@@ -1,9 +1,11 @@
 "use client";
 
-import { createClient } from "@supabase/supabase-js";
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import type { Database } from "./types";
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+/**
+ * Client-side Supabase bound to Next.js auth-helpers.
+ * This keeps the session in cookies so server components/middleware see it.
+ */
+export const supabaseBrowser = createClientComponentClient<Database>();
 
-/** Client-side Supabase (use for sign-in/out and simple client ops) */
-export const supabaseBrowser = createClient(url, anon);
