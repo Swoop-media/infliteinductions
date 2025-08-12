@@ -11,7 +11,7 @@ function makeURL(path: string): URL {
 }
 
 export async function POST(req: Request) {
-  // Only Admins can change roles
+  // Guard: only Admins can change roles
   const isAdmin = await hasRole("Admin");
   const to = makeURL("/app/admin/users");
   if (!isAdmin) {
@@ -24,14 +24,14 @@ export async function POST(req: Request) {
   const form = await req.formData();
   const user_id = String(form.get("user_id") || "").trim();
   const role_name = String(form.get("role_name") || "").trim();
-  const action = String(form.get("action") || "").trim(); // grant|revoke
+  const action = String(form.get("action") || "").trim(); // "grant" | "revoke"
 
   if (!user_id || !role_name || !action) {
     to.searchParams.set("error", "Missing fields");
     return NextResponse.redirect(to);
   }
 
-  // lookup role id by name
+  // Lookup role id by name
   const { data: role, error: roleErr } = await supabase
     .from("roles")
     .select("id, name")
@@ -43,23 +43,60 @@ export async function POST(req: Request) {
     return NextResponse.redirect(to);
   }
 
+  // We also want the recipient's email (not required for in-app)
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("id, email")
+    .eq("id", user_id)
+    .maybeSingle();
+
+  // Perform grant/revoke
   if (action === "grant") {
     const { error } = await supabase
       .from("user_roles")
       .insert({ user_id, role_id: role.id });
-    if (error) to.searchParams.set("error", error.message);
-    else to.searchParams.set("ok", "granted");
-  } else if (action === "revoke") {
+
+    if (error) {
+      to.searchParams.set("error", error.message);
+      return NextResponse.redirect(to);
+    }
+
+    // In-app notification (direct insert, RLS allows Admin)
+    await supabase.from("notifications").insert({
+      recipient_id: user_id,
+      type: "role_granted",
+      payload: { role_name: role.name },
+      read: false,
+    });
+
+    to.searchParams.set("ok", "granted");
+    return NextResponse.redirect(to);
+  }
+
+  if (action === "revoke") {
     const { error } = await supabase
       .from("user_roles")
       .delete()
       .eq("user_id", user_id)
       .eq("role_id", role.id);
-    if (error) to.searchParams.set("error", error.message);
-    else to.searchParams.set("ok", "revoked");
-  } else {
-    to.searchParams.set("error", "Invalid action");
+
+    if (error) {
+      to.searchParams.set("error", error.message);
+      return NextResponse.redirect(to);
+    }
+
+    // In-app notification (direct insert)
+    await supabase.from("notifications").insert({
+      recipient_id: user_id,
+      type: "role_revoked",
+      payload: { role_name: role.name },
+      read: false,
+    });
+
+    to.searchParams.set("ok", "revoked");
+    return NextResponse.redirect(to);
   }
 
+  to.searchParams.set("error", "Invalid action");
   return NextResponse.redirect(to);
 }

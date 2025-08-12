@@ -1,6 +1,7 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 
 type Profile = {
   id: string;
@@ -24,14 +25,9 @@ const ROLE_ORDER = [
 async function fetchData(search: string | null) {
   const supabase = createSupabaseServer();
 
-  // --- roles ---
-  const {
-    data: rolesData,
-    error: rolesErr,
-  } = await supabase.from("roles").select("id, name");
+  const { data: rolesData } = await supabase.from("roles").select("id, name");
   const roles: Role[] = rolesData ?? [];
 
-  // --- profiles (basic search) ---
   let profQuery = supabase
     .from("profiles")
     .select("id, full_name, email, department, job_description")
@@ -40,49 +36,31 @@ async function fetchData(search: string | null) {
 
   if (search && search.trim()) {
     const s = `%${search.trim()}%`;
-    // ilike OR across columns
     profQuery = profQuery.or(
       `full_name.ilike.${s},email.ilike.${s},department.ilike.${s},job_description.ilike.${s}`
     );
   }
 
-  const {
-    data: profilesData,
-    error: profilesErr,
-  } = await profQuery;
+  const { data: profilesData, error: profilesErr } = await profQuery;
   const profiles: Profile[] = profilesData ?? [];
+  if (profilesErr) {
+    return { roles, profiles: [], userRoles: [], error: profilesErr.message };
+  }
 
-  // --- user_roles for the currently listed users ---
   let userRoles: UR[] = [];
   if (profiles.length) {
     const userIds = profiles.map((p) => p.id);
-    const {
-      data: urData,
-      error: urErr,
-    } = await supabase
+    const { data: urData, error: urErr } = await supabase
       .from("user_roles")
       .select("user_id, role_id")
       .in("user_id", userIds);
-
     if (urErr) {
-      return {
-        roles,
-        profiles,
-        userRoles: [] as UR[],
-        error:
-          rolesErr?.message ??
-          profilesErr?.message ??
-          urErr.message ??
-          null,
-      };
+      return { roles, profiles, userRoles: [], error: urErr.message };
     }
     userRoles = urData ?? [];
   }
 
-  const error =
-    rolesErr?.message ?? profilesErr?.message ?? null;
-
-  return { roles, profiles, userRoles, error };
+  return { roles, profiles, userRoles, error: null as string | null };
 }
 
 export default async function AdminUsersPage({
@@ -90,7 +68,6 @@ export default async function AdminUsersPage({
 }: {
   searchParams?: Record<string, string | string[] | undefined>;
 }) {
-  // Guard: only Admins
   const isAdmin = await hasRole("Admin");
   if (!isAdmin) redirect("/app/home");
 
@@ -100,10 +77,8 @@ export default async function AdminUsersPage({
 
   const { roles, profiles, userRoles, error } = await fetchData(search);
 
-  // Safe maps (coalesce to empty arrays)
   const safeRoles: Role[] = roles ?? [];
-  const roleById = new Map(safeRoles.map((r) => [r.id, r]));
-  const assigned = new Map<string, Set<string>>(); // user_id -> Set(role_id)
+  const assigned = new Map<string, Set<string>>();
   (userRoles ?? []).forEach((ur) => {
     if (!assigned.has(ur.user_id)) assigned.set(ur.user_id, new Set());
     assigned.get(ur.user_id)!.add(ur.role_id);
@@ -137,7 +112,7 @@ export default async function AdminUsersPage({
       </form>
 
       <div className="rounded-lg border overflow-x-auto">
-        <table className="min-w-[800px] w-full text-sm">
+        <table className="min-w-[900px] w-full text-sm">
           <thead className="bg-gray-50">
             <tr>
               <th className="px-3 py-2 text-left font-medium">Name</th>
@@ -149,6 +124,7 @@ export default async function AdminUsersPage({
                   {r.name}
                 </th>
               ))}
+              <th className="px-3 py-2 text-left font-medium">Edit</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -186,6 +162,14 @@ export default async function AdminUsersPage({
                       </td>
                     );
                   })}
+                  <td className="px-3 py-2">
+                    <Link
+                      href={`/app/admin/users/${p.id}`}
+                      className="rounded-md border px-2 py-1 text-xs"
+                    >
+                      Edit
+                    </Link>
+                  </td>
                 </tr>
               );
             })}
