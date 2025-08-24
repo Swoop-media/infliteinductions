@@ -295,10 +295,17 @@ export default async function MyProfilePage() {
               >
                 Open Teams Chat
               </a>
-              <button
-                onClick={() => {
-                  // Test notification by calling our Teams API
-                  fetch('/api/teams/bot/debug-send', { 
+              <form action={async () => {
+                "use server";
+                
+                const supabase = await createSupabaseServer();
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                if (!user) return;
+
+                // Send test notification via our API
+                try {
+                  const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/teams/bot/debug-send`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -306,11 +313,20 @@ export default async function MyProfilePage() {
                       message: "🧪 Test notification from your learning platform!" 
                     })
                   });
-                }}
-                className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
-              >
-                Send Test Message
-              </button>
+                  console.log('Test notification sent:', response.status);
+                } catch (error) {
+                  console.error('Failed to send test notification:', error);
+                }
+
+                revalidatePath("/app/myprofile");
+              }}>
+                <button 
+                  type="submit"
+                  className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
+                >
+                  Send Test Message
+                </button>
+              </form>
             </div>
           </div>
         ) : (
