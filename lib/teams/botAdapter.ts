@@ -31,15 +31,17 @@ const settings = {
   MicrosoftAppPassword,
   MicrosoftAppTenantId,
   
-  // Use correct tenant for SingleTenant apps
-  ToChannelFromBotLoginUrl: `https://login.microsoftonline.com/${MicrosoftAppTenantId}/oauth2/v2.0/token`,
+  // Use botframework.com tenant for token acquisition (this is correct for bots)
+  ToChannelFromBotLoginUrl: "https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token",
   ToChannelFromBotOAuthScope: "https://api.botframework.com/.default",
   
-  // Accept tokens from the Bot Framework
+  // Accept tokens from Bot Framework AND your tenant
   ValidTokenIssuers: [
     "https://api.botframework.com",
-    `https://sts.windows.net/${MicrosoftAppTenantId}/`,
-    `https://login.microsoftonline.com/${MicrosoftAppTenantId}/v2.0`,
+    "https://sts.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47/", // Microsoft tenant
+    "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0", // Microsoft tenant
+    `https://sts.windows.net/${MicrosoftAppTenantId}/`, // Your tenant
+    `https://login.microsoftonline.com/${MicrosoftAppTenantId}/v2.0`, // Your tenant
   ],
   
   AuthenticationDisabled: false,
