@@ -29,7 +29,8 @@ const settings = {
   MicrosoftAppType,
   MicrosoftAppId,
   MicrosoftAppPassword,
-  MicrosoftAppTenantId,
+  // For MultiTenant, don't restrict tenant or use empty string
+  MicrosoftAppTenantId: MicrosoftAppType === "MultiTenant" ? "" : MicrosoftAppTenantId,
   
   // Force public cloud endpoints to avoid tenant issues
   ToChannelFromBotLoginUrl: "https://login.microsoftonline.com/botframework.com",
@@ -39,7 +40,8 @@ const settings = {
 const credentialsFactory = new ConfigurationServiceClientCredentialFactory({
   MicrosoftAppId,
   MicrosoftAppPassword,
-  MicrosoftAppTenantId,
+  // For MultiTenant, don't pass tenant ID to credentials factory
+  MicrosoftAppTenantId: MicrosoftAppType === "MultiTenant" ? "" : MicrosoftAppTenantId,
 });
 
 export const botAuth = new ConfigurationBotFrameworkAuthentication(settings as any, credentialsFactory);
