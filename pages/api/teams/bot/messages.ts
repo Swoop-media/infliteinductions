@@ -15,26 +15,23 @@ const MicrosoftAppPassword = process.env.MICROSOFT_APP_PASSWORD || "";
 const MicrosoftAppTenantId = process.env.MICROSOFT_APP_TENANT_ID || ""; // required if SingleTenant
 const MicrosoftAppType = process.env.MICROSOFT_APP_TYPE || "MultiTenant";
 
-// Force PUBLIC cloud audience/scope (prevents "wrong tenant"/700016 issues)
+// Simplified authentication configuration for SingleTenant
 const settings = {
   MicrosoftAppType,
   MicrosoftAppId,
   MicrosoftAppPassword,
   MicrosoftAppTenantId,
-
-  // For SingleTenant, use your specific tenant endpoint
-  ToChannelFromBotLoginUrl: MicrosoftAppType === "SingleTenant" 
-    ? `https://login.microsoftonline.com/${MicrosoftAppTenantId}/oauth2/v2.0/token`
-    : `https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token`,
+  
+  // Explicitly set authentication endpoints for SingleTenant
+  ToChannelFromBotLoginUrl: `https://login.microsoftonline.com/${MicrosoftAppTenantId}`,
   ToChannelFromBotOAuthScope: "https://api.botframework.com/.default",
   
-  // Additional settings for proper authentication
-  ToChannelFromBotOAuthEndpoint: MicrosoftAppType === "SingleTenant"
-    ? `https://login.microsoftonline.com/${MicrosoftAppTenantId}/oauth2/v2.0/token`
-    : "https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token",
-  ValidTokenIssuers: MicrosoftAppType === "SingleTenant" 
-    ? [`https://login.microsoftonline.com/${MicrosoftAppTenantId}/v2.0`]
-    : ["https://login.microsoftonline.com/botframework.com/v2.0"],
+  // Ensure token validation accepts tokens from your tenant
+  ValidTokenIssuers: [
+    `https://login.microsoftonline.com/${MicrosoftAppTenantId}/v2.0`,
+    `https://sts.windows.net/${MicrosoftAppTenantId}/`,
+    "https://login.microsoftonline.com/botframework.com/v2.0"
+  ],
 };
 
 const creds = new ConfigurationServiceClientCredentialFactory({
