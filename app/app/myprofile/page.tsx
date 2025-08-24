@@ -18,10 +18,10 @@ async function generateLinkCode() {
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
   // Delete any existing codes for this user
-  await supabase.from("teams_link_codes").delete().eq("user_id", user.id);
+  await supabase.from("user_link_codes").delete().eq("user_id", user.id);
 
   // Insert new code
-  await supabase.from("teams_link_codes").insert({
+  await supabase.from("user_link_codes").insert({
     user_id: user.id,
     code,
     expires_at: expiresAt.toISOString()
