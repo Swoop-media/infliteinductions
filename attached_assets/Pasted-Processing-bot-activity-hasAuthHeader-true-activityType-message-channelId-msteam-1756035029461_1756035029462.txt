@@ -1,0 +1,88 @@
+Processing bot activity: {
+  hasAuthHeader: true,
+  activityType: 'message',
+  channelId: 'msteams',
+  from: {
+    id: '29:1hqWxRZZrJjZ6qXZMGdOzwxX6orkZTygdz7_ZpxjBARu8fFCZLwUY8Bv4LjHbEAG7U2pK0VZQthHVly1RrWUiBg',
+    name: 'Henry Morgan',
+    aadObjectId: '30decbd5-5cef-4e01-91bf-e853ad98bb32'
+  },
+  conversation: {
+    id: 'a:16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n',
+    isGroup: undefined,
+    conversationType: 'personal'
+  }
+}
+Failed to send message to Teams: Error: Message send failed: 401
+    at sendToTeams (pages/api/teams/bot/messages.ts:165:16)
+    at async handler (pages/api/teams/bot/messages.ts:180:8)
+  163 |
+  164 |         if (!messageResponse.ok) {
+> 165 |           throw new Error(`Message send failed: ${messageResponse.status}`);
+      |                ^
+  166 |         }
+  167 |
+  168 |         console.log("Successfully sent message to Teams:", text);
+Bot route error: Error: Message send failed: 401
+    at sendToTeams (pages/api/teams/bot/messages.ts:165:16)
+    at async handler (pages/api/teams/bot/messages.ts:180:8)
+  163 |
+  164 |         if (!messageResponse.ok) {
+> 165 |           throw new Error(`Message send failed: ${messageResponse.status}`);
+      |                ^
+  166 |         }
+  167 |
+  168 |         console.log("Successfully sent message to Teams:", text);
+Request details: {
+  method: 'POST',
+  headers: {
+    authorization: 'present',
+    'content-type': 'application/json; charset=utf-8',
+    'user-agent': 'Microsoft-SkypeBotApi (Microsoft-BotFramework/3.0)'
+  }
+}
+ POST /api/teams/bot/messages 500 in 1765ms
+Processing bot activity: {
+  hasAuthHeader: true,
+  activityType: 'message',
+  channelId: 'msteams',
+  from: {
+    id: '29:1hqWxRZZrJjZ6qXZMGdOzwxX6orkZTygdz7_ZpxjBARu8fFCZLwUY8Bv4LjHbEAG7U2pK0VZQthHVly1RrWUiBg',
+    name: 'Henry Morgan',
+    aadObjectId: '30decbd5-5cef-4e01-91bf-e853ad98bb32'
+  },
+  conversation: {
+    id: 'a:16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n',
+    isGroup: undefined,
+    conversationType: 'personal'
+  }
+}
+Failed to send message to Teams: Error: Message send failed: 401
+    at sendToTeams (pages/api/teams/bot/messages.ts:165:16)
+    at async handler (pages/api/teams/bot/messages.ts:180:8)
+  163 |
+  164 |         if (!messageResponse.ok) {
+> 165 |           throw new Error(`Message send failed: ${messageResponse.status}`);
+      |                ^
+  166 |         }
+  167 |
+  168 |         console.log("Successfully sent message to Teams:", text);
+Bot route error: Error: Message send failed: 401
+    at sendToTeams (pages/api/teams/bot/messages.ts:165:16)
+    at async handler (pages/api/teams/bot/messages.ts:180:8)
+  163 |
+  164 |         if (!messageResponse.ok) {
+> 165 |           throw new Error(`Message send failed: ${messageResponse.status}`);
+      |                ^
+  166 |         }
+  167 |
+  168 |         console.log("Successfully sent message to Teams:", text);
+Request details: {
+  method: 'POST',
+  headers: {
+    authorization: 'present',
+    'content-type': 'application/json; charset=utf-8',
+    'user-agent': 'Microsoft-SkypeBotApi (Microsoft-BotFramework/3.0)'
+  }
+}
+ POST /api/teams/bot/messages 500 in 1156ms
