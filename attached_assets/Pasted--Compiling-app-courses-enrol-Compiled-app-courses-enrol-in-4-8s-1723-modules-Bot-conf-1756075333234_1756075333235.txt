@@ -1,0 +1,47 @@
+ ○ Compiling /app/courses/enrol ...
+ ✓ Compiled /app/courses/enrol in 4.8s (1723 modules)
+Bot configuration: {
+  MicrosoftAppType: 'SingleTenant',
+  MicrosoftAppId: 'dc8a23c4...',
+  MicrosoftAppPassword: 'SET',
+  MicrosoftAppTenantId: '19b039d8...'
+}
+ GET /app/notifications/list 200 in 1385ms
+ GET /app/notifications/list 200 in 1385ms
+ ○ Compiling /api/notify/teams ...
+ POST /app/courses/enrol 307 in 8130ms
+ ✓ Compiled /app/courses in 2.3s (1632 modules)
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./lib/notifications/dispatcher.ts
+./app/app/courses/enrol/route.ts
+ GET / 200 in 43ms
+ GET / 200 in 19ms
+ POST /app/courses?ok=enrolment_requested 200 in 5662ms
+ GET /app/notifications/list 200 in 529ms
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./lib/notifications/dispatcher.ts
+./app/app/courses/enrol/route.ts
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./lib/notifications/dispatcher.ts
+./app/app/courses/enrol/route.ts
+ ○ Compiling /app/notifications/mark-read ...
+ POST /app/notifications/mark-read 200 in 1058ms
+ GET /app/notifications/list 200 in 567ms
