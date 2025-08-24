@@ -12,16 +12,25 @@ function supabaseAdmin() {
 /** Send a DM using your stored conversation_ref keyed by app user id (recipient_id). */
 export async function sendTeamsDMToAppUser(appUserId: string, text: string) {
   const sb = supabaseAdmin();
-  const { data } = await sb
+  console.log("Looking up Teams link for app user:", appUserId);
+  
+  const { data, error } = await sb
     .from("teams_links")
-    .select("conversation_ref")
+    .select("conversation_ref, teams_user_id, aad_object_id")
     .eq("user_id", appUserId)
     .maybeSingle();
 
-  const ref = data?.conversation_ref;
-  if (!ref) return false;
+  console.log("Teams link lookup result:", { data, error });
 
+  const ref = data?.conversation_ref;
+  if (!ref) {
+    console.log("No conversation reference found for user:", appUserId);
+    return false;
+  }
+
+  console.log("Sending proactive message to Teams...");
   await sendProactive(ref, text);
+  console.log("Teams message sent successfully");
   return true;
 }
 
