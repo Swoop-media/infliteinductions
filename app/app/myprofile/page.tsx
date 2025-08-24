@@ -135,12 +135,12 @@ export default async function MyProfilePage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  // Check for active link code
+  // Check for existing link code
   const { data: linkCode } = await supabase
-    .from("user_link_codes")
+    .from("teams_link_codes")
     .select("code, expires_at")
     .eq("user_id", user.id)
-    .gte("expires_at", new Date().toISOString())
+    .gt("expires_at", new Date().toISOString())
     .maybeSingle();
 
   return (
@@ -359,10 +359,10 @@ export default async function MyProfilePage() {
                 const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
                 // Delete any existing codes for this user
-                await supabase.from("user_link_codes").delete().eq("user_id", user.id);
+                await supabase.from("teams_link_codes").delete().eq("user_id", user.id);
 
                 // Insert new code
-                await supabase.from("user_link_codes").insert({
+                await supabase.from("teams_link_codes").insert({
                   user_id: user.id,
                   code,
                   expires_at: expiresAt.toISOString()
