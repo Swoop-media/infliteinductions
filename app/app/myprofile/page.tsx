@@ -5,30 +5,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-async function generateLinkCode() {
-  "use server";
 
-  const supabase = await createSupabaseServer();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) return;
-
-  // Generate 6-digit code
-  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-  // Delete any existing codes for this user
-  await supabase.from("user_link_codes").delete().eq("user_id", user.id);
-
-  // Insert new code
-  await supabase.from("user_link_codes").insert({
-    user_id: user.id,
-    code,
-    expires_at: expiresAt.toISOString()
-  });
-
-  revalidatePath("/app/myprofile");
-}
 
 /* ---------------- Types ---------------- */
 type Profile = {
@@ -369,7 +346,30 @@ export default async function MyProfilePage() {
                 </div>
               </div>
             ) : (
-              <form action={generateLinkCode}>
+              <form action={async () => {
+                "use server";
+
+                const supabase = await createSupabaseServer();
+                const { data: { user } } = await supabase.auth.getUser();
+
+                if (!user) return;
+
+                // Generate 6-digit code
+                const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+                const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+                // Delete any existing codes for this user
+                await supabase.from("user_link_codes").delete().eq("user_id", user.id);
+
+                // Insert new code
+                await supabase.from("user_link_codes").insert({
+                  user_id: user.id,
+                  code,
+                  expires_at: expiresAt.toISOString()
+                });
+
+                revalidatePath("/app/myprofile");
+              }}>
                 <button 
                   type="submit"
                   className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
