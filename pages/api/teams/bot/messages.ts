@@ -1,7 +1,7 @@
 // pages/api/teams/bot/messages.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { TurnContext, ConfigurationServiceClientCredentialFactory, ConfigurationBotFrameworkAuthentication, CloudAdapter } from "botbuilder";
-import { createSupabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 
 export const config = {
   api: {
@@ -15,6 +15,14 @@ const MicrosoftAppId = process.env.MICROSOFT_APP_ID || "";
 const MicrosoftAppPassword = process.env.MICROSOFT_APP_PASSWORD || "";
 const MicrosoftAppTenantId = process.env.MICROSOFT_APP_TENANT_ID || ""; // required if SingleTenant
 const MicrosoftAppType = process.env.MICROSOFT_APP_TYPE || "MultiTenant";
+
+// Create admin client for bot operations (no cookies needed)
+function supabaseAdmin() {
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  if (!url || !key) throw new Error("Supabase admin env not set");
+  return createClient(url, key, { auth: { persistSession: false } });
+}
 
 // Re-enable authentication with correct SingleTenant configuration
 const settings = {
@@ -199,7 +207,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Store conversation reference for proactive messaging
     const storeConversationRef = async () => {
       try {
-        const supabase = await createSupabaseServer();
+        const supabase = supabaseAdmin();
         const conversationRef = {
           user: activity.from,
           bot: activity.recipient,
@@ -236,7 +244,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const linkCode = txt.substring(5).trim();
         if (linkCode) {
           try {
-            const supabase = await createSupabaseServer();
+            const supabase = supabaseAdmin();
             
             // Find user by link code
             const { data: linkData } = await supabase

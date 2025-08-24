@@ -4,8 +4,8 @@ import { headers } from "next/headers";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { notifyUser } from "@/lib/notifications/dispatcher";
 
-function makeURL(path: string): URL {
-  const h = headers();
+async function makeURL(path: string): Promise<URL> {
+  const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   return new URL(path, `${proto}://${host}`);
@@ -19,7 +19,7 @@ async function detectEnrolmentTable(supabase: Awaited<ReturnType<typeof createSu
 
 export async function POST(req: Request) {
   const supabase = await createSupabaseServer();
-  const to = makeURL("/app/admin?tab=enrolments");
+  const to = await makeURL("/app/admin?tab=enrolments");
 
   // Approver (must be signed in and permitted by your RLS)
   const {
