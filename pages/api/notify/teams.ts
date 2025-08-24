@@ -95,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const text = formatMessage(row);
 
-    // Try to send Teams message
+    // Try to send Teams message using the mapped recipientUserId
     try {
       console.log("Attempting to send Teams message to user:", recipientUserId);
       const success = await sendToTeams(recipientUserId, text, false);
