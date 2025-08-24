@@ -195,19 +195,97 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     };
 
+    // Store conversation reference for proactive messaging
+    const storeConversationRef = async () => {
+      try {
+        const supabase = await createSupabaseServer();
+        const conversationRef = {
+          user: activity.from,
+          bot: activity.recipient,
+          conversation: activity.conversation,
+          channelId: activity.channelId,
+          serviceUrl: activity.serviceUrl
+        };
+
+        // Store/update the conversation reference keyed by Teams user ID and AAD object ID
+        await supabase.from("teams_links").upsert({
+          teams_user_id: activity.from?.id,
+          aad_object_id: activity.from?.aadObjectId,
+          conversation_ref: conversationRef,
+          last_activity: new Date().toISOString()
+        }, {
+          onConflict: "teams_user_id"
+        });
+
+        console.log("Stored conversation reference for user:", activity.from?.aadObjectId);
+      } catch (error) {
+        console.error("Failed to store conversation reference:", error);
+      }
+    };
+
     // Process the activity and send responses
     if (activity?.type === "message") {
+      await storeConversationRef();
+      
       const txt = (activity.text || "").trim().toLowerCase();
       if (txt === "ping") {
         await sendToTeams("pong");
+      } else if (txt.startsWith("link ")) {
+        // Handle linking command: "link <code>"
+        const linkCode = txt.substring(5).trim();
+        if (linkCode) {
+          try {
+            const supabase = await createSupabaseServer();
+            
+            // Find user by link code
+            const { data: linkData } = await supabase
+              .from("teams_link_codes")
+              .select("user_id, expires_at")
+              .eq("code", linkCode)
+              .maybeSingle();
+            
+            if (linkData && new Date(linkData.expires_at) > new Date()) {
+              // Update teams_links with app user mapping
+              await supabase.from("teams_links").upsert({
+                teams_user_id: activity.from?.id,
+                aad_object_id: activity.from?.aadObjectId,
+                user_id: linkData.user_id,
+                conversation_ref: {
+                  user: activity.from,
+                  bot: activity.recipient,
+                  conversation: activity.conversation,
+                  channelId: activity.channelId,
+                  serviceUrl: activity.serviceUrl
+                },
+                last_activity: new Date().toISOString()
+              }, {
+                onConflict: "teams_user_id"
+              });
+
+              // Delete the used link code
+              await supabase.from("teams_link_codes").delete().eq("code", linkCode);
+              
+              await sendToTeams("✅ Successfully linked! You'll now receive notifications here.");
+            } else {
+              await sendToTeams("❌ Invalid or expired link code. Please generate a new one from your profile.");
+            }
+          } catch (error) {
+            console.error("Linking failed:", error);
+            await sendToTeams("❌ Linking failed. Please try again later.");
+          }
+        } else {
+          await sendToTeams("Please provide a link code: `link <your-code>`");
+        }
       } else {
         await sendToTeams(`echo: ${activity.text ?? ""}`);
       }
     } else if (activity?.type === "conversationUpdate") {
+      await storeConversationRef();
+      
       const added = activity.membersAdded || [];
       for (const m of added) {
         if (m.id !== activity.recipient?.id) {
-          await sendToTeams("Hi! I'm online.");
+          await sendToTeams("Hi! I'm online. Send me a link code to connect your account: `link <your-code>`");
         }
       }
     }

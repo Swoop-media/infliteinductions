@@ -3,8 +3,32 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 
-export const dynamic = "force-dynamic";
+async function generateLinkCode() {
+  "use server";
+
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) return;
+
+  // Generate 6-digit code
+  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+  // Delete any existing codes for this user
+  await supabase.from("teams_link_codes").delete().eq("user_id", user.id);
+
+  // Insert new code
+  await supabase.from("teams_link_codes").insert({
+    user_id: user.id,
+    code,
+    expires_at: expiresAt.toISOString()
+  });
+
+  revalidatePath("/app/myprofile");
+}
 
 /* ---------------- Types ---------------- */
 type Profile = {
@@ -120,6 +144,27 @@ function Pill({
 /* ---------------- Page ---------------- */
 export default async function MyProfilePage() {
   const { profile, inProgress, completed } = await loadMyProfileAndLearning();
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/auth/signin");
+  }
+
+  // Check for existing Teams link
+  const { data: teamsLink } = await supabase
+    .from("teams_links")
+    .select("teams_user_id, last_activity")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  // Check for active link code
+  const { data: linkCode } = await supabase
+    .from("teams_link_codes")
+    .select("code, expires_at")
+    .eq("user_id", user.id)
+    .gte("expires_at", new Date().toISOString())
+    .maybeSingle();
 
   return (
     <div className="space-y-8">
@@ -252,6 +297,52 @@ export default async function MyProfilePage() {
             </ul>
           )}
         </section>
+      </div>
+
+      {/* Teams Integration Section */}
+      <div className="rounded-md border bg-white p-4">
+        <h2 className="font-medium mb-2">Teams Integration</h2>
+
+        {teamsLink ? (
+          <div className="space-y-2">
+            <div className="text-sm text-green-600">✅ Teams account linked</div>
+            <div className="text-xs text-gray-500">
+              Last activity: {new Date(teamsLink.last_activity).toLocaleString()}
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Link your Teams account to receive notifications via Teams messages.
+            </p>
+
+            {linkCode ? (
+              <div className="space-y-2">
+                <div className="text-sm">
+                  <strong>Your link code:</strong> 
+                  <code className="ml-2 px-2 py-1 bg-gray-100 rounded font-mono text-lg">
+                    {linkCode.code}
+                  </code>
+                </div>
+                <div className="text-xs text-gray-500">
+                  Expires: {new Date(linkCode.expires_at).toLocaleString()}
+                </div>
+                <div className="text-xs text-blue-600">
+                  Send this code to the bot in Teams: <code>link {linkCode.code}</code>
+                </div>
+              </div>
+            ) : (
+              <form action={generateLinkCode}>
+                <button 
+                  type="submit"
+                  className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+                >
+                  Generate Link Code
+                </button>
+              </form>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
