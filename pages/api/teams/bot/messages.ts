@@ -35,7 +35,7 @@ const settings = {
     `https://login.microsoftonline.com/${MicrosoftAppTenantId}/v2.0`, // Your tenant
   ],
   
-  AuthenticationDisabled: false,
+  AuthenticationDisabled: true,
 };
 
 const creds = new ConfigurationServiceClientCredentialFactory({
