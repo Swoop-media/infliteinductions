@@ -33,9 +33,17 @@ const settings = {
   
   // For SingleTenant, use your specific tenant endpoint
   ToChannelFromBotLoginUrl: MicrosoftAppType === "SingleTenant" 
-    ? `https://login.microsoftonline.com/${MicrosoftAppTenantId}`
-    : `https://login.microsoftonline.com/botframework.com`,
+    ? `https://login.microsoftonline.com/${MicrosoftAppTenantId}/oauth2/v2.0/token`
+    : `https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token`,
   ToChannelFromBotOAuthScope: "https://api.botframework.com/.default",
+  
+  // Additional settings for proper authentication
+  ToChannelFromBotOAuthEndpoint: MicrosoftAppType === "SingleTenant"
+    ? `https://login.microsoftonline.com/${MicrosoftAppTenantId}/oauth2/v2.0/token`
+    : "https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token",
+  ValidTokenIssuers: MicrosoftAppType === "SingleTenant" 
+    ? [`https://login.microsoftonline.com/${MicrosoftAppTenantId}/v2.0`]
+    : ["https://login.microsoftonline.com/botframework.com/v2.0"],
 };
 
 const credentialsFactory = new ConfigurationServiceClientCredentialFactory({
