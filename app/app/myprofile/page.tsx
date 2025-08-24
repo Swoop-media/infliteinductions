@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-
+import TestMessageButton from "./TestMessageButton";
 
 
 /* ---------------- Types ---------------- */
@@ -295,38 +295,7 @@ export default async function MyProfilePage() {
               >
                 Open Teams Chat
               </a>
-              <form action={async () => {
-                "use server";
-                
-                const supabase = await createSupabaseServer();
-                const { data: { user } } = await supabase.auth.getUser();
-                
-                if (!user) return;
-
-                // Send test notification via our API
-                try {
-                  const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/teams/bot/debug-send`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                      userId: user.id,
-                      message: "🧪 Test notification from your learning platform!" 
-                    })
-                  });
-                  console.log('Test notification sent:', response.status);
-                } catch (error) {
-                  console.error('Failed to send test notification:', error);
-                }
-
-                revalidatePath("/app/myprofile");
-              }}>
-                <button 
-                  type="submit"
-                  className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
-                >
-                  Send Test Message
-                </button>
-              </form>
+              <TestMessageButton />
             </div>
           </div>
         ) : (
