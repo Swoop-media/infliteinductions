@@ -7,13 +7,13 @@ import { revalidatePath } from "next/cache";
 // Helpers
 async function getCourseAndModule(courseId: string) {
   "use server";
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
 
   // Verify auth
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/login");
+  if (!user) redirect("/auth/signin");
 
   // Fetch course (must be owner/Admin/SM per RLS)
   const { data: course, error: cErr } = await supabase
@@ -39,7 +39,7 @@ async function getCourseAndModule(courseId: string) {
 
 async function ensureQuizModule(courseId: string) {
   "use server";
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
 
   // Make sure a quiz module exists (creator/Admin/SM per RLS)
   const { data: existing, error: eErr } = await supabase
@@ -74,7 +74,7 @@ async function ensureQuizModule(courseId: string) {
 
 async function addQuestion(formData: FormData) {
   "use server";
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
   const courseId = String(formData.get("course_id") || "");
   const moduleId = String(formData.get("module_id") || "");
   const stem = String(formData.get("stem") || "").trim();
@@ -97,7 +97,7 @@ async function addQuestion(formData: FormData) {
 
 async function addOption(formData: FormData) {
   "use server";
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
   const courseId = String(formData.get("course_id") || "");
   const questionId = String(formData.get("question_id") || "");
   const label = String(formData.get("label") || "").trim();
@@ -117,7 +117,7 @@ async function addOption(formData: FormData) {
 
 async function loadQuestions(moduleId: string) {
   "use server";
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
 
   const { data: questions, error: qErr } = await supabase
     .from("quiz_questions")

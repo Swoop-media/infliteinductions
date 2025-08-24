@@ -4,7 +4,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 
 /** Returns the current auth user (or null) */
 export async function getSessionUser() {
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
   return user ?? null;
 }
@@ -13,7 +13,7 @@ export async function getSessionUser() {
 export async function hasRole(roleName: string) {
   const user = await getSessionUser();
   if (!user) return false;
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
   const { data, error } = await supabase.rpc("has_role", { uid: user.id, role_name: roleName });
   if (error) return false;
   return !!data;
@@ -23,7 +23,7 @@ export async function hasRole(roleName: string) {
 export async function getProfileAndRoles() {
   const user = await getSessionUser();
   if (!user) return null;
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
   const { data } = await supabase
     .from("v_profile_summary")
     .select("*")

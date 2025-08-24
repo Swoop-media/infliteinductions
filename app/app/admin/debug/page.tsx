@@ -1,7 +1,7 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
 
 export default async function AdminDebug() {
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
 
   // who am I?
   const {

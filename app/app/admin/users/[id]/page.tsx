@@ -1,3 +1,4 @@
+// app/app/admin/users/[id]/page.tsx
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
@@ -35,7 +36,7 @@ export default async function EditUserPage({
   const isAdmin = await hasRole("Admin");
   if (!isAdmin) redirect("/app/home");
 
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
   const { data: profile } = await supabase
     .from("profiles")
     .select("id, full_name, email, department, job_description")
@@ -43,8 +44,7 @@ export default async function EditUserPage({
     .maybeSingle();
 
   const ok =
-    (Array.isArray(searchParams?.ok) ? searchParams?.ok[0] : searchParams?.ok) ??
-    null;
+    (Array.isArray(searchParams?.ok) ? searchParams?.ok[0] : searchParams?.ok) ?? null;
   const error =
     (Array.isArray(searchParams?.error)
       ? searchParams?.error[0]
@@ -52,9 +52,9 @@ export default async function EditUserPage({
 
   if (!profile) {
     return (
-      <div className="space-y-4">
+      <div className="space-y-4 p-6">
         <h1 className="text-xl font-semibold">User not found</h1>
-        <Link className="text-sm underline" href="/app/admin/users">
+        <Link className="text-sm underline" href="/app/admin?tab=users">
           ← Back to Users
         </Link>
       </div>
@@ -62,10 +62,10 @@ export default async function EditUserPage({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Edit User</h1>
-        <Link className="text-sm underline" href="/app/admin/users">
+        <Link className="text-sm underline" href="/app/admin?tab=users">
           ← Back to Users
         </Link>
       </div>
@@ -82,7 +82,7 @@ export default async function EditUserPage({
       )}
 
       <form
-        action="/app/admin/users/update"
+        action="/app/app/admin/users/update"
         method="post"
         className="space-y-4 max-w-xl rounded-lg border bg-white p-4"
       >
@@ -139,13 +139,8 @@ export default async function EditUserPage({
         </div>
 
         <div className="flex gap-2">
-          <button className="rounded-md bg-black px-3 py-2 text-sm text-white">
-            Save
-          </button>
-          <Link
-            href="/app/admin/users"
-            className="rounded-md border px-3 py-2 text-sm"
-          >
+          <button className="rounded-md bg-black px-3 py-2 text-sm text-white">Save</button>
+          <Link href="/app/admin?tab=users" className="rounded-md border px-3 py-2 text-sm">
             Cancel
           </Link>
         </div>

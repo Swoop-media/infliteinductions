@@ -1,41 +1,64 @@
-# Phase 1 — Course Creation (Unified Modules)
+# Phase 1 – Course Creation: Schema, Policies, and Build
 
-This doc summarizes the schema changes, app changes, and test steps for the Phase 1 course‑creation flow.
+## Overview
+Phase 1 delivers the new unified course creation backend for:
+- **Digital training**
+- **Digital assessment quizzes**
+- **Onsite training**
+- **Onsite assessment**
+
+It merges old `modules` into a new `course_modules` model, adds quiz/assignment tables, and links to enrolments.
+
+We also:
+- Add Row Level Security (RLS) for course creator/owner/Admin/Senior Management
+- Add helper function `app_has_role` for role-based logic
+- Auto-create pending enrolments when a trainee is assigned
+
+## Changes
+- **`courses`**: add `created_by`, `status`
+- **`course_modules`**: unified module type, `config`, ordering, `stage`
+- **`module_content_blocks`**: richer per-module content (text, files, videos, links)
+- **`quiz_*` tables**: questions, options, answers
+- **`course_assignments`**: assign trainees, onsite trainers, onsite assessors
+- **`enrolments`**: link learners to courses
+- **Policies**: CRUD split by select/insert/update/delete, RLS enforced
+- **Helper**: `app_has_role` to support different `user_roles` table shapes
+
+## Build Instructions
+1. **Run `sql/phase1_build.sql`** in Supabase SQL Editor
+2. Confirm schema is updated in Supabase
+3. Deploy frontend changes for:
+   - New tab layout (Details / Digital Training / Digital Assessment Quiz / Onsite Training / Onsite Assessment)
+   - Module creation using `course_modules`
+4. Test course creation and module/quiz assignment flows
+
+## Rollback
+If needed, run `sql/phase1_rollback.sql` in Supabase SQL Editor.  
+⚠️ **This will drop all new tables and columns. Data loss will occur.**
 
 ---
 
-## What changed (DB)
+## Changelog
 
-### Tables & columns
-- **public.course_modules**
-  - Ensured columns exist:
-    - `order_index int not null default 0`
-    - `config jsonb not null default '{}'`
-    - `stage course_stage not null default 'draft'::course_stage`
-  - Notes: `stage` uses the `course_stage` enum.
+### v1.0 – Initial build
+- Added all schema changes
+- Added all RLS policies
+- Added helper functions
+- Added backfill scripts for `stage` and `order_index`
 
-- **public.module_content_blocks**
-  - Still references `module_id uuid` → `public.course_modules(id)` (cascade).
-  - RLS policies updated later to reference `course_modules`.
+### v1.1 – Bugfixes
+- Fixed enum cast for `course_stage`
+- Added missing `config` column to `course_modules`
+- Corrected policies to use `status::text` to avoid enum mismatch
 
-- **public.courses**
-  - Previously added (from earlier phases, recap here for context):
-    - `created_by uuid`
-    - `status course_status` (or text with check) — **published/draft/etc**
-    - Optional fields that the page **can** use if present:
-      - `valid_until date`
-      - `retake_reminder_days int`
-      - `notification_lead_days int`
+---
 
-### Enums
-- **course_stage** must include `'draft'`.
-  - If missing, add with:
-    ```sql
-    alter type course_stage add value if not exists 'draft';
-    ```
+## Related Frontend Files
+- `app/app/creator/courses/[id]/page.tsx` (tabs + module creation UI)
+- `components/ModuleList.tsx` (module ordering)
+- `components/QuizEditor.tsx` (quiz creation)
 
-### Safe SQL snippets used
-- Ensure `config` exists:
-  ```sql
-  alter table public.course_modules
-    add column if not exists config jsonb not null default '{}';
+---
+
+**Author:** _<your name>_  
+**Date:** _<today’s date>_

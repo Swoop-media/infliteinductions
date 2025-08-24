@@ -1,41 +1,56 @@
-import Sidebar from "@/components/Sidebar";
-import { redirect } from "next/navigation";
+// app/app/layout.tsx
+import Link from "next/link";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import NotificationsBell from "@/components/NotificationsBell";
+import NotificationsBell from "./_components/NotificationsBell";
+import SignOutButton from "./_components/SignOutButton";
 
-async function getUser() {
-  const supabase = createSupabaseServer();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user ?? null;
-}
+export const metadata = {
+  title: "Training Platform",
+  description: "Internal training & assessments",
+};
 
-export default async function AppLayout({
+export default async function AppSectionLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const user = await getUser();
-  if (!user) redirect("/");
+  const supabase = await createSupabaseServer();
+
+  // Auth snapshot for header (safe on the server)
+  let user: any = null;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (!error) user = data.user;
+  } catch {
+    // ignore
+  }
 
   return (
-    <div className="min-h-screen flex">
-      <Sidebar />
-      <div className="flex-1">
-        <header className="flex items-center justify-between border-b bg-white px-4 py-3">
-          <div />
-          <div className="flex items-center gap-2">
+    <div className="min-h-screen">
+      <header className="border-b bg-white">
+        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+          <nav className="flex items-center gap-4 text-sm">
+            <Link href="/app/home">Home</Link>
+            {/* removed “My profile” link */}
+            <Link href="/app/creator">Creator</Link>
+            <Link href="/app/courses">Courses</Link>
+            <Link href="/app/admin">Admin</Link>
+          </nav>
+
+          <nav className="flex items-center gap-2">
             <NotificationsBell />
-            <form action="/auth/signout" method="post">
-              <button className="rounded-md border px-3 py-1 text-sm">
-                Sign out
-              </button>
-            </form>
-          </div>
-        </header>
-        <main className="p-4">{children}</main>
-      </div>
+            {user ? (
+              <SignOutButton className="rounded-md border px-3 py-1 text-sm" />
+            ) : (
+              <Link href="/auth/login" className="rounded-md border px-3 py-1 text-sm">
+                Sign in
+              </Link>
+            )}
+          </nav>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
     </div>
   );
 }

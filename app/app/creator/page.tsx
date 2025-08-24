@@ -1,6 +1,9 @@
+// app/app/creator/page.tsx
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
+import DeleteAuthorisationButton from "./_components/DeleteAuthorisationButton";
 
 type CourseRow = {
   id: string;
@@ -19,7 +22,13 @@ type AuthzRow = {
   created_at: string;
 };
 
-function Badge({ children, tone = "default" }: { children: React.ReactNode; tone?: "default" | "green" | "amber" | "gray" }) {
+function Badge({
+  children,
+  tone = "default",
+}: {
+  children: React.ReactNode;
+  tone?: "default" | "green" | "amber" | "gray";
+}) {
   const tones: Record<string, string> = {
     default: "bg-gray-100 text-gray-800",
     green: "bg-green-100 text-green-800",
@@ -47,26 +56,50 @@ function statusTone(status: CourseRow["status"] | AuthzRow["status"]) {
   }
 }
 
+function FlashBanner({ ok, error }: { ok?: string | null; error?: string | null }) {
+  if (error) {
+    return (
+      <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+        {error}
+      </div>
+    );
+  }
+  if (ok) {
+    const msg =
+      ok === "course_deleted"
+        ? "Course deleted."
+        : ok === "authorisation_deleted"
+        ? "Authorisation deleted."
+        : "Saved.";
+    return (
+      <div className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-800">
+        {msg}
+      </div>
+    );
+  }
+  return null;
+}
+
 export default async function CreatorHome({
   searchParams,
 }: {
-  searchParams?: { tab?: string };
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  // Guard again (cheap, keeps page consistent if layout changes)
+  // Guard: redirect unauthorized users to Home with banner
   const canAccess =
     (await hasRole("Course creators")) ||
     (await hasRole("Senior management")) ||
     (await hasRole("Admin"));
   if (!canAccess) {
-    // Render nothing; layout will have redirected already.
-    return null;
+    redirect("/app/home?banner=no_access");
   }
 
-  const tab = (searchParams?.tab === "authorisations" ? "authorisations" : "courses") as
-    | "courses"
-    | "authorisations";
+  const sp = await searchParams;
+  const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) === "authorisations" ? "authorisations" : "courses";
+  const ok = (Array.isArray(sp.ok) ? sp.ok[0] : sp.ok) ?? null;
+  const error = (Array.isArray(sp.error) ? sp.error[0] : sp.error) ?? null;
 
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
 
   const [{ data: courses = [] as CourseRow[] }, { data: authzs = [] as AuthzRow[] }] =
     await Promise.all([
@@ -84,7 +117,9 @@ export default async function CreatorHome({
 
   return (
     <div className="space-y-8">
-      {/* Tab switcher (redundant to header links, but nice inline UI) */}
+      <FlashBanner ok={ok} error={error} />
+
+      {/* Tab switcher */}
       <div className="flex items-center gap-2">
         <Link
           href="/app/creator?tab=courses"
@@ -157,7 +192,13 @@ export default async function CreatorHome({
                       Edit
                     </Link>
                     <Link
-                      href={`/app/creator/courses/${c.id}?tab=assign`}
+                      href={`/app/creator/courses/${c.id}/delete`}
+                      className="rounded-md border px-3 py-1.5 text-sm border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
+                    >
+                      Delete
+                    </Link>
+                    <Link
+                      href={`/app/creator/courses/${c.id}?tab=assignments`}
                       className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
                     >
                       Assign
@@ -209,8 +250,9 @@ export default async function CreatorHome({
                     >
                       Edit
                     </Link>
+                    <DeleteAuthorisationButton authId={a.id} title={a.title ?? undefined} />
                     <Link
-                      href={`/app/creator/authorisations/${a.id}?tab=assign`}
+                      href={`/app/creator/authorisations/${a.id}?tab=assignments`}
                       className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
                     >
                       Assign

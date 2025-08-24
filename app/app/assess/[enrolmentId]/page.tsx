@@ -28,9 +28,9 @@ export default async function AssessPage({
   searchParams,
 }: {
   params: { enrolmentId: string };
-  searchParams?: { module?: string };
+  searchParams: Promise<{ module?: string }>;
 }) {
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
 
   // Require login
   const { data: me } = await supabase.auth.getUser();
@@ -65,7 +65,7 @@ export default async function AssessPage({
   // ---------- SERVER ACTION (service-side uploads + upsert) ----------
   async function submitAssessorForm(fd: FormData) {
     "use server";
-    const supa = createSupabaseServer();
+    const supa = await createSupabaseServer();
     const admin = supabaseAdmin();
 
     const enrolment_id = String(fd.get("enrolment_id") || "");

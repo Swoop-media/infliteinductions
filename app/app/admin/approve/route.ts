@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
   if (!allowed) return NextResponse.redirect(makeURL("/app/home"));
 
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
 
   const form = await req.formData();
   const enrolment_id = String(form.get("enrolment_id") || "").trim();

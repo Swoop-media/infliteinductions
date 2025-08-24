@@ -23,7 +23,7 @@ const ROLE_ORDER = [
 ];
 
 async function fetchData(search: string | null) {
-  const supabase = createSupabaseServer();
+  const supabase = await createSupabaseServer();
 
   const { data: rolesData } = await supabase.from("roles").select("id, name");
   const roles: Role[] = rolesData ?? [];

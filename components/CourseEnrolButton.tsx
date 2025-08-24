@@ -3,32 +3,58 @@
 import { useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
-type Status = "none" | "pending" | "approved" | "completed";
+type DbStatus =
+  | "pending"
+  | "approved"
+  | "in_progress"
+  | "completed"
+  | "rejected"
+  | "cancelled";
+
+type UiStatus = "none" | "pending" | "enrolled";
+
+function toUiStatus(s: DbStatus | null | undefined): UiStatus {
+  if (!s || s === "rejected" || s === "cancelled") return "none";
+  if (s === "pending") return "pending";
+  // approved, in_progress, completed
+  return "enrolled";
+}
 
 export default function CourseEnrolButton({
   courseId,
   initialStatus,
 }: {
   courseId: string;
-  initialStatus?: "pending" | "approved" | "completed" | null;
+  /** Optional DB status you already looked up server-side */
+  initialStatus?: DbStatus | null;
 }) {
-  const [status, setStatus] = useState<Status>(
-    (initialStatus as Status) || "none"
-  );
-  const [userId, setUserId] = useState<string | null>(null);
+  const [ui, setUi] = useState<UiStatus>(toUiStatus(initialStatus ?? null));
 
   useEffect(() => {
     let unsub: (() => void) | null = null;
 
     (async () => {
+      // 1) Who am I?
       const { data: ud } = await supabaseBrowser.auth.getUser();
       const uid = ud.user?.id ?? null;
-      setUserId(uid);
-      if (!uid) return;
+      if (!uid) {
+        setUi("none");
+        return;
+      }
 
-      // Listen for INSERT/UPDATE on this user's enrolment for this course
+      // 2) Fetch current DB status (covers page loads with an existing row)
+      const { data: existing } = await supabaseBrowser
+        .from("course_enrolments")
+        .select("status")
+        .eq("user_id", uid)
+        .eq("course_id", courseId)
+        .maybeSingle();
+
+      setUi(toUiStatus((existing?.status as DbStatus | undefined) ?? null));
+
+      // 3) Realtime: reflect changes made by admins
       const channel = supabaseBrowser
-        .channel(`enrol-${courseId}`)
+        .channel(`enrol-${courseId}-${uid}`)
         .on(
           "postgres_changes",
           {
@@ -38,13 +64,14 @@ export default function CourseEnrolButton({
             filter: `user_id=eq.${uid}`,
           },
           (payload: any) => {
-            const row = (payload.new || payload.old) as {
-              user_id: string;
-              course_id: string;
-              status: Status;
-            };
+            const row =
+              (payload.new || payload.old) as {
+                user_id: string;
+                course_id: string;
+                status: DbStatus;
+              };
             if (row && row.course_id === courseId) {
-              setStatus(row.status as Status);
+              setUi(toUiStatus(row.status));
             }
           }
         )
@@ -58,8 +85,8 @@ export default function CourseEnrolButton({
     };
   }, [courseId]);
 
-  // UI styles/labels
-  if (status === "pending") {
+  // UI
+  if (ui === "pending") {
     return (
       <button
         disabled
@@ -69,7 +96,8 @@ export default function CourseEnrolButton({
       </button>
     );
   }
-  if (status === "approved" || status === "completed") {
+
+  if (ui === "enrolled") {
     return (
       <button
         disabled
@@ -80,7 +108,7 @@ export default function CourseEnrolButton({
     );
   }
 
-  // No existing enrolment: show the form to create one
+  // No enrolment row yet
   return (
     <form action="/app/courses/enrol" method="post">
       <input type="hidden" name="course_id" value={courseId} />
