@@ -117,13 +117,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Send response back to Teams using direct HTTP call to Bot Framework API
     const sendToTeams = async (text: string) => {
       try {
-        // Get access token for Bot Framework
-        const tokenUrl = `https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token`;
+        // Get access token for Bot Framework - use correct tenant for SingleTenant bots
+        const tenant = MicrosoftAppType === "SingleTenant" ? MicrosoftAppTenantId : "botframework.com";
+        const tokenUrl = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`;
         const tokenParams = new URLSearchParams();
         tokenParams.set("client_id", MicrosoftAppId);
         tokenParams.set("client_secret", MicrosoftAppPassword);
         tokenParams.set("grant_type", "client_credentials");
         tokenParams.set("scope", "https://api.botframework.com/.default");
+
+        console.log("Requesting token from:", tokenUrl);
+        console.log("Token params:", {
+          client_id: MicrosoftAppId,
+          grant_type: "client_credentials",
+          scope: "https://api.botframework.com/.default"
+        });
 
         const tokenResponse = await fetch(tokenUrl, {
           method: "POST",
@@ -132,7 +140,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         if (!tokenResponse.ok) {
-          throw new Error(`Token request failed: ${tokenResponse.status}`);
+          const errorText = await tokenResponse.text();
+          console.error("Token request failed:", {
+            status: tokenResponse.status,
+            statusText: tokenResponse.statusText,
+            response: errorText
+          });
+          throw new Error(`Token request failed: ${tokenResponse.status} - ${errorText}`);
         }
 
         const tokenData = await tokenResponse.json();
@@ -162,7 +176,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         });
 
         if (!messageResponse.ok) {
-          throw new Error(`Message send failed: ${messageResponse.status}`);
+          const errorText = await messageResponse.text();
+          console.error("Message send failed:", {
+            status: messageResponse.status,
+            statusText: messageResponse.statusText,
+            response: errorText,
+            requestUrl: replyUrl,
+            requestBody: JSON.stringify(replyActivity)
+          });
+          throw new Error(`Message send failed: ${messageResponse.status} - ${errorText}`);
         }
 
         console.log("Successfully sent message to Teams:", text);
