@@ -160,7 +160,7 @@ export default async function MyProfilePage() {
 
   // Check for active link code
   const { data: linkCode } = await supabase
-    .from("teams_link_codes")
+    .from("user_link_codes")
     .select("code, expires_at")
     .eq("user_id", user.id)
     .gte("expires_at", new Date().toISOString())
