@@ -248,7 +248,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             
             // Find user by link code
             const { data: linkData } = await supabase
-              .from("teams_link_codes")
+              .from("user_link_codes")
               .select("user_id, expires_at")
               .eq("code", linkCode)
               .maybeSingle();
@@ -272,7 +272,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               });
 
               // Delete the used link code
-              await supabase.from("teams_link_codes").delete().eq("code", linkCode);
+              await supabase.from("user_link_codes").delete().eq("code", linkCode);
               
               await sendToTeams("✅ Successfully linked! You'll now receive notifications here.");
             } else {
