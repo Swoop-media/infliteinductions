@@ -1,0 +1,99 @@
+ ✓ Compiled /app/notifications/list in 3.5s (1094 modules)
+ GET / 200 in 122ms
+ GET / 200 in 25ms
+ GET / 200 in 27ms
+ GET /app/notifications/list 200 in 5251ms
+ ✓ Compiled in 875ms (1094 modules)
+ GET / 200 in 180ms
+ GET /app/notifications/list 200 in 1488ms
+Processing bot activity: {
+  hasAuthHeader: true,
+  authHeaderPrefix: 'Bearer eyJhbGciOiJSU...',
+  activityType: 'message',
+  channelId: 'msteams',
+  from: {
+    id: '29:1hqWxRZZrJjZ6qXZMGdOzwxX6orkZTygdz7_ZpxjBARu8fFCZLwUY8Bv4LjHbEAG7U2pK0VZQthHVly1RrWUiBg',
+    name: 'Henry Morgan',
+    aadObjectId: '30decbd5-5cef-4e01-91bf-e853ad98bb32'
+  },
+  conversation: {
+    id: 'a:16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n',
+    isGroup: undefined,
+    conversationType: 'personal'
+  }
+}
+Bot route error (processActivity): Error: Unauthorized. No valid identity.
+    at Generator.next (<anonymous>)
+    at new Promise (<anonymous>)
+    at Generator.next (<anonymous>) {
+  statusCode: 401
+}
+Request details: {
+  method: 'POST',
+  headers: {
+    authorization: 'present',
+    'content-type': 'application/json; charset=utf-8',
+    'user-agent': 'Microsoft-SkypeBotApi (Microsoft-BotFramework/3.0)'
+  }
+}
+ POST /api/teams/bot/messages 401 in 43ms
+Processing bot activity: {
+  hasAuthHeader: true,
+  authHeaderPrefix: 'Bearer eyJhbGciOiJSU...',
+  activityType: 'installationUpdate',
+  channelId: 'msteams',
+  from: {
+    id: '29:1kvMtH2UC1P1QpdZC5A0P1bnMd-z0oLlxHtPcyD0Q-EQraEtx7O30zFKpvHBRzr69fnwmxbzoUb2cNqRzinwYCw',
+    name: undefined,
+    aadObjectId: '9b6f8363-12ac-4948-a7a0-7ae26385f2bf'
+  },
+  conversation: {
+    id: 'a:1pwLEG1PFOrhsMOkobO2xlhth4TWLNJ2zrkwJF7LWCrxHEAQs1GL7wYeIOAexJKE70DcK0LdkFWHoESbgxVFI3Cd65cGJxDkbUmGNcrlO-cm6Pf98ge6DvbJNWZRyp14V',
+    isGroup: undefined,
+    conversationType: 'personal'
+  }
+}
+Bot route error (processActivity): Error: Unauthorized. No valid identity.
+    at Generator.next (<anonymous>)
+    at new Promise (<anonymous>)
+    at Generator.next (<anonymous>) {
+  statusCode: 401
+}
+Request details: {
+  method: 'POST',
+  headers: {
+    authorization: 'present',
+    'content-type': 'application/json; charset=utf-8',
+    'user-agent': 'Microsoft-SkypeBotApi (Microsoft-BotFramework/3.0)'
+  }
+}
+ POST /api/teams/bot/messages 401 in 11ms
+Processing bot activity: {
+  hasAuthHeader: true,
+  authHeaderPrefix: 'Bearer eyJhbGciOiJSU...',
+  activityType: 'conversationUpdate',
+  channelId: 'msteams',
+  from: {
+    id: '29:1kvMtH2UC1P1QpdZC5A0P1bnMd-z0oLlxHtPcyD0Q-EQraEtx7O30zFKpvHBRzr69fnwmxbzoUb2cNqRzinwYCw',
+    name: undefined,
+    aadObjectId: '9b6f8363-12ac-4948-a7a0-7ae26385f2bf'
+  },
+  conversation: {
+    id: 'a:1pwLEG1PFOrhsMOkobO2xlhth4TWLNJ2zrkwJF7LWCrxHEAQs1GL7wYeIOAexJKE70DcK0LdkFWHoESbgxVFI3Cd65cGJxDkbUmGNcrlO-cm6Pf98ge6DvbJNWZRyp14V',
+    isGroup: undefined,
+    conversationType: 'personal'
+  }
+}
+Bot route error (processActivity): Error: Unauthorized. No valid identity.
+    at Generator.next (<anonymous>)
+    at new Promise (<anonymous>)
+    at Generator.next (<anonymous>) {
+  statusCode: 401
+}
+Request details: {
+  method: 'POST',
+  headers: {
+    authorization: 'present',
+    'content-type': 'application/json; charset=utf-8',
+    'user-agent': 'Microsoft-SkypeBotApi (Microsoft-BotFramework/3.0)'
+  }
