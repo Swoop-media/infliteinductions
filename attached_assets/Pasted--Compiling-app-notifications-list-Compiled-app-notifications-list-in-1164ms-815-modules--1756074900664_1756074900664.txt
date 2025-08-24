@@ -1,0 +1,116 @@
+○ Compiling /app/notifications/list ...
+ ✓ Compiled /app/notifications/list in 1164ms (815 modules)
+ GET / 200 in 78ms
+ GET /app/notifications/list 200 in 1931ms
+ GET /app/notifications/list 200 in 2751ms
+ GET /app/notifications/list 200 in 2880ms
+ GET /app/notifications/list 200 in 1035ms
+ ✓ Compiled /app/notifications/mark-read in 234ms (803 modules)
+ POST /app/notifications/mark-read 200 in 1390ms
+ GET /app/notifications/list 200 in 519ms
+ GET /app/notifications/list 200 in 502ms
+ ○ Compiling /app/courses ...
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+ GET /app/courses?ok=enrolment_requested 200 in 2989ms
+ GET /app/notifications/list 200 in 892ms
+ GET /app/notifications/list 200 in 905ms
+ GET /app/notifications/list 200 in 879ms
+ GET /app/notifications/list 200 in 1344ms
+ GET /app/notifications/list 200 in 909ms
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+Bot configuration: {
+  MicrosoftAppType: 'SingleTenant',
+  MicrosoftAppId: 'dc8a23c4...',
+  MicrosoftAppPassword: 'SET',
+  MicrosoftAppTenantId: '19b039d8...'
+}
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+ POST /app/courses/enrol 307 in 7777ms
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./lib/notifications/dispatcher.ts
+./app/app/courses/enrol/route.ts
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./lib/notifications/dispatcher.ts
+./app/app/courses/enrol/route.ts
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./lib/notifications/dispatcher.ts
+./app/app/courses/enrol/route.ts
+Teams notify request: {
+  recipientUserId: undefined,
+  type: 'INSERT',
+  title: undefined,
+  body: 'undefined...',
+  data: undefined
+}
+Missing required fields in Teams notify request
+Teams notify request: {
+  recipientUserId: undefined,
+  type: 'INSERT',
+  title: undefined,
+  body: 'undefined...',
+  data: undefined
+}
+Missing required fields in Teams notify request
+ POST /api/notify/teams 400 in 3377ms
+ POST /api/notify/teams 400 in 3377ms
+ POST /app/courses?ok=enrolment_requested 200 in 4009ms
+ GET /app/notifications/list 200 in 1035ms
