@@ -1,0 +1,101 @@
+○ Compiling /app/courses/enrol ...
+ ✓ Compiled /app/courses/enrol in 5.1s (1759 modules)
+Bot configuration: {
+  MicrosoftAppType: 'SingleTenant',
+  MicrosoftAppId: 'dc8a23c4...',
+  MicrosoftAppPassword: 'SET',
+  MicrosoftAppTenantId: '19b039d8...'
+}
+ POST /app/courses/enrol 307 in 8035ms
+ ○ Compiling /api/notify/teams ...
+ ⨯ ./pages/api/notify/teams.ts
+Error:   × Expected a semicolon
+    ╭─[/home/runner/workspace/pages/api/notify/teams.ts:75:1]
+ 72 │     (h["x-supabase-signature"] as string | undefined) ??
+ 73 │     "";
+ 74 │ 
+ 75 │   const expected = process.env.SUP supabase_DB_WEBHOOK ?? "";
+    ·                                    ───────────────────
+ 76 │   const match = expected && gotHeader && gotHeader === expected;
+ 77 │ 
+ 78 │   if (!match) {
+    ╰────
+  × Expected a semicolon
+     ╭─[/home/runner/workspace/pages/api/notify/teams.ts:174:1]
+ 171 │   // If `row.aad_object_id` was meant to be a separate fallback *not* covered by `req.body.recipientUserId`, then the changes are incomplete in that regard.
+ 172 │   // However, adhering strictly to the provided `changes`, the focus is on logging and the `req.body.recipientUserId` path.
+ 173 │   }
+ 174 │ }
+     · ▲
+     ╰────
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./pages/api/notify/teams.ts
+ ⨯ ./pages/api/notify/teams.ts
+Error:   × Expected a semicolon
+    ╭─[/home/runner/workspace/pages/api/notify/teams.ts:75:1]
+ 72 │     (h["x-supabase-signature"] as string | undefined) ??
+ 73 │     "";
+ 74 │ 
+ 75 │   const expected = process.env.SUP supabase_DB_WEBHOOK ?? "";
+    ·                                    ───────────────────
+ 76 │   const match = expected && gotHeader && gotHeader === expected;
+ 77 │ 
+ 78 │   if (!match) {
+    ╰────
+  × Expected a semicolon
+     ╭─[/home/runner/workspace/pages/api/notify/teams.ts:174:1]
+ 171 │   // If `row.aad_object_id` was meant to be a separate fallback *not* covered by `req.body.recipientUserId`, then the changes are incomplete in that regard.
+ 172 │   // However, adhering strictly to the provided `changes`, the focus is on logging and the `req.body.recipientUserId` path.
+ 173 │   }
+ 174 │ }
+     · ▲
+     ╰────
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./pages/api/notify/teams.ts
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/home/runner/workspace/.next/cache/webpack/client-development-fallback/0.pack.gz_' -> '/home/runner/workspace/.next/cache/webpack/client-development-fallback/0.pack.gz'
+ ⨯ ./pages/api/notify/teams.ts
+Error:   × Expected a semicolon
+    ╭─[/home/runner/workspace/pages/api/notify/teams.ts:75:1]
+ 72 │     (h["x-supabase-signature"] as string | undefined) ??
+ 73 │     "";
+ 74 │ 
+ 75 │   const expected = process.env.SUP supabase_DB_WEBHOOK ?? "";
+    ·                                    ───────────────────
+ 76 │   const match = expected && gotHeader && gotHeader === expected;
+ 77 │ 
+ 78 │   if (!match) {
+    ╰────
+  × Expected a semicolon
+     ╭─[/home/runner/workspace/pages/api/notify/teams.ts:174:1]
+ 171 │   // If `row.aad_object_id` was meant to be a separate fallback *not* covered by `req.body.recipientUserId`, then the changes are incomplete in that regard.
+ 172 │   // However, adhering strictly to the provided `changes`, the focus is on logging and the `req.body.recipientUserId` path.
+ 173 │   }
+ 174 │ }
+     · ▲
+     ╰────
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./pages/api/notify/teams.ts
+ GET /app/notifications/list 500 in 17459ms
+ GET /app/notifications/list 500 in 16030ms
+ GET / 500 in 14930ms
+ GET /app/admin/debug-teams 500 in 14930ms
+ POST /app/courses?ok=enrolment_requested 500 in 18968ms
+ GET /app/notifications/list 500 in 10443ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/home/runner/workspace/.next/cache/webpack/client-development-fallback/0.pack.gz_' -> '/home/runner/workspace/.next/cache/webpack/client-development-fallback/0.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/home/runner/workspace/.next/cache/webpack/client-development-fallback/0.pack.gz_' -> '/home/runner/workspace/.next/cache/webpack/client-development-fallback/0.pack.gz'
+ GET / 500 in 19ms
+ GET /app/admin/debug-teams 500 in 12ms
+ GET / 500 in 9ms
+ GET /app/admin/debug-teams 500 in 16ms
