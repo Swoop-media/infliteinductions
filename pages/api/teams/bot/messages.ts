@@ -88,17 +88,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const authHeader = (req.headers.authorization as string) || "";
-    const body = await readJsonBody(req);
+    const activity = await readJsonBody(req);
 
     console.log("Processing bot activity:", {
-      hasAuthHeader: !!authHeader,
+      hasAuthHeader: Boolean(req.headers.authorization),
       authHeaderPrefix: authHeader ? authHeader.substring(0, 20) + "..." : "none",
-      activityType: body?.type,
-      channelId: body?.channelId,
+      activityType: activity?.type,
+      channelId: activity?.channelId,
+      from: activity?.from ? {
+        id: activity.from.id,
+        name: activity.from.name,
+        aadObjectId: activity.from.aadObjectId
+      } : undefined,
+      conversation: activity?.conversation ? {
+        id: activity.conversation.id,
+        isGroup: activity.conversation.isGroup,
+        conversationType: activity.conversation.conversationType
+      } : undefined
     });
 
     // IMPORTANT: use processActivity(authHeader, body, ...) so we own the HTTP response.
-    await adapter.processActivity(authHeader, body, async (context) => {
+    await adapter.processActivity(authHeader, activity, async (context) => {
       await botLogic(context);
     });
 
