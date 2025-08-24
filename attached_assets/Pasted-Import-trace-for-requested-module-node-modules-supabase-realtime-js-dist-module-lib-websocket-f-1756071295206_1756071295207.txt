@@ -1,0 +1,43 @@
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+Processing bot activity: {
+  hasAuthHeader: true,
+  activityType: 'message',
+  channelId: 'msteams',
+  from: {
+    id: '29:1hqWxRZZrJjZ6qXZMGdOzwxX6orkZTygdz7_ZpxjBARu8fFCZLwUY8Bv4LjHbEAG7U2pK0VZQthHVly1RrWUiBg',
+    name: 'Henry Morgan',
+    aadObjectId: '30decbd5-5cef-4e01-91bf-e853ad98bb32'
+  },
+  conversation: {
+    id: 'a:16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n',
+    isGroup: undefined,
+    conversationType: 'personal'
+  }
+}
+Stored conversation reference for user: 30decbd5-5cef-4e01-91bf-e853ad98bb32
+Requesting token from: https://login.microsoftonline.com/19b039d8-9be0-48db-9e5e-9449f1624368/oauth2/v2.0/token
+Token params: {
+  client_id: 'dc8a23c4-a57f-4e10-8543-05397e1b4ae3',
+  grant_type: 'client_credentials',
+  scope: 'https://api.botframework.com/.default'
+}
+Successfully sent message to Teams: ❌ Invalid or expired link code. Please generate a new one from your profile.
+Bot activity processed successfully without Bot Framework auth
