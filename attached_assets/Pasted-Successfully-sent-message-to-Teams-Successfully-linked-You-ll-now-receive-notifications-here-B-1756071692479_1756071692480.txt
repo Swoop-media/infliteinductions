@@ -1,0 +1,55 @@
+Successfully sent message to Teams: ✅ Successfully linked! You'll now receive notifications here.
+Bot activity processed successfully without Bot Framework auth
+ POST /api/teams/bot/messages 200 in 4975ms
+ GET /app/notifications/list 200 in 1027ms
+ GET /app/notifications/list 200 in 605ms
+ ○ Compiling /app/courses/enrol ...
+ ✓ Compiled /app/courses/enrol in 1719ms (1116 modules)
+Error: Route "/app/courses/enrol" used `headers().get('x-forwarded-proto')`. `headers()` should be awaited before using its value. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at createHeadersAccessError (../../../src/server/request/headers.ts:417:9)
+    at syncIODev (../../../src/server/request/headers.ts:405:2)
+    at Promise.get (../../../src/server/request/headers.ts:259:8)
+    at makeURL (app/app/courses/enrol/route.ts:7:18)
+    at POST (app/app/courses/enrol/route.ts:23:19)
+  415 | ) {
+  416 |   const prefix = route ? `Route "${route}" ` : 'This route '
+> 417 |   return new Error(
+      |         ^
+  418 |     `${prefix}used ${expression}. ` +
+  419 |       `\`headers()\` should be awaited before using its value. ` +
+  420 |       `Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis`
+Error: Route "/app/courses/enrol" used `headers().get('x-forwarded-host')`. `headers()` should be awaited before using its value. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at createHeadersAccessError (../../../src/server/request/headers.ts:417:9)
+    at syncIODev (../../../src/server/request/headers.ts:405:2)
+    at Promise.get (../../../src/server/request/headers.ts:259:8)
+    at makeURL (app/app/courses/enrol/route.ts:8:17)
+    at POST (app/app/courses/enrol/route.ts:23:19)
+  415 | ) {
+  416 |   const prefix = route ? `Route "${route}" ` : 'This route '
+> 417 |   return new Error(
+      |         ^
+  418 |     `${prefix}used ${expression}. ` +
+  419 |       `\`headers()\` should be awaited before using its value. ` +
+  420 |       `Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis`
+ GET / 200 in 338ms
+ GET /app/myprofile 200 in 620ms
+ GET / 200 in 42ms
+ POST /app/courses/enrol 307 in 2879ms
+ GET /app/myprofile 200 in 325ms
+ ○ Compiling /app/courses ...
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+Bot configuration: {
+  MicrosoftAppType: 'SingleTenant',
+  MicrosoftAppId: 'dc8a23c4...',
+  MicrosoftAppPassword: 'SET',
+  MicrosoftAppTenantId: '19b039d8...'
