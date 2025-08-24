@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { createSupabaseServer } from "@/lib/supabase/server";
 
 async function makeURL(path: string): Promise<URL> {
-  const h = headers();
+  const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   return new URL(path, `${proto}://${host}`);
