@@ -45,7 +45,10 @@ function formatMessage(row: any) {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== "POST") { res.status(405).end(); return; }
+  if (req.method !== "POST") { 
+    res.status(405).end(); 
+    return; 
+  }
 
   try {
     const { recipientUserId, type, title, body, data } = req.body;
@@ -64,42 +67,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return;
     }
 
-    // Accept any of these header names (Node lowercases headers):
-    const h = req.headers;
-    const gotHeader =
-      (h["supabase_db_webhook"] as string | undefined) ??
-      (h["x-supabase-webhook-secret"] as string | undefined) ??
-      (h["x-supabase-signature"] as string | undefined) ??
-      "";
+    const text = formatMessage({ type, title, body, payload: data });
 
-    const expected = process.env.SUPABASE_DB_WEBHOOK_SECRET ?? "";
-    const match = expected && gotHeader && gotHeader === expected;
-
-    if (!match) {
-      console.warn("DB webhook auth failed", {
-        gotHeader: Boolean(gotHeader),
-        expectedConfigured: Boolean(expected),
-        match,
-      });
-      return res.status(401).end();
-    }
-
-    // Supabase DB Webhooks post: { type, table, schema, record, old_record, ... }
-    // We tolerate direct-row posts too.
-    const payload = typeof req.body === "object" ? req.body : JSON.parse(String(req.body || "{}"));
-    const row = payload?.record ?? payload;
-
-    // Your schema: recipient_id (uuid), type (enum/text), payload (jsonb), read (bool), created_at
-    const recipientId = row?.recipient_id as string | undefined;
-    if (!recipientId) return res.status(200).json({ ok: true, skipped: "no recipient_id" });
-
-    const text = formatMessage(row);
-
-    // Try to send Teams message using the mapped recipientUserId
+    // Try to send Teams message
     try {
       console.log("Attempting to send Teams message to user:", recipientUserId);
       const success = await sendToTeams(recipientUserId, text, false);
-      console.log("Teams send result:", success);
 
       if (success) {
         res.status(200).json({ success: true, message: "Teams notification sent" });
