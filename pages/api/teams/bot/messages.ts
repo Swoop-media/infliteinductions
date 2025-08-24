@@ -1,7 +1,6 @@
 // pages/api/teams/bot/messages.ts
 import type { NextApiRequest, NextApiResponse } from "next";
-import { TurnContext, ConfigurationServiceClientCredentialFactory } from "botbuilder";
-import { adapter } from "@/lib/teams/botAdapter";
+import { TurnContext, ConfigurationServiceClientCredentialFactory, ConfigurationBotFrameworkAuthentication, CloudAdapter } from "botbuilder";
 
 export const config = {
   api: {
