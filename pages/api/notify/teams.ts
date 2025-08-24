@@ -1,3 +1,4 @@
+
 // This endpoint has been removed because:
 // 1. The enrollment notification system works perfectly through lib/notifications/dispatcher.ts
 // 2. This webhook was causing errors with undefined values
@@ -8,8 +9,10 @@
 // 2. Direct notification → lib/notifications/dispatcher.ts
 // 3. Teams message sent → lib/teams/send.ts
 
-export default function handler() {
-  return Response.json({
+import type { NextApiRequest, NextApiResponse } from "next";
+
+export default function handler(req: NextApiRequest, res: NextApiResponse) {
+  res.status(410).json({
     message: "This endpoint has been removed. Notifications work through the direct dispatcher system."
-  }, { status: 410 });
-};
+  });
+}
