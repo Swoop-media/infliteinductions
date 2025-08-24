@@ -304,10 +304,36 @@ export default async function MyProfilePage() {
         <h2 className="font-medium mb-2">Teams Integration</h2>
 
         {teamsLink ? (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="text-sm text-green-600">✅ Teams account linked</div>
             <div className="text-xs text-gray-500">
               Last activity: {new Date(teamsLink.last_activity).toLocaleString()}
+            </div>
+            <div className="flex gap-2">
+              <a 
+                href="https://teams.microsoft.com/l/chat/0/0?users=28:dc8a23c4-a57f-4e10-8543-05397e1b4ae3"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
+              >
+                Open Teams Chat
+              </a>
+              <button
+                onClick={() => {
+                  // Test notification by calling our Teams API
+                  fetch('/api/teams/bot/debug-send', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                      userId: user.id,
+                      message: "🧪 Test notification from your learning platform!" 
+                    })
+                  });
+                }}
+                className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
+              >
+                Send Test Message
+              </button>
             </div>
           </div>
         ) : (
@@ -317,7 +343,7 @@ export default async function MyProfilePage() {
             </p>
 
             {linkCode ? (
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <div className="text-sm">
                   <strong>Your link code:</strong> 
                   <code className="ml-2 px-2 py-1 bg-gray-100 rounded font-mono text-lg">
@@ -327,8 +353,19 @@ export default async function MyProfilePage() {
                 <div className="text-xs text-gray-500">
                   Expires: {new Date(linkCode.expires_at).toLocaleString()}
                 </div>
-                <div className="text-xs text-blue-600">
-                  Send this code to the bot in Teams: <code>link {linkCode.code}</code>
+                <div className="p-3 bg-blue-50 rounded-md">
+                  <div className="text-sm font-medium text-blue-800 mb-1">Next steps:</div>
+                  <div className="text-xs text-blue-700 space-y-1">
+                    <div>1. <a 
+                      href="https://teams.microsoft.com/l/chat/0/0?users=28:dc8a23c4-a57f-4e10-8543-05397e1b4ae3"
+                      target="_blank"
+                      rel="noopener noreferrer" 
+                      className="underline"
+                    >
+                      Open chat with the bot in Teams
+                    </a></div>
+                    <div>2. Send: <code className="bg-white px-1 rounded">link {linkCode.code}</code></div>
+                  </div>
                 </div>
               </div>
             ) : (
