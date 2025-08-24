@@ -26,7 +26,7 @@ export async function POST() {
     // Upsert by user_id so users can refresh their code; 'code' itself is unique, so
     // if it collides with someone else we'll just retry with a new code.
     const { data, error } = await supabase
-      .from("user_link_codes")
+      .from("teams_link_codes")
       .upsert(
         { user_id: user.id, code, expires_at: expiresAt },
         { onConflict: "user_id" }

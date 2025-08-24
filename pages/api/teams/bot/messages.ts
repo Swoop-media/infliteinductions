@@ -30,11 +30,11 @@ const settings = {
   MicrosoftAppId,
   MicrosoftAppPassword,
   MicrosoftAppTenantId,
-  
+
   // Use botframework.com tenant for token acquisition (this is correct for bots)
   ToChannelFromBotLoginUrl: "https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token",
   ToChannelFromBotOAuthScope: "https://api.botframework.com/.default",
-  
+
   // Accept tokens from Bot Framework AND your tenant
   ValidTokenIssuers: [
     "https://api.botframework.com",
@@ -43,7 +43,7 @@ const settings = {
     `https://sts.windows.net/${MicrosoftAppTenantId}/`, // Your tenant
     `https://login.microsoftonline.com/${MicrosoftAppTenantId}/v2.0`, // Your tenant
   ],
-  
+
   AuthenticationDisabled: true,
 };
 
@@ -235,7 +235,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Process the activity and send responses
     if (activity?.type === "message") {
       await storeConversationRef();
-      
+
       const txt = (activity.text || "").trim().toLowerCase();
       if (txt === "ping") {
         await sendToTeams("pong");
@@ -245,14 +245,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (linkCode) {
           try {
             const supabase = supabaseAdmin();
-            
-            // Find user by link code
-            const { data: linkData } = await supabase
-              .from("user_link_codes")
-              .select("user_id, expires_at")
-              .eq("code", linkCode)
+
+            // Find user by link code (case-insensitive)
+            const { data: linkData, error: linkError } = await supabase
+              .from("teams_link_codes")
+              .select("user_id, expires_at, code")
+              .ilike("code", linkCode)
               .maybeSingle();
-            
+
             if (linkData && new Date(linkData.expires_at) > new Date()) {
               // Update teams_links with app user mapping
               await supabase.from("teams_links").upsert({
@@ -272,8 +272,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               });
 
               // Delete the used link code
-              await supabase.from("user_link_codes").delete().eq("code", linkCode);
-              
+              await supabase.from("teams_link_codes").delete().eq("code", linkCode);
+
               await sendToTeams("✅ Successfully linked! You'll now receive notifications here.");
             } else {
               await sendToTeams("❌ Invalid or expired link code. Please generate a new one from your profile.");
@@ -290,7 +290,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     } else if (activity?.type === "conversationUpdate") {
       await storeConversationRef();
-      
+
       const added = activity.membersAdded || [];
       for (const m of added) {
         if (m.id !== activity.recipient?.id) {
