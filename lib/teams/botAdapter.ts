@@ -24,29 +24,15 @@ if (!MicrosoftAppId || !MicrosoftAppPassword) {
   throw new Error("MICROSOFT_APP_ID and MICROSOFT_APP_PASSWORD are required");
 }
 
-// More permissive authentication configuration for SingleTenant
+// Temporarily disable authentication for debugging
 const settings = {
   MicrosoftAppType,
   MicrosoftAppId,
   MicrosoftAppPassword,
   MicrosoftAppTenantId,
   
-  // Use standard Bot Framework endpoints
-  ToChannelFromBotLoginUrl: "https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token",
-  ToChannelFromBotOAuthScope: "https://api.botframework.com/.default",
-  
-  // Accept tokens from multiple issuers to handle different formats
-  ValidTokenIssuers: [
-    "https://login.microsoftonline.com/botframework.com/v2.0",
-    `https://login.microsoftonline.com/${MicrosoftAppTenantId}/v2.0`,
-    `https://sts.windows.net/${MicrosoftAppTenantId}/`,
-    "https://api.botframework.com",
-    "https://sts.windows.net/d6d49420-f39b-4df7-a1dc-d59a935871db/"
-  ],
-  
-  // Additional settings to be more permissive
-  AuthenticationDisabled: false,
-  ChannelAuthTenant: MicrosoftAppTenantId,
+  // TEMPORARILY disable authentication to test basic flow
+  AuthenticationDisabled: true,
 };
 
 const credentialsFactory = new ConfigurationServiceClientCredentialFactory({
