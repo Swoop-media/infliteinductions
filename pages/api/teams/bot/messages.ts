@@ -114,36 +114,78 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       } : undefined
     });
 
-    // Bypass Bot Framework authentication by calling botLogic directly
-    // Create a minimal TurnContext-like object for testing
-    const mockContext = {
-      activity,
-      sendActivity: async (messageOrActivity: any) => {
-        const messageText = typeof messageOrActivity === "string" 
-          ? messageOrActivity 
-          : messageOrActivity?.text || "No message";
-        
-        console.log("Bot would send:", messageText);
-        
-        // For now, just log the response instead of actually sending
-        // Once we confirm this works, we can implement proper message sending
-        return { id: "mock-message-id" };
+    // Send response back to Teams using direct HTTP call to Bot Framework API
+    const sendToTeams = async (text: string) => {
+      try {
+        // Get access token for Bot Framework
+        const tokenUrl = `https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token`;
+        const tokenParams = new URLSearchParams();
+        tokenParams.set("client_id", MicrosoftAppId);
+        tokenParams.set("client_secret", MicrosoftAppPassword);
+        tokenParams.set("grant_type", "client_credentials");
+        tokenParams.set("scope", "https://api.botframework.com/.default");
+
+        const tokenResponse = await fetch(tokenUrl, {
+          method: "POST",
+          headers: { "content-type": "application/x-www-form-urlencoded" },
+          body: tokenParams.toString(),
+        });
+
+        if (!tokenResponse.ok) {
+          throw new Error(`Token request failed: ${tokenResponse.status}`);
+        }
+
+        const tokenData = await tokenResponse.json();
+        const accessToken = tokenData.access_token;
+
+        // Send message back to Teams
+        const replyActivity = {
+          type: "message",
+          text: text,
+          from: activity.recipient,
+          recipient: activity.from,
+          conversation: activity.conversation,
+          replyToId: activity.id
+        };
+
+        const serviceUrl = activity.serviceUrl;
+        const conversationId = activity.conversation.id;
+        const replyUrl = `${serviceUrl}v3/conversations/${conversationId}/activities`;
+
+        const messageResponse = await fetch(replyUrl, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${accessToken}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(replyActivity)
+        });
+
+        if (!messageResponse.ok) {
+          throw new Error(`Message send failed: ${messageResponse.status}`);
+        }
+
+        console.log("Successfully sent message to Teams:", text);
+        return await messageResponse.json();
+      } catch (error) {
+        console.error("Failed to send message to Teams:", error);
+        throw error;
       }
     };
 
-    // Call our bot logic directly
+    // Process the activity and send responses
     if (activity?.type === "message") {
       const txt = (activity.text || "").trim().toLowerCase();
       if (txt === "ping") {
-        await mockContext.sendActivity("pong");
+        await sendToTeams("pong");
       } else {
-        await mockContext.sendActivity(`echo: ${activity.text ?? ""}`);
+        await sendToTeams(`echo: ${activity.text ?? ""}`);
       }
     } else if (activity?.type === "conversationUpdate") {
       const added = activity.membersAdded || [];
       for (const m of added) {
         if (m.id !== activity.recipient?.id) {
-          await mockContext.sendActivity("Hi! I'm online.");
+          await sendToTeams("Hi! I'm online.");
         }
       }
     }
