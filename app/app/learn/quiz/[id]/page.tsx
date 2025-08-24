@@ -150,25 +150,7 @@ export default async function LearnerQuizPage(props: {
                   });
                 }
 
-                // Send Teams notification for quiz completion
-                if (user?.id) {
-                  try {
-                    const { createNotification } = await import("@/app/app/_actions/notifications");
-                    await createNotification({
-                      recipientUserId: user.id,
-                      type: "quiz_completed",
-                      title: "Quiz Completed! 🎉",
-                      body: `You've successfully completed the quiz. Great work!`,
-                      data: {
-                        quizId: quiz.id,
-                        courseId: courseId,
-                        attemptId: attemptId
-                      }
-                    });
-                  } catch (notifyError) {
-                    console.warn("Failed to send completion notification:", notifyError);
-                  }
-                }
+                
               }
             } catch { /* ignore */ }
 
