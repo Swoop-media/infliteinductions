@@ -6,12 +6,30 @@ import {
   ConfigurationBotFrameworkAuthentication,
 } from "botbuilder";
 
+// Validate environment variables
+const MicrosoftAppId = process.env.MICROSOFT_APP_ID || "";
+const MicrosoftAppPassword = process.env.MICROSOFT_APP_PASSWORD || "";
+const MicrosoftAppTenantId = process.env.MICROSOFT_APP_TENANT_ID || "";
+const MicrosoftAppType = process.env.MICROSOFT_APP_TYPE || "MultiTenant";
+
+// Log configuration for debugging (without sensitive data)
+console.log("Bot configuration:", {
+  MicrosoftAppType,
+  MicrosoftAppId: MicrosoftAppId ? `${MicrosoftAppId.substring(0, 8)}...` : "MISSING",
+  MicrosoftAppPassword: MicrosoftAppPassword ? "SET" : "MISSING",
+  MicrosoftAppTenantId: MicrosoftAppTenantId ? `${MicrosoftAppTenantId.substring(0, 8)}...` : "MISSING",
+});
+
+if (!MicrosoftAppId || !MicrosoftAppPassword) {
+  throw new Error("MICROSOFT_APP_ID and MICROSOFT_APP_PASSWORD are required");
+}
+
 // Use consistent environment variable names
 const settings = {
-  MicrosoftAppType: process.env.MICROSOFT_APP_TYPE || "MultiTenant",
-  MicrosoftAppId: process.env.MICROSOFT_APP_ID || "",
-  MicrosoftAppPassword: process.env.MICROSOFT_APP_PASSWORD || "",
-  MicrosoftAppTenantId: process.env.MICROSOFT_APP_TENANT_ID || "",
+  MicrosoftAppType,
+  MicrosoftAppId,
+  MicrosoftAppPassword,
+  MicrosoftAppTenantId,
   
   // Force public cloud endpoints to avoid tenant issues
   ToChannelFromBotLoginUrl: "https://login.microsoftonline.com/botframework.com",
@@ -19,14 +37,14 @@ const settings = {
 };
 
 const credentialsFactory = new ConfigurationServiceClientCredentialFactory({
-  MicrosoftAppId: settings.MicrosoftAppId,
-  MicrosoftAppPassword: settings.MicrosoftAppPassword,
-  MicrosoftAppTenantId: settings.MicrosoftAppTenantId,
+  MicrosoftAppId,
+  MicrosoftAppPassword,
+  MicrosoftAppTenantId,
 });
 
 export const botAuth = new ConfigurationBotFrameworkAuthentication(settings as any, credentialsFactory);
 export const adapter = new CloudAdapter(botAuth);
-export const botAppId = settings.MicrosoftAppId;
+export const botAppId = MicrosoftAppId;
 
 // Enhanced error logging for debugging
 adapter.onTurnError = async (context, error) => {
@@ -35,6 +53,7 @@ adapter.onTurnError = async (context, error) => {
     message: error.message,
     stack: error.stack,
     statusCode: (error as any).statusCode,
+    code: (error as any).code,
   });
   try { 
     await context.sendActivity("Sorry — something went wrong."); 

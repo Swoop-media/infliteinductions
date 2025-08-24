@@ -1,15 +1,11 @@
 // pages/api/teams/bot/messages.ts
 import type { NextApiRequest, NextApiResponse } from "next";
-import {
-  CloudAdapter,
-  TurnContext,
-  ConfigurationServiceClientCredentialFactory,
-  ConfigurationBotFrameworkAuthentication,
-} from "botbuilder";
+import { TurnContext } from "botbuilder";
+import { adapter } from "@/lib/teams/botAdapter";
 
 export const config = {
   api: {
-    bodyParser: false,      // we’ll read the raw body ourselves
+    bodyParser: false,      // we'll read the raw body ourselves
     externalResolver: true, // we fully control the response
   },
 };
@@ -20,7 +16,7 @@ const MicrosoftAppPassword = process.env.MICROSOFT_APP_PASSWORD || "";
 const MicrosoftAppTenantId = process.env.MICROSOFT_APP_TENANT_ID || ""; // required if SingleTenant
 const MicrosoftAppType = process.env.MICROSOFT_APP_TYPE || "MultiTenant";
 
-// Force PUBLIC cloud audience/scope (prevents “wrong tenant”/700016 issues)
+// Force PUBLIC cloud audience/scope (prevents "wrong tenant"/700016 issues)
 const settings = {
   MicrosoftAppType,
   MicrosoftAppId,
@@ -93,6 +89,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const authHeader = (req.headers.authorization as string) || "";
     const body = await readJsonBody(req);
 
+    console.log("Processing bot activity:", {
+      hasAuthHeader: !!authHeader,
+      authHeaderPrefix: authHeader ? authHeader.substring(0, 20) + "..." : "none",
+      activityType: body?.type,
+      channelId: body?.channelId,
+    });
+
     // IMPORTANT: use processActivity(authHeader, body, ...) so we own the HTTP response.
     await adapter.processActivity(authHeader, body, async (context) => {
       await botLogic(context);
@@ -101,8 +104,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // If we got here, the activity was processed successfully.
     res.status(200).end();
   } catch (err: any) {
-    // Typical auth failures: 401 — “No valid identity”, etc.
+    // Typical auth failures: 401 — "No valid identity", etc.
     console.error("Bot route error (processActivity):", err);
+    console.error("Request details:", {
+      method: req.method,
+      headers: {
+        authorization: req.headers.authorization ? "present" : "missing",
+        "content-type": req.headers["content-type"],
+        "user-agent": req.headers["user-agent"],
+      },
+    });
     const status = Number(err?.statusCode || err?.status || 500);
     if (!res.headersSent) res.status(status || 500).end();
   }
