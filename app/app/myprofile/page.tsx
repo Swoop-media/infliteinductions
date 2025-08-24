@@ -295,7 +295,7 @@ export default async function MyProfilePage() {
               >
                 Open Teams Chat
               </a>
-              <TestMessageButton />
+              <TestMessageButton userId={user.id} />
             </div>
           </div>
         ) : (
