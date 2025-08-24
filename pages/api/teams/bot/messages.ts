@@ -23,7 +23,9 @@ const settings = {
   MicrosoftAppTenantId,
 
   // For SingleTenant, use your specific tenant endpoint
-  ToChannelFromBotLoginUrl: `https://login.microsoftonline.com/${MicrosoftAppTenantId}`,
+  ToChannelFromBotLoginUrl: MicrosoftAppType === "SingleTenant" 
+    ? `https://login.microsoftonline.com/${MicrosoftAppTenantId}`
+    : `https://login.microsoftonline.com/botframework.com`,
   ToChannelFromBotOAuthScope: "https://api.botframework.com/.default",
 };
 
