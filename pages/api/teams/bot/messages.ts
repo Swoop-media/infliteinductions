@@ -1,6 +1,7 @@
 // pages/api/teams/bot/messages.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 import { TurnContext, ConfigurationServiceClientCredentialFactory, ConfigurationBotFrameworkAuthentication, CloudAdapter } from "botbuilder";
+import { createSupabaseServer } from "@/lib/supabase/server";
 
 export const config = {
   api: {

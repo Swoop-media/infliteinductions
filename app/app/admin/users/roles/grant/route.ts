@@ -58,6 +58,35 @@ export async function POST(req: Request) {
     return NextResponse.redirect(to);
   }
 
+  // Send notification to user about role being granted
+  try {
+    const { createNotification } = await import("@/app/app/_actions/notifications");
+    
+    // Get granter name
+    const { data: granter } = await supabase
+      .from("profiles")
+      .select("first_name, last_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    
+    const granterName = granter ? `${granter.first_name} ${granter.last_name}`.trim() : "Admin";
+    
+    await createNotification({
+      recipientUserId: user_id,
+      type: "role_granted",
+      title: `Role Granted: ${roleRow.name}`,
+      body: `You have been granted the "${roleRow.name}" role by ${granterName}.`,
+      data: {
+        roleName: roleRow.name,
+        roleId: roleRow.id,
+        grantedBy: granterName,
+        grantedById: user.id
+      }
+    });
+  } catch (notifyError) {
+    console.warn("Failed to send role granted notification:", notifyError);
+  }
+
   to.searchParams.set("ok", "role_granted");
   return NextResponse.redirect(to);
 }

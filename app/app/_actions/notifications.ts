@@ -122,6 +122,62 @@ function teamsTextFor(n: NotificationInput) {
       ]
         .filter(Boolean)
         .join("\n");
+    
+    case "course_assigned":
+      return [
+        "📚 *Course assigned*",
+        n.data?.courseTitle ? `• Course: ${n.data.courseTitle}` : "",
+        n.data?.assignedBy ? `• Assigned by: ${n.data.assignedBy}` : "",
+        "",
+        n.body || "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "authorization_assigned":
+      return [
+        "🔑 *Authorization assigned*",
+        n.data?.authorizationTitle ? `• Authorization: ${n.data.authorizationTitle}` : "",
+        n.data?.assignedBy ? `• Assigned by: ${n.data.assignedBy}` : "",
+        "",
+        n.body || "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "authorization_revoked":
+      return [
+        "⚠️ *Authorization revoked*",
+        n.data?.authorizationTitle ? `• Authorization: ${n.data.authorizationTitle}` : "",
+        n.data?.revokedBy ? `• Revoked by: ${n.data.revokedBy}` : "",
+        "",
+        n.body || "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "role_granted":
+      return [
+        "👑 *Role granted*",
+        n.data?.roleName ? `• Role: ${n.data.roleName}` : "",
+        n.data?.grantedBy ? `• Granted by: ${n.data.grantedBy}` : "",
+        "",
+        n.body || "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "role_revoked":
+      return [
+        "🚫 *Role revoked*",
+        n.data?.roleName ? `• Role: ${n.data.roleName}` : "",
+        n.data?.revokedBy ? `• Revoked by: ${n.data.revokedBy}` : "",
+        "",
+        n.body || "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
     default:
       return `🔔 ${n.title}${n.body ? `\n\n${n.body}` : ""}`;
   }

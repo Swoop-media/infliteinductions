@@ -20,6 +20,11 @@ export type NotificationType =
   | "enrolment_request"
   | "enrolment_approved"
   | "enrolment_revoked"
+  | "course_assigned"
+  | "authorization_assigned"
+  | "authorization_revoked"
+  | "role_granted"
+  | "role_revoked"
   | "status_change"
   | "quiz_passed"
   | string;
@@ -69,6 +74,56 @@ function formatTeamsText(
         course ? `• Course: ${course}` : "",
         payload?.score ? `• Score: ${payload.score}%` : "",
         url ? `• View results: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "course_assigned":
+      return [
+        "📚 Course assigned",
+        course ? `• Course: ${course}` : "",
+        payload?.assignedBy ? `• Assigned by: ${payload.assignedBy}` : "",
+        url ? `• Start learning: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "authorization_assigned":
+      return [
+        "🔑 Authorization assigned",
+        payload?.authorizationTitle ? `• Authorization: ${payload.authorizationTitle}` : "",
+        payload?.assignedBy ? `• Assigned by: ${payload.assignedBy}` : "",
+        url ? `• View details: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "authorization_revoked":
+      return [
+        "⚠️ Authorization revoked",
+        payload?.authorizationTitle ? `• Authorization: ${payload.authorizationTitle}` : "",
+        payload?.revokedBy ? `• Revoked by: ${payload.revokedBy}` : "",
+        payload?.reason ? `• Reason: ${payload.reason}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "role_granted":
+      return [
+        "👑 Role granted",
+        payload?.roleName ? `• Role: ${payload.roleName}` : "",
+        payload?.grantedBy ? `• Granted by: ${payload.grantedBy}` : "",
+        url ? `• View permissions: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "role_revoked":
+      return [
+        "🚫 Role revoked",
+        payload?.roleName ? `• Role: ${payload.roleName}` : "",
+        payload?.revokedBy ? `• Revoked by: ${payload.revokedBy}` : "",
+        payload?.reason ? `• Reason: ${payload.reason}` : "",
       ]
         .filter(Boolean)
         .join("\n");
