@@ -1,4 +1,3 @@
-
 // This endpoint has been removed because:
 // 1. The enrollment notification system works perfectly through lib/notifications/dispatcher.ts
 // 2. This webhook was causing errors with undefined values
