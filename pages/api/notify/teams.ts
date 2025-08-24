@@ -1,4 +1,3 @@
-
 // pages/api/notify/teams.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 
@@ -73,7 +72,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       (h["x-supabase-signature"] as string | undefined) ??
       "";
 
-    const expected = process.env.SUPABASE_DB_WEBHOOK ?? "";
+    const expected = process.env.SUPABASE_DB_WEBHOOK_SECRET ?? "";
     const match = expected && gotHeader && gotHeader === expected;
 
     if (!match) {
@@ -96,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const text = formatMessage(row);
 
-    // Try to send Teams DM
+    // Try to send Teams message
     try {
       console.log("Attempting to send Teams message to user:", recipientUserId);
       const success = await sendToTeams(recipientUserId, text, false);
@@ -114,6 +113,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   } catch (error) {
     console.error("Handler error:", error);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: "Internal server error", details: String(error) });
   }
 }
