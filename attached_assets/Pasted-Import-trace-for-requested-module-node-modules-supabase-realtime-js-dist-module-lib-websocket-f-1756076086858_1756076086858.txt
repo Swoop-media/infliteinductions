@@ -1,0 +1,49 @@
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./lib/notifications/dispatcher.ts
+./app/app/courses/enrol/route.ts
+Processing bot activity: {
+  hasAuthHeader: true,
+  activityType: 'installationUpdate',
+  channelId: 'msteams',
+  from: {
+    id: '29:1NafWpU-81kl55Ohjvaqkhi2vbUMFOnUsH5uoRqdBpvKGLwGD59IxcbRSTW3dR3xjJO5s32czOzFKFgOzVLejRA',
+    name: undefined,
+    aadObjectId: 'ec0f469a-4ed3-45b6-84b2-fe195b99d014'
+  },
+  conversation: {
+    id: 'a:1WPKlzXnbM33QkfhDp3l2LileyKOGF6BJXJkjwmY5bu4k5tu4nrNcv27nA78RnVg-FSwHZ_9NNlX0Nnvtuln5pp5rH08o-mYkfQzaxkQtuJX31uiPHzSHexP-IQIpr6m5',
+    isGroup: undefined,
+    conversationType: 'personal'
+  }
+}
+Bot activity processed successfully without Bot Framework auth
+Processing bot activity: {
+  hasAuthHeader: true,
+  activityType: 'conversationUpdate',
+  channelId: 'msteams',
+  from: {
+    id: '29:1NafWpU-81kl55Ohjvaqkhi2vbUMFOnUsH5uoRqdBpvKGLwGD59IxcbRSTW3dR3xjJO5s32czOzFKFgOzVLejRA',
+    name: undefined,
+    aadObjectId: 'ec0f469a-4ed3-45b6-84b2-fe195b99d014'
+  },
+  conversation: {
+    id: 'a:1WPKlzXnbM33QkfhDp3l2LileyKOGF6BJXJkjwmY5bu4k5tu4nrNcv27nA78RnVg-FSwHZ_9NNlX0Nnvtuln5pp5rH08o-mYkfQzaxkQtuJX31uiPHzSHexP-IQIpr6m5',
+    isGroup: undefined,
+    conversationType: 'personal'
+  }
+}
+ POST /api/teams/bot/messages 200 in 600ms
+Stored conversation reference for user: ec0f469a-4ed3-45b6-84b2-fe195b99d014
+Requesting token from: https://login.microsoftonline.com/19b039d8-9be0-48db-9e5e-9449f1624368/oauth2/v2.0/token
+Token params: {
+  client_id: 'dc8a23c4-a57f-4e10-8543-05397e1b4ae3',
+  grant_type: 'client_credentials',
+  scope: 'https://api.botframework.com/.default'
+}
+ GET /app/notifications/list 200 in 573ms
+Successfully sent message to Teams: Hi! I'm online. Send me a link code to connect your account: `link <your-code>`
+Bot activity processed successfully without Bot Framework auth
+ POST /api/teams/bot/messages 200 in 2642ms
