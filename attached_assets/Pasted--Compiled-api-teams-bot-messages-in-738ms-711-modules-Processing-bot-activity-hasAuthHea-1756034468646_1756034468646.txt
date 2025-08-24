@@ -1,0 +1,87 @@
+ ✓ Compiled /api/teams/bot/messages in 738ms (711 modules)
+Processing bot activity: {
+  hasAuthHeader: true,
+  authHeaderPrefix: 'Bearer eyJhbGciOiJSU...',
+  activityType: 'conversationUpdate',
+  channelId: 'msteams',
+  from: {
+    id: '29:1hqWxRZZrJjZ6qXZMGdOzwxX6orkZTygdz7_ZpxjBARu8fFCZLwUY8Bv4LjHbEAG7U2pK0VZQthHVly1RrWUiBg',
+    name: undefined,
+    aadObjectId: '30decbd5-5cef-4e01-91bf-e853ad98bb32'
+  },
+  conversation: {
+    id: 'a:16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n',
+    isGroup: undefined,
+    conversationType: 'personal'
+  }
+}
+Processing bot activity: {
+  hasAuthHeader: true,
+  authHeaderPrefix: 'Bearer eyJhbGciOiJSU...',
+  activityType: 'message',
+  channelId: 'msteams',
+  from: {
+    id: '29:1hqWxRZZrJjZ6qXZMGdOzwxX6orkZTygdz7_ZpxjBARu8fFCZLwUY8Bv4LjHbEAG7U2pK0VZQthHVly1RrWUiBg',
+    name: 'Henry Morgan',
+    aadObjectId: '30decbd5-5cef-4e01-91bf-e853ad98bb32'
+  },
+  conversation: {
+    id: 'a:16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n',
+    isGroup: undefined,
+    conversationType: 'personal'
+  }
+}
+Bot unhandled error: RestError: Authorization has been denied for this request. 
+ {
+  "name": "RestError",
+  "statusCode": 401,
+  "request": {
+    "streamResponseStatusCodes": {},
+    "url": "https://smba.trafficmanager.net/apac/19b039d8-9be0-48db-9e5e-9449f1624368/v3/conversations/a%3A16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n/activities/1756034447231",
+    "method": "POST",
+    "headers": {
+      "_headersMap": {
+        "content-type": "application/json; charset=utf-8",
+        "x-ms-conversation-id": "REDACTED",
+        "accept": "*/*",
+        "user-agent": "Microsoft-BotFramework/3.1 botframework-connector/4.23.2 core-http/3.0.5 Node/v22.17.0 OS/(x64-Linux-6.2.16)",
+        "authorization": "REDACTED"
+      }
+    },
+    "withCredentials": false,
+    "timeout": 0,
+    "requestId": "a1333792-759b-43d4-86b4-fd808bf29b50"
+  },
+  "details": {
+    "message": "Authorization has been denied for this request."
+  },
+  "message": "Authorization has been denied for this request."
+}
+ POST /api/teams/bot/messages 200 in 2183ms
+Bot unhandled error: RestError: Authorization has been denied for this request. 
+ {
+  "name": "RestError",
+  "statusCode": 401,
+  "request": {
+    "streamResponseStatusCodes": {},
+    "url": "https://smba.trafficmanager.net/apac/19b039d8-9be0-48db-9e5e-9449f1624368/v3/conversations/a%3A16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n/activities/f%3A0353c2d5-5597-5abb-46f7-7b3be1fc59f4",
+    "method": "POST",
+    "headers": {
+      "_headersMap": {
+        "content-type": "application/json; charset=utf-8",
+        "x-ms-conversation-id": "REDACTED",
+        "accept": "*/*",
+        "user-agent": "Microsoft-BotFramework/3.1 botframework-connector/4.23.2 core-http/3.0.5 Node/v22.17.0 OS/(x64-Linux-6.2.16)",
+        "authorization": "REDACTED"
+      }
+    },
+    "withCredentials": false,
+    "timeout": 0,
+    "requestId": "9933a2b9-1a3a-48d4-8328-b10398096d1c"
+  },
+  "details": {
+    "message": "Authorization has been denied for this request."
+  },
+  "message": "Authorization has been denied for this request."
+}
+ POST /api/teams/bot/messages 200 in 3743ms
