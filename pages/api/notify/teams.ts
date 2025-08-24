@@ -12,4 +12,4 @@ export default function handler() {
   return Response.json({
     message: "This endpoint has been removed. Notifications work through the direct dispatcher system."
   }, { status: 410 });
-}
+};
