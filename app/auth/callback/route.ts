@@ -111,34 +111,12 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Generate a session token directly using admin client
-    const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
-      email: email,
-    });
-
-    if (sessionError || !sessionData?.properties?.action_link) {
-      console.error("Session generation error:", sessionError);
-      throw new Error("Could not generate session");
-    }
-
-    // Extract the token from the recovery link
-    const linkUrl = new URL(sessionData.properties.action_link);
-    const token = linkUrl.searchParams.get('token');
-    const tokenHash = linkUrl.searchParams.get('token_hash');
-
-    if (!token || !tokenHash) {
-      throw new Error("Could not extract session token");
-    }
-
-    // Create the redirect URL with the session token
+    // Create a simple redirect to home - let middleware handle auth
     const redirectUrl = new URL("/app/home", siteUrl);
-    redirectUrl.searchParams.set("token_hash", tokenHash);
-    redirectUrl.searchParams.set("type", "recovery");
-
-    // Set additional parameters for client-side session establishment
-    redirectUrl.searchParams.set("microsoft_auth", "true");
-
+    redirectUrl.searchParams.set("microsoft_auth", "success");
+    redirectUrl.searchParams.set("user_id", userId);
+    
+    console.log("Microsoft auth successful, redirecting to:", redirectUrl.toString());
     return NextResponse.redirect(redirectUrl);
 
   } catch (error) {

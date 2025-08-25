@@ -8,6 +8,9 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter, useSearchParams } from "next/navigation";
+import { User } from "@supabase/supabase-js";
+import { NotificationsBell } from "../_components/NotificationsBell";
+
 
 export const dynamic = "force-dynamic";
 
@@ -212,7 +215,7 @@ function Pill({
 export default function HomePage(props: {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any>(null);
   const [courses, setCourses] = useState<any[]>([]);
   const [enrolments, setEnrolments] = useState<any[]>([]);
@@ -252,39 +255,36 @@ export default function HomePage(props: {
   };
 
   useEffect(() => {
-    // Handle Microsoft auth callback
-    const handleMicrosoftAuth = async () => {
-      const tokenHash = searchParams.get('token_hash');
-      const type = searchParams.get('type');
-      const microsoftAuth = searchParams.get('microsoft_auth');
+    const getUser = async () => {
+      // Check for Microsoft auth success in URL params
+      const urlParams = new URLSearchParams(window.location.search);
+      const microsoftAuth = urlParams.get("microsoft_auth");
+      const userId = urlParams.get("user_id");
 
-      if (tokenHash && type && microsoftAuth) {
-        try {
-          const { error } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: type as any,
-          });
+      if (microsoftAuth === "success" && userId) {
+        // Try to refresh the session to pick up the newly created user
+        await supabase.auth.refreshSession();
 
-          if (error) {
-            console.error('Session verification error:', error);
-            router.push('/auth/signin?error=session_failed');
-            return;
-          }
-
-          // Clear the URL parameters
-          router.replace('/app/home');
-        } catch (error) {
-          console.error('Microsoft auth session error:', error);
-          router.push('/auth/signin?error=session_failed');
-          return;
-        }
+        // Clean up URL params
+        window.history.replaceState({}, document.title, "/app/home");
       }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setLoading(false);
     };
 
-    handleMicrosoftAuth().then(() => {
-      fetchData();
-    });
-  }, [searchParams, router, supabase]);
+    getUser();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user ?? null);
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
+  }, [supabase.auth]);
 
   // Render loading state or actual content
   if (loading) {
