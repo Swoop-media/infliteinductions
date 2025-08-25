@@ -17,7 +17,8 @@ export async function GET(req: NextRequest) {
   const state = searchParams.get("state");
 
   if (!code) {
-    return NextResponse.redirect(new URL("/auth/signin?error=missing_code", req.url));
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
+    return NextResponse.redirect(new URL("/auth/signin?error=missing_code", siteUrl));
   }
 
   try {
@@ -98,7 +99,8 @@ export async function GET(req: NextRequest) {
     if (sessionError) throw sessionError;
 
     // Redirect to app with session
-    const redirectUrl = new URL("/app/home", req.url);
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
+    const redirectUrl = new URL("/app/home", siteUrl);
     const response_redirect = NextResponse.redirect(redirectUrl);
     
     // Set session cookie (you may need to implement proper session handling)
@@ -113,6 +115,8 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error("Microsoft auth callback error:", error);
-    return NextResponse.redirect(new URL("/auth/signin?error=auth_failed", req.url));
+    // Use the site URL from env instead of req.url to avoid 0.0.0.0 issues
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
+    return NextResponse.redirect(new URL("/auth/signin?error=auth_failed", siteUrl));
   }
 }

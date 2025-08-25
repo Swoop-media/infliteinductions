@@ -16,6 +16,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(authUrl);
   } catch (error) {
     console.error("Microsoft login initiation error:", error);
-    return NextResponse.redirect(new URL("/auth/signin?error=auth_failed", req.url));
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
+    return NextResponse.redirect(new URL("/auth/signin?error=auth_failed", siteUrl));
   }
 }

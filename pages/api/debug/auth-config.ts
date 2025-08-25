@@ -11,6 +11,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     currentHost: req.headers.host,
     protocol: req.headers['x-forwarded-proto'] || 'http',
     fullUrl: `${req.headers['x-forwarded-proto'] || 'http'}://${req.headers.host}`,
+    // Debug the URL construction issue
+    nodeEnv: process.env.NODE_ENV,
+    allEnvVars: {
+      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+      VERCEL_URL: process.env.VERCEL_URL,
+      REPL_SLUG: process.env.REPL_SLUG,
+      REPL_OWNER: process.env.REPL_OWNER,
+    }
   };
 
   return res.status(200).json(config);
