@@ -130,8 +130,14 @@ export async function GET(req: NextRequest) {
 
     if (linkError) throw linkError;
 
-    // Redirect to the magic link which will establish the session and then redirect to /app/home
-    return NextResponse.redirect(linkData.properties.action_link);
+    // Fix the magic link URL to use the correct domain instead of localhost
+    let magicLinkUrl = linkData.properties.action_link;
+    if (magicLinkUrl.includes('localhost:3000')) {
+      magicLinkUrl = magicLinkUrl.replace('http://localhost:3000', siteUrl);
+    }
+
+    // Redirect to the fixed magic link which will establish the session and then redirect to /app/home
+    return NextResponse.redirect(magicLinkUrl);
 
   } catch (error) {
     console.error("Microsoft auth callback error:", error);
