@@ -60,13 +60,6 @@ export async function POST(req: Request) {
       .maybeSingle();
 
     // Get all admins and trainers from app_user_roles table
-    // First, let's see all roles in the table for debugging
-    const { data: allRoles } = await supabase
-      .from("app_user_roles")
-      .select("user_id, role_name");
-    
-    console.log("All roles in app_user_roles:", allRoles);
-
     const { data: adminUsers, error: adminError } = await supabase
       .from("app_user_roles")
       .select("user_id, role_name")
@@ -76,17 +69,8 @@ export async function POST(req: Request) {
     console.log("Admin user lookup result:", {
       adminUsers,
       adminError,
-      count: adminUsers?.length || 0,
-      currentUserId: user.id
+      count: adminUsers?.length || 0
     });
-
-    // Also try without excluding the current user to see if that's the issue
-    const { data: allAdminUsers } = await supabase
-      .from("app_user_roles")
-      .select("user_id, role_name")
-      .in("role_name", ["Admin", "Trainers and Assessors"]);
-    
-    console.log("All admin users (including current):", allAdminUsers);
 
     let finalAdminUsers = adminUsers;
 
