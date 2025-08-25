@@ -21,17 +21,52 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "Missing recipient ID" });
     }
 
+    // Extract notification details from either direct call or webhook record
+    const notificationType = type || record?.type;
+    const payload = data || record?.payload || {};
+    const createdAt = record?.created_at;
+    
     // Format the Teams message based on type
     let teamsMessage = title || "Notification";
     
-    if (type === "enrolment_request" && data) {
+    if (notificationType === "enrolment_request") {
+      const courseTitle = payload.course_title || payload.courseTitle || "Unknown course";
+      const dateTime = createdAt ? new Date(createdAt).toLocaleString('en-AU', {
+        timeZone: 'Australia/Sydney',
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      }) : "";
+      
       teamsMessage = [
-        "📥 **New enrollment request**",
-        data.learnerName ? `• Learner: ${data.learnerName}` : "",
-        data.learner_email ? `• Email: ${data.learner_email}` : "",
-        data.courseTitle ? `• Course: ${data.courseTitle}` : "",
+        "📥 **New enrolment request**",
+        `• Course: ${courseTitle}`,
+        dateTime ? `• Time: ${dateTime}` : "",
         "",
         body || "Please review this enrollment request in the admin panel."
+      ].filter(Boolean).join("\n");
+    } else if (data || payload) {
+      // Handle other notification types with available data
+      teamsMessage = [
+        `🔔 **${title || notificationType || "Notification"}**`,
+        payload.course_title ? `• Course: ${payload.course_title}` : "",
+        payload.learnerName ? `• Learner: ${payload.learnerName}` : "",
+        createdAt ? `• Time: ${new Date(createdAt).toLocaleString('en-AU', {
+          timeZone: 'Australia/Sydney', 
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        })}` : "",
+        "",
+        body || ""
       ].filter(Boolean).join("\n");
     }
 
