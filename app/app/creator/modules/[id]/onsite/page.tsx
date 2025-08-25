@@ -429,6 +429,7 @@ export default async function OnsiteModulePage(props: {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Add New Requirement</h2>
             <form action={addRequirementAction} className="space-y-4">
               <input type="hidden" name="module_id" value={mod.id} />
+              <input type="hidden" name="role" value="trainer" />
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -442,25 +443,15 @@ export default async function OnsiteModulePage(props: {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-                  <select name="role" defaultValue="trainer" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors">
-                    <option value="trainer">Trainer</option>
-                    <option value="assessor">Assessor</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Field Type</label>
-                  <select name="field_type" defaultValue="checkbox" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors">
-                    <option value="checkbox">Checkbox</option>
-                    <option value="select">Select</option>
-                    <option value="text">Text</option>
-                    <option value="date">Date</option>
-                    <option value="rating">Rating</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Field Type</label>
+                <select name="field_type" defaultValue="checkbox" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors">
+                  <option value="checkbox">Checkbox</option>
+                  <option value="select">Select</option>
+                  <option value="text">Text</option>
+                  <option value="date">Date</option>
+                  <option value="rating">Rating</option>
+                </select>
               </div>
 
               <div>
@@ -507,7 +498,7 @@ export default async function OnsiteModulePage(props: {
                 <input
                   name="help_text"
                   className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
-                  placeholder="Additional guidance for the trainer/assessor"
+                  placeholder="Additional guidance for the trainer"
                 />
               </div>
 
@@ -519,85 +510,43 @@ export default async function OnsiteModulePage(props: {
 
           {/* Requirements list */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Checklist Requirements</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Training Requirements</h2>
             
-            <div className="space-y-6">
-              {/* Trainer Requirements */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
-                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-                  Trainer Requirements
-                </h3>
-                {trainerReqs.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                    <p className="text-sm">No trainer requirements yet</p>
-                    <p className="text-xs">Add requirements using the form on the left</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {trainerReqs.map((r) => (
-                      <RequirementItem 
-                        key={r.id} 
-                        requirement={r} 
-                        moduleId={mod.id}
-                        updateRequirementAction={updateRequirementAction}
-                        deleteRequirementAction={deleteRequirementAction}
-                      />
-                    ))}
-                  </div>
-                )}
+            {trainerReqs.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <p className="text-lg font-medium mb-2">No training requirements yet</p>
+                <p className="text-sm">Add requirements using the form on the left to create your onsite training checklist</p>
               </div>
-
-              {/* Assessor Requirements */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
-                  <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
-                  Assessor Requirements
-                </h3>
-                {assessorReqs.length === 0 ? (
-                  <div className="text-center py-8 text-gray-500">
-                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p className="text-sm">No assessor requirements yet</p>
-                    <p className="text-xs">Add requirements using the form on the left</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {assessorReqs.map((r) => (
-                      <RequirementItem 
-                        key={r.id} 
-                        requirement={r} 
-                        moduleId={mod.id}
-                        updateRequirementAction={updateRequirementAction}
-                        deleteRequirementAction={deleteRequirementAction}
-                      />
-                    ))}
-                  </div>
-                )}
+            ) : (
+              <div className="space-y-3">
+                {trainerReqs.map((r) => (
+                  <RequirementItem 
+                    key={r.id} 
+                    requirement={r} 
+                    moduleId={mod.id}
+                    updateRequirementAction={updateRequirementAction}
+                    deleteRequirementAction={deleteRequirementAction}
+                  />
+                ))}
               </div>
-            </div>
+            )}
           </div>
         </div>
 
         {/* Summary info */}
         <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
           <h3 className="text-lg font-semibold text-blue-900 mb-2">Module Summary</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div className="bg-white rounded-lg p-3">
               <p className="text-gray-600">Enrolled Learners</p>
               <p className="text-2xl font-bold text-gray-900">{learners.length}</p>
             </div>
             <div className="bg-white rounded-lg p-3">
-              <p className="text-gray-600">Trainer Requirements</p>
+              <p className="text-gray-600">Training Requirements</p>
               <p className="text-2xl font-bold text-blue-600">{trainerReqs.length}</p>
-            </div>
-            <div className="bg-white rounded-lg p-3">
-              <p className="text-gray-600">Assessor Requirements</p>
-              <p className="text-2xl font-bold text-orange-600">{assessorReqs.length}</p>
             </div>
           </div>
         </div>
