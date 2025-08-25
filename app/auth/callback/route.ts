@@ -1,4 +1,3 @@
-
 // app/auth/callback/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { msalInstance } from "@/lib/auth/microsoft";
@@ -30,7 +29,7 @@ export async function GET(req: NextRequest) {
     };
 
     const response = await msalInstance.acquireTokenByCode(tokenRequest);
-    
+
     if (!response?.account) {
       throw new Error("No account information received");
     }
@@ -40,21 +39,21 @@ export async function GET(req: NextRequest) {
 
     // Create Supabase auth user first
     const supabase = supabaseAdmin();
-    
+
     // Check if user already exists first
     let userId: string;
     const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({
       page: 1,
       perPage: 1,
     });
-    
+
     // Find user by email
     const existingAuthUser = users.find(u => u.email === email);
-    
+
     if (existingAuthUser) {
       // User exists, use their ID
       userId = existingAuthUser.id;
-      
+
       // Update user metadata to include Microsoft ID if not already set
       const currentMetadata = existingAuthUser.user_metadata || {};
       if (!currentMetadata.microsoft_id) {
@@ -119,28 +118,19 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Generate session token
-    const { data: session, error: sessionError } = await supabase.auth.admin.generateLink({
+    // Generate a magic link session
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "magiclink",
       email,
+      options: {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/app/home`,
+      },
     });
 
-    if (sessionError) throw sessionError;
+    if (linkError) throw linkError;
 
-    // Redirect to app with session
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
-    const redirectUrl = new URL("/app/home", siteUrl);
-    const response_redirect = NextResponse.redirect(redirectUrl);
-    
-    // Set session cookie (you may need to implement proper session handling)
-    response_redirect.cookies.set("sb-access-token", session.properties?.access_token || "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-    });
-
-    return response_redirect;
+    // Redirect to the magic link which will establish the session and then redirect to /app/home
+    return NextResponse.redirect(linkData.properties.action_link);
 
   } catch (error) {
     console.error("Microsoft auth callback error:", error);
