@@ -1,3 +1,4 @@
+
 // app/auth/callback/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { msalInstance } from "@/lib/auth/microsoft";
@@ -110,13 +111,10 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Create a proper Supabase session using admin client
+    // Generate a session token directly using admin client
     const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
+      type: 'recovery',
       email: email,
-      options: {
-        redirectTo: `${siteUrl}/app/home`
-      }
     });
 
     if (sessionError || !sessionData?.properties?.action_link) {
@@ -124,14 +122,24 @@ export async function GET(req: NextRequest) {
       throw new Error("Could not generate session");
     }
 
-    // Fix the magic link URL to use the correct domain instead of localhost
-    let magicLinkUrl = sessionData.properties.action_link;
-    if (magicLinkUrl.includes('localhost:3000')) {
-      magicLinkUrl = magicLinkUrl.replace('http://localhost:3000', siteUrl);
+    // Extract the token from the recovery link
+    const linkUrl = new URL(sessionData.properties.action_link);
+    const token = linkUrl.searchParams.get('token');
+    const tokenHash = linkUrl.searchParams.get('token_hash');
+
+    if (!token || !tokenHash) {
+      throw new Error("Could not extract session token");
     }
 
-    // Redirect to the magic link which will establish the session and then redirect to /app/home
-    return NextResponse.redirect(magicLinkUrl);
+    // Create the redirect URL with the session token
+    const redirectUrl = new URL("/app/home", siteUrl);
+    redirectUrl.searchParams.set("token_hash", tokenHash);
+    redirectUrl.searchParams.set("type", "recovery");
+
+    // Set additional parameters for client-side session establishment
+    redirectUrl.searchParams.set("microsoft_auth", "true");
+
+    return NextResponse.redirect(redirectUrl);
 
   } catch (error) {
     console.error("Microsoft auth callback error:", error);
