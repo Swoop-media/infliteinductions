@@ -172,19 +172,20 @@ async function loadUsersAndRoles(q: string | null) {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
   if (!allowed) redirect("/app/home?banner=no_access");
 
-  const tab = tabFromSearch(searchParams ?? {});
+  const resolvedSearchParams = await searchParams;
+  const tab = tabFromSearch(resolvedSearchParams ?? {});
   const ok =
-    (Array.isArray(searchParams?.ok) ? searchParams?.ok[0] : searchParams?.ok) ?? null;
+    (Array.isArray(resolvedSearchParams?.ok) ? resolvedSearchParams?.ok[0] : resolvedSearchParams?.ok) ?? null;
   const error =
-    (Array.isArray(searchParams?.error) ? searchParams?.error[0] : searchParams?.error) ?? null;
+    (Array.isArray(resolvedSearchParams?.error) ? resolvedSearchParams?.error[0] : resolvedSearchParams?.error) ?? null;
 
   const q =
-    (Array.isArray(searchParams?.q) ? searchParams?.q[0] : searchParams?.q) ?? null;
+    (Array.isArray(resolvedSearchParams?.q) ? resolvedSearchParams?.q[0] : resolvedSearchParams?.q) ?? null;
 
   const tabs: { key: TabKey; label: string; href: string }[] = [
     { key: "enrolments", label: "Enrolments", href: "/app/admin?tab=enrolments" },

@@ -30,25 +30,28 @@ export default async function EditUserPage({
   params,
   searchParams,
 }: {
-  params: { id: string };
-  searchParams?: Record<string, string | string[] | undefined>;
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const isAdmin = await hasRole("Admin");
   if (!isAdmin) redirect("/app/home");
 
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  
   const supabase = await createSupabaseServer();
   const { data: profile } = await supabase
     .from("profiles")
     .select("id, full_name, email, department, job_description")
-    .eq("id", params.id)
+    .eq("id", resolvedParams.id)
     .maybeSingle();
 
   const ok =
-    (Array.isArray(searchParams?.ok) ? searchParams?.ok[0] : searchParams?.ok) ?? null;
+    (Array.isArray(resolvedSearchParams?.ok) ? resolvedSearchParams?.ok[0] : resolvedSearchParams?.ok) ?? null;
   const error =
-    (Array.isArray(searchParams?.error)
-      ? searchParams?.error[0]
-      : searchParams?.error) ?? null;
+    (Array.isArray(resolvedSearchParams?.error)
+      ? resolvedSearchParams?.error[0]
+      : resolvedSearchParams?.error) ?? null;
 
   if (!profile) {
     return (
