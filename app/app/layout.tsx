@@ -42,7 +42,7 @@ export default async function AppSectionLayout({
             {user ? (
               <SignOutButton className="rounded-md border px-3 py-1 text-sm" />
             ) : (
-              <Link href="/auth/login" className="rounded-md border px-3 py-1 text-sm">
+              <Link href="/auth/signin" className="rounded-md border px-3 py-1 text-sm">
                 Sign in
               </Link>
             )}
