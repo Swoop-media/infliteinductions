@@ -128,18 +128,18 @@ export default function RequirementItem({
   }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow">
+    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow overflow-hidden">
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 drag-handle">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
             <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
           </svg>
         </div>
-        <div className="flex items-start justify-between flex-1">
-        <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between flex-1 min-w-0">
+        <div className="flex-1 min-w-0 max-w-0">
           <div className="flex items-start gap-2 mb-2">
-            <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-gray-900 leading-tight mb-1 truncate" title={r.label || ""}>{r.label}</h4>
+            <div className="flex-1 min-w-0 overflow-hidden">
+              <h4 className="font-medium text-gray-900 leading-tight mb-1 truncate break-all" title={r.label || ""}>{r.label}</h4>
             </div>
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getRoleColor(r.role)}`}>
               {roleToHuman(r.role)}
