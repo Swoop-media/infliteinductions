@@ -1,16 +1,12 @@
-// app/app/home/page.tsx
+
 "use client";
 
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { unstable_noStore as noStore } from "next/cache";
-import { createSupabaseServer } from "@/lib/supabase/server";
 import { useEffect, useState } from "react";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
 import { NotificationsBell } from "../_components/NotificationsBell";
-
 
 export const dynamic = "force-dynamic";
 
@@ -44,96 +40,6 @@ type ReleaseNote = {
   body: string | null;
   created_at: string | null;
 };
-
-/** Loader */
-async function loadHomeData() {
-  "use server";
-  noStore();
-
-  const supabase = await createSupabaseServer();
-
-  // Auth
-  const { data: auth, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !auth?.user) redirect("/auth/login");
-  const userId = auth.user.id;
-
-  // Profile
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, department, job_description")
-    .eq("id", userId)
-    .maybeSingle();
-
-  // Enrolments
-  const { data: enrols = [] } = await supabase
-    .from("course_enrolments")
-    .select("course_id, status, updated_at")
-    .eq("user_id", userId);
-
-  // Fetch details for those course ids
-  const courseIds = Array.from(new Set((enrols ?? []).map((e) => e.course_id)));
-  let courses: CourseRow[] = [];
-  if (courseIds.length) {
-    const { data } = await supabase
-      .from("courses")
-      .select("id, title, status, updated_at, tags, department")
-      .in("id", courseIds);
-    courses = (data ?? []) as CourseRow[];
-  }
-  const courseMap = new Map<string, CourseRow>();
-  courses.forEach((c) => courseMap.set(c.id, c));
-
-  // Categorize by status
-  const inProgress: Array<{ course: CourseRow; status: string }> = [];
-  const completed: Array<{ course: CourseRow; status: string }> = [];
-
-  for (const e of enrols as EnrolRow[]) {
-    const c = courseMap.get(e.course_id);
-    if (!c) continue;
-    const s = (e.status || "").toLowerCase();
-
-    if (s === "approved" || s === "in_progress") {
-      inProgress.push({ course: c, status: s });
-    } else if (s === "completed") {
-      completed.push({ course: c, status: s });
-    }
-  }
-
-  // Sort newest first
-  const byUpdatedDesc = (a: { course: CourseRow }, b: { course: CourseRow }) =>
-    new Date(b.course.updated_at ?? 0).getTime() - new Date(a.course.updated_at ?? 0).getTime();
-  inProgress.sort(byUpdatedDesc);
-  completed.sort(byUpdatedDesc);
-
-  // Browse preview (safe try/catch)
-  let browsePreview: CourseRow[] = [];
-  try {
-    const { data } = await supabase
-      .from("courses")
-      .select("id, title, status, updated_at, tags, department")
-      .eq("status", "published")
-      .order("updated_at", { ascending: false })
-      .limit(6);
-    browsePreview = (data ?? []) as CourseRow[];
-  } catch {
-    // ignore if table differs
-  }
-
-  // Release notes (optional)
-  let notes: ReleaseNote[] = [];
-  try {
-    const { data } = await supabase
-      .from("release_notes")
-      .select("id, title, body, created_at")
-      .order("created_at", { ascending: false })
-      .limit(5);
-    notes = (data ?? []) as ReleaseNote[];
-  } catch {
-    // ignore if table doesn’t exist
-  }
-
-  return { profile: (profile ?? null) as Profile | null, inProgress, completed, browsePreview, notes };
-}
 
 /** Banner helpers */
 function OkErrorBanner({ ok, error }: { ok?: string | null; error?: string | null }) {
@@ -170,13 +76,13 @@ function SoftBanner({ code }: { code?: string | null }) {
     case "no_access":
     case "not_authorised":
     case "not_authorized":
-      msg = "Sorry, you don’t have access to that area.";
+      msg = "Sorry, you don't have access to that area.";
       break;
     case "logout":
       msg = "You have been signed out.";
       break;
     case "enrolment_not_approved":
-      msg = "Your enrolment hasn’t been approved yet.";
+      msg = "Your enrolment hasn't been approved yet.";
       break;
     default:
       msg = null;
@@ -212,54 +118,119 @@ function Pill({
 }
 
 /** Page */
-export default function HomePage(props: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
-}) {
+export default function HomePage() {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [courses, setCourses] = useState<any[]>([]);
-  const [enrolments, setEnrolments] = useState<any[]>([]);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [inProgress, setInProgress] = useState<Array<{ course: CourseRow; status: string }>>([]);
+  const [completed, setCompleted] = useState<Array<{ course: CourseRow; status: string }>>([]);
+  const [browsePreview, setBrowsePreview] = useState<CourseRow[]>([]);
+  const [notes, setNotes] = useState<ReleaseNote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [bannerCode, setBannerCode] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const router = useRouter();
-  const searchParams = useSearchParams();
   const supabase = createClientComponentClient();
 
-  // Mock fetchData for now, as it's defined in the server component context
-  // In a real app, you'd need to refactor this to be client-side or fetch differently
-  const fetchData = async () => {
-    // This is a placeholder. The actual data loading is handled server-side in loadHomeData.
-    // This client-side component will receive the data as props if needed, or fetch it differently.
-    // For the purpose of this example, we'll assume the server component fetches and passes data.
-    // If this component were to fetch its own data, it would look more like this:
-    /*
-    const { data: session } = await supabase.auth.getSession();
-    setUser(session?.session?.user ?? null);
-
-    if (session?.session?.user) {
+  const fetchData = async (userId: string) => {
+    try {
+      // Profile
       const { data: profileData } = await supabase
         .from("profiles")
-        .select("*")
-        .eq("id", session.session.user.id)
-        .single();
+        .select("id, full_name, email, department, job_description")
+        .eq("id", userId)
+        .maybeSingle();
+
       setProfile(profileData);
 
-      // Fetch courses and enrolments if needed client-side
-      // ...
-    }
-    setLoading(false);
-    */
+      // Enrolments
+      const { data: enrols = [] } = await supabase
+        .from("course_enrolments")
+        .select("course_id, status, updated_at")
+        .eq("user_id", userId);
 
-    // Placeholder for demonstration: Simulate loading the data that was intended to be fetched server-side
-    setLoading(false);
+      // Fetch details for those course ids
+      const courseIds = Array.from(new Set((enrols ?? []).map((e) => e.course_id)));
+      let courses: CourseRow[] = [];
+      if (courseIds.length) {
+        const { data } = await supabase
+          .from("courses")
+          .select("id, title, status, updated_at, tags, department")
+          .in("id", courseIds);
+        courses = (data ?? []) as CourseRow[];
+      }
+      const courseMap = new Map<string, CourseRow>();
+      courses.forEach((c) => courseMap.set(c.id, c));
+
+      // Categorize by status
+      const inProgressList: Array<{ course: CourseRow; status: string }> = [];
+      const completedList: Array<{ course: CourseRow; status: string }> = [];
+
+      for (const e of enrols as EnrolRow[]) {
+        const c = courseMap.get(e.course_id);
+        if (!c) continue;
+        const s = (e.status || "").toLowerCase();
+
+        if (s === "approved" || s === "in_progress") {
+          inProgressList.push({ course: c, status: s });
+        } else if (s === "completed") {
+          completedList.push({ course: c, status: s });
+        }
+      }
+
+      // Sort newest first
+      const byUpdatedDesc = (a: { course: CourseRow }, b: { course: CourseRow }) =>
+        new Date(b.course.updated_at ?? 0).getTime() - new Date(a.course.updated_at ?? 0).getTime();
+      inProgressList.sort(byUpdatedDesc);
+      completedList.sort(byUpdatedDesc);
+
+      setInProgress(inProgressList);
+      setCompleted(completedList);
+
+      // Browse preview
+      try {
+        const { data } = await supabase
+          .from("courses")
+          .select("id, title, status, updated_at, tags, department")
+          .eq("status", "published")
+          .order("updated_at", { ascending: false })
+          .limit(6);
+        setBrowsePreview((data ?? []) as CourseRow[]);
+      } catch (err) {
+        console.warn("Could not load browse preview:", err);
+      }
+
+      // Release notes
+      try {
+        const { data } = await supabase
+          .from("release_notes")
+          .select("id, title, body, created_at")
+          .order("created_at", { ascending: false })
+          .limit(5);
+        setNotes((data ?? []) as ReleaseNote[]);
+      } catch (err) {
+        console.warn("Could not load release notes:", err);
+      }
+
+    } catch (err) {
+      console.error("Error fetching data:", err);
+    }
   };
 
   useEffect(() => {
     const getUser = async () => {
-      // Check for Microsoft auth success in URL params
+      // Check URL params for banners
       const urlParams = new URLSearchParams(window.location.search);
       const microsoftAuth = urlParams.get("microsoft_auth");
       const userId = urlParams.get("user_id");
+      const bannerParam = urlParams.get("banner");
+      const okParam = urlParams.get("ok");
+      const errorParam = urlParams.get("error");
+
+      setBannerCode(bannerParam);
+      setOk(okParam);
+      setError(errorParam);
 
       if (microsoftAuth === "success" && userId) {
         // Try to refresh the session to pick up the newly created user
@@ -270,21 +241,34 @@ export default function HomePage(props: {
       }
 
       const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        router.push("/auth/login");
+        return;
+      }
+
       setUser(user);
+      await fetchData(user.id);
       setLoading(false);
     };
 
     getUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
+      async (event, session) => {
+        if (session?.user) {
+          setUser(session.user);
+          await fetchData(session.user.id);
+        } else {
+          setUser(null);
+          router.push("/auth/login");
+        }
         setLoading(false);
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+  }, [supabase.auth, router]);
 
   // Render loading state or actual content
   if (loading) {
@@ -295,47 +279,25 @@ export default function HomePage(props: {
     );
   }
 
-  // If the component is client-side and needs to fetch data, it would be handled here.
-  // However, the original code uses `loadHomeData` which is a server component function.
-  // To make this work, the server component would likely pass the loaded data as props.
-  // For this example, we'll mimic the structure but acknowledge the server-client boundary.
-
-  // Placeholder for data that would normally come from loadHomeData if passed as props
-  const serverData = {
-    profile: {
-      full_name: "Test User",
-      email: "test@example.com"
-    },
-    inProgress: [
-      { course: { id: "1", title: "Course Alpha", updated_at: new Date().toISOString() }, status: "in_progress" }
-    ],
-    completed: [
-      { course: { id: "2", title: "Course Beta", updated_at: new Date().toISOString() }, status: "completed" }
-    ],
-    browsePreview: [
-      { id: "3", title: "Course Gamma", department: "Science", tags: ["math"] },
-      { id: "4", title: "Course Delta", department: "Art", tags: ["design"] }
-    ],
-    notes: [
-      { id: "n1", title: "Initial Release", body: "Welcome!", created_at: new Date().toISOString() }
-    ]
-  };
-
-  // In a real application, you would receive 'profile', 'inProgress', 'completed', etc. as props from the server component.
-  // For this example, we'll use the placeholder `serverData` directly to show the UI structure.
-  const { profile: serverProfile, inProgress: serverInProgress, completed: serverCompleted, browsePreview: serverBrowsePreview, notes: serverNotes } = serverData;
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p>Redirecting to login...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
       {/* Banners (error/ok has priority, then soft banner code) */}
-      {OkErrorBanner({ /* ok, error */ })} {/* Removed actual props as they are server-side */}
-      {/* Removed SoftBanner rendering as bannerCode is also from server-side props */}
+      {OkErrorBanner({ ok, error })}
+      {!ok && !error && <SoftBanner code={bannerCode} />}
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Welcome{serverProfile?.full_name ? `, ${serverProfile.full_name}` : ""}</h1>
-          {serverProfile?.email && <p className="text-sm text-gray-600">{serverProfile.email}</p>}
+          <h1 className="text-2xl font-bold">Welcome{profile?.full_name ? `, ${profile.full_name}` : ""}</h1>
+          {profile?.email && <p className="text-sm text-gray-600">{profile.email}</p>}
         </div>
         <div className="flex gap-2">
           <Link href="/app/myprofile" className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50">
@@ -353,12 +315,12 @@ export default function HomePage(props: {
         <section className="space-y-3 rounded-xl border bg-white p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">In progress</h2>
-            <Pill tone="blue">{serverInProgress.length}</Pill>
+            <Pill tone="blue">{inProgress.length}</Pill>
           </div>
 
-          {serverInProgress.length === 0 ? (
+          {inProgress.length === 0 ? (
             <p className="text-sm text-gray-500">
-              You don’t have any approved courses yet. Visit{" "}
+              You don't have any approved courses yet. Visit{" "}
               <Link href="/app/courses" className="underline">
                 Courses
               </Link>{" "}
@@ -366,7 +328,7 @@ export default function HomePage(props: {
             </p>
           ) : (
             <ul className="divide-y rounded-md border">
-              {serverInProgress.map(({ course, status }) => (
+              {inProgress.map(({ course, status }) => (
                 <li key={course.id} className="flex items-center justify-between p-3">
                   <div>
                     <div className="font-medium">{course.title ?? "Untitled"}</div>
@@ -395,14 +357,14 @@ export default function HomePage(props: {
         <section className="space-y-3 rounded-xl border bg-white p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Completed</h2>
-            <Pill tone="green">{serverCompleted.length}</Pill>
+            <Pill tone="green">{completed.length}</Pill>
           </div>
 
-          {serverCompleted.length === 0 ? (
+          {completed.length === 0 ? (
             <p className="text-sm text-gray-500">No completions yet.</p>
           ) : (
             <ul className="divide-y rounded-md border">
-              {serverCompleted.map(({ course }) => (
+              {completed.map(({ course }) => (
                 <li key={course.id} className="flex items-center justify-between p-3">
                   <div>
                     <div className="font-medium">{course.title ?? "Untitled"}</div>
@@ -435,11 +397,11 @@ export default function HomePage(props: {
           </Link>
         </div>
 
-        {serverBrowsePreview.length === 0 ? (
+        {browsePreview.length === 0 ? (
           <p className="text-sm text-gray-500">No published courses yet.</p>
         ) : (
           <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {serverBrowsePreview.map((c) => (
+            {browsePreview.map((c) => (
               <li key={c.id} className="rounded-lg border p-3">
                 <div className="font-medium">{c.title ?? "Untitled"}</div>
                 <div className="mt-1 text-xs text-gray-500">
@@ -462,11 +424,11 @@ export default function HomePage(props: {
       </section>
 
       {/* Release notes (optional, shown if table exists) */}
-      {serverNotes.length > 0 && (
+      {notes.length > 0 && (
         <section className="space-y-3 rounded-xl border bg-white p-4">
           <h2 className="text-lg font-semibold">Release notes</h2>
           <ul className="space-y-3">
-            {serverNotes.map((n) => (
+            {notes.map((n) => (
               <li key={n.id} className="rounded-md border p-3">
                 <div className="font-medium">{n.title ?? "Update"}</div>
                 <div className="text-xs text-gray-500">
