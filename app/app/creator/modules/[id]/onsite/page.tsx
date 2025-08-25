@@ -4,7 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import RequirementItem from "./RequirementItem";
+import SortableRequirements from "./SortableRequirements";
 
 export const dynamic = "force-dynamic";
 
@@ -323,6 +323,31 @@ async function deleteRequirementAction(formData: FormData) {
   redirect(`/app/creator/modules/${moduleId}/onsite?ok=requirement_deleted`);
 }
 
+/** Reorder requirements */
+async function reorderRequirementsAction(formData: FormData) {
+  "use server";
+  const supabase = await createSupabaseServer();
+
+  const moduleId = String(formData.get("module_id") || "");
+  const reorderedIds = String(formData.get("reordered_ids") || "").split(",").filter(Boolean);
+
+  if (!moduleId || !reorderedIds.length) throw new Error("Missing fields");
+
+  // Update order_index for each requirement
+  for (let i = 0; i < reorderedIds.length; i++) {
+    const { error } = await supabase
+      .from("onsite_requirements")
+      .update({ order_index: i })
+      .eq("id", reorderedIds[i])
+      .eq("module_id", moduleId);
+
+    if (error) throw new Error(error.message);
+  }
+
+  revalidatePath(`/app/creator/modules/${moduleId}/onsite`);
+  redirect(`/app/creator/modules/${moduleId}/onsite?ok=requirements_reordered`);
+}
+
 // -----------------------------
 // Page
 // -----------------------------
@@ -384,6 +409,7 @@ export default async function OnsiteModulePage(props: {
               {ok === "requirement_saved" && "Requirement added successfully."}
               {ok === "requirement_updated" && "Requirement updated successfully."}
               {ok === "requirement_deleted" && "Requirement deleted successfully."}
+              {ok === "requirements_reordered" && "Requirements reordered successfully."}
             </div>
           </div>
         )}
@@ -468,27 +494,12 @@ export default async function OnsiteModulePage(props: {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Required?</label>
-                  <select name="required" defaultValue="yes" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors">
-                    <option value="yes">Yes</option>
-                    <option value="no">No</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
-                  <input
-                    name="order_index"
-                    type="number"
-                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
-                    placeholder="auto"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Leave blank for automatic ordering
-                  </p>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Required?</label>
+                <select name="required" defaultValue="yes" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors">
+                  <option value="yes">Yes</option>
+                  <option value="no">No</option>
+                </select>
               </div>
 
               <div>
@@ -512,27 +523,13 @@ export default async function OnsiteModulePage(props: {
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Training Requirements</h2>
             
-            {trainerReqs.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-                <p className="text-lg font-medium mb-2">No training requirements yet</p>
-                <p className="text-sm">Add requirements using the form on the left to create your onsite training checklist</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {trainerReqs.map((r) => (
-                  <RequirementItem 
-                    key={r.id} 
-                    requirement={r} 
-                    moduleId={mod.id}
-                    updateRequirementAction={updateRequirementAction}
-                    deleteRequirementAction={deleteRequirementAction}
-                  />
-                ))}
-              </div>
-            )}
+            <SortableRequirements 
+              requirements={trainerReqs}
+              moduleId={mod.id}
+              updateRequirementAction={updateRequirementAction}
+              deleteRequirementAction={deleteRequirementAction}
+              reorderRequirementsAction={reorderRequirementsAction}
+            />
           </div>
         </div>
 

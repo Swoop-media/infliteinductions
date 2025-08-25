@@ -89,26 +89,14 @@ export default function RequirementItem({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Order</label>
-              <input
-                name="order_index"
-                type="number"
-                defaultValue={r.order_index || ""}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Help text</label>
-              <input
-                name="help_text"
-                defaultValue={r.help_text || ""}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
-                placeholder="Optional hint"
-              />
-            </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Help text</label>
+            <input
+              name="help_text"
+              defaultValue={r.help_text || ""}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
+              placeholder="Optional hint"
+            />
           </div>
 
           <div className="flex gap-2 pt-2">
@@ -130,11 +118,19 @@ export default function RequirementItem({
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow">
-      <div className="flex items-start justify-between">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 mt-1 cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 drag-handle">
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+          </svg>
+        </div>
+        <div className="flex items-start justify-between flex-1">
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <h4 className="font-medium text-gray-900 truncate">{r.label}</h4>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(r.role)}`}>
+          <div className="flex items-start gap-2 mb-2">
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-gray-900 leading-tight mb-1">{r.label}</h4>
+            </div>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getRoleColor(r.role)}`}>
               {roleToHuman(r.role)}
             </span>
           </div>
@@ -146,15 +142,6 @@ export default function RequirementItem({
               </svg>
               {r.field_type}
             </span>
-            
-            {typeof r.order_index === "number" && (
-              <span className="inline-flex items-center">
-                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                </svg>
-                Order {r.order_index}
-              </span>
-            )}
             
             {r.required && (
               <span className="inline-flex items-center text-red-600">
@@ -203,6 +190,7 @@ export default function RequirementItem({
             </button>
           </form>
         </div>
+      </div>
       </div>
     </div>
   );
