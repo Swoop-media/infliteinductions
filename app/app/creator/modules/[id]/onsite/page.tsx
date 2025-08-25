@@ -276,18 +276,23 @@ async function updateRequirementAction(formData: FormData) {
     }
   }
 
-  const order_index = orderRaw !== "" && Number.isFinite(Number(orderRaw)) ? Number(orderRaw) : null;
+  // Build update object - only include order_index if a valid value is provided
+  const updateData: any = {
+    label,
+    field_type: fieldType,
+    options,
+    required,
+    help_text: helpText || null,
+  };
+
+  // Only update order_index if a valid number is provided
+  if (orderRaw !== "" && Number.isFinite(Number(orderRaw))) {
+    updateData.order_index = Number(orderRaw);
+  }
 
   const { error } = await supabase
     .from("onsite_requirements")
-    .update({
-      label,
-      field_type: fieldType,
-      options,
-      required,
-      order_index,
-      help_text: helpText || null,
-    })
+    .update(updateData)
     .eq("id", requirementId);
 
   if (error) throw new Error(error.message);
