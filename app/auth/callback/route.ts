@@ -111,12 +111,33 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Create a simple redirect to home - let middleware handle auth
-    const redirectUrl = new URL("/app/home", siteUrl);
-    redirectUrl.searchParams.set("microsoft_auth", "success");
-    redirectUrl.searchParams.set("user_id", userId);
+    // Generate a session for this user using admin client
+    const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: email,
+    });
+
+    if (sessionError || !sessionData?.properties?.action_link) {
+      console.error("Session generation error:", sessionError);
+      throw new Error("Could not generate session");
+    }
+
+    // Extract tokens from the magic link
+    const linkUrl = new URL(sessionData.properties.action_link);
+    const token = linkUrl.searchParams.get('token');
+    const tokenHash = linkUrl.searchParams.get('token_hash');
+
+    if (!token || !tokenHash) {
+      throw new Error("Could not extract session token");
+    }
+
+    // Redirect to auth confirmation page that will establish the session
+    const redirectUrl = new URL("/auth/confirm", siteUrl);
+    redirectUrl.searchParams.set("token_hash", tokenHash);
+    redirectUrl.searchParams.set("type", "magiclink");
+    redirectUrl.searchParams.set("next", "/app/home");
     
-    console.log("Microsoft auth successful, redirecting to:", redirectUrl.toString());
+    console.log("Microsoft auth successful, redirecting to confirm:", redirectUrl.toString());
     return NextResponse.redirect(redirectUrl);
 
   } catch (error) {

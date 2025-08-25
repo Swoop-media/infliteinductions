@@ -222,8 +222,6 @@ export default function HomePage() {
     const getUser = async () => {
       // Check URL params for banners
       const urlParams = new URLSearchParams(window.location.search);
-      const microsoftAuth = urlParams.get("microsoft_auth");
-      const userId = urlParams.get("user_id");
       const bannerParam = urlParams.get("banner");
       const okParam = urlParams.get("ok");
       const errorParam = urlParams.get("error");
@@ -232,11 +230,8 @@ export default function HomePage() {
       setOk(okParam);
       setError(errorParam);
 
-      if (microsoftAuth === "success" && userId) {
-        // Try to refresh the session to pick up the newly created user
-        await supabase.auth.refreshSession();
-
-        // Clean up URL params
+      // Clean up URL params if present
+      if (bannerParam || okParam || errorParam) {
         window.history.replaceState({}, document.title, "/app/home");
       }
 
