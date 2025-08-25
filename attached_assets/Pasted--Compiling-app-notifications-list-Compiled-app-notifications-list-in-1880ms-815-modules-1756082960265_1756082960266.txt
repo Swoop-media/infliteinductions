@@ -1,0 +1,57 @@
+ ○ Compiling /app/notifications/list ...
+ ✓ Compiled /app/notifications/list in 1880ms (815 modules)
+ GET / 200 in 102ms
+ GET /app/notifications/list 200 in 2957ms
+ GET /app/notifications/list 200 in 3317ms
+ GET /app/notifications/list 200 in 632ms
+ GET /app/notifications/list 200 in 702ms
+ GET /app/notifications/list 200 in 1156ms
+ GET /app/notifications/list 200 in 1458ms
+ GET /app/notifications/list 200 in 656ms
+ GET /app/notifications/list 200 in 686ms
+ GET /app/notifications/list 200 in 1074ms
+ GET /app/notifications/list 200 in 592ms
+ GET /app/notifications/list 200 in 624ms
+ GET /app/notifications/list 200 in 981ms
+ GET /app/notifications/list 200 in 1348ms
+ ○ Compiling /app/courses/enrol ...
+ ✓ Compiled /app/courses/enrol in 3.7s (1723 modules)
+Bot configuration: {
+  MicrosoftAppType: 'SingleTenant',
+  MicrosoftAppId: 'dc8a23c4...',
+  MicrosoftAppPassword: 'SET',
+  MicrosoftAppTenantId: '19b039d8...'
+}
+ GET /app/notifications/list 200 in 1020ms
+All roles in app_user_roles: [
+  {
+    user_id: '6a0bf6d0-6da6-496c-933c-ea0d6fcf0633',
+    role_name: 'General'
+  }
+]
+Admin user lookup result: {
+  adminUsers: [],
+  adminError: null,
+  count: 0,
+  currentUserId: '6a0bf6d0-6da6-496c-933c-ea0d6fcf0633'
+}
+ ○ Compiling /api/notify/teams ...
+All admin users (including current): []
+Found admin users to notify: 0
+ POST /app/courses/enrol 307 in 8817ms
+ ✓ Compiled /api/notify/teams in 982ms (1632 modules)
+ POST /api/notify/teams 410 in 1078ms
+ POST /api/notify/teams 410 in 1083ms
+ ○ Compiling /app/courses ...
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./lib/notifications/dispatcher.ts
+./app/app/courses/enrol/route.ts
+ GET / 200 in 30ms
+ GET / 200 in 47ms
+ POST /app/courses?ok=enrolment_requested 200 in 4558ms
