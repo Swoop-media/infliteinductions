@@ -38,45 +38,10 @@ export async function GET(req: NextRequest) {
     const { homeAccountId, username, name } = response.account;
     const email = username; // In MSAL, username is typically the email
 
-    // Create or update user in Supabase
+    // Create Supabase auth user first
     const supabase = supabaseAdmin();
     
-    // Check if user exists
-    let { data: existingUser } = await supabase
-      .from("users")
-      .select("id, email, microsoft_id")
-      .eq("email", email)
-      .maybeSingle();
-
-    let userId: string;
-
-    if (existingUser) {
-      // Update existing user with Microsoft ID if not set
-      if (!existingUser.microsoft_id) {
-        await supabase
-          .from("users")
-          .update({ microsoft_id: homeAccountId })
-          .eq("id", existingUser.id);
-      }
-      userId = existingUser.id;
-    } else {
-      // Create new user with general role
-      const { data: newUser, error } = await supabase
-        .from("users")
-        .insert({
-          email,
-          name: name || email.split("@")[0],
-          microsoft_id: homeAccountId,
-          role: "general", // Default role for new users
-        })
-        .select("id")
-        .single();
-
-      if (error) throw error;
-      userId = newUser.id;
-    }
-
-    // Create Supabase auth session
+    // Create or get auth user
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email,
       email_confirm: true,
@@ -88,6 +53,51 @@ export async function GET(req: NextRequest) {
 
     if (authError && !authError.message.includes("already registered")) {
       throw authError;
+    }
+
+    // Get the user ID from auth
+    let userId = authUser?.user?.id;
+    
+    if (!userId) {
+      // If user already exists, get their ID
+      const { data: existingAuthUser } = await supabase.auth.admin.getUserByEmail(email);
+      userId = existingAuthUser.user?.id;
+    }
+
+    if (!userId) {
+      throw new Error("Could not create or find user");
+    }
+
+    // Check if profile exists and create/update it
+    let { data: existingProfile } = await supabase
+      .from("profiles")
+      .select("id, email, microsoft_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (existingProfile) {
+      // Update existing profile with Microsoft ID if not set
+      if (!existingProfile.microsoft_id) {
+        await supabase
+          .from("profiles")
+          .update({ microsoft_id: homeAccountId })
+          .eq("id", userId);
+      }
+    } else {
+      // Create new profile
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .insert({
+          id: userId,
+          email,
+          name: name || email.split("@")[0],
+          microsoft_id: homeAccountId,
+        });
+
+      if (profileError && !profileError.message.includes("duplicate")) {
+        console.warn("Profile creation error:", profileError);
+        // Don't throw - profile might be created by trigger
+      }
     }
 
     // Generate session token
