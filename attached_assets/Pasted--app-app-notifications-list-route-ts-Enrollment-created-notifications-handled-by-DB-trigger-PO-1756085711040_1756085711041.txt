@@ -1,0 +1,70 @@
+./app/app/notifications/list/route.ts
+Enrollment created - notifications handled by DB trigger
+ POST /app/courses/enrol 307 in 1551ms
+ POST /app/courses?ok=enrolment_requested 200 in 1472ms
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+Bot configuration: {
+  MicrosoftAppType: 'SingleTenant',
+  MicrosoftAppId: 'dc8a23c4...',
+  MicrosoftAppPassword: 'SET',
+  MicrosoftAppTenantId: '19b039d8...'
+}
+Teams notification request: {
+  "type": "INSERT",
+  "table": "notifications",
+  "record": {
+    "id": "56efd168-1543-4ef8-af22-12b22fad8410",
+    "read": false,
+    "type": "enrolment_request",
+    "payload": {
+      "user_id": "6a0bf6d0-6da6-496c-933c-ea0d6fcf0633",
+      "course_title": "quiz test course"
+    },
+    "created_at": "2025-08-25T01:34:31.767976+00:00",
+    "recipient_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10"
+  },
+  "schema": "public",
+  "old_record": null
+}
+Missing recipientUserId
+Teams notification request: {
+  "type": "INSERT",
+  "table": "notifications",
+  "record": {
+    "id": "938501e7-0682-422e-9362-fb1801bdaa05",
+    "read": false,
+    "type": "enrolment_request",
+    "payload": {
+      "user_id": "6a0bf6d0-6da6-496c-933c-ea0d6fcf0633",
+      "course_title": "quiz test course"
+    },
+    "created_at": "2025-08-25T01:34:31.767976+00:00",
+    "recipient_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10"
+  },
+  "schema": "public",
+  "old_record": null
+}
+Missing recipientUserId
+ POST /api/notify/teams 400 in 1302ms
+ POST /api/notify/teams 400 in 1312ms
