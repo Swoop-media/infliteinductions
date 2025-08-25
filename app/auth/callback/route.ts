@@ -41,27 +41,40 @@ export async function GET(req: NextRequest) {
     // Create Supabase auth user first
     const supabase = supabaseAdmin();
     
-    // Create or get auth user
-    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      email_confirm: true,
-      user_metadata: {
-        name: name || email.split("@")[0],
-        microsoft_id: homeAccountId,
-      },
-    });
-
-    if (authError && !authError.message.includes("already registered")) {
-      throw authError;
-    }
-
-    // Get the user ID from auth
-    let userId = authUser?.user?.id;
+    // Check if user already exists first
+    let userId: string;
+    const { data: existingAuthUser } = await supabase.auth.admin.getUserByEmail(email);
     
-    if (!userId) {
-      // If user already exists, get their ID
-      const { data: existingAuthUser } = await supabase.auth.admin.getUserByEmail(email);
-      userId = existingAuthUser.user?.id;
+    if (existingAuthUser.user) {
+      // User exists, use their ID
+      userId = existingAuthUser.user.id;
+      
+      // Update user metadata to include Microsoft ID if not already set
+      const currentMetadata = existingAuthUser.user.user_metadata || {};
+      if (!currentMetadata.microsoft_id) {
+        await supabase.auth.admin.updateUserById(userId, {
+          user_metadata: {
+            ...currentMetadata,
+            microsoft_id: homeAccountId,
+          },
+        });
+      }
+    } else {
+      // Create new user
+      const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        user_metadata: {
+          name: name || email.split("@")[0],
+          microsoft_id: homeAccountId,
+        },
+      });
+
+      if (authError) {
+        throw authError;
+      }
+
+      userId = authUser.user.id;
     }
 
     if (!userId) {
