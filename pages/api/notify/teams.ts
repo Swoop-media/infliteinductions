@@ -10,11 +10,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     console.log("Teams notification request:", JSON.stringify(req.body, null, 2));
     
-    const { recipientUserId, type, title, body, data } = req.body;
-
-    if (!recipientUserId) {
-      console.error("Missing recipientUserId");
-      return res.status(400).json({ error: "Missing recipientUserId" });
+    // Handle both database trigger format and webhook format
+    const { recipientUserId, type, title, body, data, record } = req.body;
+    
+    // Extract recipient ID from either direct call or webhook record
+    const recipient = recipientUserId || record?.recipient_id;
+    
+    if (!recipient) {
+      console.error("Missing recipient ID. Expected recipientUserId or record.recipient_id");
+      return res.status(400).json({ error: "Missing recipient ID" });
     }
 
     // Format the Teams message based on type
@@ -31,11 +35,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ].filter(Boolean).join("\n");
     }
 
-    console.log("Sending Teams message to user:", recipientUserId);
+    console.log("Sending Teams message to user:", recipient);
     console.log("Message content:", teamsMessage);
 
     // Send Teams notification
-    const sent = await sendTeamsDMToAppUser(recipientUserId, teamsMessage);
+    const sent = await sendTeamsDMToAppUser(recipient, teamsMessage);
     
     if (sent) {
       console.log("✅ Teams notification sent successfully");
