@@ -44,7 +44,18 @@ export default function RequirementItem({
   if (isEditing) {
     return (
       <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
-        <form action={updateRequirementAction} className="space-y-4">
+        <form action={async (formData) => {
+          try {
+            await updateRequirementAction(formData);
+          } catch (error) {
+            console.error("Update failed:", error);
+            if (error instanceof Error && error.message.includes("Server Action")) {
+              window.location.reload();
+              return;
+            }
+            alert("Failed to update requirement. Please try again.");
+          }
+        }} className="space-y-4">
           <input type="hidden" name="requirement_id" value={r.id} />
           <input type="hidden" name="module_id" value={moduleId} />
           
@@ -128,7 +139,7 @@ export default function RequirementItem({
         <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2 mb-2">
             <div className="flex-1 min-w-0">
-              <h4 className="font-medium text-gray-900 leading-tight mb-1">{r.label}</h4>
+              <h4 className="font-medium text-gray-900 leading-tight mb-1 truncate" title={r.label || ""}>{r.label}</h4>
             </div>
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getRoleColor(r.role)}`}>
               {roleToHuman(r.role)}
@@ -174,7 +185,18 @@ export default function RequirementItem({
           >
             Edit
           </button>
-          <form action={deleteRequirementAction} className="inline">
+          <form action={async (formData) => {
+            try {
+              await deleteRequirementAction(formData);
+            } catch (error) {
+              console.error("Delete failed:", error);
+              if (error instanceof Error && error.message.includes("Server Action")) {
+                window.location.reload();
+                return;
+              }
+              alert("Failed to delete requirement. Please try again.");
+            }
+          }} className="inline">
             <input type="hidden" name="requirement_id" value={r.id} />
             <input type="hidden" name="module_id" value={moduleId} />
             <button

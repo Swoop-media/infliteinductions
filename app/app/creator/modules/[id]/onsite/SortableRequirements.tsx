@@ -80,9 +80,18 @@ export default function SortableRequirements({
     try {
       await reorderRequirementsAction(formData);
     } catch (error) {
-      // Revert on error
-      setLocalRequirements(requirements);
       console.error("Failed to reorder requirements:", error);
+      
+      // Check if it's a server action error (common after hot reloads)
+      if (error instanceof Error && error.message.includes("Server Action")) {
+        // Refresh the page to reload server actions
+        window.location.reload();
+        return;
+      }
+      
+      // Revert on other errors
+      setLocalRequirements(requirements);
+      alert("Failed to save new order. Please try again.");
     }
   };
 
