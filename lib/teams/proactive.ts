@@ -11,8 +11,12 @@ export async function sendProactive(conversationRef: any, text: string) {
     botId: conversationRef.bot?.id
   });
 
-  // Get access token
-  const tokenUrl = "https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token";
+  // Get access token - use correct tenant for SingleTenant bots
+  const appType = process.env.MICROSOFT_APP_TYPE || "MultiTenant";
+  const tenantId = process.env.MICROSOFT_APP_TENANT_ID || "";
+  const tenant = appType === "SingleTenant" ? tenantId : "botframework.com";
+  
+  const tokenUrl = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`;
   const tokenParams = new URLSearchParams();
   tokenParams.set("client_id", process.env.MICROSOFT_APP_ID || "");
   tokenParams.set("client_secret", process.env.MICROSOFT_APP_PASSWORD || "");
