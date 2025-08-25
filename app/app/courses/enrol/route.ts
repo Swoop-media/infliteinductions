@@ -65,14 +65,14 @@ export async function POST(req: Request) {
       .select("id, name");
     console.log("All available roles:", allRoles);
 
-    // Get all admins and trainers to notify - fix the query syntax
+    // Get all admins and trainers to notify using exact role names from your data
     const { data: adminUsers, error: adminError } = await supabase
       .from("user_roles")
       .select(`
         user_id,
         roles!inner(id, name)
       `)
-      .or("roles.name.ilike.%admin%,roles.name.ilike.%trainer%");
+      .in("roles.name", ["Admin", "Trainers and Assessors"]);
 
     console.log("Admin user lookup result:", { 
       adminUsers, 
@@ -80,25 +80,7 @@ export async function POST(req: Request) {
       count: adminUsers?.length || 0 
     });
 
-    // If no results with pattern matching, try some common exact role names
     let finalAdminUsers = adminUsers;
-    if (!adminUsers || adminUsers.length === 0) {
-      console.log("No admins found with pattern matching, trying exact matches...");
-      
-      // Look for common admin/trainer role names based on your data
-      const commonAdminRoles = ["Admin", "admin", "Administrator", "Trainers and Assessors", "Trainer", "trainer"];
-      
-      const { data: exactAdmins, error: exactError } = await supabase
-        .from("user_roles")
-        .select(`
-          user_id,
-          roles!inner(id, name)
-        `)
-        .in("roles.name", commonAdminRoles);
-      
-      console.log("Exact match lookup result:", { exactAdmins, exactError });
-      finalAdminUsers = exactAdmins;
-    }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
     const enrollmentUrl = `${siteUrl}/app/admin?tab=enrolments`;
