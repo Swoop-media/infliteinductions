@@ -110,13 +110,28 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Create a simple session by redirecting to a page that will handle client-side auth
-    const redirectUrl = new URL("/app/home", siteUrl);
-    redirectUrl.searchParams.set("microsoft_auth", "true");
-    redirectUrl.searchParams.set("user_id", userId);
-    redirectUrl.searchParams.set("email", email);
+    // Create a proper Supabase session using admin client
+    const { data: sessionData, error: sessionError } = await supabase.auth.admin.generateLink({
+      type: 'magiclink',
+      email: email,
+      options: {
+        redirectTo: `${siteUrl}/app/home`
+      }
+    });
 
-    return NextResponse.redirect(redirectUrl);
+    if (sessionError || !sessionData?.properties?.action_link) {
+      console.error("Session generation error:", sessionError);
+      throw new Error("Could not generate session");
+    }
+
+    // Fix the magic link URL to use the correct domain instead of localhost
+    let magicLinkUrl = sessionData.properties.action_link;
+    if (magicLinkUrl.includes('localhost:3000')) {
+      magicLinkUrl = magicLinkUrl.replace('http://localhost:3000', siteUrl);
+    }
+
+    // Redirect to the magic link which will establish the session and then redirect to /app/home
+    return NextResponse.redirect(magicLinkUrl);
 
   } catch (error) {
     console.error("Microsoft auth callback error:", error);
