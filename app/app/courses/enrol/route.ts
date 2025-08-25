@@ -63,8 +63,7 @@ export async function POST(req: Request) {
     const { data: adminUsers, error: adminError } = await supabase
       .from("app_user_roles")
       .select("user_id, role_name")
-      .in("role_name", ["Admin", "Trainers and Assessors"])
-      .neq("user_id", user.id); // Don't notify the person enrolling themselves
+      .in("role_name", ["Admin", "Trainers and Assessors"]);
 
     console.log("Admin user lookup result:", {
       adminUsers,
