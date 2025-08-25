@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import RequirementItem from "./RequirementItem";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,8 @@ function firstParam(sp: Record<string, string | string[] | undefined>, key: stri
   const v = sp[key];
   return Array.isArray(v) ? v[0] : (v ?? null);
 }
+
+
 
 // -----------------------------
 // Loaders
@@ -246,14 +249,83 @@ async function addRequirementAction(formData: FormData) {
   redirect(`/app/creator/modules/${moduleId}/onsite?ok=requirement_saved`);
 }
 
+/** Update existing requirement */
+async function updateRequirementAction(formData: FormData) {
+  "use server";
+  const supabase = await createSupabaseServer();
+
+  const requirementId = String(formData.get("requirement_id") || "");
+  const moduleId = String(formData.get("module_id") || "");
+  const label = String(formData.get("label") || "").trim();
+  const fieldType = String(formData.get("field_type") || "checkbox");
+  const optionsRaw = String(formData.get("options") || "").trim();
+  const required = String(formData.get("required") || "yes").toLowerCase() === "yes";
+  const orderRaw = String(formData.get("order_index") || "").trim();
+  const helpText = String(formData.get("help_text") || "").trim();
+
+  if (!requirementId || !moduleId || !label) throw new Error("Missing fields");
+
+  // Parse options
+  let options: any = [];
+  if (optionsRaw.length > 0) {
+    try {
+      const parsed = JSON.parse(optionsRaw);
+      if (Array.isArray(parsed)) options = parsed;
+    } catch {
+      // keep []
+    }
+  }
+
+  const order_index = orderRaw !== "" && Number.isFinite(Number(orderRaw)) ? Number(orderRaw) : null;
+
+  const { error } = await supabase
+    .from("onsite_requirements")
+    .update({
+      label,
+      field_type: fieldType,
+      options,
+      required,
+      order_index,
+      help_text: helpText || null,
+    })
+    .eq("id", requirementId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/app/creator/modules/${moduleId}/onsite`);
+  redirect(`/app/creator/modules/${moduleId}/onsite?ok=requirement_updated`);
+}
+
+/** Delete requirement */
+async function deleteRequirementAction(formData: FormData) {
+  "use server";
+  const supabase = await createSupabaseServer();
+
+  const requirementId = String(formData.get("requirement_id") || "");
+  const moduleId = String(formData.get("module_id") || "");
+
+  if (!requirementId || !moduleId) throw new Error("Missing fields");
+
+  const { error } = await supabase
+    .from("onsite_requirements")
+    .delete()
+    .eq("id", requirementId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/app/creator/modules/${moduleId}/onsite`);
+  redirect(`/app/creator/modules/${moduleId}/onsite?ok=requirement_deleted`);
+}
+
 // -----------------------------
 // Page
 // -----------------------------
 export default async function OnsiteModulePage(props: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const moduleId = props.params.id;
+  const params = await props.params;
+  const moduleId = params.id;
   const sp = await (props.searchParams ?? Promise.resolve({}));
   const ok = firstParam(sp, "ok");
   const errParam = firstParam(sp, "error");
@@ -297,6 +369,8 @@ export default async function OnsiteModulePage(props: {
         <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
           {ok === "title_saved" && "Title saved."}
           {ok === "requirement_saved" && "Requirement saved."}
+          {ok === "requirement_updated" && "Requirement updated."}
+          {ok === "requirement_deleted" && "Requirement deleted."}
         </div>
       )}
       {errParam && (
@@ -439,26 +513,13 @@ export default async function OnsiteModulePage(props: {
               ) : (
                 <ul className="space-y-2">
                   {trainerReqs.map((r) => (
-                    <li key={r.id} className="rounded-md border p-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <div className="min-w-0">
-                          <div className="font-medium">{r.label}</div>
-                          <div className="text-xs text-gray-500">
-                            {roleToHuman(r.role)} • {r.field_type}
-                            {typeof r.order_index === "number" ? ` • Order ${r.order_index}` : ""}
-                            {r.required ? " • Required" : ""}
-                          </div>
-                          {Array.isArray(r.options) && r.options.length > 0 && (
-                            <div className="text-xs text-gray-500">
-                              Options: <code>{JSON.stringify(r.options)}</code>
-                            </div>
-                          )}
-                          {r.help_text && (
-                            <div className="text-xs text-gray-500">Help: {r.help_text}</div>
-                          )}
-                        </div>
-                      </div>
-                    </li>
+                    <RequirementItem 
+                      key={r.id} 
+                      requirement={r} 
+                      moduleId={mod.id}
+                      updateRequirementAction={updateRequirementAction}
+                      deleteRequirementAction={deleteRequirementAction}
+                    />
                   ))}
                 </ul>
               )}
@@ -471,26 +532,13 @@ export default async function OnsiteModulePage(props: {
               ) : (
                 <ul className="space-y-2">
                   {assessorReqs.map((r) => (
-                    <li key={r.id} className="rounded-md border p-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <div className="min-w-0">
-                          <div className="font-medium">{r.label}</div>
-                          <div className="text-xs text-gray-500">
-                            {roleToHuman(r.role)} • {r.field_type}
-                            {typeof r.order_index === "number" ? ` • Order ${r.order_index}` : ""}
-                            {r.required ? " • Required" : ""}
-                          </div>
-                          {Array.isArray(r.options) && r.options.length > 0 && (
-                            <div className="text-xs text-gray-500">
-                              Options: <code>{JSON.stringify(r.options)}</code>
-                            </div>
-                          )}
-                          {r.help_text && (
-                            <div className="text-xs text-gray-500">Help: {r.help_text}</div>
-                          )}
-                        </div>
-                      </div>
-                    </li>
+                    <RequirementItem 
+                      key={r.id} 
+                      requirement={r} 
+                      moduleId={mod.id}
+                      updateRequirementAction={updateRequirementAction}
+                      deleteRequirementAction={deleteRequirementAction}
+                    />
                   ))}
                 </ul>
               )}
