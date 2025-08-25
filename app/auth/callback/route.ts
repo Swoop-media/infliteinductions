@@ -43,14 +43,20 @@ export async function GET(req: NextRequest) {
     
     // Check if user already exists first
     let userId: string;
-    const { data: existingAuthUser } = await supabase.auth.admin.getUserByEmail(email);
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({
+      page: 1,
+      perPage: 1,
+    });
     
-    if (existingAuthUser.user) {
+    // Find user by email
+    const existingAuthUser = users.find(u => u.email === email);
+    
+    if (existingAuthUser) {
       // User exists, use their ID
-      userId = existingAuthUser.user.id;
+      userId = existingAuthUser.id;
       
       // Update user metadata to include Microsoft ID if not already set
-      const currentMetadata = existingAuthUser.user.user_metadata || {};
+      const currentMetadata = existingAuthUser.user_metadata || {};
       if (!currentMetadata.microsoft_id) {
         await supabase.auth.admin.updateUserById(userId, {
           user_metadata: {
