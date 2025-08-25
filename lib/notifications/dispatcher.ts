@@ -191,13 +191,19 @@ export async function notifyUser(
   // 2) Teams DM (best-effort)
   if (!opts?.skipTeams) {
     const text = formatTeamsText(type, payloadWithEvent, payloadWithEvent?.title);
+    console.log(`🚀 Attempting to send Teams DM to user ${recipientId} for notification type: ${type}`);
 
     // Primary: send by app user id (we store conversations by app user id in lib/teams/send)
     try {
-      await sendTeamsDMToAppUser(recipientId, text);
-      return;
+      const sent = await sendTeamsDMToAppUser(recipientId, text);
+      if (sent) {
+        console.log(`✅ Teams DM sent successfully to user ${recipientId}`);
+        return;
+      } else {
+        console.log(`⚠️ Teams DM not sent to user ${recipientId} - no Teams link found`);
+      }
     } catch (e) {
-      console.warn("[notifyUser] Teams DM (by app user id) failed; trying AAD id if provided:", e);
+      console.warn(`❌ Teams DM failed for user ${recipientId}:`, e);
     }
 
     // Optional fallback: if you mapped/know the AAD object id, try that too

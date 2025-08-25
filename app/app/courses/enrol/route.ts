@@ -41,18 +41,7 @@ export async function POST(req: Request) {
     return NextResponse.redirect(to);
   }
 
-  // 🔒 Notify Admins/Trainers via SECURITY DEFINER RPC (bypasses RLS)
-  try {
-    await supabase.rpc("notify_enrolment_request", {
-      p_user_id: user.id,
-      p_course_id: course_id,
-    });
-  } catch (e) {
-    // soft-fail
-    console.error("notify_enrolment_request rpc failed", e);
-  }
-
-  // Also try direct notification call as backup
+  // 🔒 Notify Admins/Trainers via direct notification (with proper Teams integration)
   try {
     const { notifyUser } = await import("@/lib/notifications/dispatcher");
     
@@ -83,9 +72,12 @@ export async function POST(req: Request) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
     const enrollmentUrl = `${siteUrl}/app/admin?tab=enrolments`;
 
+    console.log("Found admin users to notify:", adminUsers?.length || 0);
+
     // Notify each admin/trainer
     if (adminUsers) {
       for (const admin of adminUsers) {
+        console.log(`Sending enrollment notification to admin: ${admin.user_id}`);
         await notifyUser(
           admin.user_id,
           "enrolment_request",

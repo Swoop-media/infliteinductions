@@ -12,26 +12,45 @@ function supabaseAdmin() {
 /** Send a DM using your stored conversation_ref keyed by app user id (recipient_id). */
 export async function sendTeamsDMToAppUser(appUserId: string, text: string) {
   const sb = supabaseAdmin();
-  console.log("Looking up Teams link for app user:", appUserId);
+  console.log("🔍 Looking up Teams link for app user:", appUserId);
   
   const { data, error } = await sb
     .from("teams_links")
-    .select("conversation_ref, teams_user_id, aad_object_id")
+    .select("conversation_ref, teams_user_id, aad_object_id, user_id")
     .eq("user_id", appUserId)
     .maybeSingle();
 
-  console.log("Teams link lookup result:", { data, error });
+  console.log("📋 Teams link lookup result:", { 
+    found: !!data, 
+    error: error?.message, 
+    hasConversationRef: !!data?.conversation_ref,
+    teamsUserId: data?.teams_user_id,
+    appUserId: data?.user_id
+  });
+
+  if (error) {
+    console.error("❌ Database error looking up Teams link:", error);
+    throw error;
+  }
 
   const ref = data?.conversation_ref;
   if (!ref) {
-    console.log("No conversation reference found for user:", appUserId);
+    console.log("⚠️ No conversation reference found for user:", appUserId);
+    console.log("💡 User needs to link their Teams account or send a message to the bot first");
     return false;
   }
 
-  console.log("Sending proactive message to Teams...");
-  await sendProactive(ref, text);
-  console.log("Teams message sent successfully");
-  return true;
+  console.log("📤 Sending proactive message to Teams...");
+  console.log("📝 Message preview:", text.substring(0, 100) + "...");
+  
+  try {
+    await sendProactive(ref, text);
+    console.log("✅ Teams message sent successfully to user:", appUserId);
+    return true;
+  } catch (error) {
+    console.error("❌ Failed to send Teams message to user:", appUserId, error);
+    throw error;
+  }
 }
 
 /** Optional: if you ever store AAD object IDs in teams_links */
