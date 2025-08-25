@@ -9,6 +9,7 @@ type Profile = {
   email: string | null;
   department: string | null;
   job_description: string | null;
+  microsoft_id: string | null;
 };
 
 type Role = { id: string; name: string };
@@ -30,7 +31,7 @@ async function fetchData(search: string | null) {
 
   let profQuery = supabase
     .from("profiles")
-    .select("id, full_name, email, department, job_description")
+    .select("id, full_name, email, department, job_description, microsoft_id")
     .order("full_name", { ascending: true })
     .limit(200);
 
@@ -117,6 +118,7 @@ export default async function AdminUsersPage({
             <tr>
               <th className="px-3 py-2 text-left font-medium">Name</th>
               <th className="px-3 py-2 text-left font-medium">Email</th>
+              <th className="px-3 py-2 text-left font-medium">Microsoft ID</th>
               <th className="px-3 py-2 text-left font-medium">Department</th>
               <th className="px-3 py-2 text-left font-medium">Job</th>
               {sortedRoles.map((r) => (
@@ -134,6 +136,15 @@ export default async function AdminUsersPage({
                 <tr key={p.id} className="bg-white">
                   <td className="px-3 py-2">{p.full_name ?? "-"}</td>
                   <td className="px-3 py-2">{p.email ?? "-"}</td>
+                  <td className="px-3 py-2">
+                    {p.microsoft_id ? (
+                      <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                        {p.microsoft_id.substring(0, 8)}...
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">-</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2">{p.department ?? "-"}</td>
                   <td className="px-3 py-2">{p.job_description ?? "-"}</td>
                   {sortedRoles.map((r) => {
