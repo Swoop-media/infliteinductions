@@ -1,4 +1,3 @@
-
 // app/api/auth/microsoft/login/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { msalInstance, AUTH_CODE_URL_PARAMETERS } from "@/lib/auth/microsoft";
@@ -12,7 +11,7 @@ export async function GET(req: NextRequest) {
     };
 
     const authUrl = await msalInstance.getAuthCodeUrl(authCodeUrlParameters);
-    
+
     return NextResponse.redirect(authUrl);
   } catch (error) {
     console.error("Microsoft login initiation error:", error);
