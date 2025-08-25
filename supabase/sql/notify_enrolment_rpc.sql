@@ -40,57 +40,27 @@ BEGIN
     JOIN roles r ON ur.role_id = r.id
     WHERE LOWER(r.name) IN ('admin', 'trainers and assessors')
   LOOP
-    -- Insert notification - try new schema first, fallback to old
-    BEGIN
-      -- Try the new schema (with user_id, title, body, data columns)
-      INSERT INTO notifications (
-        user_id,
-        type,
-        title,
-        body,
-        data,
-        read
-      ) VALUES (
-        v_admin_id,
-        'enrolment_request',
-        'New enrollment request',
-        v_learner_name || ' has requested enrollment in ' || COALESCE(v_course_title, 'a course'),
-        jsonb_build_object(
-          'user_id', p_user_id,
-          'course_id', p_course_id,
-          'learnerName', v_learner_name,
-          'learner_email', v_learner_email,
-          'courseTitle', v_course_title,
-          'course_title', v_course_title,
-          'url', v_site_url || '/app/admin?tab=enrolments',
-          'event_id', 'enrol_req_' || p_user_id::text || '_' || p_course_id::text
-        ),
-        false
-      );
-    EXCEPTION
-      WHEN undefined_column THEN
-        -- Fallback to old schema (with recipient_id and payload columns)
-        INSERT INTO notifications (
-          recipient_id,
-          type,
-          payload,
-          read
-        ) VALUES (
-          v_admin_id,
-          'enrolment_request',
-          jsonb_build_object(
-            'user_id', p_user_id,
-            'course_id', p_course_id,
-            'learnerName', v_learner_name,
-            'learner_email', v_learner_email,
-            'courseTitle', v_course_title,
-            'course_title', v_course_title,
-            'url', v_site_url || '/app/admin?tab=enrolments',
-            'event_id', 'enrol_req_' || p_user_id::text || '_' || p_course_id::text
-          ),
-          false
-        );
-    END;
+    -- Insert notification using the original schema (recipient_id and payload)
+    INSERT INTO notifications (
+      recipient_id,
+      type,
+      payload,
+      read
+    ) VALUES (
+      v_admin_id,
+      'enrolment_request',
+      jsonb_build_object(
+        'user_id', p_user_id,
+        'course_id', p_course_id,
+        'learnerName', v_learner_name,
+        'learner_email', v_learner_email,
+        'courseTitle', v_course_title,
+        'course_title', v_course_title,
+        'url', v_site_url || '/app/admin?tab=enrolments',
+        'event_id', 'enrol_req_' || p_user_id::text || '_' || p_course_id::text
+      ),
+      false
+    );
 
     -- Call the edge function to send Teams notification with better error handling
     BEGIN
