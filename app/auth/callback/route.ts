@@ -118,26 +118,34 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Generate a magic link session
+    // Generate a one-time password token for the user
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: "magiclink",
+    const { data: otpData, error: otpError } = await supabase.auth.admin.generateLink({
+      type: "invite",
       email,
       options: {
         redirectTo: `${siteUrl}/app/home`,
       },
     });
 
-    if (linkError) throw linkError;
+    if (otpError) throw otpError;
 
-    // Fix the magic link URL to use the correct domain instead of localhost
-    let magicLinkUrl = linkData.properties.action_link;
-    if (magicLinkUrl.includes('localhost:3000')) {
-      magicLinkUrl = magicLinkUrl.replace('http://localhost:3000', siteUrl);
+    // Extract the token from the invite link
+    const url = new URL(otpData.properties.action_link);
+    const token = url.searchParams.get('token');
+    const tokenHash = url.searchParams.get('token_hash');
+
+    if (!token || !tokenHash) {
+      throw new Error("Failed to generate session token");
     }
 
-    // Redirect to the fixed magic link which will establish the session and then redirect to /app/home
-    return NextResponse.redirect(magicLinkUrl);
+    // Redirect to a URL that will verify the OTP and establish the session
+    const sessionUrl = new URL(`${siteUrl}/auth/callback`);
+    sessionUrl.searchParams.set('token_hash', tokenHash);
+    sessionUrl.searchParams.set('type', 'invite');
+    sessionUrl.searchParams.set('next', '/app/home');
+
+    return NextResponse.redirect(sessionUrl);
 
   } catch (error) {
     console.error("Microsoft auth callback error:", error);
