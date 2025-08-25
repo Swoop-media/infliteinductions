@@ -1,0 +1,85 @@
+○ Compiling /app/courses ...
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+ GET /app/courses?ok=enrolment_requested 200 in 3976ms
+ GET /app/notifications/list 200 in 511ms
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+Bot configuration: {
+  MicrosoftAppType: 'SingleTenant',
+  MicrosoftAppId: 'dc8a23c4...',
+  MicrosoftAppPassword: 'SET',
+  MicrosoftAppTenantId: '19b039d8...'
+}
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./node_modules/@supabase/auth-helpers-shared/dist/index.mjs
+./node_modules/@supabase/auth-helpers-nextjs/dist/index.js
+./lib/supabase/server.ts
+./app/app/notifications/list/route.ts
+Admin user lookup result: { adminUsers: [], adminError: null, count: 0 }
+Found admin users to notify: 0
+ POST /app/courses/enrol 307 in 7102ms
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./lib/notifications/dispatcher.ts
+./app/app/courses/enrol/route.ts
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./lib/notifications/dispatcher.ts
+./app/app/courses/enrol/route.ts
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./lib/notifications/dispatcher.ts
+./app/app/courses/enrol/route.ts
+ POST /api/notify/teams 410 in 2539ms
+ POST /api/notify/teams 410 in 2541ms
