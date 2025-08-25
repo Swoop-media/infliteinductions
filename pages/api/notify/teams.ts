@@ -21,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Extract notification details from either direct call or webhook record
-    const notificationType = type || record?.type;
+    const notificationType = record?.type || type;
     const payload = data || record?.payload || {};
     const createdAt = record?.created_at;
 
