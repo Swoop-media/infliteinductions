@@ -1,0 +1,169 @@
+ ✓ Compiled /app/courses/enrol in 3.8s (1723 modules)
+Bot configuration: {
+  MicrosoftAppType: 'SingleTenant',
+  MicrosoftAppId: 'dc8a23c4...',
+  MicrosoftAppPassword: 'SET',
+  MicrosoftAppTenantId: '19b039d8...'
+}
+Admin user lookup result: {
+  adminUsers: [
+    {
+      user_id: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10',
+      role_name: 'Admin'
+    },
+    {
+      user_id: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10',
+      role_name: 'Trainers and Assessors'
+    }
+  ],
+  adminError: null,
+  count: 2
+}
+Found admin users to notify: 2
+Sending enrollment notification to admin: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10 (role: Admin)
+ ○ Compiling /api/notify/teams ...
+🚀 Attempting to send Teams DM to user 1b44c8f5-95aa-4f8c-8110-8f36106b4d10 for notification type: enrolment_request
+🔍 Looking up Teams link for app user: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+📋 Teams link lookup result: {
+  found: true,
+  error: undefined,
+  hasConversationRef: true,
+  teamsUserId: '29:1hqWxRZZrJjZ6qXZMGdOzwxX6orkZTygdz7_ZpxjBARu8fFCZLwUY8Bv4LjHbEAG7U2pK0VZQthHVly1RrWUiBg',
+  appUserId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10'
+}
+📤 Sending proactive message to Teams...
+📝 Message preview: 📥 Enrollment request
+• Learner: Unknown
+• Course: Sigma 25 jump checks
+• Link: http://localhost:300...
+sendProactive called with text: 📥 Enrollment request
+• Learner: Unknown
+• Course: Sigma 25 jump checks
+• Link: http://localhost:300...
+Conversation ref: {
+  serviceUrl: 'https://smba.trafficmanager.net/apac/19b039d8-9be0-48db-9e5e-9449f1624368/',
+  conversationId: 'a:16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n',
+  fromId: '29:1hqWxRZZrJjZ6qXZMGdOzwxX6orkZTygdz7_ZpxjBARu8fFCZLwUY8Bv4LjHbEAG7U2pK0VZQthHVly1RrWUiBg',
+  botId: '28:dc8a23c4-a57f-4e10-8543-05397e1b4ae3'
+}
+Requesting access token...
+Access token obtained successfully
+Sending message to: https://smba.trafficmanager.net/apac/19b039d8-9be0-48db-9e5e-9449f1624368//v3/conversations/a:16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n/activities
+Message activity: {
+  "type": "message",
+  "from": {
+    "id": "dc8a23c4-a57f-4e10-8543-05397e1b4ae3"
+  },
+  "recipient": {
+    "id": "29:1hqWxRZZrJjZ6qXZMGdOzwxX6orkZTygdz7_ZpxjBARu8fFCZLwUY8Bv4LjHbEAG7U2pK0VZQthHVly1RrWUiBg"
+  },
+  "conversation": {
+    "id": "a:16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n"
+  },
+  "serviceUrl": "https://smba.trafficmanager.net/apac/19b039d8-9be0-48db-9e5e-9449f1624368/",
+  "text": "📥 Enrollment request\n• Learner: Unknown\n• Course: Sigma 25 jump checks\n• Link: http://localhost:3000/app/admin?tab=enrolments"
+}
+Message send failed: 401 {"message":"Authorization has been denied for this request."}
+❌ Failed to send Teams message to user: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10 Error: Message send failed: 401 - {"message":"Authorization has been denied for this request."}
+    at sendProactive (lib/teams/proactive.ts:66:10)
+    at async sendTeamsDMToAppUser (lib/teams/send.ts:47:4)
+    at async notifyUser (lib/notifications/dispatcher.ts:198:19)
+    at async POST (app/app/courses/enrol/route.ts:93:8)
+  64 |     const errorText = await messageResponse.text();
+  65 |     console.error("Message send failed:", messageResponse.status, errorText);
+> 66 |     throw new Error(`Message send failed: ${messageResponse.status} - ${errorText}`);
+     |          ^
+  67 |   }
+  68 |
+  69 |   const result = await messageResponse.json();
+❌ Teams DM failed for user 1b44c8f5-95aa-4f8c-8110-8f36106b4d10: Error: Message send failed: 401 - {"message":"Authorization has been denied for this request."}
+    at sendProactive (lib/teams/proactive.ts:66:10)
+    at async sendTeamsDMToAppUser (lib/teams/send.ts:47:4)
+    at async notifyUser (lib/notifications/dispatcher.ts:198:19)
+    at async POST (app/app/courses/enrol/route.ts:93:8)
+  64 |     const errorText = await messageResponse.text();
+  65 |     console.error("Message send failed:", messageResponse.status, errorText);
+> 66 |     throw new Error(`Message send failed: ${messageResponse.status} - ${errorText}`);
+     |          ^
+  67 |   }
+  68 |
+  69 |   const result = await messageResponse.json();
+Sending enrollment notification to admin: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10 (role: Trainers and Assessors)
+🚀 Attempting to send Teams DM to user 1b44c8f5-95aa-4f8c-8110-8f36106b4d10 for notification type: enrolment_request
+🔍 Looking up Teams link for app user: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+ ✓ Compiled /api/notify/teams in 4.4s (1632 modules)
+📋 Teams link lookup result: {
+  found: true,
+  error: undefined,
+  hasConversationRef: true,
+  teamsUserId: '29:1hqWxRZZrJjZ6qXZMGdOzwxX6orkZTygdz7_ZpxjBARu8fFCZLwUY8Bv4LjHbEAG7U2pK0VZQthHVly1RrWUiBg',
+  appUserId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10'
+}
+📤 Sending proactive message to Teams...
+📝 Message preview: 📥 Enrollment request
+• Learner: Unknown
+• Course: Sigma 25 jump checks
+• Link: http://localhost:300...
+sendProactive called with text: 📥 Enrollment request
+• Learner: Unknown
+• Course: Sigma 25 jump checks
+• Link: http://localhost:300...
+Conversation ref: {
+  serviceUrl: 'https://smba.trafficmanager.net/apac/19b039d8-9be0-48db-9e5e-9449f1624368/',
+  conversationId: 'a:16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n',
+  fromId: '29:1hqWxRZZrJjZ6qXZMGdOzwxX6orkZTygdz7_ZpxjBARu8fFCZLwUY8Bv4LjHbEAG7U2pK0VZQthHVly1RrWUiBg',
+  botId: '28:dc8a23c4-a57f-4e10-8543-05397e1b4ae3'
+}
+Requesting access token...
+ POST /api/notify/teams 410 in 9ms
+Access token obtained successfully
+Sending message to: https://smba.trafficmanager.net/apac/19b039d8-9be0-48db-9e5e-9449f1624368//v3/conversations/a:16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n/activities
+Message activity: {
+  "type": "message",
+  "from": {
+    "id": "dc8a23c4-a57f-4e10-8543-05397e1b4ae3"
+  },
+  "recipient": {
+    "id": "29:1hqWxRZZrJjZ6qXZMGdOzwxX6orkZTygdz7_ZpxjBARu8fFCZLwUY8Bv4LjHbEAG7U2pK0VZQthHVly1RrWUiBg"
+  },
+  "conversation": {
+    "id": "a:16BdaBNKcpI58ppd7e6_HBqO3pWA68VSK_nyfIFnMNteqYfKJPYoqm1R3G7_l3yQ4JAVFed3m8ZoTy3QWhW_eqOWvM_3cs2DKzJdZ2vPksIu65Toz6aX-VQ1fdOrJ6O4n"
+  },
+  "serviceUrl": "https://smba.trafficmanager.net/apac/19b039d8-9be0-48db-9e5e-9449f1624368/",
+  "text": "📥 Enrollment request\n• Learner: Unknown\n• Course: Sigma 25 jump checks\n• Link: http://localhost:3000/app/admin?tab=enrolments"
+}
+Message send failed: 401 {"message":"Authorization has been denied for this request."}
+❌ Failed to send Teams message to user: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10 Error: Message send failed: 401 - {"message":"Authorization has been denied for this request."}
+    at sendProactive (lib/teams/proactive.ts:66:10)
+    at async sendTeamsDMToAppUser (lib/teams/send.ts:47:4)
+    at async notifyUser (lib/notifications/dispatcher.ts:198:19)
+    at async POST (app/app/courses/enrol/route.ts:93:8)
+  64 |     const errorText = await messageResponse.text();
+  65 |     console.error("Message send failed:", messageResponse.status, errorText);
+> 66 |     throw new Error(`Message send failed: ${messageResponse.status} - ${errorText}`);
+     |          ^
+  67 |   }
+  68 |
+  69 |   const result = await messageResponse.json();
+❌ Teams DM failed for user 1b44c8f5-95aa-4f8c-8110-8f36106b4d10: Error: Message send failed: 401 - {"message":"Authorization has been denied for this request."}
+    at sendProactive (lib/teams/proactive.ts:66:10)
+    at async sendTeamsDMToAppUser (lib/teams/send.ts:47:4)
+    at async notifyUser (lib/notifications/dispatcher.ts:198:19)
+    at async POST (app/app/courses/enrol/route.ts:93:8)
+  64 |     const errorText = await messageResponse.text();
+  65 |     console.error("Message send failed:", messageResponse.status, errorText);
+> 66 |     throw new Error(`Message send failed: ${messageResponse.status} - ${errorText}`);
+     |          ^
+  67 |   }
+  68 |
+  69 |   const result = await messageResponse.json();
+ POST /app/courses/enrol 307 in 12750ms
+ ○ Compiling /app/courses ...
+ ⚠ ./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+Critical dependency: the request of a dependency is an expression
+
+Import trace for requested module:
+./node_modules/@supabase/realtime-js/dist/module/lib/websocket-factory.js
+./node_modules/@supabase/realtime-js/dist/module/index.js
+./node_modules/@supabase/supabase-js/dist/module/index.js
+./app/app/courses/enrol/route.ts
