@@ -21,10 +21,17 @@ This document is the single source of truth for stack, schema, routes, and conve
 - **Next.js** 15.4.6 (App Router, TypeScript)
 - **Supabase** (Postgres, RLS, Storage, Realtime)
 - **Tailwind-like utility classes**
-- **Auth** via Supabase
+- **Auth** via Microsoft SSO + Supabase
+  - Microsoft tenant-restricted authentication
+  - Automatic user/profile creation (no email confirmation)
   - Server helper: `@/lib/supabase/server`
   - Browser helper: `@/lib/supabase/client`
+  - Auth helper: `@/lib/auth/microsoft` (MSAL)
 - Role helper: `@/lib/roles` with `hasRole()`
+- **Microsoft Teams Bot** integration
+  - Proactive notifications via Teams
+  - User account linking via bot commands
+  - Teams helpers: `@/lib/teams/`
 
 ---
 
@@ -134,6 +141,10 @@ roles: id uuid, name text, description text
 user_roles: user_id uuid, role_id uuid, granted_at timestamptz default now(), granted_by uuid null
 UNIQUE (user_id, role_id)
 
+### Teams Integration
+teams_links: teams_user_id text PK, aad_object_id text, user_id uuid FK profiles.id, conversation_ref jsonb, last_activity timestamptz, created_at timestamptz, updated_at timestamptz
+teams_link_codes: id uuid PK, user_id uuid FK profiles.id, code text UNIQUE, expires_at timestamptz, created_at timestamptz
+
 markdown
 Copy
 Edit
@@ -160,6 +171,15 @@ Edit
 
 ## Routes & Pages (Key)
 
+### Authentication
+- `app/auth/signin/page.tsx` - Microsoft SSO login page
+- `app/auth/callback/route.ts` - Microsoft OAuth callback handler
+  - Creates/finds Supabase user
+  - Creates profile with Microsoft metadata
+  - Establishes session via temporary password
+- `app/auth/confirm/page.tsx` - Session establishment page
+- `api/auth/microsoft/login/route.ts` - Microsoft OAuth initiation
+
 ### Creator
 - `app/app/creator/page.tsx` – list of Courses & Authorisations; delete flows with confirmation pages and `?ok` banners.
 - `app/app/creator/courses/[id]/page.tsx` – editor with tabs
@@ -174,6 +194,14 @@ Edit
   - Approve enrolments → POST `/app/app/admin/enrolments/approve`
   - Roles grant/revoke → POST `/app/app/admin/users/roles/grant|revoke`
   - Self-lockout guard: cannot remove your own Admin role.
+
+### Teams Bot API
+- `pages/api/teams/bot/messages.ts` - Bot framework message handler
+  - Processes Teams activities and commands
+  - Handles `/link` command for account linking
+  - Supports proactive message sending
+- `pages/api/teams/link/generate.ts` - Generate 6-digit link codes
+- `app/api/teams/bot/debug-send/route.ts` - Test proactive messaging
 
 ### Learner
 - **Catalogue**: `app/app/courses/page.tsx`
@@ -278,14 +306,42 @@ Edit
 
 ## Environment
 
-- Optional emails: `RESEND_API_KEY`
+Required:
+- `MICROSOFT_APP_ID` - Microsoft App Registration ID
+- `MICROSOFT_APP_PASSWORD` - Microsoft App Registration secret
+- `MICROSOFT_APP_TYPE=SingleTenant` - Restricts to your tenant
+- `MICROSOFT_APP_TENANT_ID` - Your Microsoft tenant ID
+- `NEXT_PUBLIC_SITE_URL` - Your app URL (for OAuth redirects)
 - Supabase keys/env expected by your `@/lib/supabase/*` helpers
+
+Optional:
+- `RESEND_API_KEY` - For email notifications
+- `SUPABASE_DB_WEBHOOK_SECRET` - For Teams bot webhooks
+- `SUPABASE_DB_WEBHOOK` - For Teams bot integration
+
 - Next.js App Router with server actions enabled
 
 ---
 
 ## Paths Touched Recently
 
+### Authentication System
+app/auth/callback/route.ts
+app/auth/confirm/page.tsx
+app/auth/signin/page.tsx
+lib/auth/microsoft.ts
+api/auth/microsoft/login/route.ts
+
+### Teams Integration
+pages/api/teams/bot/messages.ts
+pages/api/teams/link/generate.ts
+app/api/teams/bot/debug-send/route.ts
+lib/teams/botAdapter.ts
+lib/teams/proactive.ts
+lib/teams/send.ts
+supabase/sql/teams_integration.sql
+
+### Core App
 app/app/creator/page.tsx
 app/app/creator/courses/[id]/page.tsx
 app/app/creator/courses/[id]/delete/page.tsx
@@ -316,6 +372,16 @@ Edit
 
 ## Testing Checklist (Smoke)
 
+### Authentication
+1. **Microsoft Login** → redirects to Microsoft → creates user/profile → establishes session → lands on `/app/home`
+2. **Tenant restriction** → only users from configured tenant can login
+3. **Profile creation** → both Supabase auth user and profile created automatically
+
+### Teams Bot (if configured)
+1. **Link account** → `/link` in Teams bot → generates code → user enters code → accounts linked
+2. **Proactive notifications** → enrolment events trigger Teams messages to linked users
+
+### Core Functionality  
 1. Learner requests enrolment → Admin sees **pending**, button shows **Requested**.
 2. Admin approves → learner sees **Enrolled**, can open player.
 3. Player ordering is: digital training → quiz → onsite training → onsite assessment.

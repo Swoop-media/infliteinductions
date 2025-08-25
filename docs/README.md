@@ -27,9 +27,20 @@ Create .env.local with:
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
+NEXT_PUBLIC_SITE_URL=https://your-replit-url.replit.dev
+
+# Microsoft Authentication (required)
+MICROSOFT_APP_ID=your-app-id
+MICROSOFT_APP_PASSWORD=your-app-password
+MICROSOFT_APP_TYPE=SingleTenant
+MICROSOFT_APP_TENANT_ID=your-tenant-id
 
 # Optional (emails via Resend)
 RESEND_API_KEY=YOUR_RESEND_API_KEY
+
+# Teams Bot Integration (optional)
+SUPABASE_DB_WEBHOOK_SECRET=your-webhook-secret
+SUPABASE_DB_WEBHOOK=your-webhook-hash
 
 
 SUPABASE_SERVICE_ROLE_KEY is only used server-side; do not expose it on the client.
@@ -40,6 +51,22 @@ pnpm dev    # or npm run dev / yarn dev
 
 
 Open: http://localhost:3000
+
+Authentication
+
+The app uses **Microsoft Single Sign-On (SSO)** for authentication:
+
+- **Login Flow**: Users click "Login with Microsoft" → Microsoft OAuth → automatic user/profile creation
+- **No Email Confirmation**: Designed for corporate tenants where users may not have external email access
+- **Automatic Profile Creation**: Both Supabase auth user and profile are created automatically
+- **Session Management**: Uses temporary passwords for reliable session establishment
+- **Tenant Restricted**: Only users from your Microsoft tenant can authenticate
+
+Key Auth Files:
+- `app/auth/signin/page.tsx` - Login page with Microsoft button
+- `app/auth/callback/route.ts` - Handles Microsoft OAuth callback
+- `app/auth/confirm/page.tsx` - Establishes authenticated session
+- `lib/auth/microsoft.ts` - MSAL configuration
 
 App Structure (high level)
 app/
@@ -82,6 +109,26 @@ app/
     notify.ts                  # (optional) extra notifications/email hook
 docs/
   Handover.md                  # Deep handover for new devs/chats
+
+Microsoft Teams Integration
+
+The app includes Microsoft Teams bot integration for proactive notifications:
+
+- **Teams Bot**: Sends course notifications directly to Teams
+- **Link Account Flow**: Users can link their Teams account via `/link` command in bot
+- **Proactive Messages**: Notifications for enrolment requests, approvals, etc.
+- **User Mapping**: Links Microsoft Teams users to app users via `teams_links` table
+
+Teams Tables:
+```sql
+teams_links(teams_user_id, aad_object_id, user_id, conversation_ref, last_activity, created_at, updated_at)
+teams_link_codes(user_id, code, expires_at, created_at)
+```
+
+Teams Files:
+- `pages/api/teams/bot/messages.ts` - Bot message handler
+- `pages/api/teams/link/generate.ts` - Link code generation
+- `lib/teams/` - Bot utilities and proactive messaging
 
 Database (must-have tables)
 
