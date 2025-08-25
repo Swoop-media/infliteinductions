@@ -1,3 +1,4 @@
+
 // app/auth/callback/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { msalInstance } from "@/lib/auth/microsoft";
@@ -13,10 +14,61 @@ function supabaseAdmin() {
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
-  const state = searchParams.get("state");
+  const token_hash = searchParams.get("token_hash");
+  const type = searchParams.get("type");
+  const next = searchParams.get("next");
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
+
+  // Handle Supabase auth verification (second part of flow)
+  if (token_hash && type) {
+    try {
+      const supabase = supabaseAdmin();
+      
+      // Verify the session using the token hash
+      const { data, error } = await supabase.auth.verifyOtp({
+        token_hash,
+        type: type as any,
+      });
+
+      if (error) {
+        console.error("Session verification failed:", error);
+        return NextResponse.redirect(new URL("/auth/signin?error=auth_failed", siteUrl));
+      }
+
+      // Create a response that will set the session cookie
+      const response = NextResponse.redirect(new URL(next || "/app/home", siteUrl));
+      
+      // Set the session in cookies
+      if (data.session) {
+        response.cookies.set({
+          name: 'sb-access-token',
+          value: data.session.access_token,
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+          maxAge: data.session.expires_in || 3600
+        });
+        
+        response.cookies.set({
+          name: 'sb-refresh-token',
+          value: data.session.refresh_token,
+          httpOnly: true,
+          secure: true,
+          sameSite: 'lax',
+          maxAge: 60 * 60 * 24 * 7 // 7 days
+        });
+      }
+
+      return response;
+    } catch (error) {
+      console.error("Auth verification error:", error);
+      return NextResponse.redirect(new URL("/auth/signin?error=auth_failed", siteUrl));
+    }
+  }
+
+  // Handle Microsoft OAuth callback (first part of flow)
   if (!code) {
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
     return NextResponse.redirect(new URL("/auth/signin?error=missing_code", siteUrl));
   }
 
@@ -25,7 +77,7 @@ export async function GET(req: NextRequest) {
     const tokenRequest = {
       code,
       scopes: ["openid", "profile", "email", "User.Read"],
-      redirectUri: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      redirectUri: `${siteUrl}/auth/callback`,
     };
 
     const response = await msalInstance.acquireTokenByCode(tokenRequest);
@@ -42,13 +94,10 @@ export async function GET(req: NextRequest) {
 
     // Check if user already exists first
     let userId: string;
-    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({
-      page: 1,
-      perPage: 1,
-    });
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
 
     // Find user by email
-    const existingAuthUser = users.find(u => u.email === email);
+    const existingAuthUser = users?.find(u => u.email === email);
 
     if (existingAuthUser) {
       // User exists, use their ID
@@ -118,43 +167,41 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Generate a session link for the user
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
-    
-    // Use different link types based on whether user exists
-    const linkType = existingAuthUser ? "magiclink" : "invite";
-    
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: linkType,
-      email,
-      options: {
-        redirectTo: `${siteUrl}/app/home`,
-      },
+    // Create a session directly instead of using magic link
+    const { data: sessionData, error: sessionError } = await supabase.auth.admin.createSession({
+      user_id: userId,
     });
 
-    if (linkError) throw linkError;
-
-    // Extract the token from the link
-    const url = new URL(linkData.properties.action_link);
-    const token = url.searchParams.get('token');
-    const tokenHash = url.searchParams.get('token_hash');
-
-    if (!token || !tokenHash) {
-      throw new Error("Failed to generate session token");
+    if (sessionError || !sessionData.session) {
+      throw new Error("Failed to create session");
     }
 
-    // Redirect to a URL that will verify the token and establish the session
-    const sessionUrl = new URL(`${siteUrl}/auth/callback`);
-    sessionUrl.searchParams.set('token_hash', tokenHash);
-    sessionUrl.searchParams.set('type', linkType);
-    sessionUrl.searchParams.set('next', '/app/home');
+    // Create response with session cookies
+    const redirectResponse = NextResponse.redirect(new URL("/app/home", siteUrl));
+    
+    // Set the session cookies
+    redirectResponse.cookies.set({
+      name: 'sb-access-token',
+      value: sessionData.session.access_token,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: sessionData.session.expires_in || 3600
+    });
+    
+    redirectResponse.cookies.set({
+      name: 'sb-refresh-token',
+      value: sessionData.session.refresh_token,
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 7 days
+    });
 
-    return NextResponse.redirect(sessionUrl);
+    return redirectResponse;
 
   } catch (error) {
     console.error("Microsoft auth callback error:", error);
-    // Use the site URL from env instead of req.url to avoid 0.0.0.0 issues
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
     return NextResponse.redirect(new URL("/auth/signin?error=auth_failed", siteUrl));
   }
 }
