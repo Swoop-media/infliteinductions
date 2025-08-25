@@ -118,20 +118,24 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Generate a one-time password token for the user
+    // Generate a session link for the user
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
-    const { data: otpData, error: otpError } = await supabase.auth.admin.generateLink({
-      type: "invite",
+    
+    // Use different link types based on whether user exists
+    const linkType = existingAuthUser ? "magiclink" : "invite";
+    
+    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
+      type: linkType,
       email,
       options: {
         redirectTo: `${siteUrl}/app/home`,
       },
     });
 
-    if (otpError) throw otpError;
+    if (linkError) throw linkError;
 
-    // Extract the token from the invite link
-    const url = new URL(otpData.properties.action_link);
+    // Extract the token from the link
+    const url = new URL(linkData.properties.action_link);
     const token = url.searchParams.get('token');
     const tokenHash = url.searchParams.get('token_hash');
 
@@ -139,10 +143,10 @@ export async function GET(req: NextRequest) {
       throw new Error("Failed to generate session token");
     }
 
-    // Redirect to a URL that will verify the OTP and establish the session
+    // Redirect to a URL that will verify the token and establish the session
     const sessionUrl = new URL(`${siteUrl}/auth/callback`);
     sessionUrl.searchParams.set('token_hash', tokenHash);
-    sessionUrl.searchParams.set('type', 'invite');
+    sessionUrl.searchParams.set('type', linkType);
     sessionUrl.searchParams.set('next', '/app/home');
 
     return NextResponse.redirect(sessionUrl);
