@@ -12,15 +12,15 @@ export default function AuthConfirm() {
 
   useEffect(() => {
     const confirmAuth = async () => {
-      const tokenHash = searchParams.get("token_hash");
-      const type = searchParams.get("type");
+      const email = searchParams.get("email");
+      const password = searchParams.get("password");
       const next = searchParams.get("next") || "/app/home";
 
-      if (tokenHash && type) {
+      if (email && password) {
         try {
-          const { error } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
-            type: type as any,
+          const { error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
           });
 
           if (error) {
@@ -29,7 +29,8 @@ export default function AuthConfirm() {
             return;
           }
 
-          // Session established successfully
+          // Session established successfully, clean up URL and redirect
+          window.history.replaceState({}, document.title, "/auth/confirm");
           router.push(next);
         } catch (error) {
           console.error("Auth confirmation error:", error);
