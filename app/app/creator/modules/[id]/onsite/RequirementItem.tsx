@@ -22,6 +22,12 @@ function roleToHuman(role: string) {
   return role;
 }
 
+function getRoleColor(role: string) {
+  if (role === "onsite_trainer" || role === "trainer") return "text-blue-600 bg-blue-50";
+  if (role === "onsite_assessor" || role === "assessor") return "text-orange-600 bg-orange-50";
+  return "text-gray-600 bg-gray-50";
+}
+
 export default function RequirementItem({ 
   requirement: r, 
   moduleId,
@@ -37,110 +43,147 @@ export default function RequirementItem({
 
   if (isEditing) {
     return (
-      <li className="rounded-md border p-3 text-sm bg-gray-50">
-        <form action={updateRequirementAction} className="space-y-3">
+      <div className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+        <form action={updateRequirementAction} className="space-y-4">
           <input type="hidden" name="requirement_id" value={r.id} />
           <input type="hidden" name="module_id" value={moduleId} />
           
-          <div className="grid gap-2">
-            <label className="text-xs font-medium">Label</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Label</label>
             <input
               name="label"
               defaultValue={r.label || ""}
-              className="w-full rounded border px-2 py-1 text-sm"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
               required
             />
           </div>
 
-          <div className="grid gap-2">
-            <label className="text-xs font-medium">Field type</label>
-            <select name="field_type" defaultValue={r.field_type || "checkbox"} className="rounded border px-2 py-1 text-sm">
-              <option value="checkbox">Checkbox</option>
-              <option value="select">Select</option>
-              <option value="text">Text</option>
-              <option value="date">Date</option>
-              <option value="rating">Rating</option>
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Field type</label>
+              <select name="field_type" defaultValue={r.field_type || "checkbox"} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20">
+                <option value="checkbox">Checkbox</option>
+                <option value="select">Select</option>
+                <option value="text">Text</option>
+                <option value="date">Date</option>
+                <option value="rating">Rating</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Required?</label>
+              <select name="required" defaultValue={r.required ? "yes" : "no"} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20">
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            </div>
           </div>
 
-          <div className="grid gap-2">
-            <label className="text-xs font-medium">Options (JSON array)</label>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Options (JSON array)</label>
             <input
               name="options"
               defaultValue={Array.isArray(r.options) ? JSON.stringify(r.options) : "[]"}
-              className="w-full rounded border px-2 py-1 text-sm"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
               placeholder='e.g. ["Pass","Fail"] or [1,2,3,4,5]'
             />
           </div>
 
-          <div className="grid gap-2">
-            <label className="text-xs font-medium">Required?</label>
-            <select name="required" defaultValue={r.required ? "yes" : "no"} className="rounded border px-2 py-1 text-sm">
-              <option value="yes">Yes</option>
-              <option value="no">No</option>
-            </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Order</label>
+              <input
+                name="order_index"
+                type="number"
+                defaultValue={r.order_index || ""}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Help text</label>
+              <input
+                name="help_text"
+                defaultValue={r.help_text || ""}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20"
+                placeholder="Optional hint"
+              />
+            </div>
           </div>
 
-          <div className="grid gap-2">
-            <label className="text-xs font-medium">Order</label>
-            <input
-              name="order_index"
-              type="number"
-              defaultValue={r.order_index || ""}
-              className="w-20 rounded border px-2 py-1 text-sm"
-            />
-          </div>
-
-          <div className="grid gap-2">
-            <label className="text-xs font-medium">Help text</label>
-            <input
-              name="help_text"
-              defaultValue={r.help_text || ""}
-              className="w-full rounded border px-2 py-1 text-sm"
-              placeholder="Optional hint"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <button type="submit" className="rounded bg-green-600 px-3 py-1 text-xs text-white">
-              Save
+          <div className="flex gap-2 pt-2">
+            <button type="submit" className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 transition-colors">
+              Save Changes
             </button>
             <button 
               type="button" 
               onClick={() => setIsEditing(false)}
-              className="rounded bg-gray-500 px-3 py-1 text-xs text-white"
+              className="rounded-lg bg-gray-500 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600 transition-colors"
             >
               Cancel
             </button>
           </div>
         </form>
-      </li>
+      </div>
     );
   }
 
   return (
-    <li className="rounded-md border p-2 text-sm">
+    <div className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-sm transition-shadow">
       <div className="flex items-start justify-between">
-        <div className="min-w-0 flex-1">
-          <div className="font-medium">{r.label}</div>
-          <div className="text-xs text-gray-500">
-            {roleToHuman(r.role)} • {r.field_type}
-            {typeof r.order_index === "number" ? ` • Order ${r.order_index}` : ""}
-            {r.required ? " • Required" : ""}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            <h4 className="font-medium text-gray-900 truncate">{r.label}</h4>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getRoleColor(r.role)}`}>
+              {roleToHuman(r.role)}
+            </span>
           </div>
+          
+          <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+            <span className="inline-flex items-center">
+              <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+              </svg>
+              {r.field_type}
+            </span>
+            
+            {typeof r.order_index === "number" && (
+              <span className="inline-flex items-center">
+                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                </svg>
+                Order {r.order_index}
+              </span>
+            )}
+            
+            {r.required && (
+              <span className="inline-flex items-center text-red-600">
+                <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                Required
+              </span>
+            )}
+          </div>
+          
           {Array.isArray(r.options) && r.options.length > 0 && (
-            <div className="text-xs text-gray-500">
-              Options: <code>{JSON.stringify(r.options)}</code>
+            <div className="mt-2 text-xs text-gray-600">
+              <span className="font-medium">Options:</span> 
+              <code className="ml-1 bg-gray-100 px-1 py-0.5 rounded text-xs">{JSON.stringify(r.options)}</code>
             </div>
           )}
+          
           {r.help_text && (
-            <div className="text-xs text-gray-500">Help: {r.help_text}</div>
+            <div className="mt-2 text-xs text-gray-600">
+              <span className="font-medium">Help:</span> {r.help_text}
+            </div>
           )}
         </div>
-        <div className="flex gap-1 ml-2">
+        
+        <div className="flex gap-2 ml-3 flex-shrink-0">
           <button
             onClick={() => setIsEditing(true)}
-            className="rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
+            className="rounded-md bg-blue-500 px-3 py-1 text-xs font-medium text-white hover:bg-blue-600 transition-colors"
           >
             Edit
           </button>
@@ -154,13 +197,13 @@ export default function RequirementItem({
                   e.preventDefault();
                 }
               }}
-              className="rounded bg-red-500 px-2 py-1 text-xs text-white hover:bg-red-600"
+              className="rounded-md bg-red-500 px-3 py-1 text-xs font-medium text-white hover:bg-red-600 transition-colors"
             >
               Delete
             </button>
           </form>
         </div>
       </div>
-    </li>
+    </div>
   );
 }

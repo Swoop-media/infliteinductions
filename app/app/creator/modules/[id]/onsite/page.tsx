@@ -1,3 +1,4 @@
+
 // app/app/creator/modules/[id]/onsite/page.tsx
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -339,224 +340,266 @@ export default async function OnsiteModulePage(props: {
 
   if (err || !mod) {
     return (
-      <div className="p-6 space-y-4">
-        <h1 className="text-xl font-semibold">Onsite Module</h1>
-        <p className="text-red-600">Error: {err ?? "Module not found"}</p>
-        <Link href="/app/creator" className="underline text-sm">
-          ← Back to Creator
-        </Link>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="mx-auto max-w-4xl">
+          <h1 className="text-xl font-semibold">Onsite Module</h1>
+          <p className="text-red-600 mt-2">Error: {err ?? "Module not found"}</p>
+          <Link href="/app/creator" className="underline text-sm text-blue-600 hover:text-blue-800 mt-4 inline-block">
+            ← Back to Creator
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">
-            {mod.type === "onsite_training" ? "Onsite Training" : "Onsite Assessment"}
-          </h1>
-          <p className="text-sm text-gray-500">
-            Module: <span className="font-medium">{mod.title ?? "Untitled"}</span> • ID: {mod.id}
-          </p>
-        </div>
-        <Link
-          href={`/app/creator/courses/${mod.course_id}?tab=${mod.type}`}
-          className="rounded-md border px-3 py-1 text-sm"
-        >
-          Back to course
-        </Link>
-      </div>
-
-      {/* Flash banners */}
-      {ok && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
-          {ok === "title_saved" && "Title saved."}
-          {ok === "requirement_saved" && "Requirement saved."}
-          {ok === "requirement_updated" && "Requirement updated."}
-          {ok === "requirement_deleted" && "Requirement deleted."}
-        </div>
-      )}
-      {errParam && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {errParam}
-        </div>
-      )}
-
-      {/* Save module title */}
-      <div className="rounded-xl border p-4 space-y-3 bg-white">
-        <h2 className="text-lg font-semibold">Module title</h2>
-        <form action={saveTitleAction} className="flex items-center gap-2">
-          <input type="hidden" name="module_id" value={mod.id} />
-          <input
-            name="title"
-            defaultValue={mod.title ?? ""}
-            placeholder="e.g. Onsite Assessment"
-            className="w-[480px] max-w-full rounded-md border px-3 py-2"
-          />
-          <button className="rounded-md bg-black px-4 py-2 text-white">Save</button>
-        </form>
-      </div>
-
-      {/* Three-column layout */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {/* Learners list */}
-        <div className="rounded-xl border p-4 space-y-2">
-          <h3 className="text-sm font-semibold">Learners</h3>
-          {learners.length === 0 ? (
-            <p className="text-sm text-gray-500">No trainees assigned.</p>
-          ) : (
-            <ul className="space-y-1">
-              {learners.map((l) => (
-                <li key={l.id} className="text-sm">
-                  {l.full_name || l.email || l.id}
-                </li>
-              ))}
-            </ul>
-          )}
+    <div className="min-h-screen bg-gray-50">
+      <div className="mx-auto max-w-4xl p-6 space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {mod.type === "onsite_training" ? "Onsite Training Builder" : "Onsite Assessment Builder"}
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Create checklist requirements for trainers and assessors to complete during onsite sessions
+            </p>
+          </div>
+          <Link
+            href={`/app/creator/courses/${mod.course_id}?tab=${mod.type}`}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            ← Back to course
+          </Link>
         </div>
 
-        {/* Add requirement + list */}
-        <div className="rounded-xl border p-4 space-y-4">
-          <details open className="space-y-3">
-            <summary className="cursor-pointer text-sm font-semibold">Add requirement</summary>
-            <form action={addRequirementAction} className="grid gap-3">
+        {/* Flash banners */}
+        {ok && (
+          <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800">
+            <div className="flex items-center">
+              <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              {ok === "title_saved" && "Module title saved successfully."}
+              {ok === "requirement_saved" && "Requirement added successfully."}
+              {ok === "requirement_updated" && "Requirement updated successfully."}
+              {ok === "requirement_deleted" && "Requirement deleted successfully."}
+            </div>
+          </div>
+        )}
+        {errParam && (
+          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <div className="flex items-center">
+              <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {errParam}
+            </div>
+          </div>
+        )}
+
+        {/* Module title section */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Module Details</h2>
+          <form action={saveTitleAction} className="flex items-center gap-3">
+            <input type="hidden" name="module_id" value={mod.id} />
+            <div className="flex-1">
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                Module Title
+              </label>
+              <input
+                id="title"
+                name="title"
+                defaultValue={mod.title ?? ""}
+                placeholder="e.g. Onsite Safety Assessment"
+                className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
+              />
+            </div>
+            <button className="mt-7 rounded-lg bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 transition-colors">
+              Save Title
+            </button>
+          </form>
+          <p className="text-xs text-gray-500 mt-2">ID: {mod.id}</p>
+        </div>
+
+        {/* Main content area */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Add requirement form */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Add New Requirement</h2>
+            <form action={addRequirementAction} className="space-y-4">
               <input type="hidden" name="module_id" value={mod.id} />
 
-              <div className="grid gap-1">
-                <label className="text-sm">Label</label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Requirement Label
+                </label>
                 <input
                   name="label"
-                  placeholder="e.g. Safety briefing delivered"
-                  className="w-full rounded-md border px-3 py-2"
+                  placeholder="e.g. Safety briefing delivered to learner"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
                   required
                 />
               </div>
 
-              <div className="grid gap-1">
-                <label className="text-sm">Role</label>
-                <select name="role" defaultValue="trainer" className="rounded-md border px-3 py-2">
-                  <option value="trainer">Trainer</option>
-                  <option value="assessor">Assessor</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                  <select name="role" defaultValue="trainer" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors">
+                    <option value="trainer">Trainer</option>
+                    <option value="assessor">Assessor</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Field Type</label>
+                  <select name="field_type" defaultValue="checkbox" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors">
+                    <option value="checkbox">Checkbox</option>
+                    <option value="select">Select</option>
+                    <option value="text">Text</option>
+                    <option value="date">Date</option>
+                    <option value="rating">Rating</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="grid gap-1">
-                <label className="text-sm">Field type</label>
-                <select name="field_type" defaultValue="checkbox" className="rounded-md border px-3 py-2">
-                  <option value="checkbox">Checkbox</option>
-                  <option value="select">Select</option>
-                  <option value="text">Text</option>
-                  <option value="date">Date</option>
-                  <option value="rating">Rating</option>
-                </select>
-              </div>
-
-              <div className="grid gap-1">
-                <label className="text-sm">
-                  Options (JSON array; required for Select/Rating, ignored otherwise)
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Options (for Select/Rating fields)
                 </label>
                 <input
                   name="options"
                   placeholder='e.g. ["Pass","Fail"] or [1,2,3,4,5]'
-                  className="w-full rounded-md border px-3 py-2"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
                 />
-                <p className="text-xs text-gray-500">
-                  If left blank, we’ll save an empty list <code>[]</code>.
+                <p className="text-xs text-gray-500 mt-1">
+                  JSON array format. Leave blank for other field types.
                 </p>
               </div>
 
-              <div className="grid gap-1">
-                <label className="text-sm">Required?</label>
-                <select name="required" defaultValue="yes" className="rounded-md border px-3 py-2">
-                  <option value="yes">Yes</option>
-                  <option value="no">No</option>
-                </select>
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Required?</label>
+                  <select name="required" defaultValue="yes" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors">
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
+                  </select>
+                </div>
 
-              <div className="grid gap-1">
-                <label className="text-sm">Order</label>
-                <input
-                  name="order_index"
-                  type="number"
-                  className="w-28 rounded-md border px-3 py-2"
-                  placeholder="auto"
-                />
-                <p className="text-xs text-gray-500">
-                  Leave blank to place it at the end (next • Trainer: {nextFor.trainer}, Assessor: {nextFor.assessor}).
-                </p>
-              </div>
-
-              <div className="grid gap-1">
-                <label className="text-sm">Help text (optional)</label>
-                <input
-                  name="help_text"
-                  className="w-full rounded-md border px-3 py-2"
-                  placeholder="Short hint for the trainer/assessor"
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
+                  <input
+                    name="order_index"
+                    type="number"
+                    className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
+                    placeholder="auto"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Leave blank for automatic ordering
+                  </p>
+                </div>
               </div>
 
               <div>
-                <button className="rounded-md bg-black px-4 py-2 text-white">
-                  Save requirement
-                </button>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Help Text (optional)
+                </label>
+                <input
+                  name="help_text"
+                  className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors"
+                  placeholder="Additional guidance for the trainer/assessor"
+                />
               </div>
+
+              <button className="w-full rounded-lg bg-green-600 px-6 py-3 text-white font-medium hover:bg-green-700 transition-colors">
+                Add Requirement
+              </button>
             </form>
-          </details>
+          </div>
 
-          {/* Lists */}
-          <div className="space-y-3">
-            <div>
-              <h4 className="text-sm font-semibold">Checklist requirements</h4>
-            </div>
+          {/* Requirements list */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Checklist Requirements</h2>
+            
+            <div className="space-y-6">
+              {/* Trainer Requirements */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
+                  <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                  Trainer Requirements
+                </h3>
+                {trainerReqs.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                    </svg>
+                    <p className="text-sm">No trainer requirements yet</p>
+                    <p className="text-xs">Add requirements using the form on the left</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {trainerReqs.map((r) => (
+                      <RequirementItem 
+                        key={r.id} 
+                        requirement={r} 
+                        moduleId={mod.id}
+                        updateRequirementAction={updateRequirementAction}
+                        deleteRequirementAction={deleteRequirementAction}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
 
-            <div className="space-y-2">
-              <h5 className="text-xs font-medium text-gray-600">Trainer</h5>
-              {trainerReqs.length === 0 ? (
-                <p className="text-sm text-gray-500">No requirements yet.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {trainerReqs.map((r) => (
-                    <RequirementItem 
-                      key={r.id} 
-                      requirement={r} 
-                      moduleId={mod.id}
-                      updateRequirementAction={updateRequirementAction}
-                      deleteRequirementAction={deleteRequirementAction}
-                    />
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <h5 className="text-xs font-medium text-gray-600">Assessor</h5>
-              {assessorReqs.length === 0 ? (
-                <p className="text-sm text-gray-500">No requirements yet.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {assessorReqs.map((r) => (
-                    <RequirementItem 
-                      key={r.id} 
-                      requirement={r} 
-                      moduleId={mod.id}
-                      updateRequirementAction={updateRequirementAction}
-                      deleteRequirementAction={deleteRequirementAction}
-                    />
-                  ))}
-                </ul>
-              )}
+              {/* Assessor Requirements */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-3 flex items-center">
+                  <span className="w-2 h-2 bg-orange-500 rounded-full mr-2"></span>
+                  Assessor Requirements
+                </h3>
+                {assessorReqs.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <svg className="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-sm">No assessor requirements yet</p>
+                    <p className="text-xs">Add requirements using the form on the left</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {assessorReqs.map((r) => (
+                      <RequirementItem 
+                        key={r.id} 
+                        requirement={r} 
+                        moduleId={mod.id}
+                        updateRequirementAction={updateRequirementAction}
+                        deleteRequirementAction={deleteRequirementAction}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Responses panel (placeholder) */}
-        <div className="rounded-xl border p-4">
-          <h3 className="text-sm font-semibold">Responses (select a learner)</h3>
-          <p className="text-sm text-gray-500 mt-1">
-            Pick a learner to fill responses.
-          </p>
+        {/* Summary info */}
+        <div className="bg-blue-50 rounded-xl border border-blue-200 p-6">
+          <h3 className="text-lg font-semibold text-blue-900 mb-2">Module Summary</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div className="bg-white rounded-lg p-3">
+              <p className="text-gray-600">Enrolled Learners</p>
+              <p className="text-2xl font-bold text-gray-900">{learners.length}</p>
+            </div>
+            <div className="bg-white rounded-lg p-3">
+              <p className="text-gray-600">Trainer Requirements</p>
+              <p className="text-2xl font-bold text-blue-600">{trainerReqs.length}</p>
+            </div>
+            <div className="bg-white rounded-lg p-3">
+              <p className="text-gray-600">Assessor Requirements</p>
+              <p className="text-2xl font-bold text-orange-600">{assessorReqs.length}</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
