@@ -8,7 +8,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    console.log("Teams notification request:", JSON.stringify(req.body, null, 2));
+    console.log("🔔 Teams notification request received:");
+    console.log("Raw body:", JSON.stringify(req.body, null, 2));
     
     // Handle both database trigger format and webhook format
     const { recipientUserId, type, title, body, data, record } = req.body;
@@ -16,8 +17,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Extract recipient ID from either direct call or webhook record
     const recipient = recipientUserId || record?.recipient_id;
     
+    console.log("📋 Extracted values:");
+    console.log("- recipientUserId:", recipientUserId);
+    console.log("- type:", type);
+    console.log("- title:", title);
+    console.log("- record.recipient_id:", record?.recipient_id);
+    console.log("- Final recipient:", recipient);
+    
     if (!recipient) {
-      console.error("Missing recipient ID. Expected recipientUserId or record.recipient_id");
+      console.error("❌ Missing recipient ID. Expected recipientUserId or record.recipient_id");
+      console.log("Available keys in req.body:", Object.keys(req.body));
       return res.status(400).json({ error: "Missing recipient ID" });
     }
 
@@ -70,18 +79,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ].filter(Boolean).join("\n");
     }
 
-    console.log("Sending Teams message to user:", recipient);
-    console.log("Message content:", teamsMessage);
+    console.log("📤 Attempting to send Teams message:");
+    console.log("- To user:", recipient);
+    console.log("- Message content:", teamsMessage);
+    console.log("- Message length:", teamsMessage.length);
 
     // Send Teams notification
     const sent = await sendTeamsDMToAppUser(recipient, teamsMessage);
     
     if (sent) {
-      console.log("✅ Teams notification sent successfully");
-      res.status(200).json({ success: true });
+      console.log("✅ Teams notification sent successfully to user:", recipient);
+      res.status(200).json({ success: true, recipient, messageLength: teamsMessage.length });
     } else {
-      console.log("⚠️ Teams notification not sent - no Teams link found");
-      res.status(200).json({ success: false, reason: "No Teams link found" });
+      console.log("⚠️ Teams notification not sent - no Teams link found for user:", recipient);
+      res.status(200).json({ success: false, reason: "No Teams link found", recipient });
     }
   } catch (error) {
     console.error("Teams notification endpoint error:", error);
