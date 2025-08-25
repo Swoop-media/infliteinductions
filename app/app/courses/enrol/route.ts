@@ -44,6 +44,11 @@ export async function POST(req: Request) {
   // 🔒 Notify Admins/Trainers via direct notification (handled by DB trigger)
   // The database trigger on_enrolment_insert_notify() automatically notifies admins
   console.log("Enrollment created - notifications handled by DB trigger");
+  console.log("Enrollment details:", {
+    user_id: user.id,
+    course_id,
+    status: "pending"
+  });
 
   to.searchParams.set("ok", "enrolment_requested");
   return NextResponse.redirect(to);

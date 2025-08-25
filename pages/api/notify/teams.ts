@@ -35,6 +35,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (notificationType === "enrolment_request") {
       const courseTitle = payload.course_title || payload.courseTitle || "Unknown course";
+      const learnerName = payload.learnerName || payload.learner_name || "Unknown learner";
+      const learnerEmail = payload.learner_email || payload.learnerEmail || "";
       const dateTime = createdAt ? new Date(createdAt).toLocaleString('en-AU', {
         timeZone: 'Australia/Sydney',
         day: '2-digit',
@@ -44,16 +46,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         minute: '2-digit',
         second: '2-digit',
         hour12: true
-      }) : "";
+      }) : new Date().toLocaleString('en-AU', {
+        timeZone: 'Australia/Sydney',
+        day: '2-digit',
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
 
       teamsMessage = [
-        "📥 **New enrolment request: " + courseTitle + "**",
-        dateTime ? `${dateTime}` : "",
+        "📥 **New enrollment request**",
+        `• **Course:** ${courseTitle}`,
+        `• **Learner:** ${learnerName}`,
+        learnerEmail ? `• **Email:** ${learnerEmail}` : "",
+        `• **Time:** ${dateTime}`,
         "",
-        "Please review this enrollment request in the admin panel."
+        "Please review this enrollment request in the admin panel.",
+        payload.url ? `🔗 ${payload.url}` : ""
       ].filter(Boolean).join("\n");
 
-      console.log("📝 Formatted enrolment request message:", teamsMessage);
+      console.log("📝 Formatted enrollment request message:", teamsMessage);
     } else if (payload && Object.keys(payload).length > 0) {
       // Handle other notification types with available data
       teamsMessage = [
