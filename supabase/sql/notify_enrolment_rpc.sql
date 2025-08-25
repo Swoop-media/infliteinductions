@@ -32,6 +32,18 @@ BEGIN
   -- Log what we're doing
   RAISE LOG 'Notifying enrollment request: user_id=%, course_id=%, learner=%, course=%',
     p_user_id, p_course_id, v_learner_name, v_course_title;
+  
+  -- Debug: Check if we have any admin users
+  RAISE LOG 'Looking for admin users in user_roles and roles tables';
+  
+  FOR v_admin_id IN
+    SELECT DISTINCT ur.user_id
+    FROM user_roles ur
+    JOIN roles r ON ur.role_id = r.id
+    WHERE LOWER(r.name) IN ('admin', 'trainers and assessors')
+  LOOP
+    RAISE LOG 'Found admin user: %', v_admin_id;
+  END LOOP;
 
   -- Notify all admins and trainers
   FOR v_admin_id IN
@@ -41,26 +53,35 @@ BEGIN
     WHERE LOWER(r.name) IN ('admin', 'trainers and assessors')
   LOOP
     -- Insert notification using the original schema (recipient_id and payload)
-    INSERT INTO notifications (
-      recipient_id,
-      type,
-      payload,
-      read
-    ) VALUES (
-      v_admin_id,
-      'enrolment_request',
-      jsonb_build_object(
-        'user_id', p_user_id,
-        'course_id', p_course_id,
-        'learnerName', v_learner_name,
-        'learner_email', v_learner_email,
-        'courseTitle', v_course_title,
-        'course_title', v_course_title,
-        'url', v_site_url || '/app/admin?tab=enrolments',
-        'event_id', 'enrol_req_' || p_user_id::text || '_' || p_course_id::text
-      ),
-      false
-    );
+    BEGIN
+      INSERT INTO notifications (
+        recipient_id,
+        type,
+        payload,
+        read
+      ) VALUES (
+        v_admin_id,
+        'enrolment_request',
+        jsonb_build_object(
+          'user_id', p_user_id,
+          'course_id', p_course_id,
+          'learnerName', v_learner_name,
+          'learner_email', v_learner_email,
+          'courseTitle', v_course_title,
+          'course_title', v_course_title,
+          'url', v_site_url || '/app/admin?tab=enrolments',
+          'event_id', 'enrol_req_' || p_user_id::text || '_' || p_course_id::text
+        ),
+        false
+      );
+      
+      RAISE LOG 'Successfully inserted notification for admin: %', v_admin_id;
+      
+    EXCEPTION
+      WHEN OTHERS THEN
+        RAISE WARNING 'Failed to insert notification for admin %: % (SQLSTATE: %)', 
+          v_admin_id, SQLERRM, SQLSTATE;
+    END;
 
     -- Call the edge function to send Teams notification with better error handling
     BEGIN
@@ -129,11 +150,24 @@ $$;
 
 -- Drop and recreate the trigger to ensure it's working
 DROP TRIGGER IF EXISTS enrolment_insert_notify ON course_enrolments;
+DROP TRIGGER IF EXISTS enrolment_insert_notify ON enrolments;
 
+-- Try both possible table names to ensure compatibility
 CREATE TRIGGER enrolment_insert_notify
   AFTER INSERT ON course_enrolments
   FOR EACH ROW
   EXECUTE FUNCTION on_enrolment_insert_notify();
+
+-- Also create trigger for 'enrolments' table if it exists
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'enrolments') THEN
+    CREATE TRIGGER enrolment_insert_notify_alt
+      AFTER INSERT ON enrolments
+      FOR EACH ROW
+      EXECUTE FUNCTION on_enrolment_insert_notify();
+  END IF;
+END $$;
 
 -- Grant necessary permissions
 GRANT EXECUTE ON FUNCTION notify_enrolment_request(UUID, UUID) TO service_role;
