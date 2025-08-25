@@ -1,0 +1,26 @@
+Error: ./app/app/home/page.tsx
+Error:   [31m×[0m It is not allowed to define inline "use server" annotated Server Actions in Client Components.
+  [31m│[0m To use Server Actions in a Client Component, you can either export them from a separate file with "use server" at the top, or pass them down through props from a Server Component.
+  [31m│[0m
+  [31m│[0m Read more: https://nextjs.org/docs/app/api-reference/directives/use-server#using-server-functions-in-a-client-component
+
+    ╭─[[36;1;4m/home/runner/workspace/app/app/home/page.tsx[0m:50:1]
+ [2m47[0m │ 
+ [2m48[0m │ /** Loader */
+ [2m49[0m │ async function loadHomeData() {
+ [2m50[0m │   "use server";
+    · [35;1m  ────────────[0m
+ [2m51[0m │   noStore();
+ [2m52[0m │ 
+ [2m53[0m │   const supabase = await createSupabaseServer();
+    ╰────
+    at tr (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:552:164429)
+    at o6 (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:62116)
+    at iP (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:81700)
+    at i$ (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:92800)
+    at sv (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:125399)
+    at eval (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:125244)
+    at sm (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:125252)
+    at sa (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:121554)
+    at sZ (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:143648)
+    at MessagePort._ (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:196942)
