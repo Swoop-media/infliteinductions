@@ -119,11 +119,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Generate a magic link session
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: "magiclink",
       email,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/app/home`,
+        redirectTo: `${siteUrl}/app/home`,
       },
     });
 
