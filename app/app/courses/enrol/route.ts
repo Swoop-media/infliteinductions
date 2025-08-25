@@ -41,76 +41,9 @@ export async function POST(req: Request) {
     return NextResponse.redirect(to);
   }
 
-  // 🔒 Notify Admins/Trainers via direct notification (with proper Teams integration)
-  try {
-    const { notifyUser } = await import("@/lib/notifications/dispatcher");
-    
-    // Create admin client to bypass RLS for admin lookups
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabaseAdmin = createClient(
-      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-      process.env.SUPABASE_SERVICE_ROLE_KEY || "",
-      { auth: { persistSession: false } }
-    );
-
-    // Get course details for notification
-    const { data: course } = await supabase
-      .from("courses")
-      .select("title")
-      .eq("id", course_id)
-      .maybeSingle();
-
-    // Get user details
-    const { data: userProfile } = await supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    // Get all admins and trainers from app_user_roles table using admin client
-    const { data: adminUsers, error: adminError } = await supabaseAdmin
-      .from("app_user_roles")
-      .select("user_id, role_name")
-      .in("role_name", ["Admin", "Trainers and Assessors"]);
-
-    console.log("Admin user lookup result:", {
-      adminUsers,
-      adminError,
-      count: adminUsers?.length || 0
-    });
-
-    let finalAdminUsers = adminUsers;
-
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    const enrollmentUrl = `${siteUrl}/app/admin?tab=enrolments`;
-
-    console.log("Found admin users to notify:", finalAdminUsers?.length || 0);
-
-    // Notify each admin/trainer
-    if (finalAdminUsers && finalAdminUsers.length > 0) {
-      for (const admin of finalAdminUsers) {
-        console.log(`Sending enrollment notification to admin: ${admin.user_id} (role: ${admin.role_name})`);
-        await notifyUser(
-          admin.user_id,
-          "enrolment_request",
-          {
-            learnerName: userProfile?.full_name || userProfile?.email || "Unknown",
-            learner_email: userProfile?.email,
-            courseTitle: course?.title || "Unknown Course",
-            url: enrollmentUrl,
-            user_id: user.id,
-            course_id: course_id,
-          },
-          {
-            eventId: `enrol_req_${user.id}_${course_id}`,
-            skipTeams: false,
-          }
-        );
-      }
-    }
-  } catch (e) {
-    console.error("Direct notification failed", e);
-  }
+  // 🔒 Notify Admins/Trainers via direct notification (handled by DB trigger)
+  // The database trigger on_enrolment_insert_notify() automatically notifies admins
+  console.log("Enrollment created - notifications handled by DB trigger");
 
   to.searchParams.set("ok", "enrolment_requested");
   return NextResponse.redirect(to);

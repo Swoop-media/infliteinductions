@@ -1,10 +1,8 @@
-// This file has been replaced by app/app/_components/NotificationsBell.tsx
-// The new component uses the cleaner /app/notifications/list API route
-// and has better styling and functionality.
 
-// If you need to use the old component, it's available in git history.
-// The current app layout uses the new component from app/_components/
+// This component has been replaced by app/app/_components/NotificationsBell.tsx
+// The new notification system uses lib/notifications/dispatcher.ts
+// All notifications are now handled through the database triggers and the new dispatcher
 
 export default function NotificationsBell() {
-  return null; // This component is deprecated
+  return null; // Component fully deprecated - use app/app/_components/NotificationsBell.tsx
 }
