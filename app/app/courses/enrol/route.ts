@@ -44,7 +44,7 @@ export async function POST(req: Request) {
   // 🔒 Notify Admins/Trainers via direct notification (with proper Teams integration)
   try {
     const { notifyUser } = await import("@/lib/notifications/dispatcher");
-    
+
     // Get course details for notification
     const { data: course } = await supabase
       .from("courses")
@@ -59,25 +59,17 @@ export async function POST(req: Request) {
       .eq("user_id", user.id)
       .maybeSingle();
 
-    // First, let's see what roles exist
-    const { data: allRoles } = await supabase
-      .from("roles")
-      .select("id, name");
-    console.log("All available roles:", allRoles);
-
-    // Get all admins and trainers to notify using exact role names from your data
+    // Get all admins and trainers from app_user_roles table
     const { data: adminUsers, error: adminError } = await supabase
-      .from("user_roles")
-      .select(`
-        user_id,
-        roles!inner(id, name)
-      `)
-      .in("roles.name", ["Admin", "Trainers and Assessors"]);
+      .from("app_user_roles")
+      .select("user_id, role_name")
+      .in("role_name", ["Admin", "Trainers and Assessors"])
+      .neq("user_id", user.id); // Don't notify the person enrolling themselves
 
-    console.log("Admin user lookup result:", { 
-      adminUsers, 
-      adminError, 
-      count: adminUsers?.length || 0 
+    console.log("Admin user lookup result:", {
+      adminUsers,
+      adminError,
+      count: adminUsers?.length || 0
     });
 
     let finalAdminUsers = adminUsers;
@@ -90,7 +82,7 @@ export async function POST(req: Request) {
     // Notify each admin/trainer
     if (finalAdminUsers && finalAdminUsers.length > 0) {
       for (const admin of finalAdminUsers) {
-        console.log(`Sending enrollment notification to admin: ${admin.user_id} (role: ${admin.roles?.name})`);
+        console.log(`Sending enrollment notification to admin: ${admin.user_id} (role: ${admin.role_name})`);
         await notifyUser(
           admin.user_id,
           "enrolment_request",
