@@ -41,26 +41,30 @@ export default async function TrainAssessPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/signin");
 
+  // First get courses where current user is onsite_trainer
+  const { data: trainerCourses = [] } = await supabase
+    .from("course_assignments")
+    .select("course_id")
+    .eq("user_id", user.id)
+    .eq("role", "onsite_trainer");
+
+  const trainerCourseIds = trainerCourses.map(c => c.course_id);
+
   // Fetch pending onsite training (where user is assigned as onsite_trainer)
-  const { data: pendingTraining = [] } = await supabase
-    .from("course_enrolments")
-    .select(`
-      id,
-      course_id,
-      user_id,
-      created_at,
-      courses!inner(id, title),
-      profiles!inner(id, name, email)
-    `)
-    .eq("status", "approved")
-    .in("course_id", 
-      // Subquery to get courses where current user is onsite_trainer
-      supabase
-        .from("course_assignments")
-        .select("course_id")
-        .eq("user_id", user.id)
-        .eq("role", "onsite_trainer")
-    );
+  const { data: pendingTraining = [] } = trainerCourseIds.length > 0 
+    ? await supabase
+        .from("course_enrolments")
+        .select(`
+          id,
+          course_id,
+          user_id,
+          created_at,
+          courses!inner(id, title),
+          profiles!inner(id, name, email)
+        `)
+        .eq("status", "approved")
+        .in("course_id", trainerCourseIds)
+    : { data: [] };
 
   // Filter for enrolments that have completed digital phases but not onsite training
   const pendingTrainingItems: PendingTraining[] = [];
@@ -136,26 +140,30 @@ export default async function TrainAssessPage() {
     }
   }
 
+  // First get courses where current user is onsite_assessor
+  const { data: assessorCourses = [] } = await supabase
+    .from("course_assignments")
+    .select("course_id")
+    .eq("user_id", user.id)
+    .eq("role", "onsite_assessor");
+
+  const assessorCourseIds = assessorCourses.map(c => c.course_id);
+
   // Fetch pending assessments (where user is assigned as onsite_assessor)
-  const { data: pendingAssessments = [] } = await supabase
-    .from("course_enrolments")
-    .select(`
-      id,
-      course_id,
-      user_id,
-      created_at,
-      courses!inner(id, title),
-      profiles!inner(id, name, email)
-    `)
-    .eq("status", "approved")
-    .in("course_id", 
-      // Subquery to get courses where current user is onsite_assessor
-      supabase
-        .from("course_assignments")
-        .select("course_id")
-        .eq("user_id", user.id)
-        .eq("role", "onsite_assessor")
-    );
+  const { data: pendingAssessments = [] } = assessorCourseIds.length > 0
+    ? await supabase
+        .from("course_enrolments")
+        .select(`
+          id,
+          course_id,
+          user_id,
+          created_at,
+          courses!inner(id, title),
+          profiles!inner(id, name, email)
+        `)
+        .eq("status", "approved")
+        .in("course_id", assessorCourseIds)
+    : { data: [] };
 
   // Filter for enrolments that have completed onsite training but not assessment
   const pendingAssessmentItems: PendingAssessment[] = [];
