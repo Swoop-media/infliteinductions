@@ -136,10 +136,12 @@ export default function RequirementItem({
           </svg>
         </div>
         <div className="flex items-start justify-between flex-1 min-w-0">
-        <div className="flex-1 min-w-0 max-w-0">
+        <div className="flex-1 min-w-0">
           <div className="flex items-start gap-2 mb-2">
-            <div className="flex-1 min-w-0 overflow-hidden">
-              <h4 className="font-medium text-gray-900 leading-tight mb-1 truncate break-all" title={r.label || ""}>{r.label}</h4>
+            <div className="flex-1 min-w-0">
+              <h4 className="font-medium text-gray-900 leading-tight mb-1" title={r.label || ""}>
+                {r.label && r.label.length > 12 ? `${r.label.substring(0, 12)}...` : r.label}
+              </h4>
             </div>
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 ${getRoleColor(r.role)}`}>
               {roleToHuman(r.role)}
