@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -14,7 +13,6 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
   const [authError, setAuthError] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
-  const [needsAuth, setNeedsAuth] = useState(false);
   const [authAttempted, setAuthAttempted] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const authCheckTimeoutRef = useRef<NodeJS.Timeout>();
@@ -25,38 +23,27 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
 
   useEffect(() => {
     if (!isMounted || typeof window === 'undefined') return;
-    
+
     // Check if user is already authenticated for this course's SharePoint
     const authKey = `sharepoint_auth_${courseId}`;
     let isAlreadyAuthed = false;
-    
+
     try {
       isAlreadyAuthed = localStorage.getItem(authKey) === 'true';
     } catch (e) {
       console.warn('localStorage not available:', e);
     }
-    
+
     if (isAlreadyAuthed) {
       console.log('User already authenticated for this course');
       setIsAuthenticated(true);
       setIsLoading(false);
       setShowAuthPrompt(false);
-      setNeedsAuth(false);
     } else {
-      // Start by trying to load the iframe
-      setIsLoading(true);
-      setShowAuthPrompt(false);
-      setNeedsAuth(false);
-      
-      // Set a timeout to check if authentication is needed
-      authCheckTimeoutRef.current = setTimeout(() => {
-        if (!isAuthenticated && !authAttempted) {
-          console.log('Iframe failed to load after timeout, showing auth prompt');
-          setNeedsAuth(true);
-          setShowAuthPrompt(true);
-          setIsLoading(false);
-        }
-      }, 8000); // Wait 8 seconds for iframe to load
+      // Show auth prompt immediately for SharePoint videos
+      console.log('SharePoint authentication required');
+      setShowAuthPrompt(true);
+      setIsLoading(false);
     }
 
     return () => {
@@ -64,46 +51,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
         clearTimeout(authCheckTimeoutRef.current);
       }
     };
-  }, [courseId, isMounted, isAuthenticated, authAttempted]);
-
-  const handleIframeLoad = () => {
-    if (typeof window === 'undefined') return;
-    
-    console.log('Iframe loaded successfully');
-    
-    // Clear the auth check timeout since iframe loaded
-    if (authCheckTimeoutRef.current) {
-      clearTimeout(authCheckTimeoutRef.current);
-    }
-    
-    try {
-      // Check if the iframe actually loaded the video or if it's showing a login page
-      // We'll assume if it loads quickly without error, it's authenticated
-      const authKey = `sharepoint_auth_${courseId}`;
-      localStorage.setItem(authKey, 'true');
-      setIsAuthenticated(true);
-      setShowAuthPrompt(false);
-      setNeedsAuth(false);
-      setAuthError(null);
-      setIsLoading(false);
-    } catch (e) {
-      console.warn('Error in handleIframeLoad:', e);
-    }
-  };
-
-  const handleIframeError = () => {
-    console.log('Iframe failed to load due to error');
-    
-    // Clear the auth check timeout
-    if (authCheckTimeoutRef.current) {
-      clearTimeout(authCheckTimeoutRef.current);
-    }
-    
-    setNeedsAuth(true);
-    setShowAuthPrompt(true);
-    setIsLoading(false);
-    setAuthError('Authentication required to view this video');
-  };
+  }, [courseId, isMounted]);
 
   const handleAuthenticate = async () => {
     if (typeof window === 'undefined') return;
@@ -113,15 +61,14 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
       setAuthError(null);
       setAuthAttempted(true);
 
-      console.log('Starting authentication flow');
+      console.log('Starting SharePoint authentication flow');
 
-      // Clear any existing authentication state
-      const authKey = `sharepoint_auth_${courseId}`;
-      localStorage.removeItem(authKey);
-
-      // Create a more targeted auth URL - try to use the SharePoint domain for auth
+      // Get the SharePoint domain from the video URL
       const sharePointUrl = new URL(url);
-      const authUrl = `https://${sharePointUrl.hostname}/_layouts/15/authenticate.aspx`;
+      const sharePointDomain = sharePointUrl.hostname;
+
+      // Use the SharePoint login URL directly with the video URL as redirect
+      const authUrl = `https://${sharePointDomain}/_layouts/15/authenticate.aspx?Source=${encodeURIComponent(url)}`;
 
       // Open SharePoint authentication in a new window
       const authWindow = window.open(
@@ -142,35 +89,24 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
       // Monitor the auth window
       let checkInterval: NodeJS.Timeout;
       let authCompleted = false;
-      
+
       const checkAuth = async () => {
         try {
           // Check if window is closed
           if (authWindow.closed) {
             clearInterval(checkInterval);
-            
+
             if (!authCompleted) {
-              console.log('Auth popup closed, attempting to reload video');
-              
-              // Mark auth as completed and try to load the video
+              console.log('Auth popup closed, marking as authenticated');
               authCompleted = true;
-              
-              // Wait a moment for cookies/session to be established
-              await new Promise(resolve => setTimeout(resolve, 2000));
-              
-              // Mark as authenticated and force reload the iframe
+
+              // Mark as authenticated and show the video
+              const authKey = `sharepoint_auth_${courseId}`;
               localStorage.setItem(authKey, 'true');
               setIsAuthenticated(true);
               setShowAuthPrompt(false);
-              setNeedsAuth(false);
               setIsLoading(false);
-              
-              // Force reload the iframe with a cache-busting parameter
-              if (iframeRef.current) {
-                const separator = url.includes('?') ? '&' : '?';
-                const cacheBuster = `${separator}_t=${Date.now()}`;
-                iframeRef.current.src = url + cacheBuster;
-              }
+              setAuthError(null);
             }
             return;
           }
@@ -178,9 +114,12 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
           // Try to detect successful authentication by checking the URL
           try {
             const currentUrl = authWindow.location.href;
-            if (currentUrl && !currentUrl.includes('login') && !currentUrl.includes('signin') && !currentUrl.includes('authenticate')) {
+            // If we can access the URL and it contains our SharePoint domain, auth likely succeeded
+            if (currentUrl && currentUrl.includes(sharePointDomain) &&
+                !currentUrl.includes('login') && !currentUrl.includes('signin') &&
+                !currentUrl.includes('authenticate.aspx')) {
               if (!authCompleted) {
-                console.log('Authentication appears successful, closing window');
+                console.log('Authentication appears successful based on URL');
                 authCompleted = true;
                 authWindow.close();
               }
@@ -195,7 +134,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
 
       checkInterval = setInterval(checkAuth, 1000);
 
-      // Clear interval and close window after 10 minutes if still open
+      // Clear interval and close window after 5 minutes if still open
       setTimeout(() => {
         clearInterval(checkInterval);
         if (authWindow && !authWindow.closed) {
@@ -209,11 +148,26 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
           setIsLoading(false);
           setAuthError('Authentication timed out. Please try again.');
         }
-      }, 600000);
+      }, 300000);
     } catch (e) {
       console.error('Error in handleAuthenticate:', e);
       setAuthError('Failed to open authentication window. Please try again.');
       setIsLoading(false);
+    }
+  };
+
+  const handleIframeLoad = () => {
+    console.log('SharePoint iframe loaded');
+    if (isAuthenticated) {
+      setIsLoading(false);
+    }
+  };
+
+  const handleIframeError = () => {
+    console.log('SharePoint iframe failed to load');
+    setIsLoading(false);
+    if (!isAuthenticated) {
+      setAuthError('Failed to load video. Please try authenticating again.');
     }
   };
 
@@ -228,7 +182,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
     );
   }
 
-  if ((showAuthPrompt && needsAuth) || (!isAuthenticated && needsAuth)) {
+  if (showAuthPrompt && !isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-full bg-gray-50">
         <div className="text-center p-6">
@@ -237,9 +191,9 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Video Authentication Required</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">SharePoint Video Authentication Required</h3>
           <p className="text-sm text-gray-600 mb-4">
-            This video requires you to sign in with your Microsoft account. You only need to do this once per course.
+            This video is hosted on SharePoint and requires you to sign in with your Microsoft account. You only need to do this once per course.
           </p>
           <button
             onClick={handleAuthenticate}
@@ -256,14 +210,27 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
                 <path d="M23 11.97H11.97V23H23V11.97z"/>
               </svg>
             )}
-            {isLoading ? 'Authenticating...' : 'Sign in to Microsoft 365'}
+            {isLoading ? 'Authenticating...' : 'Sign in to SharePoint'}
           </button>
           <p className="text-xs text-gray-500 mt-2">
-            A new window will open for authentication. Sign in and close the window when done.
+            A new window will open for authentication. Close the window after signing in.
           </p>
           {authError && (
-            <p className="text-xs text-red-600 mt-2">{authError}</p>
+            <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded">
+              <p className="text-xs text-red-600">{authError}</p>
+            </div>
           )}
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center h-full bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+          <p className="text-sm text-gray-600">Setting up video...</p>
         </div>
       </div>
     );
@@ -280,17 +247,17 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
           </div>
         </div>
       )}
-      
+
       <iframe
         ref={iframeRef}
-        src={isAuthenticated ? (url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`) : url}
-        className="h-full w-full"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        src={url}
+        className="h-full w-full border-0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
         allowFullScreen
+        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation"
         referrerPolicy="no-referrer-when-downgrade"
         onLoad={handleIframeLoad}
         onError={handleIframeError}
-        style={{ display: needsAuth && showAuthPrompt ? 'none' : 'block' }}
       />
     </div>
   );
