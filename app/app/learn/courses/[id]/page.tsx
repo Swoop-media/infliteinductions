@@ -84,21 +84,50 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
     // Use the same table as enrol route: course_enrolments
     const TABLE_NAME = "course_enrolments";
     
-    const { data: enrolmentData } = await supabase
+    const { data: enrolmentData, error: enrolmentError } = await supabase
       .from(TABLE_NAME)
-      .select("id, status, user_id, course_id")
+      .select("id, status, user_id, course_id, created_at, approved_at")
       .eq("user_id", user.id)
       .eq("course_id", courseId)
       .maybeSingle();
 
-    console.log("Enrolment check debug:", {
+    console.log("Enrolment check debug (regular client):", {
       table: TABLE_NAME,
       userId: user.id,
       courseId,
       enrolment: enrolmentData,
       hasEnrolment: !!enrolmentData,
-      status: enrolmentData?.status
+      status: enrolmentData?.status,
+      error: enrolmentError?.message || null
     });
+
+    // Also check with service client to see if RLS is blocking
+    try {
+      const supabaseService = await import("@/lib/supabase/service").then(m => m.createSupabaseService());
+      const { data: serviceEnrolmentData, error: serviceError } = await supabaseService
+        .from(TABLE_NAME)
+        .select("id, status, user_id, course_id, created_at, approved_at")
+        .eq("user_id", user.id)
+        .eq("course_id", courseId)
+        .maybeSingle();
+
+      console.log("Enrolment check debug (service client):", {
+        table: TABLE_NAME,
+        userId: user.id,
+        courseId,
+        enrolment: serviceEnrolmentData,
+        hasEnrolment: !!serviceEnrolmentData,
+        status: serviceEnrolmentData?.status,
+        error: serviceError?.message || null
+      });
+
+      // If service client finds it but regular client doesn't, it's an RLS issue
+      if (serviceEnrolmentData && !enrolmentData) {
+        console.log("🚨 RLS ISSUE DETECTED: Service client found enrolment but regular client didn't");
+      }
+    } catch (serviceErr) {
+      console.log("Could not check with service client:", serviceErr);
+    }
 
     enrolment = enrolmentData;
 

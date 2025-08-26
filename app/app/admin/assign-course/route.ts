@@ -40,7 +40,11 @@ export async function POST(req: Request) {
     return NextResponse.redirect(to);
   }
 
-  // Debug: Check what enrolment-related tables exist and their data
+  // Debug: Comprehensive database state check
+  console.log("=== ASSIGN COURSE DEBUG START ===");
+  console.log("User attempting to assign:", { admin_user_id: user.id, target_user_id: user_id, course_id });
+
+  // Check what enrolment-related tables exist
   try {
     const { data: tablesCheck } = await supabase
       .from("information_schema.tables")
@@ -49,31 +53,54 @@ export async function POST(req: Request) {
       .like("table_name", "%enrol%");
     
     console.log("Available enrolment tables:", tablesCheck);
-
-    // Check both possible tables for existing data
-    const { data: courseEnrolmentsData, error: ceError } = await supabase
-      .from("course_enrolments")
-      .select("id, user_id, course_id, status")
-      .limit(5);
-    
-    const { data: enrolmentsData, error: eError } = await supabase
-      .from("enrolments")
-      .select("id, user_id, course_id, status")
-      .limit(5);
-
-    console.log("course_enrolments table check:", { 
-      error: ceError?.message || null, 
-      sampleData: courseEnrolmentsData?.length || 0,
-      data: courseEnrolmentsData 
-    });
-    
-    console.log("enrolments table check:", { 
-      error: eError?.message || null, 
-      sampleData: enrolmentsData?.length || 0,
-      data: enrolmentsData 
-    });
   } catch (e) {
     console.log("Could not check tables:", e);
+  }
+
+  // Check current enrolments for this user/course combination across both possible tables
+  try {
+    console.log("Checking existing enrolments for user/course...");
+    
+    const { data: ceData, error: ceError } = await supabase
+      .from("course_enrolments")
+      .select("*")
+      .eq("user_id", user_id)
+      .eq("course_id", course_id);
+    
+    const { data: eData, error: eError } = await supabase
+      .from("enrolments")
+      .select("*")
+      .eq("user_id", user_id)
+      .eq("course_id", course_id);
+
+    console.log("course_enrolments existing records:", { 
+      error: ceError?.message || null, 
+      count: ceData?.length || 0,
+      data: ceData 
+    });
+    
+    console.log("enrolments existing records:", { 
+      error: eError?.message || null, 
+      count: eData?.length || 0,
+      data: eData 
+    });
+
+    // Also check with service role to see if RLS is the issue
+    const supabaseService = await import("@/lib/supabase/service").then(m => m.createSupabaseService());
+    const { data: serviceData, error: serviceError } = await supabaseService
+      .from("course_enrolments")
+      .select("*")
+      .eq("user_id", user_id)
+      .eq("course_id", course_id);
+
+    console.log("course_enrolments via service role:", { 
+      error: serviceError?.message || null, 
+      count: serviceData?.length || 0,
+      data: serviceData 
+    });
+
+  } catch (e) {
+    console.log("Error checking existing enrolments:", e);
   }
 
   // Get course details
@@ -133,18 +160,41 @@ export async function POST(req: Request) {
 
   // Verify the enrolment was created/updated
   if (!error) {
-    const { data: verifyEnrolment } = await supabase
+    // Check with regular client
+    const { data: verifyEnrolment, error: verifyError } = await supabase
       .from(TABLE_NAME)
-      .select("id, status, user_id, course_id")
+      .select("id, status, user_id, course_id, created_at, approved_at")
       .eq("user_id", user_id)
       .eq("course_id", course_id)
       .maybeSingle();
 
-    console.log("Verification query result:", { 
+    console.log("Verification query result (regular client):", { 
       table: TABLE_NAME,
-      verifyEnrolment 
+      verifyEnrolment,
+      verifyError: verifyError?.message || null
     });
+
+    // Also check with service role client to see if RLS is blocking
+    try {
+      const supabaseService = await import("@/lib/supabase/service").then(m => m.createSupabaseService());
+      const { data: serviceVerify, error: serviceVerifyError } = await supabaseService
+        .from(TABLE_NAME)
+        .select("id, status, user_id, course_id, created_at, approved_at")
+        .eq("user_id", user_id)
+        .eq("course_id", course_id)
+        .maybeSingle();
+
+      console.log("Verification query result (service client):", { 
+        table: TABLE_NAME,
+        serviceVerify,
+        serviceVerifyError: serviceVerifyError?.message || null
+      });
+    } catch (serviceErr) {
+      console.log("Could not verify with service client:", serviceErr);
+    }
   }
+
+  console.log("=== ASSIGN COURSE DEBUG END ===");
 
   // Also ensure the course assignment exists for the trainee role
   if (!error) {
