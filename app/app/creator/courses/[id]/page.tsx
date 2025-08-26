@@ -540,7 +540,7 @@ async function assignUserAction(formData: FormData) {
 
     await createNotification({
       recipientUserId: userId,
-      type: "course_assigned",
+      type: "enrolment_approved", // Use existing enum value
       title: notificationTitle,
       body: notificationBody,
       data: {
@@ -625,7 +625,7 @@ async function revokeAssignmentAction(formData: FormData) {
 
       await createNotification({
         recipientUserId: assignmentDetails.user_id,
-        type: "course_assignment_revoked",
+        type: "enrolment_revoked", // Use existing enum value
         title: `Assignment Revoked: ${courseTitle}`,
         body: `Your ${roleDisplayName} assignment for "${courseTitle}" has been revoked by ${revokerName}.`,
         data: {

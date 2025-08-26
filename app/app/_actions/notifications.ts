@@ -123,21 +123,35 @@ function teamsTextFor(n: NotificationInput) {
         .filter(Boolean)
         .join("\n");
     
-    case "course_assigned":
+    case "enrolment_approved":
+      // Handle both regular enrolment approvals and course assignments
       const role = n.data?.role;
       const roleDisplay = n.data?.roleDisplayName || role;
       const emoji = role === "trainee" ? "📚" : 
                    role === "onsite_trainer" ? "👨‍🏫" : 
                    role === "onsite_assessor" ? "📋" : "📚";
       
+      // If it's a course assignment (has role data), use assignment formatting
+      if (role) {
+        return [
+          `${emoji} *${role === "trainee" ? "Course assigned" : `${roleDisplay} role assigned`}*`,
+          n.data?.courseTitle ? `• Course: ${n.data.courseTitle}` : "",
+          n.data?.assignedBy ? `• Assigned by: ${n.data.assignedBy}` : "",
+          role && role !== "trainee" ? `• Role: ${roleDisplay}` : "",
+          "",
+          n.body || "",
+          n.data?.url ? `🔗 ${role === "trainee" ? "Start learning" : "View course"}: ${n.data.url}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+      }
+      
+      // Default enrolment approved formatting
       return [
-        `${emoji} *${role === "trainee" ? "Course assigned" : `${roleDisplay} role assigned`}*`,
+        "📚 *Enrolment approved*",
         n.data?.courseTitle ? `• Course: ${n.data.courseTitle}` : "",
-        n.data?.assignedBy ? `• Assigned by: ${n.data.assignedBy}` : "",
-        role && role !== "trainee" ? `• Role: ${roleDisplay}` : "",
         "",
         n.body || "",
-        n.data?.url ? `🔗 ${role === "trainee" ? "Start learning" : "View course"}: ${n.data.url}` : "",
       ]
         .filter(Boolean)
         .join("\n");
@@ -186,13 +200,28 @@ function teamsTextFor(n: NotificationInput) {
         .filter(Boolean)
         .join("\n");
 
-    case "course_assignment_revoked":
+    case "enrolment_revoked":
+      // Handle both regular enrolment revocations and assignment revocations
       const revokedRole = n.data?.roleDisplayName || n.data?.role;
+      
+      // If it's a role assignment revocation (has role data), use assignment formatting
+      if (revokedRole) {
+        return [
+          "⚠️ *Course assignment revoked*",
+          n.data?.courseTitle ? `• Course: ${n.data.courseTitle}` : "",
+          revokedRole ? `• Role: ${revokedRole}` : "",
+          n.data?.revokedBy ? `• Revoked by: ${n.data.revokedBy}` : "",
+          "",
+          n.body || "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+      }
+      
+      // Default enrolment revoked formatting
       return [
-        "⚠️ *Course assignment revoked*",
+        "⚠️ *Enrolment revoked*",
         n.data?.courseTitle ? `• Course: ${n.data.courseTitle}` : "",
-        revokedRole ? `• Role: ${revokedRole}` : "",
-        n.data?.revokedBy ? `• Revoked by: ${n.data.revokedBy}` : "",
         "",
         n.body || "",
       ]
