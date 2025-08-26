@@ -226,25 +226,45 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
 
   if (assignmentId) {
     // For assignments, use assignment_progress table
-    const { data: assignmentProgress } = await supabase
+    const { data: assignmentProgress, error: assignmentProgressError } = await supabase
       .from("assignment_progress")
       .select("module_id")
       .eq("assignment_id", assignmentId);
+
+    console.log("Assignment progress check:", {
+      assignmentId,
+      progressData: assignmentProgress,
+      error: assignmentProgressError?.message || null,
+      count: assignmentProgress?.length || 0
+    });
 
     if (assignmentProgress) {
       doneRows = assignmentProgress;
     }
   } else if (enrolmentId) {
     // Fallback to enrollment progress
-    const { data: enrollmentProgress } = await supabase
+    const { data: enrollmentProgress, error: enrollmentProgressError } = await supabase
       .from("module_progress")
       .select("module_id")
       .eq("enrolment_id", enrolmentId);
+
+    console.log("Enrollment progress check:", {
+      enrolmentId,
+      progressData: enrollmentProgress,
+      error: enrollmentProgressError?.message || null,
+      count: enrollmentProgress?.length || 0
+    });
 
     if (enrollmentProgress) {
       doneRows = enrollmentProgress;
     }
   }
+
+  console.log("Final progress calculation:", {
+    doneRows,
+    doneRowsCount: doneRows?.length || 0,
+    totalModules: modules.length
+  });
 
   const completedIds = new Set((doneRows ?? []).map((r: any) => r.module_id as string));
 
