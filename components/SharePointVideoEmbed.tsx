@@ -290,15 +290,25 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
               return;
             }
           }
-        }, 2000); // Wait 2 seconds for content to load
+          
+          // If we can't access the content, assume it loaded successfully
+          addDebugLog('SharePoint content loaded (cross-origin restrictions prevent inspection)');
+          setIsLoading(false);
+        }, 3000); // Wait 3 seconds for content to load
       } catch (e) {
         // Cross-origin restrictions prevent access - this is expected
         addDebugLog('Cannot access iframe content (cross-origin)', { error: e.message });
+        setIsLoading(false);
       }
     }
     
     if (isAuthenticated) {
-      setIsLoading(false);
+      // Set a timeout to show refresh option if user might be stuck on login screen
+      setTimeout(() => {
+        if (isAuthenticated) {
+          addDebugLog('SharePoint should be loaded, if you see login screen, session may have expired');
+        }
+      }, 5000);
     }
   };
 
@@ -480,6 +490,22 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
         onLoad={handleIframeLoad}
         onError={handleIframeError}
       />
+      
+      {/* Refresh button overlay - shown when authenticated but potentially stuck on login */}
+      {isAuthenticated && !isLoading && (
+        <div className="absolute bottom-4 right-4 z-30">
+          <button
+            onClick={clearAuthAndRetry}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium shadow-lg flex items-center gap-2"
+            title="If you're seeing a login screen, click to refresh authentication"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Refresh Auth
+          </button>
+        </div>
+      )}
     </div>
   );
 }
