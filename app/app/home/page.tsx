@@ -220,45 +220,69 @@ export default function HomePage() {
 
   useEffect(() => {
     const getUser = async () => {
-      // Check URL params for banners
-      const urlParams = new URLSearchParams(window.location.search);
-      const bannerParam = urlParams.get("banner");
-      const okParam = urlParams.get("ok");
-      const errorParam = urlParams.get("error");
+      try {
+        // Check URL params for banners
+        const urlParams = new URLSearchParams(window.location.search);
+        const bannerParam = urlParams.get("banner");
+        const okParam = urlParams.get("ok");
+        const errorParam = urlParams.get("error");
 
-      setBannerCode(bannerParam);
-      setOk(okParam);
-      setError(errorParam);
+        setBannerCode(bannerParam);
+        setOk(okParam);
+        setError(errorParam);
 
-      // Clean up URL params if present
-      if (bannerParam || okParam || errorParam) {
-        window.history.replaceState({}, document.title, "/app/home");
-      }
+        // Clean up URL params if present
+        if (bannerParam || okParam || errorParam) {
+          window.history.replaceState({}, document.title, "/app/home");
+        }
 
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error) {
+          console.error("Auth error:", error);
+          router.push("/auth/signin");
+          return;
+        }
+        
+        if (!user) {
+          router.push("/auth/signin");
+          return;
+        }
+
+        setUser(user);
+        await fetchData(user.id);
+      } catch (err) {
+        console.error("Error in getUser:", err);
         router.push("/auth/signin");
-        return;
+      } finally {
+        setLoading(false);
       }
-
-      setUser(user);
-      await fetchData(user.id);
-      setLoading(false);
     };
 
     getUser();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          setUser(session.user);
-          await fetchData(session.user.id);
-        } else {
-          setUser(null);
+        try {
+          if (event === 'SIGNED_OUT') {
+            setUser(null);
+            router.push("/auth/signin");
+            return;
+          }
+
+          if (session?.user) {
+            setUser(session.user);
+            await fetchData(session.user.id);
+          } else {
+            setUser(null);
+            router.push("/auth/signin");
+          }
+        } catch (err) {
+          console.error("Auth state change error:", err);
           router.push("/auth/signin");
+        } finally {
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
