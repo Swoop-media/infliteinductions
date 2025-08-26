@@ -138,7 +138,37 @@ export default async function AssessPage({
       redirect(`/app/assess/${params.enrolmentId}?error=${encodeURIComponent(error.message)}`);
     }
 
+    // Mark module as completed in module_progress
+    const { data: moduleData } = await supa
+      .from("course_modules")
+      .select("id")
+      .eq("course_id", enrol.course_id)
+      .eq("type", module)
+      .maybeSingle();
+
+    if (moduleData) {
+      // Insert progress record (idempotent)
+      try {
+        await supa
+          .from("module_progress")
+          .insert({ 
+            enrolment_id: enrolment_id, 
+            module_id: moduleData.id 
+          });
+      } catch {
+        // Ignore if already exists
+      }
+
+      // Try to complete the enrolment if all modules are done
+      try {
+        await supa.rpc("try_complete_enrolment", { p_enrolment_id: enrolment_id });
+      } catch {
+        // Ignore errors
+      }
+    }
+
     revalidatePath(`/app/assess/${params.enrolmentId}`);
+    revalidatePath(`/app/train-assess`);
     redirect(`/app/assess/${params.enrolmentId}?ok=submitted&module=${module}`);
   }
 
