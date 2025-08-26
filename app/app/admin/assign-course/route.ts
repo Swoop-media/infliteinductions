@@ -133,14 +133,37 @@ export async function POST(req: Request) {
       user_id, 
       course_id, 
       status: "approved",
-      requested_at: now
+      requested_at: now,
+      approved_at: now
     })
-    .select("id, status, user_id, course_id");
+    .select("id, status, user_id, course_id, created_at");
 
   console.log("Enrolment creation result:", { 
     enrolmentData, 
-    error: error?.message || null 
+    error: error?.message || null,
+    errorCode: (error as any)?.code || null,
+    errorDetails: (error as any)?.details || null
   });
+
+  // Verify the record was actually created by immediately querying it back
+  if (!error && enrolmentData && enrolmentData.length > 0) {
+    console.log("✅ Enrolment record created successfully:", enrolmentData[0]);
+    
+    // Double-check by querying it back immediately
+    const { data: verifyData, error: verifyError } = await supabase
+      .from("course_enrolments")
+      .select("id, status, user_id, course_id")
+      .eq("user_id", user_id)
+      .eq("course_id", course_id)
+      .single();
+    
+    console.log("Verification query result:", {
+      verifyData,
+      verifyError: verifyError?.message || null
+    });
+  } else {
+    console.log("❌ Enrolment creation failed or returned no data");
+  }
 
   console.log("=== ASSIGN COURSE DEBUG END ===");
 

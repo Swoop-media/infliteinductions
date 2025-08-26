@@ -81,9 +81,12 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
   // Enrolment (skip for preview)
   let enrolment: any = null;
   if (!preview && user) {
-    // Use the same table as enrol route: course_enrolments
+    // Check enrolment in course_enrolments table
     const TABLE_NAME = "course_enrolments";
+    console.log("=== ENROLMENT CHECK DEBUG START ===");
+    console.log("Checking for enrolment:", { userId: user.id, courseId, table: TABLE_NAME });
 
+    // First check with regular client
     const { data: enrolmentData, error: enrolmentError } = await supabase
       .from(TABLE_NAME)
       .select("id, status, user_id, course_id, created_at")
@@ -101,7 +104,25 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
       error: enrolmentError?.message || null
     });
 
-    // Also check with service client to see if RLS is blocking
+    // Also check the legacy 'enrolments' table in case there's confusion
+    const { data: legacyEnrolmentData, error: legacyError } = await supabase
+      .from("enrolments")
+      .select("id, status, user_id, course_id, created_at")
+      .eq("user_id", user.id)
+      .eq("course_id", courseId)
+      .maybeSingle();
+
+    console.log("Legacy enrolments table check:", {
+      table: "enrolments",
+      userId: user.id,
+      courseId,
+      enrolment: legacyEnrolmentData,
+      hasEnrolment: !!legacyEnrolmentData,
+      status: legacyEnrolmentData?.status,
+      error: legacyError?.message || null
+    });
+
+    // Check with service client to see if RLS is blocking
     try {
       const supabaseService = await import("@/lib/supabase/service").then(m => m.createSupabaseService());
       const { data: serviceEnrolmentData, error: serviceError } = await supabaseService
@@ -125,50 +146,66 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
       if (serviceEnrolmentData && !enrolmentData) {
         console.log("🚨 RLS ISSUE DETECTED: Service client found enrolment but regular client didn't");
       }
+
+      // Use service data if regular client failed but service succeeded
+      if (!enrolmentData && serviceEnrolmentData) {
+        console.log("Using service client data due to RLS issue");
+        enrolmentData = serviceEnrolmentData;
+      }
     } catch (serviceErr) {
       console.log("Could not check with service client:", serviceErr);
     }
 
-    enrolment = enrolmentData;
+    // Use legacy enrolment if course_enrolments is empty but legacy has data
+    let finalEnrolment = enrolmentData || legacyEnrolmentData;
+
+    console.log("Final enrolment decision:", {
+      finalEnrolment: finalEnrolment,
+      source: finalEnrolment === enrolmentData ? "course_enrolments" :
+              finalEnrolment === legacyEnrolmentData ? "legacy_enrolments" : "none"
+    });
+    console.log("=== ENROLMENT CHECK DEBUG END ===");
+
+    enrolment = finalEnrolment;
 
     // Check enrolment status
-    if (!enrolmentData) {
+    if (!enrolment) {
       // Not enrolled - return error flag
-      return { 
-        user, 
-        course, 
-        enrolment: null, 
-        modules: [], 
-        completedIds: new Set(), 
-        docsByModule: new Map(), 
-        preview, 
-        error: "not_enrolled" 
+      return {
+        user,
+        course,
+        enrolment: null,
+        modules: [],
+        completedIds: new Set(),
+        docsByModule: new Map(),
+        preview,
+        error: "not_enrolled"
       };
     }
 
-    if (enrolmentData.status === "pending") {
-      return { 
-        user, 
-        course, 
-        enrolment: null, 
-        modules: [], 
-        completedIds: new Set(), 
-        docsByModule: new Map(), 
-        preview, 
-        error: "pending_approval" 
+    if (enrolment.status === "pending") {
+      return {
+        user,
+        course,
+        enrolment: null,
+        modules: [],
+        completedIds: new Set(),
+        docsByModule: new Map(),
+        preview,
+        error: "pending_approval"
       };
     }
 
-    if (enrolmentData.status !== "approved" && enrolmentData.status !== "in_progress" && enrolmentData.status !== "completed") {
-      return { 
-        user, 
-        course, 
-        enrolment: null, 
-        modules: [], 
-        completedIds: new Set(), 
-        docsByModule: new Map(), 
-        preview, 
-        error: `invalid_status:${enrolmentData.status}` 
+    if (enrolment.status !== "approved" && enrolment.status !== "in_progress" && enrolment.status !== "completed") {
+      return {
+        user,
+        course,
+        enrolment: null,
+        modules: [],
+        completedIds: new Set(),
+        docsByModule: new Map(),
+        preview,
+        error: `invalid_status:${enrolment.status}`
       };
     }
 
@@ -397,7 +434,7 @@ export default async function LearnerCoursePage(props: {
         </div>
       );
     }
-    
+
     if (data.error === "pending_approval") {
       return (
         <div className="min-h-screen bg-gray-50 p-8">
@@ -412,7 +449,7 @@ export default async function LearnerCoursePage(props: {
         </div>
       );
     }
-    
+
     if (data.error.startsWith("invalid_status:")) {
       const status = data.error.split(":")[1];
       return (
@@ -428,7 +465,7 @@ export default async function LearnerCoursePage(props: {
         </div>
       );
     }
-    
+
     return (
       <div className="p-6">
         <h1 className="text-xl font-semibold">Course</h1>
