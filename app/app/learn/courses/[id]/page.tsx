@@ -865,20 +865,8 @@ async function ModuleBody({
   if (type === "digital_training") {
     const blocks = await loadBlocks(module.id);
 
-    // Soft video gate (creator sets gate_seconds on video blocks)
-    const DEFAULT_GATE_SECONDS = 90;
+    // Video gating disabled for now
     let gateSeconds = 0;
-    if (!preview) {
-      const videos = (blocks ?? []).filter((b: any) => b.kind === "video_embed" && b?.data?.url);
-      if (videos.length) {
-        gateSeconds = Math.max(
-          ...videos.map((b: any) => {
-            const v = Number(b?.data?.gate_seconds);
-            return Number.isFinite(v) && v > 0 ? v : DEFAULT_GATE_SECONDS;
-          })
-        );
-      }
-    }
 
     // IDs for inline script targets
     const formId = `nextForm_${module.id}`;
