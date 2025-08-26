@@ -119,9 +119,15 @@ export async function POST(req: Request) {
   const now = new Date().toISOString();
   const TABLE_NAME = "course_enrolments";
 
-  // First, try to delete any existing enrollment to start fresh
+  // Clean up any existing enrollment in both tables to start fresh
   await supabase
-    .from(TABLE_NAME)
+    .from("course_enrolments")
+    .delete()
+    .eq("user_id", user_id)
+    .eq("course_id", course_id);
+
+  await supabase
+    .from("enrolments")
     .delete()
     .eq("user_id", user_id)
     .eq("course_id", course_id);
