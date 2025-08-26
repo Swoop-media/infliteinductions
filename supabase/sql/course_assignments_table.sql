@@ -1,4 +1,3 @@
-
 -- Create course_assignments table for direct assignment system
 CREATE TABLE IF NOT EXISTS public.course_assignments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -11,7 +10,7 @@ CREATE TABLE IF NOT EXISTS public.course_assignments (
     revoked_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    
+
     -- Unique constraint: one user can have one assignment per course per role
     UNIQUE(user_id, course_id, role)
 );
@@ -33,7 +32,46 @@ END $$;
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_course_assignments_user_id ON public.course_assignments(user_id);
 CREATE INDEX IF NOT EXISTS idx_course_assignments_course_id ON public.course_assignments(course_id);
-CREATE INDEX IF NOT EXISTS idx_course_assignments_status ON public.course_assignments(status);
+CREATE INDEX IF NOT EXISTS idx_course_assignments_role ON public.course_assignments(role);
+
+-- Create indexes for assignment_progress
+CREATE INDEX IF NOT EXISTS idx_assignment_progress_assignment_id ON public.assignment_progress(assignment_id);
+CREATE INDEX IF NOT EXISTS idx_assignment_progress_module_id ON public.assignment_progress(module_id);
+
+-- RLS Policies for assignment_progress
+-- Users can view their own progress
+CREATE POLICY "Users can view their own assignment progress"
+ON public.assignment_progress
+FOR SELECT
+USING (
+    assignment_id IN (
+        SELECT id FROM public.course_assignments 
+        WHERE user_id = auth.uid()
+    )
+);
+
+-- Users can insert their own progress
+CREATE POLICY "Users can insert their own assignment progress"
+ON public.assignment_progress
+FOR INSERT
+WITH CHECK (
+    assignment_id IN (
+        SELECT id FROM public.course_assignments 
+        WHERE user_id = auth.uid()
+    )
+);
+
+-- Admins and course creators can view all assignment progress
+CREATE POLICY "Admins and creators can view all assignment progress"
+ON public.assignment_progress
+FOR SELECT
+USING (
+    EXISTS (
+        SELECT 1 FROM public.user_roles 
+        WHERE user_id = auth.uid() 
+        AND role IN ('admin', 'course_creator')
+    )
+);
 
 -- Enable RLS
 ALTER TABLE public.course_assignments ENABLE ROW LEVEL SECURITY;
@@ -119,3 +157,20 @@ CREATE TRIGGER course_assignments_updated_at
     BEFORE UPDATE ON public.course_assignments
     FOR EACH ROW
     EXECUTE FUNCTION public.handle_updated_at();
+
+-- Add assignment_id column to learner_documents if it doesn't exist
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'learner_documents' 
+        AND column_name = 'assignment_id'
+    ) THEN
+        ALTER TABLE public.learner_documents 
+        ADD COLUMN assignment_id UUID REFERENCES public.course_assignments(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
+-- Create index for assignment_id in learner_documents
+CREATE INDEX IF NOT EXISTS idx_learner_documents_assignment_id ON public.learner_documents(assignment_id);
