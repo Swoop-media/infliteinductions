@@ -1,3 +1,4 @@
+
 -- Create course_assignments table for direct assignment system
 CREATE TABLE IF NOT EXISTS public.course_assignments (
    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -15,23 +16,7 @@ CREATE TABLE IF NOT EXISTS public.course_assignments (
    UNIQUE(user_id, course_id, role)
 );
 
--- Role column is already defined in the table creation above
-
--- Add status column if it doesn't exist (for existing tables)
-DO $$ 
-BEGIN 
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'course_assignments' 
-        AND column_name = 'status'
-    ) THEN
-        ALTER TABLE public.course_assignments 
-        ADD COLUMN status TEXT NOT NULL CHECK (status IN ('active', 'revoked')) DEFAULT 'active';
-    END IF;
-END $$;
-
--- Add assignment status and completed_at columns for progress tracking
+-- Add assignment_status column if it doesn't exist (for progress tracking)
 DO $$ 
 BEGIN 
     IF NOT EXISTS (
@@ -45,6 +30,7 @@ BEGIN
     END IF;
 END $$;
 
+-- Add completed_at column if it doesn't exist (for progress tracking)
 DO $$ 
 BEGIN 
     IF NOT EXISTS (
