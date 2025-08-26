@@ -508,7 +508,7 @@ async function ModuleBody({
               <input type="hidden" name="preview" value={preview ? "1" : ""} />
 
               <div id={counterId} className="text-sm text-gray-600" style={{ display: gateSeconds > 0 ? "block" : "none" }}>
-                ⏳ Please watch the video — Next unlocks in 01:30.
+                ⏳ Please watch the video — Next unlocks in <span id={`${counterId}_time`}>{String(Math.floor(gateSeconds / 60)).padStart(2, '0')}:{String(gateSeconds % 60).padStart(2, '0')}</span>.
               </div>
 
               <button
@@ -538,26 +538,31 @@ async function ModuleBody({
       return;
     }
     var target = ${gateSeconds};
-    var acc = 0;
-    var last = null;
+    var remaining = target;
+    var lastTime = Date.now();
+    var timeSpan = document.getElementById(${JSON.stringify(`${counterId}_time`)});
     function fmt(total){ var m=Math.floor(total/60), s=total%60; return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
-    function tick(t){
-      if(document.hidden){ last = t; return requestAnimationFrame(loop); }
-      if(last == null){ last = t; return requestAnimationFrame(loop); }
-      var delta = Math.max(0, Math.round((t - last)/1000));
-      last = t;
-      acc = Math.min(target, acc + delta);
-      if(ctr){ ctr.textContent = '⏳ Please watch the video — Next unlocks in ' + fmt(target - acc) + '.'; }
-      if(acc >= target){
-        btn.disabled = false;
-        if(ctr) ctr.style.display='none';
-        try { localStorage.setItem(KEY, '1'); } catch(e){}
-      } else {
-        requestAnimationFrame(loop);
-      }
+    function updateDisplay(){
+      if(timeSpan){ timeSpan.textContent = fmt(remaining); }
     }
-    function loop(ts){ tick(ts); }
-    requestAnimationFrame(loop);
+    function tick(){
+      if(document.hidden){ return setTimeout(tick, 1000); }
+      var now = Date.now();
+      var delta = Math.floor((now - lastTime) / 1000);
+      if(delta >= 1){
+        remaining = Math.max(0, remaining - delta);
+        lastTime = now;
+        updateDisplay();
+        if(remaining <= 0){
+          btn.disabled = false;
+          if(ctr) ctr.style.display='none';
+          try { localStorage.setItem(KEY, '1'); } catch(e){}
+          return;
+        }
+      }
+      setTimeout(tick, 1000);
+    }
+    tick();
   }catch(e){}
 })();`,
                 }}
