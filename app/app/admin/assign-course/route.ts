@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createSupabaseServer } from "@/lib/supabase/server";
@@ -15,7 +14,7 @@ export async function POST(req: Request) {
   const isAdmin = await hasRole("Admin");
   const isCreator = await hasRole("Course creators");
   const isManager = await hasRole("Senior management");
-  
+
   if (!isAdmin && !isCreator && !isManager) {
     return NextResponse.redirect(makeURL("/app/home"));
   }
@@ -51,7 +50,7 @@ export async function POST(req: Request) {
       .select("table_name")
       .eq("table_schema", "public")
       .like("table_name", "%enrol%");
-    
+
     console.log("Available enrolment tables:", tablesCheck);
   } catch (e) {
     console.log("Could not check tables:", e);
@@ -60,13 +59,13 @@ export async function POST(req: Request) {
   // Check current enrolments for this user/course combination across both possible tables
   try {
     console.log("Checking existing enrolments for user/course...");
-    
+
     const { data: ceData, error: ceError } = await supabase
       .from("course_enrolments")
       .select("*")
       .eq("user_id", user_id)
       .eq("course_id", course_id);
-    
+
     const { data: eData, error: eError } = await supabase
       .from("enrolments")
       .select("*")
@@ -78,7 +77,7 @@ export async function POST(req: Request) {
       count: ceData?.length || 0,
       data: ceData 
     });
-    
+
     console.log("enrolments existing records:", { 
       error: eError?.message || null, 
       count: eData?.length || 0,
@@ -86,7 +85,8 @@ export async function POST(req: Request) {
     });
 
     // Also check with service role to see if RLS is the issue
-    const supabaseService = await import("@/lib/supabase/service").then(m => m.createSupabaseService());
+    const { createSupabaseService } = await import("@/lib/supabase/service");
+    const supabaseService = await createSupabaseService();
     const { data: serviceData, error: serviceError } = await supabaseService
       .from("course_enrolments")
       .select("*")
@@ -118,7 +118,7 @@ export async function POST(req: Request) {
   // Assign course (create enrolment with approved status)
   const now = new Date().toISOString();
   const TABLE_NAME = "course_enrolments";
-  
+
   // First, try to delete any existing enrollment to start fresh
   await supabase
     .from(TABLE_NAME)
@@ -126,9 +126,9 @@ export async function POST(req: Request) {
     .eq("user_id", user_id)
     .eq("course_id", course_id);
 
-  // Now insert a new approved enrollment
+  // Insert into course_enrolments with 'approved' status
   const { data: enrolmentData, error } = await supabase
-    .from(TABLE_NAME)
+    .from("course_enrolments")
     .insert({
       user_id, 
       course_id, 
@@ -174,17 +174,17 @@ export async function POST(req: Request) {
   // Send notification to user about course assignment
   try {
     const { createNotification } = await import("@/app/app/_actions/notifications");
-    
+
     // Get assigner name
     const { data: assigner } = await supabase
       .from("profiles")
       .select("first_name, last_name")
       .eq("id", user.id)
       .maybeSingle();
-    
+
     const assignerName = assigner ? `${assigner.first_name} ${assigner.last_name}`.trim() : "Admin";
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    
+
     await createNotification({
       recipientUserId: user_id,
       type: "course_assigned",
