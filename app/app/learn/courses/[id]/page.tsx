@@ -603,11 +603,13 @@ async function canUserEnrol(supabase: any, userId: string, courseId: string): Pr
 
 /** PAGE */
 export default async function LearnerCoursePage(props: {
-  params: { id: string }; // Changed to non-promise for direct access
-  searchParams?: Record<string, string | string[] | undefined>; // Changed to non-promise
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const courseId = props.params.id;
-  const sp = props.searchParams || {};
+  const params = await props.params;
+  const searchParams = await (props.searchParams || Promise.resolve({}));
+  const courseId = params.id;
+  const sp = searchParams || {};
   const preview = ((Array.isArray(sp.preview) ? sp.preview[0] : sp.preview) ?? "") === "1";
 
   const data = await loadCourseForLearner(courseId, preview);
@@ -699,6 +701,7 @@ export default async function LearnerCoursePage(props: {
   const isUnlocked = unlocked.has(cur.id);
   const isDone = completedIds.has(cur.id);
   // ReadOnly is true if in preview mode OR if the user has completed the course (via enrolment or assignment)
+  const supabase = await createSupabaseServer();
   const readOnly = preview || (enrolment?.status === "completed") || (assignment && await isAssignmentCompleted(supabase, assignment.id));
 
 
@@ -862,7 +865,7 @@ async function ModuleBody({
         {/* Show inline Next only when we actually need to mark complete */}
         {isUnlocked && !isDone && (enrolment || assignment) && !readOnly && (
           <div className="pt-2">
-            <form id={formId} action={markModuleComplete} className="flex items-center justify-between gap-3">
+            <form id={formId} action={markComplete} className="flex items-center justify-between gap-3">
               <input type="hidden" name="course_id" value={module.course_id} />
               <input type="hidden" name="module_id" value={module.id} />
               {/* Conditionally add enrolment_id or assignment_id */}
