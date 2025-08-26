@@ -133,48 +133,43 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
 
     // Check enrolment status
     if (!enrolmentData) {
-      // Not enrolled - show enrolment form
-      return (
-        <div className="min-h-screen bg-gray-50 p-8">
-          <div className="mx-auto max-w-4xl">
-            <h1 className="mb-6 text-3xl font-bold">{course.title}</h1>
-            <div className="rounded-lg bg-white p-6 shadow">
-              <p className="mb-4">You are not enrolled in this course.</p>
-              <CourseEnrolButton courseId={courseId} />
-            </div>
-          </div>
-        </div>
-      );
+      // Not enrolled - return error flag
+      return { 
+        user, 
+        course, 
+        enrolment: null, 
+        modules: [], 
+        completedIds: new Set(), 
+        docsByModule: new Map(), 
+        preview, 
+        error: "not_enrolled" 
+      };
     }
 
     if (enrolmentData.status === "pending") {
-      return (
-        <div className="min-h-screen bg-gray-50 p-8">
-          <div className="mx-auto max-w-4xl">
-            <h1 className="mb-6 text-3xl font-bold">{course.title}</h1>
-            <div className="rounded-lg bg-white p-6 shadow">
-              <p className="text-yellow-600">
-                Your enrolment is pending approval. Please wait for an administrator to approve your request.
-              </p>
-            </div>
-          </div>
-        </div>
-      );
+      return { 
+        user, 
+        course, 
+        enrolment: null, 
+        modules: [], 
+        completedIds: new Set(), 
+        docsByModule: new Map(), 
+        preview, 
+        error: "pending_approval" 
+      };
     }
 
     if (enrolmentData.status !== "approved" && enrolmentData.status !== "in_progress" && enrolmentData.status !== "completed") {
-      return (
-        <div className="min-h-screen bg-gray-50 p-8">
-          <div className="mx-auto max-w-4xl">
-            <h1 className="mb-6 text-3xl font-bold">{course.title}</h1>
-            <div className="rounded-lg bg-white p-6 shadow">
-              <p className="text-red-600">
-                Your enrolment status is: {enrolmentData.status}. Please contact an administrator.
-              </p>
-            </div>
-          </div>
-        </div>
-      );
+      return { 
+        user, 
+        course, 
+        enrolment: null, 
+        modules: [], 
+        completedIds: new Set(), 
+        docsByModule: new Map(), 
+        preview, 
+        error: `invalid_status:${enrolmentData.status}` 
+      };
     }
 
     // Soft transition to in_progress
@@ -389,6 +384,51 @@ export default async function LearnerCoursePage(props: {
 
   const data = await loadCourseForLearner(courseId, preview);
   if (data.error) {
+    if (data.error === "not_enrolled") {
+      return (
+        <div className="min-h-screen bg-gray-50 p-8">
+          <div className="mx-auto max-w-4xl">
+            <h1 className="mb-6 text-3xl font-bold">{data.course.title}</h1>
+            <div className="rounded-lg bg-white p-6 shadow">
+              <p className="mb-4">You are not enrolled in this course.</p>
+              <CourseEnrolButton courseId={courseId} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    if (data.error === "pending_approval") {
+      return (
+        <div className="min-h-screen bg-gray-50 p-8">
+          <div className="mx-auto max-w-4xl">
+            <h1 className="mb-6 text-3xl font-bold">{data.course.title}</h1>
+            <div className="rounded-lg bg-white p-6 shadow">
+              <p className="text-yellow-600">
+                Your enrolment is pending approval. Please wait for an administrator to approve your request.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
+    if (data.error.startsWith("invalid_status:")) {
+      const status = data.error.split(":")[1];
+      return (
+        <div className="min-h-screen bg-gray-50 p-8">
+          <div className="mx-auto max-w-4xl">
+            <h1 className="mb-6 text-3xl font-bold">{data.course.title}</h1>
+            <div className="rounded-lg bg-white p-6 shadow">
+              <p className="text-red-600">
+                Your enrolment status is: {status}. Please contact an administrator.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div className="p-6">
         <h1 className="text-xl font-semibold">Course</h1>
@@ -932,9 +972,13 @@ async function BlockView({ block }: { block: any }) {
   return null;
 }
 
-// Dummy component for type checking, replace with actual implementation if needed
 async function CourseEnrolButton({ courseId }: { courseId: string }) {
-  // This is a placeholder. In a real application, this would be a button
-  // that triggers the enrollment process.
-  return <button className="rounded-md bg-black px-4 py-2 text-sm text-white">Enroll Now</button>;
+  return (
+    <form action="/app/courses/enrol" method="post">
+      <input type="hidden" name="course_id" value={courseId} />
+      <button className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800">
+        Request Enrolment
+      </button>
+    </form>
+  );
 }
