@@ -54,7 +54,7 @@ export async function POST(req: Request) {
 
   // Assign course (create enrolment with approved status and proper timestamps)
   const now = new Date().toISOString();
-  const { error } = await supabase
+  const { data: enrolmentData, error } = await supabase
     .from("course_enrolments")
     .upsert(
       { 
@@ -65,12 +65,15 @@ export async function POST(req: Request) {
         approved_at: now,
         approved_by: user.id 
       },
-      { onConflict: "user_id,course_id", ignoreDuplicates: true }
-    );
+      { onConflict: "user_id,course_id", ignoreDuplicates: false }
+    )
+    .select("id, status");
+
+  console.log("Enrolment creation result:", { enrolmentData, error });
 
   // Also ensure the course assignment exists for the trainee role
   if (!error) {
-    const { error: assignmentError } = await supabase
+    const { data: assignmentData, error: assignmentError } = await supabase
       .from("course_assignments")
       .upsert(
         {
@@ -79,8 +82,11 @@ export async function POST(req: Request) {
           role: "trainee",
           created_by: user.id
         },
-        { onConflict: "course_id,user_id,role", ignoreDuplicates: true }
-      );
+        { onConflict: "course_id,user_id,role", ignoreDuplicates: false }
+      )
+      .select("id");
+
+    console.log("Assignment creation result:", { assignmentData, assignmentError });
 
     if (assignmentError && (assignmentError as any).code !== "23505") {
       console.warn("Course assignment creation warning:", assignmentError);

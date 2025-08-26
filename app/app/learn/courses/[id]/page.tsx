@@ -81,17 +81,26 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
   // Enrolment (skip for preview)
   let enrolment: any = null;
   if (!preview && user) {
-    const { data: e } = await supabase
+    // Check if user is enrolled in this course
+    const { data: enrolment } = await supabase
       .from("course_enrolments")
-      .select("id, user_id, course_id, status, updated_at")
-      .eq("course_id", courseId)
+      .select("id, status, user_id, course_id")
       .eq("user_id", user.id)
+      .eq("course_id", courseId)
       .maybeSingle();
-    enrolment = e ?? null;
 
-    if (!enrolment) redirect("/app/courses?error=not_enrolled");
-    if (["pending", "rejected", "cancelled"].includes(enrolment.status)) {
-      redirect("/app/courses?error=enrolment_not_approved");
+    console.log("Enrolment check debug:", {
+      userId: user.id,
+      courseId,
+      enrolment,
+      hasEnrolment: !!enrolment,
+      status: enrolment?.status
+    });
+
+    if (!enrolment || enrolment.status !== "approved") {
+      const errorParam = !enrolment ? "not_enrolled" : `status_${enrolment.status}`;
+      console.log("Redirecting due to enrolment issue:", errorParam);
+      redirect(`/app/courses?error=${errorParam}`);
     }
 
     // Soft transition to in_progress
