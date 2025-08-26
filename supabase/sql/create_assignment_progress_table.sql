@@ -81,9 +81,10 @@ ON public.assignment_progress
 FOR SELECT
 USING (
     EXISTS (
-        SELECT 1 FROM public.user_roles 
-        WHERE user_id = auth.uid() 
-        AND role IN ('admin', 'course_creator')
+        SELECT 1 FROM public.user_roles ur
+        JOIN public.roles r ON r.id = ur.role_id
+        WHERE ur.user_id = auth.uid() 
+        AND r.name IN ('Admin', 'Course Creators')
     )
 );
 
@@ -93,9 +94,10 @@ ON public.assignment_progress
 FOR INSERT
 WITH CHECK (
     EXISTS (
-        SELECT 1 FROM public.user_roles 
-        WHERE user_id = auth.uid() 
-        AND role IN ('admin', 'course_creator')
+        SELECT 1 FROM public.user_roles ur
+        JOIN public.roles r ON r.id = ur.role_id
+        WHERE ur.user_id = auth.uid() 
+        AND r.name IN ('Admin', 'Course Creators')
     )
 );
 
@@ -105,16 +107,18 @@ ON public.assignment_progress
 FOR UPDATE
 USING (
     EXISTS (
-        SELECT 1 FROM public.user_roles 
-        WHERE user_id = auth.uid() 
-        AND role IN ('admin', 'course_creator')
+        SELECT 1 FROM public.user_roles ur
+        JOIN public.roles r ON r.id = ur.role_id
+        WHERE ur.user_id = auth.uid() 
+        AND r.name IN ('Admin', 'Course Creators')
     )
 )
 WITH CHECK (
     EXISTS (
-        SELECT 1 FROM public.user_roles 
-        WHERE user_id = auth.uid() 
-        AND role IN ('admin', 'course_creator')
+        SELECT 1 FROM public.user_roles ur
+        JOIN public.roles r ON r.id = ur.role_id
+        WHERE ur.user_id = auth.uid() 
+        AND r.name IN ('Admin', 'Course Creators')
     )
 );
 
