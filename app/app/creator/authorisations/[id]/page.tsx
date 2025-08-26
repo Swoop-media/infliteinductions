@@ -666,6 +666,7 @@ function AssignmentsTab({
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Assign people</h2>
           <form method="get" action={buildUrl(authId, "assignments")}>
+            <input type="hidden" name="tab" value="assignments" />
             <div className="flex items-center gap-2">
               <input
                 type="text"
