@@ -212,8 +212,12 @@ export async function createNotification(input: NotificationInput) {
   const n = NotificationInput.parse(input);
   const supabase = await createSupabaseServer();
 
-  // 1) Persist the in-app notification (column names kept minimal to avoid schema conflicts)
-  const { data, error } = await supabase
+  // 1) Persist the in-app notification - try new schema first, fallback to old schema
+  let data: any;
+  let error: any;
+
+  // Try new schema with user_id, title, body columns
+  ({ data, error } = await supabase
     .from("notifications")
     .insert({
       user_id: n.recipientUserId,
@@ -221,10 +225,27 @@ export async function createNotification(input: NotificationInput) {
       title: n.title,
       body: n.body ?? null,
       data: n.data ?? null,
-      // is_read / read_at are left to defaults so we don't touch older rows or schemas
     })
     .select("id")
-    .single();
+    .single());
+
+  // If that fails due to missing columns, try old schema with recipient_id and payload
+  if (error && (error.code === "42703" || error.message.includes("Could not find") || error.message.includes("column"))) {
+    ({ data, error } = await supabase
+      .from("notifications")
+      .insert({
+        recipient_id: n.recipientUserId,
+        type: n.type,
+        payload: {
+          title: n.title,
+          body: n.body ?? null,
+          ...n.data ?? {},
+        },
+        read: false,
+      })
+      .select("id")
+      .single());
+  }
 
   if (error) {
     throw new Error(`Failed to save notification: ${error.message}`);
