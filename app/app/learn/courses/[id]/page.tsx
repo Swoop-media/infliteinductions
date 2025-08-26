@@ -263,10 +263,15 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
   console.log("Final progress calculation:", {
     doneRows,
     doneRowsCount: doneRows?.length || 0,
-    totalModules: modules.length
+    totalModules: modules.length,
+    assignmentId,
+    enrolmentId
   });
 
   const completedIds = new Set((doneRows ?? []).map((r: any) => r.module_id as string));
+  
+  console.log("Completed module IDs:", Array.from(completedIds));
+  console.log("All module IDs:", modules.map((m: any) => m.id));
 
 
   // Learner documents (for request_document)
@@ -410,17 +415,21 @@ async function markComplete(formData: FormData) {
   // Mark complete (idempotent)
   try {
     if (progressTable === "assignment_progress") {
-      await supabase
+      const { error: insertError } = await supabase
         .from("assignment_progress")
-        .insert({ assignment_id: progressKey, module_id: moduleId })
-        .select()
-        .maybeSingle(); // Use maybeSingle to avoid errors if already exists
+        .insert({ assignment_id: progressKey, module_id: moduleId });
+      
+      if (insertError && !insertError.message?.includes('duplicate')) {
+        console.warn("Assignment progress insert error:", insertError);
+      }
     } else {
-      await supabase
+      const { error: insertError } = await supabase
         .from("module_progress")
-        .insert({ enrolment_id: progressKey, module_id: moduleId })
-        .select()
-        .maybeSingle(); // Use maybeSingle to avoid errors if already exists
+        .insert({ enrolment_id: progressKey, module_id: moduleId });
+      
+      if (insertError && !insertError.message?.includes('duplicate')) {
+        console.warn("Module progress insert error:", insertError);
+      }
     }
   } catch (e) {
     // Ignore duplicate key errors, which might happen if called multiple times
@@ -542,17 +551,21 @@ async function uploadLearnerDocument(formData: FormData) {
   if (!preview && progressKey) {
     try {
       if (progressTable === "assignment_progress") {
-        await supabase
+        const { error: insertError } = await supabase
           .from("assignment_progress")
-          .insert({ assignment_id: progressKey, module_id: moduleId })
-          .select()
-          .maybeSingle(); // Use maybeSingle to avoid errors if already exists
+          .insert({ assignment_id: progressKey, module_id: moduleId });
+        
+        if (insertError && !insertError.message?.includes('duplicate')) {
+          console.warn("Assignment progress insert error during document upload:", insertError);
+        }
       } else {
-        await supabase
+        const { error: insertError } = await supabase
           .from("module_progress")
-          .insert({ enrolment_id: progressKey, module_id: moduleId })
-          .select()
-          .maybeSingle(); // Use maybeSingle to avoid errors if already exists
+          .insert({ enrolment_id: progressKey, module_id: moduleId });
+        
+        if (insertError && !insertError.message?.includes('duplicate')) {
+          console.warn("Module progress insert error during document upload:", insertError);
+        }
       }
     } catch (e) {
       // Ignore duplicate key errors
@@ -720,9 +733,10 @@ export default async function LearnerCoursePage(props: {
 
   const isUnlocked = unlocked.has(cur.id);
   const isDone = completedIds.has(cur.id);
-  // ReadOnly is true if in preview mode OR if the user has completed the course (via enrolment or assignment)
+  // ReadOnly is true if in preview mode OR if the user has completed the course (via assignment)
   const supabase = await createSupabaseServer();
-  const readOnly = preview || (enrolment?.status === "completed") || (assignment && await isAssignmentCompleted(supabase, assignment.id));
+  const assignmentCompleted = assignment ? await isAssignmentCompleted(supabase, assignment.id) : false;
+  const readOnly = preview || assignmentCompleted;
 
 
   // Prev/Next URLs
@@ -766,7 +780,7 @@ export default async function LearnerCoursePage(props: {
         </div>
       )}
 
-      {(enrolment?.status === "completed" || (assignment && isAssignmentCompleted(supabase, assignment.id))) && (
+      {assignmentCompleted && (
         <div className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-800">
           Course completed — you can still review content below.
         </div>
@@ -1095,44 +1109,40 @@ async function ModuleBody({
   return <p className="text-sm text-gray-600">Unsupported module type.</p>;
 }
 
-// Helper to check if an assignment is completed (requires a function in Supabase or similar)
-// This is a placeholder and might need a real implementation based on your backend logic.
+// Helper to check if an assignment is completed
 async function isAssignmentCompleted(supabase: any, assignmentId: string): Promise<boolean> {
   try {
-    // This is a placeholder. Replace with actual logic to check if an assignment is marked as completed.
-    // For example, you might have a 'completed_at' timestamp or a status field in 'course_assignments'.
-    // If your backend has a function like 'try_complete_assignment', you might need to call that and check its return value,
-    // or query a status field after the fact.
-    
-    // Example: Check if a 'completed_at' timestamp exists in 'assignment_progress' for all modules
-    // This is a simplification; a real check might be more involved.
-    const { data: assignmentProgressData } = await supabase
+    // Get the assignment and course info
+    const { data: assignmentData } = await supabase
       .from("course_assignments")
       .select("course_id")
       .eq("id", assignmentId)
       .single();
 
-    if (!assignmentProgressData) return false;
+    if (!assignmentData) return false;
 
+    // Get all modules for this course
     const { data: modules } = await supabase
       .from("course_modules")
       .select("id")
-      .eq("course_id", assignmentProgressData.course_id);
+      .eq("course_id", assignmentData.course_id);
 
-    if (!modules || modules.length === 0) return false; // No modules in the course
+    if (!modules || modules.length === 0) return false;
 
-    // Check if all modules associated with this assignment are marked as complete
-    const { count } = await supabase
+    // Get completed modules for this assignment
+    const { data: completedModules } = await supabase
       .from("assignment_progress")
-      .select("id", { count: "exact", head: true })
-      .eq("assignment_id", assignmentId)
-      .in("module_id", modules.map((m: any) => m.id));
+      .select("module_id")
+      .eq("assignment_id", assignmentId);
 
-    return count === modules.length;
+    if (!completedModules) return false;
+
+    // Check if all modules are completed
+    return completedModules.length === modules.length;
 
   } catch (error) {
     console.error("Error checking assignment completion status:", error);
-    return false; // Assume not completed if there's an error
+    return false;
   }
 }
 
