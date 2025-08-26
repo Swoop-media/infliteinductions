@@ -40,7 +40,7 @@ export async function POST(req: Request) {
     return NextResponse.redirect(to);
   }
 
-  // Debug: Check what enrolment-related tables exist
+  // Debug: Check what enrolment-related tables exist and their data
   try {
     const { data: tablesCheck } = await supabase
       .from("information_schema.tables")
@@ -49,6 +49,29 @@ export async function POST(req: Request) {
       .like("table_name", "%enrol%");
     
     console.log("Available enrolment tables:", tablesCheck);
+
+    // Check both possible tables for existing data
+    const { data: courseEnrolmentsData, error: ceError } = await supabase
+      .from("course_enrolments")
+      .select("id, user_id, course_id, status")
+      .limit(5);
+    
+    const { data: enrolmentsData, error: eError } = await supabase
+      .from("enrolments")
+      .select("id, user_id, course_id, status")
+      .limit(5);
+
+    console.log("course_enrolments table check:", { 
+      error: ceError?.message || null, 
+      sampleData: courseEnrolmentsData?.length || 0,
+      data: courseEnrolmentsData 
+    });
+    
+    console.log("enrolments table check:", { 
+      error: eError?.message || null, 
+      sampleData: enrolmentsData?.length || 0,
+      data: enrolmentsData 
+    });
   } catch (e) {
     console.log("Could not check tables:", e);
   }
@@ -68,15 +91,19 @@ export async function POST(req: Request) {
   // Assign course (create enrolment with approved status and proper timestamps)
   const now = new Date().toISOString();
   
+  // Use the same table as the enrol route: course_enrolments
+  const TABLE_NAME = "course_enrolments";
+  
   // First, check if enrolment already exists
   const { data: existingEnrolment } = await supabase
-    .from("course_enrolments")
+    .from(TABLE_NAME)
     .select("id, status, user_id, course_id")
     .eq("user_id", user_id)
     .eq("course_id", course_id)
     .maybeSingle();
 
   console.log("Existing enrolment check:", { 
+    table: TABLE_NAME,
     user_id, 
     course_id, 
     existingEnrolment,
@@ -84,7 +111,7 @@ export async function POST(req: Request) {
   });
 
   const { data: enrolmentData, error } = await supabase
-    .from("course_enrolments")
+    .from(TABLE_NAME)
     .upsert(
       { 
         user_id, 
@@ -98,18 +125,25 @@ export async function POST(req: Request) {
     )
     .select("id, status, user_id, course_id");
 
-  console.log("Enrolment creation result:", { enrolmentData, error });
+  console.log("Enrolment creation result:", { 
+    table: TABLE_NAME,
+    enrolmentData, 
+    error: error?.message || null 
+  });
 
   // Verify the enrolment was created/updated
   if (!error) {
     const { data: verifyEnrolment } = await supabase
-      .from("course_enrolments")
+      .from(TABLE_NAME)
       .select("id, status, user_id, course_id")
       .eq("user_id", user_id)
       .eq("course_id", course_id)
       .maybeSingle();
 
-    console.log("Verification query result:", { verifyEnrolment });
+    console.log("Verification query result:", { 
+      table: TABLE_NAME,
+      verifyEnrolment 
+    });
   }
 
   // Also ensure the course assignment exists for the trainee role

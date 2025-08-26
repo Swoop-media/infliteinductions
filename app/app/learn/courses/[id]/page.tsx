@@ -81,34 +81,26 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
   // Enrolment (skip for preview)
   let enrolment: any = null;
   if (!preview && user) {
-    // Check both possible table names to debug table mismatch
-    const { data: enrolmentV1 } = await supabase
-      .from("course_enrolments")
+    // Use the same table as enrol route: course_enrolments
+    const TABLE_NAME = "course_enrolments";
+    
+    const { data: enrolmentData } = await supabase
+      .from(TABLE_NAME)
       .select("id, status, user_id, course_id")
       .eq("user_id", user.id)
       .eq("course_id", courseId)
       .maybeSingle();
 
-    const { data: enrolmentV2 } = await supabase
-      .from("enrolments")
-      .select("id, status, user_id, course_id")
-      .eq("user_id", user.id)
-      .eq("course_id", courseId)
-      .maybeSingle();
-
-    console.log("Enrolment debug - multiple table check:", {
+    console.log("Enrolment check debug:", {
+      table: TABLE_NAME,
       userId: user.id,
       courseId,
-      course_enrolments: enrolmentV1,
-      enrolments: enrolmentV2,
-      hasV1: !!enrolmentV1,
-      hasV2: !!enrolmentV2,
-      statusV1: enrolmentV1?.status,
-      statusV2: enrolmentV2?.status
+      enrolment: enrolmentData,
+      hasEnrolment: !!enrolmentData,
+      status: enrolmentData?.status
     });
 
-    // Use whichever table has the data
-    enrolment = enrolmentV1 || enrolmentV2;
+    enrolment = enrolmentData;
 
     if (!enrolment || enrolment.status !== "approved") {
       const errorParam = !enrolment ? "not_enrolled" : `status_${enrolment.status}`;
@@ -118,7 +110,7 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
 
     // Soft transition to in_progress
     if (enrolment.status === "approved") {
-      await supabase.from("course_enrolments").update({ status: "in_progress" }).eq("id", enrolment.id);
+      await supabase.from(TABLE_NAME).update({ status: "in_progress" }).eq("id", enrolment.id);
       enrolment.status = "in_progress";
     }
   }
