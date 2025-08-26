@@ -12,10 +12,9 @@ function makeURL(path: string): URL {
 
 export async function POST(req: Request) {
   const isAdmin = await hasRole("Admin");
-  const isCreator = await hasRole("Course creators");
   const isManager = await hasRole("Senior management");
 
-  if (!isAdmin && !isCreator && !isManager) {
+  if (!isAdmin && !isManager) {
     return NextResponse.redirect(makeURL("/app/home"));
   }
 
