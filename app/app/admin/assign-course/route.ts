@@ -115,14 +115,14 @@ export async function POST(req: Request) {
     return NextResponse.redirect(to);
   }
 
-  // Assign course (create enrolment with approved status)
+  // Use course_assignments approach instead of enrolments
   const now = new Date().toISOString();
-  const TABLE_NAME = "course_enrolments";
 
-  // Clean up any existing enrollment in both tables to start fresh using service client to bypass RLS
+  // Clean up any existing enrollment records to start fresh
   const { createSupabaseService } = await import("@/lib/supabase/service");
   const supabaseService = await createSupabaseService();
   
+  // Clean up both enrolment tables
   const { error: cleanupError1 } = await supabaseService
     .from("course_enrolments")
     .delete()
@@ -140,86 +140,48 @@ export async function POST(req: Request) {
     legacy_enrolments: cleanupError2?.message || "success"
   });
 
-  // Verify cleanup worked by checking both tables
-  const { data: remainingCE } = await supabaseService
-    .from("course_enrolments")
-    .select("id")
-    .eq("user_id", user_id)
-    .eq("course_id", course_id);
+  // Create course assignment (trainee role = automatically approved access)
+  const { data: assignmentData, error } = await supabase
+    .from("course_assignments")
+    .upsert(
+      {
+        user_id,
+        course_id,
+        role: "trainee",
+        created_by: user.id
+      },
+      { onConflict: "course_id,user_id,role", ignoreDuplicates: false }
+    )
+    .select("id, user_id, course_id, role, created_at");
 
-  const { data: remainingE } = await supabaseService
-    .from("enrolments")
-    .select("id")
-    .eq("user_id", user_id)
-    .eq("course_id", course_id);
-
-  console.log("Post-cleanup verification:", {
-    course_enrolments_remaining: remainingCE?.length || 0,
-    legacy_enrolments_remaining: remainingE?.length || 0
-  });
-
-  // Insert into course_enrolments with 'approved' status
-  const { data: enrolmentData, error } = await supabase
-    .from("course_enrolments")
-    .insert({
-      user_id, 
-      course_id, 
-      status: "approved",
-      requested_at: now,
-      approved_at: now
-    })
-    .select("id, status, user_id, course_id, created_at");
-
-  console.log("Enrolment creation result:", { 
-    enrolmentData, 
+  console.log("Assignment creation result:", { 
+    assignmentData, 
     error: error?.message || null,
-    errorCode: (error as any)?.code || null,
-    errorDetails: (error as any)?.details || null
+    errorCode: (error as any)?.code || null
   });
 
-  // Verify the record was actually created by immediately querying it back
-  if (!error && enrolmentData && enrolmentData.length > 0) {
-    console.log("✅ Enrolment record created successfully:", enrolmentData[0]);
+  // Verify the assignment was created
+  if (!error && assignmentData && assignmentData.length > 0) {
+    console.log("✅ Course assignment created successfully:", assignmentData[0]);
     
-    // Double-check by querying it back immediately
+    // Double-check by querying it back
     const { data: verifyData, error: verifyError } = await supabase
-      .from("course_enrolments")
-      .select("id, status, user_id, course_id")
+      .from("course_assignments")
+      .select("id, user_id, course_id, role")
       .eq("user_id", user_id)
       .eq("course_id", course_id)
+      .eq("role", "trainee")
       .single();
     
-    console.log("Verification query result:", {
+    console.log("Assignment verification:", {
       verifyData,
       verifyError: verifyError?.message || null
     });
   } else {
-    console.log("❌ Enrolment creation failed or returned no data");
+    console.log("❌ Course assignment creation failed or returned no data");
   }
 
   console.log("=== ASSIGN COURSE DEBUG END ===");
-
-  // Also ensure the course assignment exists for the trainee role
-  if (!error) {
-    const { data: assignmentData, error: assignmentError } = await supabase
-      .from("course_assignments")
-      .upsert(
-        {
-          user_id,
-          course_id,
-          role: "trainee",
-          created_by: user.id
-        },
-        { onConflict: "course_id,user_id,role", ignoreDuplicates: false }
-      )
-      .select("id");
-
-    console.log("Assignment creation result:", { assignmentData, assignmentError });
-
-    if (assignmentError && (assignmentError as any).code !== "23505") {
-      console.warn("Course assignment creation warning:", assignmentError);
-    }
-  }
 
   if (error) {
     to.searchParams.set("error", error.message);

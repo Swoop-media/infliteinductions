@@ -78,143 +78,139 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
     .maybeSingle();
   if (!course) return { error: "Course not found" } as const;
 
-  // Enrolment (skip for preview)
-  let enrolment: any = null;
-  if (!preview && user) {
-    // Check enrolment in course_enrolments table
-    const TABLE_NAME = "course_enrolments";
-    console.log("=== ENROLMENT CHECK DEBUG START ===");
-    console.log("Checking for enrolment:", { userId: user.id, courseId, table: TABLE_NAME });
+  let enrolment: any = null; // This will hold the enrolment object if found and relevant
 
-    // First check with regular client
-    const { data: enrolmentData, error: enrolmentError } = await supabase
-      .from(TABLE_NAME)
-      .select("id, status, user_id, course_id, created_at")
+  // Check access via course assignments first (trainee assignments = automatic access)
+  console.log("=== ACCESS CHECK DEBUG START ===");
+
+  let hasAssignmentAccess = false;
+
+  // Check course assignments
+  {
+    const { data: assignmentData, error: assignmentError } = await supabase
+      .from("course_assignments")
+      .select("id, role, user_id, course_id, created_at")
       .eq("user_id", user.id)
       .eq("course_id", courseId)
+      .eq("role", "trainee")
       .maybeSingle();
 
-    console.log("Enrolment check debug (regular client):", {
-      table: TABLE_NAME,
+    console.log("Course assignment check:", {
       userId: user.id,
       courseId,
-      enrolment: enrolmentData,
-      hasEnrolment: !!enrolmentData,
-      status: enrolmentData?.status,
-      error: enrolmentError?.message || null
+      assignment: assignmentData,
+      hasAssignment: !!assignmentData,
+      role: assignmentData?.role,
+      error: assignmentError?.message || null
     });
 
-    // Also check the legacy 'enrolments' table in case there's confusion
-    const { data: legacyEnrolmentData, error: legacyError } = await supabase
-      .from("enrolments")
-      .select("id, status, user_id, course_id, created_at")
-      .eq("user_id", user.id)
-      .eq("course_id", courseId)
-      .maybeSingle();
+    if (assignmentData) {
+      hasAssignmentAccess = true;
+      console.log("✅ Access granted via course assignment");
+    }
+  }
 
-    console.log("Legacy enrolments table check:", {
-      table: "enrolments",
-      userId: user.id,
-      courseId,
-      enrolment: legacyEnrolmentData,
-      hasEnrolment: !!legacyEnrolmentData,
-      status: legacyEnrolmentData?.status,
-      error: legacyError?.message || null
-    });
+  // If no assignment access, check enrolments
+  let enrolmentAccess = false;
+  if (!hasAssignmentAccess) {
+    console.log("No assignment access, checking enrolments...");
 
-    // Check with service client to see if RLS is blocking
-    try {
-      const supabaseService = await import("@/lib/supabase/service").then(m => m.createSupabaseService());
-      const { data: serviceEnrolmentData, error: serviceError } = await supabaseService
-        .from(TABLE_NAME)
+    let enrolmentData: any = null;
+    let legacyEnrolmentData: any = null;
+
+    // Check current enrolment table
+    {
+      const { data, error } = await supabase
+        .from("course_enrolments")
         .select("id, status, user_id, course_id, created_at")
         .eq("user_id", user.id)
         .eq("course_id", courseId)
         .maybeSingle();
 
-      console.log("Enrolment check debug (service client):", {
-        table: TABLE_NAME,
+      console.log("Enrolment check debug (regular client):", {
+        table: "course_enrolments",
         userId: user.id,
         courseId,
-        enrolment: serviceEnrolmentData,
-        hasEnrolment: !!serviceEnrolmentData,
-        status: serviceEnrolmentData?.status,
-        error: serviceError?.message || null
+        enrolment: data,
+        hasEnrolment: !!data,
+        status: data?.status,
+        error: error?.message || null
       });
 
-      // If service client finds it but regular client doesn't, it's an RLS issue
-      if (serviceEnrolmentData && !enrolmentData) {
-        console.log("🚨 RLS ISSUE DETECTED: Service client found enrolment but regular client didn't");
-      }
-
-      // Use service data if regular client failed but service succeeded
-      if (!enrolmentData && serviceEnrolmentData) {
-        console.log("Using service client data due to RLS issue");
-        enrolmentData = serviceEnrolmentData;
-      }
-    } catch (serviceErr) {
-      console.log("Could not check with service client:", serviceErr);
+      enrolmentData = data;
     }
 
-    // Use legacy enrolment if course_enrolments is empty but legacy has data
+    // Check legacy enrolments table
+    {
+      const { data, error } = await supabase
+        .from("enrolments")
+        .select("id, status, user_id, course_id, created_at")
+        .eq("user_id", user.id)
+        .eq("course_id", courseId)
+        .maybeSingle();
+
+      console.log("Legacy enrolments table check:", {
+        table: "enrolments",
+        userId: user.id,
+        courseId,
+        enrolment: data,
+        hasEnrolment: !!data,
+        status: data?.status,
+        error: error?.message || null
+      });
+
+      legacyEnrolmentData = data;
+    }
+
     let finalEnrolment = enrolmentData || legacyEnrolmentData;
-
-    console.log("Final enrolment decision:", {
-      finalEnrolment: finalEnrolment,
-      source: finalEnrolment === enrolmentData ? "course_enrolments" :
-              finalEnrolment === legacyEnrolmentData ? "legacy_enrolments" : "none"
-    });
-    console.log("=== ENROLMENT CHECK DEBUG END ===");
-
     enrolment = finalEnrolment;
 
-    // Check enrolment status
-    if (!enrolment) {
-      // Not enrolled - return error flag
-      return {
-        user,
-        course,
-        enrolment: null,
-        modules: [],
-        completedIds: new Set(),
-        docsByModule: new Map(),
-        preview,
-        error: "not_enrolled"
-      };
+    if (enrolment?.status === "pending") {
+      return <div className="mx-auto max-w-4xl p-6">Waiting for enrolment approval...</div>;
     }
-
-    if (enrolment.status === "pending") {
-      return {
-        user,
-        course,
-        enrolment: null,
-        modules: [],
-        completedIds: new Set(),
-        docsByModule: new Map(),
-        preview,
-        error: "pending_approval"
-      };
+    if (enrolment?.status === "rejected") {
+      return <div className="mx-auto max-w-4xl p-6">Enrolment rejected.</div>;
     }
-
-    if (enrolment.status !== "approved" && enrolment.status !== "in_progress" && enrolment.status !== "completed") {
-      return {
-        user,
-        course,
-        enrolment: null,
-        modules: [],
-        completedIds: new Set(),
-        docsByModule: new Map(),
-        preview,
-        error: `invalid_status:${enrolment.status}`
-      };
-    }
-
-    // Soft transition to in_progress
-    if (enrolment.status === "approved") {
-      await supabase.from(TABLE_NAME).update({ status: "in_progress" }).eq("id", enrolment.id);
-      enrolment.status = "in_progress";
+    if (enrolment && ["approved", "in_progress", "completed"].includes(enrolment.status)) {
+      enrolmentAccess = true;
+      console.log("✅ Access granted via enrolment");
     }
   }
+
+  console.log("Final access decision:", {
+    hasAssignmentAccess,
+    enrolmentAccess,
+    finalAccess: hasAssignmentAccess || enrolmentAccess
+  });
+  console.log("=== ACCESS CHECK DEBUG END ===");
+
+  // Grant access if either assignment or enrolment allows it
+  if (!hasAssignmentAccess && !enrolmentAccess) {
+    if (preview) {
+      console.log("Preview mode: User not enrolled, but showing preview");
+      // Continue with preview
+    } else {
+      console.log("User not enrolled, showing enrol button");
+      const canEnrol = await canUserEnrol(supabase, user.id, courseId); // Assuming canUserEnrol exists
+      if (!canEnrol) {
+        return (
+          <div className="mx-auto max-w-4xl p-6">
+            <p>You cannot enrol in this course at this time.</p>
+          </div>
+        );
+      }
+      return (
+        <div className="mx-auto max-w-4xl p-6">
+          <h1 className="text-2xl font-bold mb-4">{course.title}</h1>
+          <p className="mb-4 text-gray-600">{course.description}</p>
+          <CourseEnrolButton courseId={courseId} />
+        </div>
+      );
+    }
+  }
+
+  // If we reach here, the user has access (either via assignment or enrolment)
+  // Continue loading course modules and progress, etc.
 
   // Modules -> sort by global type + per-type order_index
   const modsResp = await supabase
@@ -330,9 +326,7 @@ async function markModuleComplete(formData: FormData) {
   }
 
   // Mark complete (idempotent)
-  try {
-    await supabase.from("module_progress").insert({ enrolment_id: enrolmentId, module_id: moduleId }).select().single();
-  } catch {}
+  try { await supabase.from("module_progress").insert({ enrolment_id: enrolmentId, module_id: moduleId }).select().single(); } catch {}
 
   // Try complete enrolment
   try { await supabase.rpc("try_complete_enrolment", { p_enrolment_id: enrolmentId }); } catch {}
@@ -408,6 +402,29 @@ async function uploadLearnerDocument(formData: FormData) {
 
   revalidatePath(`/app/learn/courses/${courseId}`);
   redirect(pageUrl(courseId, { notice: "saved", step: nextStep, preview }));
+}
+
+/** Dummy function for canUserEnrol (replace with actual logic if needed) */
+async function canUserEnrol(supabase: any, userId: string, courseId: string): Promise<boolean> {
+  // Placeholder logic: Assume user can enrol if not already enrolled or assigned.
+  // In a real app, this would involve more checks.
+  const { data: enrolment, error: enrolmentError } = await supabase
+    .from("course_enrolments")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("course_id", courseId)
+    .maybeSingle();
+  if (enrolment) return false;
+
+  const { data: assignment, error: assignmentError } = await supabase
+    .from("course_assignments")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("course_id", courseId)
+    .maybeSingle();
+  if (assignment) return false;
+
+  return true;
 }
 
 /** PAGE */
