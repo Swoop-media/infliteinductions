@@ -136,19 +136,13 @@ export default function HomePage() {
 
   const fetchData = async (userId: string) => {
     try {
-      // Set a timeout for data fetching
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Data fetch timeout')), 10000)
-      );
-
       // Profile
-      const profilePromise = supabase
+      const { data: profileData } = await supabase
         .from("profiles")
         .select("id, full_name, email, department, job_description")
         .eq("id", userId)
         .maybeSingle();
-
-      const { data: profileData } = await Promise.race([profilePromise, timeoutPromise]) as any;
+      
       setProfile(profileData);
 
       // Get both enrolments and assignments
@@ -239,13 +233,12 @@ export default function HomePage() {
 
       // Release notes
       try {
-        const notesPromise = supabase
+        const { data } = await supabase
           .from("release_notes")
           .select("id, title, body, created_at")
           .order("created_at", { ascending: false })
           .limit(5);
         
-        const { data } = await Promise.race([notesPromise, timeoutPromise]) as any;
         setNotes((data ?? []) as ReleaseNote[]);
       } catch (err) {
         console.warn("Could not load release notes:", err);
@@ -253,7 +246,7 @@ export default function HomePage() {
 
     } catch (err) {
       console.error("Error fetching data:", err);
-      throw err; // Re-throw to be caught by calling function
+      // Don't throw - just log the error and continue with empty data
     }
   };
 
@@ -300,10 +293,7 @@ export default function HomePage() {
         await fetchData(user.id);
       } catch (err) {
         console.error("Error in getUser:", err);
-        if (mounted) {
-          setLoading(false);
-          router.push("/auth/signin");
-        }
+        // Don't redirect on data fetch errors, just continue
       } finally {
         if (mounted) {
           setLoading(false);
@@ -335,10 +325,7 @@ export default function HomePage() {
           }
         } catch (err) {
           console.error("Auth state change error:", err);
-          if (mounted) {
-            setLoading(false);
-            router.push("/auth/signin");
-          }
+          // Don't redirect on auth state change errors, just log them
         }
       }
     );
