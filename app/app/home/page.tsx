@@ -142,7 +142,7 @@ export default function HomePage() {
         .select("id, full_name, email, department, job_description")
         .eq("id", userId)
         .maybeSingle();
-      
+
       setProfile(profileData);
 
       // Get both enrolments and assignments
@@ -238,7 +238,7 @@ export default function HomePage() {
           .select("id, title, body, created_at")
           .order("created_at", { ascending: false })
           .limit(5);
-        
+
         setNotes((data ?? []) as ReleaseNote[]);
       } catch (err) {
         console.warn("Could not load release notes:", err);
@@ -306,7 +306,7 @@ export default function HomePage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
-        
+
         try {
           if (event === 'SIGNED_OUT') {
             setUser(null);
