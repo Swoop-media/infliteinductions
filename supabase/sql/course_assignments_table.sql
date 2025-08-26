@@ -1,19 +1,18 @@
-
 -- Create course_assignments table for direct assignment system
 CREATE TABLE IF NOT EXISTS public.course_assignments (
-   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-   course_id UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
-   role TEXT NOT NULL CHECK (role IN ('trainee', 'onsite_trainer', 'onsite_assessor')) DEFAULT 'trainee',
-   assigned_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-   status TEXT NOT NULL CHECK (status IN ('active', 'revoked')) DEFAULT 'active',
-   assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-   revoked_at TIMESTAMPTZ,
-   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  course_id UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
+  role TEXT NOT NULL CHECK (role IN ('trainee', 'onsite_trainer', 'onsite_assessor')) DEFAULT 'trainee',
+  assigned_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL CHECK (status IN ('active', 'revoked')) DEFAULT 'active',
+  assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  revoked_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-   -- Unique constraint: one user can have one assignment per course per role
-   UNIQUE(user_id, course_id, role)
+  -- Unique constraint: one user can have one assignment per course per role
+  UNIQUE(user_id, course_id, role)
 );
 
 -- Add assignment_status column if it doesn't exist (for progress tracking)
@@ -48,98 +47,6 @@ END $$;
 CREATE INDEX IF NOT EXISTS idx_course_assignments_user_id ON public.course_assignments(user_id);
 CREATE INDEX IF NOT EXISTS idx_course_assignments_course_id ON public.course_assignments(course_id);
 CREATE INDEX IF NOT EXISTS idx_course_assignments_role ON public.course_assignments(role);
-
--- Create indexes for assignment_progress
-CREATE INDEX IF NOT EXISTS idx_assignment_progress_assignment_id ON public.assignment_progress(assignment_id);
-CREATE INDEX IF NOT EXISTS idx_assignment_progress_module_id ON public.assignment_progress(module_id);
-
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Users can view their own assignment progress" ON public.assignment_progress;
-DROP POLICY IF EXISTS "Users can insert their own assignment progress" ON public.assignment_progress;
-DROP POLICY IF EXISTS "Admins and creators can view all assignment progress" ON public.assignment_progress;
-
--- RLS Policies for assignment_progress
--- Users can view their own progress
-CREATE POLICY "Users can view their own assignment progress"
-ON public.assignment_progress
-FOR SELECT
-USING (
-    assignment_id IN (
-        SELECT id FROM public.course_assignments 
-        WHERE user_id = auth.uid()
-    )
-);
-
--- Users can insert their own progress
-CREATE POLICY "Users can insert their own assignment progress"
-ON public.assignment_progress
-FOR INSERT
-WITH CHECK (
-    assignment_id IN (
-        SELECT id FROM public.course_assignments 
-        WHERE user_id = auth.uid()
-    )
-);
-
--- Users can update their own progress
-CREATE POLICY "Users can update their own assignment progress"
-ON public.assignment_progress
-FOR UPDATE
-USING (
-    assignment_id IN (
-        SELECT id FROM public.course_assignments 
-        WHERE user_id = auth.uid()
-    )
-)
-WITH CHECK (
-    assignment_id IN (
-        SELECT id FROM public.course_assignments 
-        WHERE user_id = auth.uid()
-    )
-);
-
--- Admins and course creators can view all assignment progress
-CREATE POLICY "Admins and creators can view all assignment progress"
-ON public.assignment_progress
-FOR SELECT
-USING (
-    EXISTS (
-        SELECT 1 FROM public.user_roles 
-        WHERE user_id = auth.uid() 
-        AND role IN ('admin', 'course_creator')
-    )
-);
-
--- Admins and course creators can insert assignment progress
-CREATE POLICY "Admins and creators can insert all assignment progress"
-ON public.assignment_progress
-FOR INSERT
-WITH CHECK (
-    EXISTS (
-        SELECT 1 FROM public.user_roles 
-        WHERE user_id = auth.uid() 
-        AND role IN ('admin', 'course_creator')
-    )
-);
-
--- Admins and course creators can update assignment progress
-CREATE POLICY "Admins and creators can update all assignment progress"
-ON public.assignment_progress
-FOR UPDATE
-USING (
-    EXISTS (
-        SELECT 1 FROM public.user_roles 
-        WHERE user_id = auth.uid() 
-        AND role IN ('admin', 'course_creator')
-    )
-)
-WITH CHECK (
-    EXISTS (
-        SELECT 1 FROM public.user_roles 
-        WHERE user_id = auth.uid() 
-        AND role IN ('admin', 'course_creator')
-    )
-);
 
 -- Enable RLS
 ALTER TABLE public.course_assignments ENABLE ROW LEVEL SECURITY;
