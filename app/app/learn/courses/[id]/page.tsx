@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath, unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import SharePointVideoEmbed from "@/components/SharePointVideoEmbed";
 
 export const dynamic = "force-dynamic";
 
@@ -879,7 +880,7 @@ async function ModuleBody({
         {blocks.length === 0 ? (
           <p className="text-sm text-gray-600">No content yet.</p>
         ) : (
-          blocks.map((b: any) => <BlockView key={b.id} block={b} />)
+          blocks.map((b: any) => <BlockView key={b.id} block={{...b, course_id: module.course_id}} />)
         )}
 
         {isDone && <div className="pt-2 text-sm text-green-700">You completed this step.</div>}
@@ -1154,7 +1155,7 @@ function extractIframeSrc(raw: string) {
   return trimmed;
 }
 
-function toEmbedUrl(raw: string) {
+function toEmbedUrl(raw: string, courseId?: string) {
   const input = extractIframeSrc(raw);
   try {
     const u = new URL(input);
@@ -1182,8 +1183,14 @@ function toEmbedUrl(raw: string) {
       if (id) return `https://player.vimeo.com/video/${id}`;
     }
 
-    // SharePoint/OneDrive embed page
+    // SharePoint/OneDrive embed page - add authentication handling
     if (host.endsWith(".sharepoint.com") && u.pathname.includes("/_layouts/15/embed.aspx")) {
+      // Add course context for session management
+      if (courseId) {
+        const authUrl = new URL(input);
+        authUrl.searchParams.set('courseContext', courseId);
+        return authUrl.toString();
+      }
       return input;
     }
 
@@ -1222,16 +1229,24 @@ async function BlockView({ block }: { block: any }) {
 
   if (kind === "video_embed") {
     const raw = String(data.url ?? "");
-    const url = toEmbedUrl(raw);
+    const url = toEmbedUrl(raw, block.course_id);
+    
+    // Check if this is a SharePoint URL that needs authentication
+    const isSharePoint = url && url.includes('.sharepoint.com');
+    
     return url ? (
       <div className="aspect-video w-full overflow-hidden rounded-md border">
-        <iframe
-          src={url}
-          className="h-full w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-          referrerPolicy="no-referrer-when-downgrade"
-        />
+        {isSharePoint ? (
+          <SharePointVideoEmbed url={url} courseId={block.course_id} />
+        ) : (
+          <iframe
+            src={url}
+            className="h-full w-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        )}
       </div>
     ) : (
       <p className="text-sm text-gray-500">No video URL provided.</p>
