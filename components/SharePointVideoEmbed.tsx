@@ -272,6 +272,31 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
 
   const handleIframeLoad = () => {
     addDebugLog('SharePoint iframe loaded successfully');
+    
+    // Try to detect if SharePoint is showing a login screen
+    if (iframeRef.current && isAuthenticated) {
+      try {
+        setTimeout(() => {
+          // Check if the iframe contains typical SharePoint auth elements
+          const iframe = iframeRef.current;
+          if (iframe && iframe.contentDocument) {
+            const doc = iframe.contentDocument;
+            const signInElements = doc.querySelector('[data-automation-id="signInButton"], .signin-button, #idSIButton9, .ms-Button--primary');
+            const authContainers = doc.querySelector('.auth-container, .sign-in-container, .ms-signInContainer');
+            
+            if (signInElements || authContainers) {
+              addDebugLog('Detected SharePoint login screen in iframe, clearing cached auth');
+              clearAuthAndRetry();
+              return;
+            }
+          }
+        }, 2000); // Wait 2 seconds for content to load
+      } catch (e) {
+        // Cross-origin restrictions prevent access - this is expected
+        addDebugLog('Cannot access iframe content (cross-origin)', { error: e.message });
+      }
+    }
+    
     if (isAuthenticated) {
       setIsLoading(false);
     }
@@ -351,6 +376,15 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
                 className="w-full text-sm text-gray-600 hover:text-gray-800 underline"
               >
                 Clear cache and try again
+              </button>
+            )}
+            
+            {isAuthenticated && (
+              <button
+                onClick={clearAuthAndRetry}
+                className="w-full text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                Refresh SharePoint authentication
               </button>
             )}
 
