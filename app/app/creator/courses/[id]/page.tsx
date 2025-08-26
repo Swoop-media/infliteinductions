@@ -429,7 +429,7 @@ async function updateCourseDetails(formData: FormData) {
   redirect(next);
 }
 
-/** Assignments (robust: enrolment auto-create/approve + best-effort notification) */
+/** Assignments (robust: enrolment auto-create/approve + comprehensive notifications) */
 async function assignUserAction(formData: FormData) {
   "use server";
   const supabase = await createSupabaseServer();
@@ -449,6 +449,26 @@ async function assignUserAction(formData: FormData) {
   const { data: { user }, error: authErr } = await supabase.auth.getUser();
   if (authErr) throw new Error(authErr.message);
   if (!user) throw new Error("Not authenticated");
+
+  // Get course and assigner details for notifications
+  let courseTitle = "Course";
+  let assignerName = "Admin";
+  try {
+    const [courseResult, assignerResult] = await Promise.all([
+      supabase.from("courses").select("title").eq("id", courseId).maybeSingle(),
+      supabase.from("profiles").select("full_name, first_name, last_name").eq("id", user.id).maybeSingle()
+    ]);
+    
+    courseTitle = courseResult.data?.title || "Course";
+    const profile = assignerResult.data;
+    if (profile) {
+      assignerName = profile.full_name || 
+        (profile.first_name && profile.last_name ? `${profile.first_name} ${profile.last_name}`.trim() : null) ||
+        "Admin";
+    }
+  } catch {
+    // Use defaults if lookup fails
+  }
 
   // Try RPC first if present
   const rpc = await supabase.rpc("assign_course_user", {
@@ -481,29 +501,64 @@ async function assignUserAction(formData: FormData) {
           course_id: courseId,
           user_id: userId,
           status: "approved",
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
         });
       } else if (existing.status !== "approved" && existing.status !== "in_progress") {
         await supabase
           .from("course_enrolments")
-          .update({ status: "approved" })
+          .update({ 
+            status: "approved",
+            approved_by: user.id,
+            approved_at: new Date().toISOString()
+          })
           .eq("id", existing.id);
       }
     }
+  }
 
-    // Best-effort notification
-    try {
-      const { data: c } = await supabase
-        .from("courses")
-        .select("title")
-        .eq("id", courseId)
-        .maybeSingle();
-      await supabase.from("notifications").insert({
-        user_id: userId,
-        type: "course_assigned",
-        data: { course_id: courseId, title: c?.title ?? "Course" },
-        read: false,
-      });
-    } catch { /* ignore if notifications not available */ }
+  // Send comprehensive notification using the new notification system
+  try {
+    const { createNotification } = await import("@/app/app/_actions/notifications");
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    
+    const roleDisplayName = role === "trainee" ? "Trainee" : 
+                           role === "onsite_trainer" ? "Onsite Trainer" : 
+                           "Onsite Assessor";
+    
+    const notificationTitle = role === "trainee" ? 
+      `Course Assigned: ${courseTitle}` :
+      `${roleDisplayName} Role Assigned: ${courseTitle}`;
+    
+    const notificationBody = role === "trainee" ?
+      `You have been enrolled in "${courseTitle}" by ${assignerName}. You can start learning now!` :
+      `You have been assigned as ${roleDisplayName} for "${courseTitle}" by ${assignerName}.`;
+    
+    const courseUrl = role === "trainee" ? 
+      `${siteUrl}/app/learn/courses/${courseId}` :
+      `${siteUrl}/app/creator/courses/${courseId}`;
+
+    await createNotification({
+      recipientUserId: userId,
+      type: "course_assigned",
+      title: notificationTitle,
+      body: notificationBody,
+      data: {
+        courseTitle,
+        courseId,
+        role,
+        roleDisplayName,
+        assignedBy: assignerName,
+        assignedById: user.id,
+        url: courseUrl,
+        // Use a unique event ID to prevent duplicate notifications
+        event_id: `course_assign_${courseId}_${userId}_${role}_${Date.now()}`
+      },
+      sendTeams: true
+    });
+  } catch (notifyError) {
+    console.warn("Failed to send course assignment notification:", notifyError);
+    // Don't fail the assignment if notification fails
   }
 
   revalidatePath(buildCourseUrl(courseId));
@@ -519,8 +574,75 @@ async function revokeAssignmentAction(formData: FormData) {
   const next = String(formData.get("next") || "") || buildCourseUrl(courseId, "assignments", "revoked");
   if (!courseId || !assignmentId) throw new Error("Missing course_id or assignment_id");
 
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr) throw new Error(authErr.message);
+  if (!user) throw new Error("Not authenticated");
+
+  // Get assignment details before deletion for notification
+  let assignmentDetails = null;
+  try {
+    const { data: assignment } = await supabase
+      .from("course_assignments")
+      .select("user_id, role, course_id")
+      .eq("id", assignmentId)
+      .maybeSingle();
+    assignmentDetails = assignment;
+  } catch {
+    // Continue with deletion even if we can't get details
+  }
+
   const { error } = await supabase.from("course_assignments").delete().eq("id", assignmentId);
   if (error) throw new Error(error.message);
+
+  // Send revocation notification
+  if (assignmentDetails) {
+    try {
+      const { createNotification } = await import("@/app/app/_actions/notifications");
+      
+      // Get course and revoker details
+      let courseTitle = "Course";
+      let revokerName = "Admin";
+      try {
+        const [courseResult, revokerResult] = await Promise.all([
+          supabase.from("courses").select("title").eq("id", courseId).maybeSingle(),
+          supabase.from("profiles").select("full_name, first_name, last_name").eq("id", user.id).maybeSingle()
+        ]);
+        
+        courseTitle = courseResult.data?.title || "Course";
+        const profile = revokerResult.data;
+        if (profile) {
+          revokerName = profile.full_name || 
+            (profile.first_name && profile.last_name ? `${profile.first_name} ${profile.last_name}`.trim() : null) ||
+            "Admin";
+        }
+      } catch {
+        // Use defaults
+      }
+
+      const roleDisplayName = assignmentDetails.role === "trainee" ? "Trainee" : 
+                             assignmentDetails.role === "onsite_trainer" ? "Onsite Trainer" : 
+                             "Onsite Assessor";
+
+      await createNotification({
+        recipientUserId: assignmentDetails.user_id,
+        type: "course_assignment_revoked",
+        title: `Assignment Revoked: ${courseTitle}`,
+        body: `Your ${roleDisplayName} assignment for "${courseTitle}" has been revoked by ${revokerName}.`,
+        data: {
+          courseTitle,
+          courseId,
+          role: assignmentDetails.role,
+          roleDisplayName,
+          revokedBy: revokerName,
+          revokedById: user.id,
+          event_id: `course_revoke_${courseId}_${assignmentDetails.user_id}_${assignmentDetails.role}_${Date.now()}`
+        },
+        sendTeams: true
+      });
+    } catch (notifyError) {
+      console.warn("Failed to send assignment revocation notification:", notifyError);
+    }
+  }
 
   revalidatePath(buildCourseUrl(courseId));
   redirect(next);

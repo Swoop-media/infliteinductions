@@ -124,12 +124,20 @@ function teamsTextFor(n: NotificationInput) {
         .join("\n");
     
     case "course_assigned":
+      const role = n.data?.role;
+      const roleDisplay = n.data?.roleDisplayName || role;
+      const emoji = role === "trainee" ? "📚" : 
+                   role === "onsite_trainer" ? "👨‍🏫" : 
+                   role === "onsite_assessor" ? "📋" : "📚";
+      
       return [
-        "📚 *Course assigned*",
+        `${emoji} *${role === "trainee" ? "Course assigned" : `${roleDisplay} role assigned`}*`,
         n.data?.courseTitle ? `• Course: ${n.data.courseTitle}` : "",
         n.data?.assignedBy ? `• Assigned by: ${n.data.assignedBy}` : "",
+        role && role !== "trainee" ? `• Role: ${roleDisplay}` : "",
         "",
         n.body || "",
+        n.data?.url ? `🔗 ${role === "trainee" ? "Start learning" : "View course"}: ${n.data.url}` : "",
       ]
         .filter(Boolean)
         .join("\n");
@@ -171,6 +179,19 @@ function teamsTextFor(n: NotificationInput) {
       return [
         "🚫 *Role revoked*",
         n.data?.roleName ? `• Role: ${n.data.roleName}` : "",
+        n.data?.revokedBy ? `• Revoked by: ${n.data.revokedBy}` : "",
+        "",
+        n.body || "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "course_assignment_revoked":
+      const revokedRole = n.data?.roleDisplayName || n.data?.role;
+      return [
+        "⚠️ *Course assignment revoked*",
+        n.data?.courseTitle ? `• Course: ${n.data.courseTitle}` : "",
+        revokedRole ? `• Role: ${revokedRole}` : "",
         n.data?.revokedBy ? `• Revoked by: ${n.data.revokedBy}` : "",
         "",
         n.body || "",
