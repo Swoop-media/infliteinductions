@@ -1,4 +1,11 @@
 
+-- Ensure course_assignments table has status and completed_at columns
+ALTER TABLE public.course_assignments 
+ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'assigned' CHECK (status IN ('assigned', 'in_progress', 'completed', 'expired'));
+
+ALTER TABLE public.course_assignments 
+ADD COLUMN IF NOT EXISTS completed_at TIMESTAMPTZ;
+
 -- Create assignment_progress table for tracking module completion in assignments
 CREATE TABLE IF NOT EXISTS public.assignment_progress (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
