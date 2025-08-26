@@ -119,18 +119,23 @@ export async function POST(req: Request) {
   const now = new Date().toISOString();
   const TABLE_NAME = "course_enrolments";
 
-  // Clean up any existing enrollment in both tables to start fresh
-  await supabase
+  // Clean up any existing enrollment in both tables to start fresh using service client to bypass RLS
+  const { createSupabaseService } = await import("@/lib/supabase/service");
+  const supabaseService = await createSupabaseService();
+  
+  await supabaseService
     .from("course_enrolments")
     .delete()
     .eq("user_id", user_id)
     .eq("course_id", course_id);
 
-  await supabase
+  await supabaseService
     .from("enrolments")
     .delete()
     .eq("user_id", user_id)
     .eq("course_id", course_id);
+
+  console.log("Cleaned up existing enrolments from both tables using service client");
 
   // Insert into course_enrolments with 'approved' status
   const { data: enrolmentData, error } = await supabase
