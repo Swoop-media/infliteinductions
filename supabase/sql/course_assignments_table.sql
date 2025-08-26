@@ -15,6 +15,20 @@ CREATE TABLE IF NOT EXISTS public.course_assignments (
    UNIQUE(user_id, course_id, role)
 );
 
+-- Ensure the role column exists with correct definition
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'course_assignments' 
+        AND column_name = 'role'
+    ) THEN
+        ALTER TABLE public.course_assignments 
+        ADD COLUMN role TEXT NOT NULL CHECK (role IN ('trainee', 'onsite_trainer', 'onsite_assessor')) DEFAULT 'trainee';
+    END IF;
+END $$;
+
 -- Add status column if it doesn't exist (for existing tables)
 DO $$ 
 BEGIN 
@@ -26,6 +40,33 @@ BEGIN
     ) THEN
         ALTER TABLE public.course_assignments 
         ADD COLUMN status TEXT NOT NULL CHECK (status IN ('active', 'revoked')) DEFAULT 'active';
+    END IF;
+END $$;
+
+-- Add assignment status and completed_at columns for progress tracking
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'course_assignments' 
+        AND column_name = 'assignment_status'
+    ) THEN
+        ALTER TABLE public.course_assignments 
+        ADD COLUMN assignment_status TEXT DEFAULT 'assigned' CHECK (assignment_status IN ('assigned', 'in_progress', 'completed', 'expired'));
+    END IF;
+END $$;
+
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'course_assignments' 
+        AND column_name = 'completed_at'
+    ) THEN
+        ALTER TABLE public.course_assignments 
+        ADD COLUMN completed_at TIMESTAMPTZ;
     END IF;
 END $$;
 

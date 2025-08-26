@@ -38,6 +38,8 @@ BEGIN
 END;
 $$ language plpgsql;
 
+-- Drop existing trigger if it exists, then create it
+DROP TRIGGER IF EXISTS trg_assignment_progress_updated_at ON public.assignment_progress;
 CREATE TRIGGER trg_assignment_progress_updated_at
     BEFORE UPDATE ON public.assignment_progress
     FOR EACH ROW
