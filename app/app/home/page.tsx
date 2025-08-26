@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -7,6 +6,7 @@ import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { useRouter } from "next/navigation";
 import { User } from "@supabase/supabase-js";
 import { NotificationsBell } from "../_components/NotificationsBell";
+import { useSearchParams } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -132,6 +132,7 @@ export default function HomePage() {
 
   const router = useRouter();
   const supabase = createClientComponentClient();
+  const searchParams = useSearchParams();
 
   const fetchData = async (userId: string) => {
     try {
@@ -198,11 +199,11 @@ export default function HomePage() {
       for (const a of assignments) {
         const c = courseMap.get(a.course_id);
         if (!c) continue;
-        
+
         // Check if this course is already in the list from enrolments
         const alreadyExists = inProgressList.some(item => item.course.id === a.course_id) ||
                              completedList.some(item => item.course.id === a.course_id);
-        
+
         if (!alreadyExists) {
           inProgressList.push({ course: c, status: "assigned" });
         }
@@ -266,13 +267,13 @@ export default function HomePage() {
         }
 
         const { data: { user }, error } = await supabase.auth.getUser();
-        
+
         if (error) {
           console.error("Auth error:", error);
           router.push("/auth/signin");
           return;
         }
-        
+
         if (!user) {
           router.push("/auth/signin");
           return;
@@ -340,6 +341,31 @@ export default function HomePage() {
       {/* Banners (error/ok has priority, then soft banner code) */}
       {OkErrorBanner({ ok, error })}
       {!ok && !error && <SoftBanner code={bannerCode} />}
+
+      {/* Added no_access banner handling */}
+      {searchParams?.notice === "assigned" && (
+        <div className="mb-4 rounded-md bg-green-50 p-4 border border-green-200">
+          <div className="text-sm text-green-800">
+            ✓ User successfully assigned to course
+          </div>
+        </div>
+      )}
+
+      {searchParams?.notice === "revoked" && (
+        <div className="mb-4 rounded-md bg-yellow-50 p-4 border border-yellow-200">
+          <div className="text-sm text-yellow-800">
+            ✓ User assignment revoked
+          </div>
+        </div>
+      )}
+
+      {searchParams?.banner === "no_access" && (
+        <div className="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
+          <div className="text-sm text-red-800">
+            ⚠️ Sorry, you do not have access to that page. Please contact your administrator if you believe this is an error.
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between">

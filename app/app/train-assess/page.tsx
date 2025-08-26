@@ -1,8 +1,16 @@
 
 // app/app/train-assess/page.tsx
+import { enforceAnyRoleOrHome } from "@/lib/roles/enforce";
+
 export const dynamic = "force-dynamic";
 
-export default function TrainAssessPage() {
+export default async function TrainAssessPage() {
+  // Enforce role-based access - only allow specific roles
+  await enforceAnyRoleOrHome([
+    "Trainers and Assessors", 
+    "Senior Management", 
+    "Admin"
+  ]);
   return (
     <div className="space-y-6">
       <div className="border-b pb-4">
