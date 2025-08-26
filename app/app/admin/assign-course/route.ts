@@ -115,82 +115,32 @@ export async function POST(req: Request) {
     return NextResponse.redirect(to);
   }
 
-  // Assign course (create enrolment with approved status and proper timestamps)
+  // Assign course (create enrolment with approved status)
   const now = new Date().toISOString();
-  
-  // Use the same table as the enrol route: course_enrolments
   const TABLE_NAME = "course_enrolments";
   
-  // First, check if enrolment already exists
-  const { data: existingEnrolment } = await supabase
+  // First, try to delete any existing enrollment to start fresh
+  await supabase
     .from(TABLE_NAME)
-    .select("id, status, user_id, course_id")
+    .delete()
     .eq("user_id", user_id)
-    .eq("course_id", course_id)
-    .maybeSingle();
+    .eq("course_id", course_id);
 
-  console.log("Existing enrolment check:", { 
-    table: TABLE_NAME,
-    user_id, 
-    course_id, 
-    existingEnrolment,
-    hasExisting: !!existingEnrolment 
-  });
-
+  // Now insert a new approved enrollment
   const { data: enrolmentData, error } = await supabase
     .from(TABLE_NAME)
-    .upsert(
-      { 
-        user_id, 
-        course_id, 
-        status: "approved", 
-        requested_at: now
-      },
-      { onConflict: "user_id,course_id", ignoreDuplicates: false }
-    )
+    .insert({
+      user_id, 
+      course_id, 
+      status: "approved",
+      requested_at: now
+    })
     .select("id, status, user_id, course_id");
 
   console.log("Enrolment creation result:", { 
-    table: TABLE_NAME,
     enrolmentData, 
     error: error?.message || null 
   });
-
-  // Verify the enrolment was created/updated
-  if (!error) {
-    // Check with regular client
-    const { data: verifyEnrolment, error: verifyError } = await supabase
-      .from(TABLE_NAME)
-      .select("id, status, user_id, course_id, created_at")
-      .eq("user_id", user_id)
-      .eq("course_id", course_id)
-      .maybeSingle();
-
-    console.log("Verification query result (regular client):", { 
-      table: TABLE_NAME,
-      verifyEnrolment,
-      verifyError: verifyError?.message || null
-    });
-
-    // Also check with service role client to see if RLS is blocking
-    try {
-      const supabaseService = await import("@/lib/supabase/service").then(m => m.createSupabaseService());
-      const { data: serviceVerify, error: serviceVerifyError } = await supabaseService
-        .from(TABLE_NAME)
-        .select("id, status, user_id, course_id, created_at")
-        .eq("user_id", user_id)
-        .eq("course_id", course_id)
-        .maybeSingle();
-
-      console.log("Verification query result (service client):", { 
-        table: TABLE_NAME,
-        serviceVerify,
-        serviceVerifyError: serviceVerifyError?.message || null
-      });
-    } catch (serviceErr) {
-      console.log("Could not verify with service client:", serviceErr);
-    }
-  }
 
   console.log("=== ASSIGN COURSE DEBUG END ===");
 

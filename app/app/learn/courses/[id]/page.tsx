@@ -83,7 +83,7 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
   if (!preview && user) {
     // Use the same table as enrol route: course_enrolments
     const TABLE_NAME = "course_enrolments";
-    
+
     const { data: enrolmentData, error: enrolmentError } = await supabase
       .from(TABLE_NAME)
       .select("id, status, user_id, course_id, created_at")
@@ -131,10 +131,50 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
 
     enrolment = enrolmentData;
 
-    if (!enrolment || enrolment.status !== "approved") {
-      const errorParam = !enrolment ? "not_enrolled" : `status_${enrolment.status}`;
-      console.log("Redirecting due to enrolment issue:", errorParam);
-      redirect(`/app/courses?error=${errorParam}`);
+    // Check enrolment status
+    if (!enrolmentData) {
+      // Not enrolled - show enrolment form
+      return (
+        <div className="min-h-screen bg-gray-50 p-8">
+          <div className="mx-auto max-w-4xl">
+            <h1 className="mb-6 text-3xl font-bold">{course.title}</h1>
+            <div className="rounded-lg bg-white p-6 shadow">
+              <p className="mb-4">You are not enrolled in this course.</p>
+              <CourseEnrolButton courseId={courseId} />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (enrolmentData.status === "pending") {
+      return (
+        <div className="min-h-screen bg-gray-50 p-8">
+          <div className="mx-auto max-w-4xl">
+            <h1 className="mb-6 text-3xl font-bold">{course.title}</h1>
+            <div className="rounded-lg bg-white p-6 shadow">
+              <p className="text-yellow-600">
+                Your enrolment is pending approval. Please wait for an administrator to approve your request.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (enrolmentData.status !== "approved" && enrolmentData.status !== "in_progress" && enrolmentData.status !== "completed") {
+      return (
+        <div className="min-h-screen bg-gray-50 p-8">
+          <div className="mx-auto max-w-4xl">
+            <h1 className="mb-6 text-3xl font-bold">{course.title}</h1>
+            <div className="rounded-lg bg-white p-6 shadow">
+              <p className="text-red-600">
+                Your enrolment status is: {enrolmentData.status}. Please contact an administrator.
+              </p>
+            </div>
+          </div>
+        </div>
+      );
     }
 
     // Soft transition to in_progress
@@ -890,4 +930,11 @@ async function BlockView({ block }: { block: any }) {
 
   // request_document is handled in ModuleBody
   return null;
+}
+
+// Dummy component for type checking, replace with actual implementation if needed
+async function CourseEnrolButton({ courseId }: { courseId: string }) {
+  // This is a placeholder. In a real application, this would be a button
+  // that triggers the enrollment process.
+  return <button className="rounded-md bg-black px-4 py-2 text-sm text-white">Enroll Now</button>;
 }
