@@ -15,19 +15,7 @@ CREATE TABLE IF NOT EXISTS public.course_assignments (
    UNIQUE(user_id, course_id, role)
 );
 
--- Ensure the role column exists with correct definition
-DO $$ 
-BEGIN 
-    IF NOT EXISTS (
-        SELECT 1 FROM information_schema.columns 
-        WHERE table_schema = 'public' 
-        AND table_name = 'course_assignments' 
-        AND column_name = 'role'
-    ) THEN
-        ALTER TABLE public.course_assignments 
-        ADD COLUMN role TEXT NOT NULL CHECK (role IN ('trainee', 'onsite_trainer', 'onsite_assessor')) DEFAULT 'trainee';
-    END IF;
-END $$;
+-- Role column is already defined in the table creation above
 
 -- Add status column if it doesn't exist (for existing tables)
 DO $$ 
