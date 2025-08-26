@@ -238,7 +238,7 @@ export default function HomePage() {
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
-        router.push("/auth/login");
+        router.push("/auth/signin");
         return;
       }
 
@@ -256,7 +256,7 @@ export default function HomePage() {
           await fetchData(session.user.id);
         } else {
           setUser(null);
-          router.push("/auth/login");
+          router.push("/auth/signin");
         }
         setLoading(false);
       }
