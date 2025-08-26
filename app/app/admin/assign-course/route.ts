@@ -123,19 +123,40 @@ export async function POST(req: Request) {
   const { createSupabaseService } = await import("@/lib/supabase/service");
   const supabaseService = await createSupabaseService();
   
-  await supabaseService
+  const { error: cleanupError1 } = await supabaseService
     .from("course_enrolments")
     .delete()
     .eq("user_id", user_id)
     .eq("course_id", course_id);
 
-  await supabaseService
+  const { error: cleanupError2 } = await supabaseService
     .from("enrolments")
     .delete()
     .eq("user_id", user_id)
     .eq("course_id", course_id);
 
-  console.log("Cleaned up existing enrolments from both tables using service client");
+  console.log("Cleanup results:", {
+    course_enrolments: cleanupError1?.message || "success",
+    legacy_enrolments: cleanupError2?.message || "success"
+  });
+
+  // Verify cleanup worked by checking both tables
+  const { data: remainingCE } = await supabaseService
+    .from("course_enrolments")
+    .select("id")
+    .eq("user_id", user_id)
+    .eq("course_id", course_id);
+
+  const { data: remainingE } = await supabaseService
+    .from("enrolments")
+    .select("id")
+    .eq("user_id", user_id)
+    .eq("course_id", course_id);
+
+  console.log("Post-cleanup verification:", {
+    course_enrolments_remaining: remainingCE?.length || 0,
+    legacy_enrolments_remaining: remainingE?.length || 0
+  });
 
   // Insert into course_enrolments with 'approved' status
   const { data: enrolmentData, error } = await supabase
