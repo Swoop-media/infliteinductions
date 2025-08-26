@@ -49,13 +49,28 @@ async function loadMyProfileAndLearning() {
     .eq("id", user.id)
     .maybeSingle();
 
-  // Enrolments (we'll categorize client-side)
-  const { data: enrols = [] } = await supabase
-    .from("course_enrolments")
-    .select("course_id, status, updated_at")
-    .eq("user_id", user.id);
+  // Get both enrolments and assignments
+  const [enrolsResult, assignmentsResult] = await Promise.all([
+    supabase
+      .from("course_enrolments")
+      .select("course_id, status, updated_at")
+      .eq("user_id", user.id),
+    supabase
+      .from("course_assignments")
+      .select("course_id, role, created_at")
+      .eq("user_id", user.id)
+      .eq("role", "trainee")
+  ]);
 
-  const courseIds = Array.from(new Set(enrols.map((e) => e.course_id)));
+  const enrols = enrolsResult.data ?? [];
+  const assignments = assignmentsResult.data ?? [];
+
+  // Collect all unique course IDs
+  const courseIds = Array.from(new Set([
+    ...enrols.map((e) => e.course_id),
+    ...assignments.map((a) => a.course_id)
+  ]));
+
   let courses: CourseRow[] = [];
   if (courseIds.length) {
     const { data } = await supabase
@@ -72,6 +87,7 @@ async function loadMyProfileAndLearning() {
   const inProgress: Array<{ course: CourseRow; status: string }> = [];
   const completed: Array<{ course: CourseRow; status: string }> = [];
 
+  // Process enrolments
   for (const e of enrols as EnrolRow[]) {
     const c = courseMap.get(e.course_id);
     if (!c) continue;
@@ -83,6 +99,20 @@ async function loadMyProfileAndLearning() {
       completed.push({ course: c, status: s });
     }
     // ignore: pending, rejected, cancelled, etc.
+  }
+
+  // Process assignments (trainees are automatically "approved")
+  for (const a of assignments) {
+    const c = courseMap.get(a.course_id);
+    if (!c) continue;
+    
+    // Check if this course is already in the list from enrolments
+    const alreadyExists = inProgress.some(item => item.course.id === a.course_id) ||
+                         completed.some(item => item.course.id === a.course_id);
+    
+    if (!alreadyExists) {
+      inProgress.push({ course: c, status: "assigned" });
+    }
   }
 
   // Sort by most recently updated course first
@@ -225,8 +255,8 @@ export default async function MyProfilePage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Pill tone={status === "approved" ? "gray" : "blue"}>
-                      {status === "approved" ? "Approved" : "In progress"}
+                    <Pill tone={status === "approved" ? "gray" : status === "assigned" ? "green" : "blue"}>
+                      {status === "approved" ? "Approved" : status === "assigned" ? "Assigned" : "In progress"}
                     </Pill>
                     <Link
                       href={`/app/learn/courses/${course.id}`}

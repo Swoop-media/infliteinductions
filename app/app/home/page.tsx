@@ -144,14 +144,28 @@ export default function HomePage() {
 
       setProfile(profileData);
 
-      // Enrolments
-      const { data: enrols = [] } = await supabase
-        .from("course_enrolments")
-        .select("course_id, status, updated_at")
-        .eq("user_id", userId);
+      // Get both enrolments and assignments
+      const [enrolsResult, assignmentsResult] = await Promise.all([
+        supabase
+          .from("course_enrolments")
+          .select("course_id, status, updated_at")
+          .eq("user_id", userId),
+        supabase
+          .from("course_assignments")
+          .select("course_id, role, created_at")
+          .eq("user_id", userId)
+          .eq("role", "trainee")
+      ]);
 
-      // Fetch details for those course ids
-      const courseIds = Array.from(new Set((enrols ?? []).map((e) => e.course_id)));
+      const enrols = enrolsResult.data ?? [];
+      const assignments = assignmentsResult.data ?? [];
+
+      // Collect all unique course IDs
+      const courseIds = Array.from(new Set([
+        ...enrols.map((e) => e.course_id),
+        ...assignments.map((a) => a.course_id)
+      ]));
+
       let courses: CourseRow[] = [];
       if (courseIds.length) {
         const { data } = await supabase
@@ -167,6 +181,7 @@ export default function HomePage() {
       const inProgressList: Array<{ course: CourseRow; status: string }> = [];
       const completedList: Array<{ course: CourseRow; status: string }> = [];
 
+      // Process enrolments
       for (const e of enrols as EnrolRow[]) {
         const c = courseMap.get(e.course_id);
         if (!c) continue;
@@ -176,6 +191,20 @@ export default function HomePage() {
           inProgressList.push({ course: c, status: s });
         } else if (s === "completed") {
           completedList.push({ course: c, status: s });
+        }
+      }
+
+      // Process assignments (trainees are automatically "approved")
+      for (const a of assignments) {
+        const c = courseMap.get(a.course_id);
+        if (!c) continue;
+        
+        // Check if this course is already in the list from enrolments
+        const alreadyExists = inProgressList.some(item => item.course.id === a.course_id) ||
+                             completedList.some(item => item.course.id === a.course_id);
+        
+        if (!alreadyExists) {
+          inProgressList.push({ course: c, status: "assigned" });
         }
       }
 
@@ -356,8 +385,8 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Pill tone={status === "approved" ? "gray" : "blue"}>
-                      {status === "approved" ? "Approved" : "In progress"}
+                    <Pill tone={status === "approved" ? "gray" : status === "assigned" ? "green" : "blue"}>
+                      {status === "approved" ? "Approved" : status === "assigned" ? "Assigned" : "In progress"}
                     </Pill>
                     <Link
                       href={`/app/learn/courses/${course.id}`}
