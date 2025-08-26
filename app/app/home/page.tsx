@@ -136,13 +136,19 @@ export default function HomePage() {
 
   const fetchData = async (userId: string) => {
     try {
+      // Set a timeout for data fetching
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Data fetch timeout')), 10000)
+      );
+
       // Profile
-      const { data: profileData } = await supabase
+      const profilePromise = supabase
         .from("profiles")
         .select("id, full_name, email, department, job_description")
         .eq("id", userId)
         .maybeSingle();
 
+      const { data: profileData } = await Promise.race([profilePromise, timeoutPromise]) as any;
       setProfile(profileData);
 
       // Get both enrolments and assignments
@@ -233,11 +239,13 @@ export default function HomePage() {
 
       // Release notes
       try {
-        const { data } = await supabase
+        const notesPromise = supabase
           .from("release_notes")
           .select("id, title, body, created_at")
           .order("created_at", { ascending: false })
           .limit(5);
+        
+        const { data } = await Promise.race([notesPromise, timeoutPromise]) as any;
         setNotes((data ?? []) as ReleaseNote[]);
       } catch (err) {
         console.warn("Could not load release notes:", err);
@@ -245,10 +253,13 @@ export default function HomePage() {
 
     } catch (err) {
       console.error("Error fetching data:", err);
+      throw err; // Re-throw to be caught by calling function
     }
   };
 
   useEffect(() => {
+    let mounted = true;
+
     const getUser = async () => {
       try {
         // Check URL params for banners
@@ -257,9 +268,11 @@ export default function HomePage() {
         const okParam = urlParams.get("ok");
         const errorParam = urlParams.get("error");
 
-        setBannerCode(bannerParam);
-        setOk(okParam);
-        setError(errorParam);
+        if (mounted) {
+          setBannerCode(bannerParam);
+          setOk(okParam);
+          setError(errorParam);
+        }
 
         // Clean up URL params if present
         if (bannerParam || okParam || errorParam) {
@@ -268,13 +281,17 @@ export default function HomePage() {
 
         const { data: { user }, error } = await supabase.auth.getUser();
 
+        if (!mounted) return;
+
         if (error) {
           console.error("Auth error:", error);
+          setLoading(false);
           router.push("/auth/signin");
           return;
         }
 
         if (!user) {
+          setLoading(false);
           router.push("/auth/signin");
           return;
         }
@@ -283,9 +300,14 @@ export default function HomePage() {
         await fetchData(user.id);
       } catch (err) {
         console.error("Error in getUser:", err);
-        router.push("/auth/signin");
+        if (mounted) {
+          setLoading(false);
+          router.push("/auth/signin");
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     };
 
@@ -293,30 +315,38 @@ export default function HomePage() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        if (!mounted) return;
+        
         try {
           if (event === 'SIGNED_OUT') {
             setUser(null);
+            setLoading(false);
             router.push("/auth/signin");
             return;
           }
 
-          if (session?.user) {
+          if (session?.user && user?.id !== session.user.id) {
             setUser(session.user);
             await fetchData(session.user.id);
-          } else {
+          } else if (!session?.user) {
             setUser(null);
+            setLoading(false);
             router.push("/auth/signin");
           }
         } catch (err) {
           console.error("Auth state change error:", err);
-          router.push("/auth/signin");
-        } finally {
-          setLoading(false);
+          if (mounted) {
+            setLoading(false);
+            router.push("/auth/signin");
+          }
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [supabase.auth, router]);
 
   // Render loading state or actual content
