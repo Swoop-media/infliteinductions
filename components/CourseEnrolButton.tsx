@@ -64,6 +64,13 @@ export default function CourseEnrolButton({
             filter: `user_id=eq.${uid}`,
           },
           (payload: any) => {
+            console.log("CourseEnrolButton realtime update:", {
+              event: payload.eventType,
+              courseId,
+              userId: uid,
+              payload
+            });
+            
             const row =
               (payload.new || payload.old) as {
                 user_id: string;
@@ -71,13 +78,39 @@ export default function CourseEnrolButton({
                 status: DbStatus;
               };
             if (row && row.course_id === courseId) {
+              console.log("Updating UI status from realtime:", {
+                oldStatus: row.status,
+                newUiStatus: toUiStatus(row.status)
+              });
               setUi(toUiStatus(row.status));
             }
           }
         )
         .subscribe();
 
-      unsub = () => channel.unsubscribe();
+      // Set up periodic refresh in case realtime misses updates
+      const refreshInterval = setInterval(async () => {
+        const { data: refreshed } = await supabaseBrowser
+          .from("course_enrolments")
+          .select("status")
+          .eq("user_id", uid)
+          .eq("course_id", courseId)
+          .maybeSingle();
+        
+        const currentStatus = toUiStatus((refreshed?.status as DbStatus | undefined) ?? null);
+        setUi(currentStatus);
+        console.log("CourseEnrolButton periodic refresh:", {
+          courseId,
+          userId: uid,
+          status: refreshed?.status,
+          uiStatus: currentStatus
+        });
+      }, 5000); // Check every 5 seconds
+
+      unsub = () => {
+        channel.unsubscribe();
+        clearInterval(refreshInterval);
+      };
     })();
 
     return () => {
