@@ -28,8 +28,38 @@ export async function POST(req: Request) {
   // Update using the normal client; RLS allows this for Admin/Trainers
   const { error } = await supabase
     .from("course_enrolments")
-    .update({ status: "approved" })
+    .update({ 
+      status: "approved",
+      approved_at: new Date().toISOString()
+    })
     .eq("id", enrolment_id);
+
+  // Get enrolment details for course assignment
+  if (!error) {
+    const { data: enrolment } = await supabase
+      .from("course_enrolments")
+      .select("user_id, course_id")
+      .eq("id", enrolment_id)
+      .single();
+
+    if (enrolment) {
+      // Ensure course assignment exists
+      const { error: assignmentError } = await supabase
+        .from("course_assignments")
+        .upsert(
+          {
+            user_id: enrolment.user_id,
+            course_id: enrolment.course_id,
+            role: "trainee"
+          },
+          { onConflict: "course_id,user_id,role", ignoreDuplicates: true }
+        );
+
+      if (assignmentError && (assignmentError as any).code !== "23505") {
+        console.warn("Course assignment creation warning:", assignmentError);
+      }
+    }
+  }
 
   const to = makeURL("/app/admin");
   if (error) {
