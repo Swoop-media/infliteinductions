@@ -40,6 +40,19 @@ export async function POST(req: Request) {
     return NextResponse.redirect(to);
   }
 
+  // Debug: Check what enrolment-related tables exist
+  try {
+    const { data: tablesCheck } = await supabase
+      .from("information_schema.tables")
+      .select("table_name")
+      .eq("table_schema", "public")
+      .like("table_name", "%enrol%");
+    
+    console.log("Available enrolment tables:", tablesCheck);
+  } catch (e) {
+    console.log("Could not check tables:", e);
+  }
+
   // Get course details
   const { data: course } = await supabase
     .from("courses")
@@ -54,6 +67,22 @@ export async function POST(req: Request) {
 
   // Assign course (create enrolment with approved status and proper timestamps)
   const now = new Date().toISOString();
+  
+  // First, check if enrolment already exists
+  const { data: existingEnrolment } = await supabase
+    .from("course_enrolments")
+    .select("id, status, user_id, course_id")
+    .eq("user_id", user_id)
+    .eq("course_id", course_id)
+    .maybeSingle();
+
+  console.log("Existing enrolment check:", { 
+    user_id, 
+    course_id, 
+    existingEnrolment,
+    hasExisting: !!existingEnrolment 
+  });
+
   const { data: enrolmentData, error } = await supabase
     .from("course_enrolments")
     .upsert(
@@ -67,9 +96,21 @@ export async function POST(req: Request) {
       },
       { onConflict: "user_id,course_id", ignoreDuplicates: false }
     )
-    .select("id, status");
+    .select("id, status, user_id, course_id");
 
   console.log("Enrolment creation result:", { enrolmentData, error });
+
+  // Verify the enrolment was created/updated
+  if (!error) {
+    const { data: verifyEnrolment } = await supabase
+      .from("course_enrolments")
+      .select("id, status, user_id, course_id")
+      .eq("user_id", user_id)
+      .eq("course_id", course_id)
+      .maybeSingle();
+
+    console.log("Verification query result:", { verifyEnrolment });
+  }
 
   // Also ensure the course assignment exists for the trainee role
   if (!error) {

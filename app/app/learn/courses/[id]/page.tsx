@@ -81,21 +81,34 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
   // Enrolment (skip for preview)
   let enrolment: any = null;
   if (!preview && user) {
-    // Check if user is enrolled in this course
-    const { data: enrolment } = await supabase
+    // Check both possible table names to debug table mismatch
+    const { data: enrolmentV1 } = await supabase
       .from("course_enrolments")
       .select("id, status, user_id, course_id")
       .eq("user_id", user.id)
       .eq("course_id", courseId)
       .maybeSingle();
 
-    console.log("Enrolment check debug:", {
+    const { data: enrolmentV2 } = await supabase
+      .from("enrolments")
+      .select("id, status, user_id, course_id")
+      .eq("user_id", user.id)
+      .eq("course_id", courseId)
+      .maybeSingle();
+
+    console.log("Enrolment debug - multiple table check:", {
       userId: user.id,
       courseId,
-      enrolment,
-      hasEnrolment: !!enrolment,
-      status: enrolment?.status
+      course_enrolments: enrolmentV1,
+      enrolments: enrolmentV2,
+      hasV1: !!enrolmentV1,
+      hasV2: !!enrolmentV2,
+      statusV1: enrolmentV1?.status,
+      statusV2: enrolmentV2?.status
     });
+
+    // Use whichever table has the data
+    enrolment = enrolmentV1 || enrolmentV2;
 
     if (!enrolment || enrolment.status !== "approved") {
       const errorParam = !enrolment ? "not_enrolled" : `status_${enrolment.status}`;
