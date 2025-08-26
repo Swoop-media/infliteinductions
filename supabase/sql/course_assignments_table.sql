@@ -16,6 +16,20 @@ CREATE TABLE IF NOT EXISTS public.course_assignments (
     UNIQUE(user_id, course_id, role)
 );
 
+-- Add status column if it doesn't exist (for existing tables)
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'course_assignments' 
+        AND column_name = 'status'
+    ) THEN
+        ALTER TABLE public.course_assignments 
+        ADD COLUMN status TEXT NOT NULL CHECK (status IN ('active', 'revoked')) DEFAULT 'active';
+    END IF;
+END $$;
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_course_assignments_user_id ON public.course_assignments(user_id);
 CREATE INDEX IF NOT EXISTS idx_course_assignments_course_id ON public.course_assignments(course_id);
