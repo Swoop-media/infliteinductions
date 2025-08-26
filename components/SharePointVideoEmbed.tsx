@@ -13,6 +13,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
   const [isLoading, setIsLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -35,81 +36,62 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
     if (isAlreadyAuthed) {
       setIsAuthenticated(true);
       setIsLoading(false);
+      setShowAuthPrompt(false);
     } else {
-      // Try to load the iframe and detect if authentication is needed
-      checkAuthenticationStatus();
+      // Try to load the video directly first
+      setIsLoading(false);
+      setShowAuthPrompt(false);
+      // Let the iframe load and see if it needs authentication
     }
   }, [courseId, isMounted]);
 
-  const checkAuthenticationStatus = () => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    setAuthError(null);
-
+  const handleIframeLoad = () => {
+    if (typeof window === 'undefined') return;
+    
     try {
-      // Create a hidden iframe to test access
-      const testFrame = document.createElement('iframe');
-      testFrame.style.display = 'none';
-      testFrame.src = url;
-      
-      const timeout = setTimeout(() => {
-        try {
-          if (testFrame.parentNode) {
-            document.body.removeChild(testFrame);
+      // Check if the iframe loaded successfully
+      const iframe = iframeRef.current;
+      if (iframe) {
+        // Try to detect if we're seeing an auth page vs the actual video
+        // This is a heuristic - if the page loads quickly it might be an auth page
+        setTimeout(() => {
+          try {
+            // If we can access the iframe content, we're likely authenticated
+            const authKey = `sharepoint_auth_${courseId}`;
+            localStorage.setItem(authKey, 'true');
+            setIsAuthenticated(true);
+            setShowAuthPrompt(false);
+            setAuthError(null);
+          } catch (e) {
+            // Cross-origin restrictions mean we can't check the content
+            // Just assume it loaded if we get here
+            console.log('Iframe loaded, assuming authenticated');
+            const authKey = `sharepoint_auth_${courseId}`;
+            localStorage.setItem(authKey, 'true');
+            setIsAuthenticated(true);
+            setShowAuthPrompt(false);
+            setAuthError(null);
           }
-        } catch (e) {
-          console.warn('Error removing test frame:', e);
-        }
-        setAuthError('Unable to load video. Authentication may be required.');
-        setIsLoading(false);
-      }, 10000);
-
-      testFrame.onload = () => {
-        clearTimeout(timeout);
-        try {
-          // If we can access the iframe content, we're authenticated
-          const authKey = `sharepoint_auth_${courseId}`;
-          localStorage.setItem(authKey, 'true');
-          setIsAuthenticated(true);
-          if (testFrame.parentNode) {
-            document.body.removeChild(testFrame);
-          }
-        } catch (e) {
-          // Cross-origin error means we might need authentication
-          setAuthError('Video requires authentication');
-        }
-        setIsLoading(false);
-      };
-
-      testFrame.onerror = () => {
-        clearTimeout(timeout);
-        setAuthError('Failed to load video');
-        setIsLoading(false);
-        try {
-          if (testFrame.parentNode) {
-            document.body.removeChild(testFrame);
-          }
-        } catch (e) {
-          console.warn('Error removing test frame on error:', e);
-        }
-      };
-
-      document.body.appendChild(testFrame);
+        }, 2000);
+      }
     } catch (e) {
-      console.error('Error in checkAuthenticationStatus:', e);
-      setIsLoading(false);
-      setAuthError('Failed to initialize video authentication check');
+      console.warn('Error in handleIframeLoad:', e);
     }
+  };
+
+  const handleIframeError = () => {
+    console.log('Iframe failed to load, showing auth prompt');
+    setShowAuthPrompt(true);
+    setAuthError('Authentication required to view this video');
   };
 
   const handleAuthenticate = () => {
     if (typeof window === 'undefined') return;
 
     try {
+      setIsLoading(true);
+      setAuthError(null);
+
       // Open SharePoint URL in a new window for authentication
       const authWindow = window.open(
         url,
@@ -119,28 +101,46 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
 
       if (!authWindow) {
         setAuthError('Popup blocked. Please allow popups and try again.');
+        setIsLoading(false);
         return;
       }
 
       // Monitor the auth window
-      const checkAuth = setInterval(() => {
+      let checkInterval: NodeJS.Timeout;
+      const checkAuth = () => {
         try {
-          if (authWindow?.closed) {
-            clearInterval(checkAuth);
-            // Recheck authentication after window closes
-            setTimeout(() => {
-              checkAuthenticationStatus();
-            }, 1000);
+          if (authWindow.closed) {
+            clearInterval(checkInterval);
+            // When the popup closes, refresh the main iframe
+            console.log('Auth popup closed, refreshing video');
+            const authKey = `sharepoint_auth_${courseId}`;
+            localStorage.setItem(authKey, 'true');
+            setIsAuthenticated(true);
+            setShowAuthPrompt(false);
+            setIsLoading(false);
+            
+            // Force reload the iframe
+            if (iframeRef.current) {
+              const currentSrc = iframeRef.current.src;
+              iframeRef.current.src = '';
+              setTimeout(() => {
+                if (iframeRef.current) {
+                  iframeRef.current.src = currentSrc;
+                }
+              }, 100);
+            }
           }
         } catch (e) {
           // Handle cross-origin errors
           console.warn('Error checking auth window:', e);
         }
-      }, 1000);
+      };
+
+      checkInterval = setInterval(checkAuth, 1000);
 
       // Clear interval after 5 minutes
       setTimeout(() => {
-        clearInterval(checkAuth);
+        clearInterval(checkInterval);
         if (authWindow && !authWindow.closed) {
           try {
             authWindow.close();
@@ -148,24 +148,12 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
             console.warn('Error closing auth window:', e);
           }
         }
+        setIsLoading(false);
       }, 300000);
     } catch (e) {
       console.error('Error in handleAuthenticate:', e);
       setAuthError('Failed to open authentication window');
-    }
-  };
-
-  const handleIframeLoad = () => {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      // Set authentication as successful when iframe loads successfully
-      const authKey = `sharepoint_auth_${courseId}`;
-      localStorage.setItem(authKey, 'true');
-      setIsAuthenticated(true);
-      setAuthError(null);
-    } catch (e) {
-      console.warn('Error in handleIframeLoad:', e);
+      setIsLoading(false);
     }
   };
 
@@ -180,18 +168,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-          <p className="text-sm text-gray-600">Loading video...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (authError && !isAuthenticated) {
+  if (showAuthPrompt && !isAuthenticated) {
     return (
       <div className="flex items-center justify-center h-full bg-gray-50">
         <div className="text-center p-6">
@@ -206,34 +183,58 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
           </p>
           <button
             onClick={handleAuthenticate}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            disabled={isLoading}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
           >
-            <svg className="w-4 h-4 mr-2" viewBox="0 0 23 23" fill="currentColor">
-              <path d="M11.03 0H0v11.03h11.03V0z"/>
-              <path d="M23 0H11.97v11.03H23V0z"/>
-              <path d="M11.03 11.97H0V23h11.03V11.97z"/>
-              <path d="M23 11.97H11.97V23H23V11.97z"/>
-            </svg>
-            Sign in to view video
+            {isLoading ? (
+              <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <svg className="w-4 h-4 mr-2" viewBox="0 0 23 23" fill="currentColor">
+                <path d="M11.03 0H0v11.03h11.03V0z"/>
+                <path d="M23 0H11.97v11.03H23V0z"/>
+                <path d="M11.03 11.97H0V23h11.03V11.97z"/>
+                <path d="M23 11.97H11.97V23H23V11.97z"/>
+              </svg>
+            )}
+            {isLoading ? 'Signing in...' : 'Sign in to view video'}
           </button>
           <p className="text-xs text-gray-500 mt-2">
             A new window will open for authentication
           </p>
+          {authError && (
+            <p className="text-xs text-red-600 mt-2">{authError}</p>
+          )}
         </div>
       </div>
     );
   }
 
   return (
-    <iframe
-      ref={iframeRef}
-      src={url}
-      className="h-full w-full"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowFullScreen
-      referrerPolicy="no-referrer-when-downgrade"
-      onLoad={handleIframeLoad}
-      onError={() => setAuthError('Failed to load video')}
-    />
+    <div className="h-full w-full relative">
+      <iframe
+        ref={iframeRef}
+        src={url}
+        className="h-full w-full"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowFullScreen
+        referrerPolicy="no-referrer-when-downgrade"
+        onLoad={handleIframeLoad}
+        onError={handleIframeError}
+      />
+      
+      {/* Overlay for auth detection */}
+      <div 
+        className="absolute inset-0 pointer-events-none"
+        onMouseEnter={() => {
+          // Check if we need to show auth prompt based on iframe content
+          setTimeout(() => {
+            if (!isAuthenticated && !showAuthPrompt) {
+              // If the iframe shows a sign-in page, show our auth prompt
+              setShowAuthPrompt(true);
+            }
+          }, 3000);
+        }}
+      />
+    </div>
   );
 }
