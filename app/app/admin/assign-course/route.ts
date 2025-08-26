@@ -144,9 +144,7 @@ export async function POST(req: Request) {
         user_id, 
         course_id, 
         status: "approved", 
-        requested_at: now,
-        approved_at: now,
-        approved_by: user.id 
+        requested_at: now
       },
       { onConflict: "user_id,course_id", ignoreDuplicates: false }
     )
@@ -163,7 +161,7 @@ export async function POST(req: Request) {
     // Check with regular client
     const { data: verifyEnrolment, error: verifyError } = await supabase
       .from(TABLE_NAME)
-      .select("id, status, user_id, course_id, created_at, approved_at")
+      .select("id, status, user_id, course_id, created_at")
       .eq("user_id", user_id)
       .eq("course_id", course_id)
       .maybeSingle();
@@ -179,7 +177,7 @@ export async function POST(req: Request) {
       const supabaseService = await import("@/lib/supabase/service").then(m => m.createSupabaseService());
       const { data: serviceVerify, error: serviceVerifyError } = await supabaseService
         .from(TABLE_NAME)
-        .select("id, status, user_id, course_id, created_at, approved_at")
+        .select("id, status, user_id, course_id, created_at")
         .eq("user_id", user_id)
         .eq("course_id", course_id)
         .maybeSingle();

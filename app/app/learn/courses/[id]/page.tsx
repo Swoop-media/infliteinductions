@@ -86,7 +86,7 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
     
     const { data: enrolmentData, error: enrolmentError } = await supabase
       .from(TABLE_NAME)
-      .select("id, status, user_id, course_id, created_at, approved_at")
+      .select("id, status, user_id, course_id, created_at")
       .eq("user_id", user.id)
       .eq("course_id", courseId)
       .maybeSingle();
@@ -106,7 +106,7 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
       const supabaseService = await import("@/lib/supabase/service").then(m => m.createSupabaseService());
       const { data: serviceEnrolmentData, error: serviceError } = await supabaseService
         .from(TABLE_NAME)
-        .select("id, status, user_id, course_id, created_at, approved_at")
+        .select("id, status, user_id, course_id, created_at")
         .eq("user_id", user.id)
         .eq("course_id", courseId)
         .maybeSingle();
