@@ -20,52 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_assignment_progress_assignment_id ON public.assig
 CREATE INDEX IF NOT EXISTS idx_assignment_progress_module_id ON public.assignment_progress(module_id);
 CREATE INDEX IF NOT EXISTS idx_assignment_progress_completed_at ON public.assignment_progress(completed_at);
 
--- RLS Policies for assignment_progress
--- Users can view their own progress
-CREATE POLICY "Users can view their own assignment progress"
-ON public.assignment_progress
-FOR SELECT
-USING (
-    assignment_id IN (
-        SELECT id FROM public.course_assignments 
-        WHERE user_id = auth.uid()
-    )
-);
-
--- Users can insert their own progress
-CREATE POLICY "Users can insert their own assignment progress"
-ON public.assignment_progress
-FOR INSERT
-WITH CHECK (
-    assignment_id IN (
-        SELECT id FROM public.course_assignments 
-        WHERE user_id = auth.uid()
-    )
-);
-
--- Admins and course creators can view all assignment progress
-CREATE POLICY "Admins and creators can view all assignment progress"
-ON public.assignment_progress
-FOR SELECT
-USING (
-    EXISTS (
-        SELECT 1 FROM public.user_roles 
-        WHERE user_id = auth.uid() 
-        AND role IN ('admin', 'course_creator')
-    )
-);
-
--- Admins and course creators can manage all assignment progress
-CREATE POLICY "Admins and creators can manage all assignment progress"
-ON public.assignment_progress
-FOR ALL
-USING (
-    EXISTS (
-        SELECT 1 FROM public.user_roles 
-        WHERE user_id = auth.uid() 
-        AND role IN ('admin', 'course_creator')
-    )
-);
+-- RLS Policies will be created by course_assignments_table.sql
 
 -- Update timestamps trigger
 CREATE OR REPLACE FUNCTION public.update_assignment_progress_updated_at()
