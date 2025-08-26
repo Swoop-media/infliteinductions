@@ -521,7 +521,7 @@ export default async function OnsiteModulePage(props: {
 
           {/* Requirements list */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Training Requirements</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Requirements</h2>
             
             <SortableRequirements 
               requirements={trainerReqs}
@@ -542,7 +542,7 @@ export default async function OnsiteModulePage(props: {
               <p className="text-2xl font-bold text-gray-900">{learners.length}</p>
             </div>
             <div className="bg-white rounded-lg p-3">
-              <p className="text-gray-600">Training Requirements</p>
+              <p className="text-gray-600">Requirements</p>
               <p className="text-2xl font-bold text-blue-600">{trainerReqs.length}</p>
             </div>
           </div>
