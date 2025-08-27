@@ -222,6 +222,14 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
     return oa === ob ? String(a.id).localeCompare(String(b.id)) : oa - ob;
   });
 
+  console.log("Modules query result:", {
+    courseId,
+    data: modsResp.data,
+    error: modsResp.error,
+    count: modsResp.data?.length || 0,
+    sampleModule: modsResp.data?.[0] || null
+  });
+
   // Progress: done modules - check both assignment and enrollment progress
   let doneRows: any[] = [];
 
@@ -307,6 +315,14 @@ async function loadBlocks(moduleId: string) {
     .eq("module_id", moduleId)
     .order("order_index", { ascending: true })
     .order("created_at", { ascending: true });
+  
+  console.log("Blocks query result:", {
+    moduleId,
+    data: resp.data,
+    error: resp.error,
+    count: resp.data?.length || 0,
+    sampleBlock: resp.data?.[0] || null
+  });
   return (resp.data ?? []) as any[];
 }
 
@@ -1298,6 +1314,6 @@ async function CourseEnrolButton({ courseId }: { courseId: string }) {
 
 // Mock for markModuleComplete if it's needed within ModuleBody but defined outside
 // This is usually handled by the server component rendering context.
-// If the original `markModuleComplete` action is correctly imported or available in scope,
+// If the original `markComplete` action is correctly imported or available in scope,
 // no mock is needed. Let's assume it's globally available in the server component context.
-// async function markModuleComplete(formData: FormData) { ... } // Assuming this is globally defined
+// async function markComplete(formData: FormData) { ... } // Assuming this is globally defined
