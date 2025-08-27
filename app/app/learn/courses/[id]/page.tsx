@@ -372,7 +372,7 @@ async function markComplete(formData: FormData) {
     progressKey = assignment.id;
     progressTable = "assignment_progress";
   } else {
-    // Fallback to enrollment progress
+    // Fallback to enrollment
     const { data: enrol } = await supabase
       .from("course_enrolments")
       .select("id")
@@ -1228,8 +1228,7 @@ async function BlockView({ block }: { block: any }) {
   }
 
   if (kind === "video_embed") {
-    const raw = String(data.url ?? "");
-    const url = toEmbedUrl(raw, block.course_id);
+    const url = toEmbedUrl(data?.url ?? "", block.course_id);
 
     return url ? (
       <VideoPlayer 
