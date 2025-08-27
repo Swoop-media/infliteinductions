@@ -210,16 +210,8 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
   // Modules -> sort by global type + per-type order_index
   const modsResp = await supabase
     .from("course_modules")
-    .select("id, course_id, type, title, order_index, created_at, video_url")
+    .select("id, course_id, type, title, order_index, created_at")
     .eq("course_id", courseId);
-  
-  console.log("Modules query result:", {
-    courseId,
-    data: modsResp.data,
-    error: modsResp.error,
-    count: modsResp.data?.length || 0
-  });
-  
   const modulesRaw = (modsResp.data ?? []) as any[];
   const modules = [...modulesRaw].sort((a, b) => {
     const ta = TYPE_ORDER.indexOf(a.type as ModuleType);
@@ -314,8 +306,7 @@ async function loadBlocks(moduleId: string) {
     .select("id, module_id, kind, data, order_index, created_at")
     .eq("module_id", moduleId)
     .order("order_index", { ascending: true })
-    .order("created_at", { ascending: true })
-    .throwOnError(); // Ensure errors are thrown
+    .order("created_at", { ascending: true });
   return (resp.data ?? []) as any[];
 }
 
@@ -721,30 +712,11 @@ export default async function LearnerCoursePage(props: {
   const doneCount = Array.from(completedIds).length;
   const percent = pct(doneCount, total);
 
-  // Handle case where there are no modules
-  if (total === 0) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">{course.title ?? "Untitled course"}</h1>
-          </div>
-          <div className="text-right">
-            <Link href="/app/courses" className="rounded-md border px-3 py-1 text-sm">Back to catalogue</Link>
-          </div>
-        </div>
-        <div className="rounded-xl border bg-white p-4">
-          <p className="text-gray-600">This course has no modules yet.</p>
-        </div>
-      </div>
-    );
-  }
-
-  const banner = ((Array.isArray(sp.notice) ? sp.notice[0] : sp.notice) ?? "") === "saved" ? "Saved." : null;
+  const banner = (Array.isArray(sp.notice) ? sp.notice[0] : sp.notice) === "saved" ? "Saved." : null;
 
   // Current step
   const stepParam = Number((Array.isArray(sp.step) ? sp.step[0] : sp.step) ?? "1");
-  const step = Math.max(1, Math.min(total, isFinite(stepParam) ? stepParam : 1));
+  const step = Math.max(1, Math.min(total || 1, isFinite(stepParam) ? stepParam : 1));
   const cur = modules[step - 1] as any;
 
   // Unlocking
@@ -908,7 +880,7 @@ async function ModuleBody({
         {blocks.length === 0 ? (
           <p className="text-sm text-gray-600">No content yet.</p>
         ) : (
-          blocks.map((b: any) => <BlockView key={b.id} block={{...b, course_id: module.course_id, video_url: module.video_url }} />)
+          blocks.map((b: any) => <BlockView key={b.id} block={{...b, course_id: module.course_id}} />)
         )}
 
         {isDone && <div className="pt-2 text-sm text-green-700">You completed this step.</div>}
@@ -1258,8 +1230,7 @@ async function BlockView({ block }: { block: any }) {
   if (kind === "video_embed") {
     const url = toEmbedUrl(data?.url ?? "", block.course_id);
 
-    // Add null check for video URL before rendering VideoPlayer
-    return url && url !== 'undefined' ? (
+    return url ? (
       <VideoPlayer 
                     url={url} 
                     courseId={block.course_id}
@@ -1327,6 +1298,6 @@ async function CourseEnrolButton({ courseId }: { courseId: string }) {
 
 // Mock for markModuleComplete if it's needed within ModuleBody but defined outside
 // This is usually handled by the server component rendering context.
-// If the original `markComplete` action is correctly imported or available in scope,
+// If the original `markModuleComplete` action is correctly imported or available in scope,
 // no mock is needed. Let's assume it's globally available in the server component context.
-// async function markComplete(formData: FormData) { ... } // Assuming this is globally defined
+// async function markModuleComplete(formData: FormData) { ... } // Assuming this is globally defined
