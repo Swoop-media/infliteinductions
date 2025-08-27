@@ -221,12 +221,19 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
 
       if (response.ok) {
         const data = await response.json();
-        addDebugLog(`Proxy request successful: ${JSON.stringify(data)}`);
-        return { 
-          success: true, 
-          videoUrl: data.proxyUrl || videoUrl,
-          sessionInfo: data 
-        };
+        addDebugLog(`Proxy request response: ${JSON.stringify(data)}`);
+        
+        // Check if the proxy actually succeeded or just returned an error message
+        if (data.success === true) {
+          return { 
+            success: true, 
+            videoUrl: data.proxyUrl || videoUrl,
+            sessionInfo: data 
+          };
+        } else {
+          addDebugLog(`Proxy indicated failure: ${data.error || 'Unknown error'}`);
+          return { success: false, error: data.error || 'Proxy authentication failed' };
+        }
       } else {
         const error = await response.text();
         addDebugLog(`Proxy request failed: ${response.status} - ${error}`);
