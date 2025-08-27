@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath, unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
+import VideoPlayer from '@/components/VideoPlayer';
 
 export const dynamic = "force-dynamic";
 
@@ -140,7 +140,7 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
         .eq("user_id", user.id)
         .eq("course_id", courseId)
         .maybeSingle();
-      
+
       console.log("Legacy enrolments table check:", {
         table: "enrolments",
         userId: user.id,
@@ -152,7 +152,7 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
       });
       legacyEnrolmentData = legacyEnrol;
     }
-    
+
     let finalEnrolment = enrolData || legacyEnrolmentData;
     enrolment = finalEnrolment;
 
@@ -270,7 +270,7 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
   });
 
   const completedIds = new Set((doneRows ?? []).map((r: any) => r.module_id as string));
-  
+
   console.log("Completed module IDs:", Array.from(completedIds));
   console.log("All module IDs:", modules.map((m: any) => m.id));
 
@@ -419,7 +419,7 @@ async function markComplete(formData: FormData) {
       const { error: insertError } = await supabase
         .from("assignment_progress")
         .insert({ assignment_id: progressKey, module_id: moduleId });
-      
+
       if (insertError && !insertError.message?.includes('duplicate')) {
         console.warn("Assignment progress insert error:", insertError);
       }
@@ -427,7 +427,7 @@ async function markComplete(formData: FormData) {
       const { error: insertError } = await supabase
         .from("module_progress")
         .insert({ enrolment_id: progressKey, module_id: moduleId });
-      
+
       if (insertError && !insertError.message?.includes('duplicate')) {
         console.warn("Module progress insert error:", insertError);
       }
@@ -474,7 +474,7 @@ async function uploadLearnerDocument(formData: FormData) {
   const expiryStr = String(formData.get("expiry_date") || "").trim() || null;
   const file = formData.get("file") as File | null;
   const preview = formData.get("preview") === "1";
-  
+
   if (!courseId || !moduleId || !file || file.size === 0) {
     throw new Error("missing data or file");
   }
@@ -501,7 +501,7 @@ async function uploadLearnerDocument(formData: FormData) {
       .eq("course_id", courseId)
       .eq("user_id", user.id)
       .maybeSingle();
-    
+
     let enrolmentId: string | null = enrol?.id || null;
     if (!enrolmentId) {
       const { data: legacyEnrol } = await supabase
@@ -555,7 +555,7 @@ async function uploadLearnerDocument(formData: FormData) {
         const { error: insertError } = await supabase
           .from("assignment_progress")
           .insert({ assignment_id: progressKey, module_id: moduleId });
-        
+
         if (insertError && !insertError.message?.includes('duplicate')) {
           console.warn("Assignment progress insert error during document upload:", insertError);
         }
@@ -563,7 +563,7 @@ async function uploadLearnerDocument(formData: FormData) {
         const { error: insertError } = await supabase
           .from("module_progress")
           .insert({ enrolment_id: progressKey, module_id: moduleId });
-        
+
         if (insertError && !insertError.message?.includes('duplicate')) {
           console.warn("Module progress insert error during document upload:", insertError);
         }
@@ -603,7 +603,7 @@ async function uploadLearnerDocument(formData: FormData) {
 async function canUserEnrol(supabase: any, userId: string, courseId: string): Promise<boolean> {
   // Placeholder logic: Assume user can enrol if not already enrolled or assigned.
   // In a real app, this would involve more checks.
-  
+
   // Check current enrolments
   const { data: enrolmentData, error: enrolmentError } = await supabase
     .from("course_enrolments")
@@ -647,7 +647,7 @@ export default async function LearnerCoursePage(props: {
   const preview = ((Array.isArray(sp.preview) ? sp.preview[0] : sp.preview) ?? "") === "1";
 
   const data = await loadCourseForLearner(courseId, preview);
-  
+
   // Handle error cases directly from loadCourseForLearner return
   if (data.error) {
     // Re-check for specific error types for better UI feedback
@@ -1230,9 +1230,12 @@ async function BlockView({ block }: { block: any }) {
   if (kind === "video_embed") {
     const raw = String(data.url ?? "");
     const url = toEmbedUrl(raw, block.course_id);
-    
+
     return url ? (
-      <SimpleVideoPlayer url={url} courseId={block.course_id} />
+      <VideoPlayer 
+                    url={url} 
+                    courseId={block.course_id}
+                  />
     ) : (
       <p className="text-sm text-gray-500">No video URL provided.</p>
     );

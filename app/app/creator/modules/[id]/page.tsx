@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
+import VideoPlayer from '@/components/VideoPlayer';
 
 export const dynamic = "force-dynamic";
 
