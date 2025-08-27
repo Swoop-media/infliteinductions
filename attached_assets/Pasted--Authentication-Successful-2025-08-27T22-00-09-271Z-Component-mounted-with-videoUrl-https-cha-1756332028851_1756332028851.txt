@@ -1,0 +1,15 @@
+✓ Authentication Successful
+[2025-08-27T22:00:09.271Z] Component mounted with videoUrl: https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451
+[2025-08-27T22:00:09.271Z] Component mounted with videoUrl: https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451
+[2025-08-27T22:00:09.373Z] Starting authentication check...
+[2025-08-27T22:00:09.373Z] Parsed URL info: {"origin":"https://charterinflight.sharepoint.com","hostname":"charterinflight.sharepoint.com","pathname":"/sites/INFLITEHeliAOC/_layouts/15/embed.aspx","search":"?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451","isMicrosoft365":true,"isVideo":false,"tenantInfo":"charterinflight"}
+[2025-08-27T22:00:09.373Z] Trying strategy: direct-embed
+[2025-08-27T22:00:10.012Z] Direct embed test: Image failed (likely not authenticated)
+[2025-08-27T22:00:10.012Z] Strategy direct-embed failed: Direct embed failed - authentication required
+[2025-08-27T22:00:10.012Z] Trying strategy: iframe-with-auth
+[2025-08-27T22:00:10.641Z] Iframe auth test: Sign in required
+[2025-08-27T22:00:10.641Z] Strategy iframe-with-auth failed: Sign in required
+[2025-08-27T22:00:10.641Z] Trying strategy: proxy-request
+[2025-08-27T22:00:10.641Z] Testing proxy request...
+[2025-08-27T22:00:11.533Z] Proxy request successful: {"success":false,"error":"SharePoint authentication required","suggestion":"Use popup authentication or open in new window","authUrl":"https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451","isSharePoint":true}
+[2025-08-27T22:00:11.533Z] Strategy proxy-request succeeded
