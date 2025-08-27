@@ -570,14 +570,17 @@ export default async function ModuleEditorPage(props: {
                         <input type="hidden" name="module_id" value={mod.id} />
                         <input type="hidden" name="block_id" value={b.id} />
                         <label className="grid gap-1 sm:col-span-2">
-                          <span className="text-xs text-gray-600">Video URL or full &lt;iframe…&gt; snippet</span>
+                          <span className="text-xs text-gray-600">Video URL</span>
                           <textarea
                             name="url"
                             rows={3}
                             defaultValue={String(b.data?.url ?? "")}
                             className="w-full rounded-md border px-3 py-2 text-sm"
-                            placeholder="Paste a YouTube/Vimeo URL or an <iframe …> embed"
+                            placeholder="Paste any video URL: YouTube, Vimeo, SharePoint, etc."
                           />
+                          <span className="text-xs text-gray-500">
+                            Supports: YouTube, Vimeo, SharePoint/OneDrive videos, and direct video URLs
+                          </span>
                         </label>
                         <label className="grid gap-1">
                           <span className="text-xs text-gray-600">Compulsory view time (seconds)</span>
