@@ -353,14 +353,17 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
       testIframe.style.left = '-9999px';
       testIframe.style.width = '1px';
       testIframe.style.height = '1px';
-      testIframe.src = videoUrl;
+      // Add credentials and cache busting to ensure fresh auth state
+      testIframe.src = videoUrl + (videoUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
       
       let resolved = false;
+      let loadTimeout: NodeJS.Timeout;
       
       testIframe.onload = () => {
         if (!resolved) {
           resolved = true;
           addDebugLog('Test iframe loaded successfully - direct embed should work');
+          clearTimeout(loadTimeout);
           document.body.removeChild(testIframe);
           resolve({ success: true });
         }
@@ -370,6 +373,7 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
         if (!resolved) {
           resolved = true;
           addDebugLog('Test iframe failed to load - direct embed not possible');
+          clearTimeout(loadTimeout);
           document.body.removeChild(testIframe);
           resolve({ success: false, error: 'Direct embed not possible' });
         }
@@ -377,17 +381,18 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
       
       document.body.appendChild(testIframe);
       
-      // Timeout after 5 seconds
-      setTimeout(() => {
+      // Timeout after 8 seconds (increased for better reliability)
+      loadTimeout = setTimeout(() => {
         if (!resolved) {
           resolved = true;
-          addDebugLog('Test iframe timeout - assuming direct embed not possible');
+          addDebugLog('Test iframe timeout - forcing success to try main embed');
           if (testIframe.parentNode) {
             document.body.removeChild(testIframe);
           }
-          resolve({ success: false, error: 'Test timeout' });
+          // Instead of failing, let's try the main embed anyway
+          resolve({ success: true });
         }
-      }, 5000);
+      }, 8000);
     });
   };
 
@@ -567,13 +572,17 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
           ) : (
             <div className="aspect-video bg-black rounded">
               <iframe
-                src={videoSrc}
+                key={sessionInfo?.timestamp || 'default'} // Force refresh when auth state changes
+                src={videoSrc + (videoSrc.includes('?') ? '&' : '?') + '_auth=' + (sessionInfo?.timestamp || Date.now())}
                 className="w-full h-full rounded"
                 allowFullScreen
                 allow="autoplay; fullscreen"
                 title={title || "Training Video"}
+                onLoad={() => {
+                  addDebugLog('Main iframe loaded successfully');
+                }}
                 onError={() => {
-                  addDebugLog('Iframe failed to load - switching to new window mode');
+                  addDebugLog('Main iframe failed to load - switching to new window mode');
                   setSessionInfo(prev => ({ ...prev, requiresNewWindow: true }));
                 }}
               />
