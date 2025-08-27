@@ -90,12 +90,22 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
   };
 
   const tryAuthenticationStrategies = async (urlInfo: any) => {
+    // Check if we recently tried authentication to prevent loops
+    const lastAuthAttempt = sessionStorage.getItem('lastAuthAttempt');
+    const now = Date.now();
+    if (lastAuthAttempt && (now - parseInt(lastAuthAttempt)) < 5000) {
+      addDebugLog('Recent authentication attempt detected - preventing loop');
+      setAuthStatus('unauthenticated');
+      setAuthError('Authentication recently attempted - please wait before retrying');
+      return;
+    }
+    
+    sessionStorage.setItem('lastAuthAttempt', now.toString());
+
     const strategies = [
       'direct-embed',
-      'iframe-with-auth',
-      'proxy-request',
-      'popup-auth',
-      'session-check'
+      'proxy-request', // Try proxy before iframe since it's more reliable
+      'popup-auth'
     ];
 
     for (const strategy of strategies) {
@@ -111,6 +121,12 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
           return;
         } else {
           addDebugLog(`Strategy ${strategy} failed: ${result.error}`);
+          
+          // Don't try popup if it was blocked or is on cooldown
+          if (strategy === 'popup-auth' && (result.error === 'popup_blocked' || result.error === 'popup_cooldown' || result.error === 'popup_timeout')) {
+            addDebugLog('Popup strategy failed - skipping remaining strategies');
+            break;
+          }
         }
       } catch (error) {
         addDebugLog(`Strategy ${strategy} threw error: ${error}`);
@@ -249,87 +265,107 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
     return new Promise((resolve) => {
       addDebugLog('Attempting popup authentication...');
       
+      // Check if we're already in a popup auth cycle to prevent infinite popups
+      const lastPopupAttempt = sessionStorage.getItem('lastPopupAttempt');
+      const now = Date.now();
+      if (lastPopupAttempt && (now - parseInt(lastPopupAttempt)) < 10000) {
+        addDebugLog('Recent popup attempt detected - skipping to prevent spam');
+        resolve({ success: false, error: 'popup_cooldown' });
+        return;
+      }
+      
+      sessionStorage.setItem('lastPopupAttempt', now.toString());
+      
       try {
+        // Close any existing auth windows first
+        if (window.authPopupRef && !window.authPopupRef.closed) {
+          window.authPopupRef.close();
+        }
+        
         // Try to open popup with more permissive settings
         const popup = window.open(
           videoUrl,
-          'sharepoint-auth',
+          'sharepoint-auth-' + now, // Unique name to prevent reuse
           'width=1200,height=800,scrollbars=yes,resizable=yes,location=yes,menubar=yes,toolbar=yes,status=yes'
         );
 
+        window.authPopupRef = popup; // Store reference globally
+
         if (!popup || popup.closed) {
           addDebugLog('Popup blocked by browser - will suggest manual authentication');
-          resolve({ success: false, error: 'popup_blocked' }); // Special error code
+          resolve({ success: false, error: 'popup_blocked' });
           return;
         }
 
         addDebugLog('Popup opened successfully');
         
-        // Give user time to authenticate
+        // Shorter timeout to prevent stuck state
         let checkCount = 0;
-        const maxChecks = 60; // Increase to 60 seconds for better UX
+        const maxChecks = 30; // Reduced to 30 seconds
+        let resolved = false;
         
         const checkPopup = setInterval(() => {
           checkCount++;
           
           try {
             if (popup.closed) {
-              addDebugLog('Popup closed by user - attempting to embed video directly');
-              clearInterval(checkPopup);
-              
-              // After popup closes, try to verify authentication by testing a direct iframe load
-              setTimeout(async () => {
-                const authTest = await testDirectEmbedAfterAuth();
-                if (authTest.success) {
-                  addDebugLog('Authentication verified - can embed directly');
-                  resolve({ 
-                    success: true,
-                    videoUrl: videoUrl,
-                    sessionInfo: { 
-                      authenticatedViaPopup: true, 
-                      timestamp: Date.now(),
-                      canEmbedDirectly: true 
+              if (!resolved) {
+                resolved = true;
+                addDebugLog('Popup closed by user - testing authentication state');
+                clearInterval(checkPopup);
+                
+                // Quick test without waiting too long
+                setTimeout(async () => {
+                  try {
+                    const authTest = await testDirectEmbedAfterAuth();
+                    if (authTest.success) {
+                      addDebugLog('Authentication verified - can embed directly');
+                      resolve({ 
+                        success: true,
+                        videoUrl: videoUrl,
+                        sessionInfo: { 
+                          authenticatedViaPopup: true, 
+                          timestamp: Date.now(),
+                          canEmbedDirectly: true 
+                        }
+                      });
+                    } else {
+                      addDebugLog('Direct embed still not working - will use new window mode');
+                      resolve({ 
+                        success: true,
+                        videoUrl: videoUrl,
+                        sessionInfo: { 
+                          authenticatedViaPopup: true, 
+                          timestamp: Date.now(),
+                          requiresNewWindow: true 
+                        }
+                      });
                     }
-                  });
-                } else {
-                  addDebugLog('Authentication verification failed - video will open in new window');
-                  resolve({ 
-                    success: true,
-                    videoUrl: videoUrl,
-                    sessionInfo: { 
-                      authenticatedViaPopup: true, 
-                      timestamp: Date.now(),
-                      requiresNewWindow: true 
-                    }
-                  });
-                }
-              }, 2000); // Wait 2 seconds for auth to propagate
+                  } catch (error) {
+                    addDebugLog(`Auth verification failed: ${error}`);
+                    resolve({ 
+                      success: true,
+                      videoUrl: videoUrl,
+                      sessionInfo: { 
+                        authenticatedViaPopup: true, 
+                        timestamp: Date.now(),
+                        requiresNewWindow: true 
+                      }
+                    });
+                  }
+                }, 1000); // Reduced wait time
+              }
               return;
             }
 
-            // Try to detect successful authentication by checking popup URL
-            try {
-              const popupUrl = popup.location.href;
-              if (popupUrl && !popupUrl.includes('login') && !popupUrl.includes('signin') && popupUrl.includes(urlInfo.hostname)) {
-                addDebugLog('Authentication detected - closing popup');
-                popup.close();
-                clearInterval(checkPopup);
-                resolve({ 
-                  success: true, 
-                  videoUrl: videoUrl,
-                  sessionInfo: { authenticatedViaPopup: true, timestamp: Date.now() }
-                });
-                return;
-              }
-            } catch (e) {
-              // Cross-origin error is expected, continue
-            }
-
             if (checkCount >= maxChecks) {
-              addDebugLog('Popup authentication timeout');
-              if (!popup.closed) popup.close();
-              clearInterval(checkPopup);
-              resolve({ success: false, error: 'Authentication timeout - please try again' });
+              if (!resolved) {
+                resolved = true;
+                addDebugLog('Popup authentication timeout - closing popup');
+                if (!popup.closed) popup.close();
+                clearInterval(checkPopup);
+                resolve({ success: false, error: 'popup_timeout' });
+              }
             }
           } catch (error) {
             addDebugLog(`Popup check error: ${error}`);
@@ -425,8 +461,24 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
 
   const retryAuthentication = () => {
     addDebugLog('Retrying authentication...');
+    
+    // Clear any stuck authentication states
+    sessionStorage.removeItem('lastAuthAttempt');
+    sessionStorage.removeItem('lastPopupAttempt');
+    
+    // Close any existing popup windows
+    if (window.authPopupRef && !window.authPopupRef.closed) {
+      window.authPopupRef.close();
+    }
+    
     setDebugLogs([]);
-    checkAuthAndLoadVideo();
+    setAuthStatus('checking');
+    setAuthError(null);
+    
+    // Small delay to ensure cleanup is complete
+    setTimeout(() => {
+      checkAuthAndLoadVideo();
+    }, 500);
   };
 
   const clearAuthAndRetry = () => {
@@ -612,6 +664,16 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
 
   // Authentication failed or required
   const isPopupBlocked = authError === 'popup_blocked' || debugLogs.some(log => log.includes('Popup blocked'));
+  const isPopupCooldown = authError === 'popup_cooldown' || debugLogs.some(log => log.includes('popup attempt detected'));
+  const isStuck = authStatus === 'checking' && debugLogs.some(log => log.includes('Popup opened successfully')) && debugLogs.length > 8;
+  
+  // If we detect the component is stuck, force it to unauthenticated state
+  if (isStuck) {
+    setTimeout(() => {
+      setAuthStatus('unauthenticated');
+      setAuthError('Authentication process was stuck - please try manual authentication');
+    }, 100);
+  }
   
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded-lg shadow-sm border p-6">
@@ -631,17 +693,15 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
             <div className="bg-orange-50 border border-orange-200 rounded p-3">
               <h4 className="font-medium text-orange-900 text-sm mb-2">⚠️ Popups Blocked</h4>
               <p className="text-xs text-orange-700 mb-3">
-                Your browser is blocking popups. Please enable popups for this site, or use the manual option below.
+                Your browser is blocking popups. Please enable popups for this site, or use manual authentication below.
               </p>
-              <div className="space-y-2">
-                <button
-                  onClick={retryAuthentication}
-                  className="w-full bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 text-sm"
-                >
-                  Try Popup Again (Enable Popups First)
-                </button>
-                <p className="text-xs text-orange-600">Or use manual authentication below ↓</p>
-              </div>
+            </div>
+          ) : isPopupCooldown ? (
+            <div className="bg-blue-50 border border-blue-200 rounded p-3">
+              <h4 className="font-medium text-blue-900 text-sm mb-2">⏱️ Authentication Cooldown</h4>
+              <p className="text-xs text-blue-700 mb-3">
+                Please wait a moment before trying popup authentication again, or use manual authentication below.
+              </p>
             </div>
           ) : (
             <p className="text-gray-600 text-sm">
