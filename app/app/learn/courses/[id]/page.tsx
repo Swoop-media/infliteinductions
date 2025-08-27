@@ -212,6 +212,14 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
     .from("course_modules")
     .select("id, course_id, type, title, order_index, created_at, video_url")
     .eq("course_id", courseId);
+  
+  console.log("Modules query result:", {
+    courseId,
+    data: modsResp.data,
+    error: modsResp.error,
+    count: modsResp.data?.length || 0
+  });
+  
   const modulesRaw = (modsResp.data ?? []) as any[];
   const modules = [...modulesRaw].sort((a, b) => {
     const ta = TYPE_ORDER.indexOf(a.type as ModuleType);
@@ -713,11 +721,30 @@ export default async function LearnerCoursePage(props: {
   const doneCount = Array.from(completedIds).length;
   const percent = pct(doneCount, total);
 
+  // Handle case where there are no modules
+  if (total === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{course.title ?? "Untitled course"}</h1>
+          </div>
+          <div className="text-right">
+            <Link href="/app/courses" className="rounded-md border px-3 py-1 text-sm">Back to catalogue</Link>
+          </div>
+        </div>
+        <div className="rounded-xl border bg-white p-4">
+          <p className="text-gray-600">This course has no modules yet.</p>
+        </div>
+      </div>
+    );
+  }
+
   const banner = ((Array.isArray(sp.notice) ? sp.notice[0] : sp.notice) ?? "") === "saved" ? "Saved." : null;
 
   // Current step
   const stepParam = Number((Array.isArray(sp.step) ? sp.step[0] : sp.step) ?? "1");
-  const step = Math.max(1, Math.min(total || 1, isFinite(stepParam) ? stepParam : 1));
+  const step = Math.max(1, Math.min(total, isFinite(stepParam) ? stepParam : 1));
   const cur = modules[step - 1] as any;
 
   // Unlocking
