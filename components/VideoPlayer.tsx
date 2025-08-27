@@ -274,14 +274,36 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
           
           try {
             if (popup.closed) {
-              addDebugLog('Popup closed by user - will automatically retry authentication check');
+              addDebugLog('Popup closed by user - attempting to embed video directly');
               clearInterval(checkPopup);
-              // Automatically retry authentication after popup closes
-              resolve({ 
-                success: true, // Mark as success to trigger automatic retry
-                videoUrl: videoUrl,
-                sessionInfo: { popupClosed: true, timestamp: Date.now(), autoRetry: true }
-              });
+              
+              // After popup closes, try to verify authentication by testing a direct iframe load
+              setTimeout(async () => {
+                const authTest = await testDirectEmbedAfterAuth();
+                if (authTest.success) {
+                  addDebugLog('Authentication verified - can embed directly');
+                  resolve({ 
+                    success: true,
+                    videoUrl: videoUrl,
+                    sessionInfo: { 
+                      authenticatedViaPopup: true, 
+                      timestamp: Date.now(),
+                      canEmbedDirectly: true 
+                    }
+                  });
+                } else {
+                  addDebugLog('Authentication verification failed - video will open in new window');
+                  resolve({ 
+                    success: true,
+                    videoUrl: videoUrl,
+                    sessionInfo: { 
+                      authenticatedViaPopup: true, 
+                      timestamp: Date.now(),
+                      requiresNewWindow: true 
+                    }
+                  });
+                }
+              }, 2000); // Wait 2 seconds for auth to propagate
               return;
             }
 
@@ -318,6 +340,54 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
         addDebugLog(`Failed to open popup: ${error}`);
         resolve({ success: false, error: `Failed to open authentication window: ${error}` });
       }
+    });
+  };
+
+  const testDirectEmbedAfterAuth = async (): Promise<{success: boolean, error?: string}> => {
+    return new Promise((resolve) => {
+      addDebugLog('Testing direct embed after authentication...');
+      
+      // Create a test iframe to see if we can now embed directly
+      const testIframe = document.createElement('iframe');
+      testIframe.style.position = 'absolute';
+      testIframe.style.left = '-9999px';
+      testIframe.style.width = '1px';
+      testIframe.style.height = '1px';
+      testIframe.src = videoUrl;
+      
+      let resolved = false;
+      
+      testIframe.onload = () => {
+        if (!resolved) {
+          resolved = true;
+          addDebugLog('Test iframe loaded successfully - direct embed should work');
+          document.body.removeChild(testIframe);
+          resolve({ success: true });
+        }
+      };
+      
+      testIframe.onerror = () => {
+        if (!resolved) {
+          resolved = true;
+          addDebugLog('Test iframe failed to load - direct embed not possible');
+          document.body.removeChild(testIframe);
+          resolve({ success: false, error: 'Direct embed not possible' });
+        }
+      };
+      
+      document.body.appendChild(testIframe);
+      
+      // Timeout after 5 seconds
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          addDebugLog('Test iframe timeout - assuming direct embed not possible');
+          if (testIframe.parentNode) {
+            document.body.removeChild(testIframe);
+          }
+          resolve({ success: false, error: 'Test timeout' });
+        }
+      }, 5000);
     });
   };
 
@@ -445,6 +515,9 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
   }
 
   if (authStatus === 'authenticated' && videoSrc) {
+    // Check if we need to force new window due to embedding restrictions
+    const requiresNewWindow = sessionInfo?.requiresNewWindow;
+    
     return (
       <div className="w-full max-w-4xl mx-auto bg-white rounded-lg shadow-sm border p-6">
         <div className="space-y-4">
@@ -468,20 +541,50 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
             </div>
           </div>
           
-          <div className="aspect-video bg-black rounded">
-            <iframe
-              src={videoSrc}
-              className="w-full h-full rounded"
-              allowFullScreen
-              allow="autoplay; fullscreen"
-              title={title || "Training Video"}
-            />
-          </div>
+          {requiresNewWindow ? (
+            <div className="aspect-video bg-gray-50 rounded flex items-center justify-center border-2 border-dashed border-gray-300">
+              <div className="text-center space-y-3">
+                <div className="text-gray-600">
+                  <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <h4 className="text-lg font-medium text-gray-900">Video Ready to Play</h4>
+                <p className="text-sm text-gray-600 mb-4">
+                  Due to SharePoint security settings, this video needs to open in a new window.
+                </p>
+                <button
+                  onClick={openInNewWindow}
+                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m2 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Play Video
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="aspect-video bg-black rounded">
+              <iframe
+                src={videoSrc}
+                className="w-full h-full rounded"
+                allowFullScreen
+                allow="autoplay; fullscreen"
+                title={title || "Training Video"}
+                onError={() => {
+                  addDebugLog('Iframe failed to load - switching to new window mode');
+                  setSessionInfo(prev => ({ ...prev, requiresNewWindow: true }));
+                }}
+              />
+            </div>
+          )}
           
           {sessionInfo && (
             <div className="text-xs text-green-600 bg-green-50 p-2 rounded">
               ✓ Authenticated successfully
               {sessionInfo.authenticatedViaPopup && " (via popup)"}
+              {requiresNewWindow && " - Video will open in new window"}
             </div>
           )}
         </div>
