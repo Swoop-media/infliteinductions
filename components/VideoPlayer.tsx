@@ -250,15 +250,16 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
       addDebugLog('Attempting popup authentication...');
       
       try {
+        // Try to open popup with more permissive settings
         const popup = window.open(
           videoUrl,
           'sharepoint-auth',
-          'width=1200,height=800,scrollbars=yes,resizable=yes,location=yes,menubar=no,toolbar=no'
+          'width=1200,height=800,scrollbars=yes,resizable=yes,location=yes,menubar=yes,toolbar=yes,status=yes'
         );
 
-        if (!popup) {
-          addDebugLog('Popup blocked by browser');
-          resolve({ success: false, error: 'Popup blocked - please allow popups and try again' });
+        if (!popup || popup.closed) {
+          addDebugLog('Popup blocked by browser - will suggest manual authentication');
+          resolve({ success: false, error: 'popup_blocked' }); // Special error code
           return;
         }
 
@@ -266,20 +267,20 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
         
         // Give user time to authenticate
         let checkCount = 0;
-        const maxChecks = 60; // 60 seconds max
+        const maxChecks = 30; // Reduce to 30 seconds for better UX
         
         const checkPopup = setInterval(() => {
           checkCount++;
           
           try {
             if (popup.closed) {
-              addDebugLog('Popup closed by user');
+              addDebugLog('Popup closed by user - assuming authentication completed');
               clearInterval(checkPopup);
-              // Assume success if user closed it manually (they might have authenticated)
+              // Don't assume success immediately, let user manually retry
               resolve({ 
-                success: true, 
-                videoUrl: videoUrl,
-                sessionInfo: { authenticatedViaPopup: true, timestamp: Date.now() }
+                success: false, 
+                error: 'popup_closed_manually',
+                sessionInfo: { popupClosed: true, timestamp: Date.now() }
               });
               return;
             }
@@ -472,6 +473,8 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
   }
 
   // Authentication failed or required
+  const isPopupBlocked = authError === 'popup_blocked' || debugLogs.some(log => log.includes('Popup blocked'));
+  
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded-lg shadow-sm border p-6">
       <div className="text-center space-y-4">
@@ -486,12 +489,30 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
         </h3>
         
         <div className="space-y-4">
-          <p className="text-gray-600 text-sm">
-            This video requires SharePoint authentication. Please try one of these options:
-          </p>
+          {isPopupBlocked ? (
+            <div className="bg-orange-50 border border-orange-200 rounded p-3">
+              <h4 className="font-medium text-orange-900 text-sm mb-2">⚠️ Popups Blocked</h4>
+              <p className="text-xs text-orange-700 mb-3">
+                Your browser is blocking popups. Please enable popups for this site, or use the manual option below.
+              </p>
+              <div className="space-y-2">
+                <button
+                  onClick={retryAuthentication}
+                  className="w-full bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 text-sm"
+                >
+                  Try Popup Again (Enable Popups First)
+                </button>
+                <p className="text-xs text-orange-600">Or use manual authentication below ↓</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-gray-600 text-sm">
+              This video requires SharePoint authentication. Please try one of these options:
+            </p>
+          )}
 
           <div className="bg-blue-50 border border-blue-200 rounded p-3">
-            <h4 className="font-medium text-blue-900 text-sm mb-2">Recommended: Authenticate in New Window</h4>
+            <h4 className="font-medium text-blue-900 text-sm mb-2">Manual Authentication (Recommended)</h4>
             <p className="text-xs text-blue-700 mb-3">
               1. Click "Open & Authenticate" below<br/>
               2. Sign in to SharePoint in the new window<br/>
@@ -529,7 +550,7 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
           </div>
         </div>
 
-        {authError && (
+        {authError && authError !== 'popup_blocked' && authError !== 'popup_closed_manually' && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
             <p className="text-sm text-red-600">{authError}</p>
           </div>
