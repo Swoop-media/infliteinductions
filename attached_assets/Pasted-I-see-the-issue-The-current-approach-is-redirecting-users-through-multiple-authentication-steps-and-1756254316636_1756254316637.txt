@@ -1,0 +1,31 @@
+I see the issue. The current approach is redirecting users through multiple authentication steps and creating a complex flow. Let me simplify this significantly by creating a more direct video player that leverages the user's existing Microsoft session.
+
+The problem is that we're overcomplicating the SharePoint video embedding. Since your users already authenticate with Microsoft credentials to access your LMS, we can use a much simpler approach that takes advantage of their existing browser session with Microsoft services.
+
+Let me create a streamlined video player that handles different video types more elegantly:
+
+components/VideoPlayer.tsx
+Create simplified universal video player
+Now let's update the course pages to use this simplified player:
+
+app/app/learn/courses/[id]/page.tsx
+Update course page to use new VideoPlayer Update course page to use new VideoPlayer Replace SimpleVideoPlayer with VideoPlayer
+app/app/creator/modules/[id]/page.tsx
+Update creator module page to use new VideoPlayer Update creator module page to use new VideoPlayer Replace SimpleVideoPlayer with VideoPlayer in creator page
+This new approach:
+
+Eliminates complex authentication flows - No more popup windows, localStorage checks, or manual auth triggers
+Uses browser's existing Microsoft session - If users are already signed into Microsoft (which they are for your LMS), SharePoint videos should work automatically
+Provides clear guidance when videos fail - Shows specific instructions for SharePoint videos
+Handles all video types uniformly - YouTube, Vimeo, SharePoint, and direct video URLs
+Includes proper iframe sandboxing - Better security and compatibility
+Has a retry mechanism - Users can easily retry if authentication is needed
+The key insight is that since your users authenticate with Microsoft to access your LMS, their browser already has the necessary cookies and tokens to access SharePoint resources from the same tenant. We just need to embed the SharePoint video directly and let the browser handle the authentication seamlessly.
+
+Apply all:
+Edit file
+components/VideoPlayer.tsx
+Edit file
+app/app/learn/courses/[id]/page.tsx
+Edit file
+app/app/creator/modules/[id]/page.tsx
