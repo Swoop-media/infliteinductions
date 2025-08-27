@@ -1,0 +1,30 @@
+❌ Authentication Failed
+Video URL: https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451
+User Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36
+Cookies: Present
+Timestamp: 2025-08-27T22:19:26.341Z
+Debug Logs:
+[2025-08-27T22:19:22.075Z] Component mounted with videoUrl: https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451
+[2025-08-27T22:19:22.075Z] Component mounted with videoUrl: https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451
+[2025-08-27T22:19:22.177Z] Starting authentication check...
+[2025-08-27T22:19:22.177Z] Parsed URL info: {"origin":"https://charterinflight.sharepoint.com","hostname":"charterinflight.sharepoint.com","pathname":"/sites/INFLITEHeliAOC/_layouts/15/embed.aspx","search":"?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451","isMicrosoft365":true,"isVideo":false,"tenantInfo":"charterinflight"}
+[2025-08-27T22:19:22.177Z] Trying strategy: direct-embed
+[2025-08-27T22:19:22.827Z] Direct embed test: Image failed (likely not authenticated)
+[2025-08-27T22:19:22.828Z] Strategy direct-embed failed: Direct embed failed - authentication required
+[2025-08-27T22:19:22.828Z] Trying strategy: iframe-with-auth
+[2025-08-27T22:19:23.374Z] Iframe auth test: Sign in required
+[2025-08-27T22:19:23.374Z] Strategy iframe-with-auth failed: Sign in required
+[2025-08-27T22:19:23.374Z] Trying strategy: proxy-request
+[2025-08-27T22:19:23.374Z] Testing proxy request...
+[2025-08-27T22:19:24.295Z] Proxy request response: {"success":false,"error":"SharePoint authentication required","suggestion":"Use popup authentication or open in new window","authUrl":"https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451","isSharePoint":true}
+[2025-08-27T22:19:24.295Z] Proxy indicated failure: SharePoint authentication required
+[2025-08-27T22:19:24.295Z] Strategy proxy-request failed: SharePoint authentication required
+[2025-08-27T22:19:24.295Z] Trying strategy: popup-auth
+[2025-08-27T22:19:24.296Z] Attempting popup authentication...
+[2025-08-27T22:19:24.296Z] Popup blocked by browser
+[2025-08-27T22:19:24.296Z] Strategy popup-auth failed: Popup blocked - please allow popups and try again
+[2025-08-27T22:19:24.296Z] Trying strategy: session-check
+[2025-08-27T22:19:24.296Z] Checking for existing Microsoft session...
+[2025-08-27T22:19:24.719Z] Session check response status: 0
+[2025-08-27T22:19:24.719Z] Strategy session-check failed: Session verification inconclusive
+[2025-08-27T22:19:24.719Z] All authentication strategies failed
