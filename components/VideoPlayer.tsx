@@ -24,7 +24,16 @@ export default function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
   };
 
   useEffect(() => {
-    addDebugLog(`Component mounted with videoUrl: ${videoUrl}`);
+    addDebugLog(`Component mounted with videoUrl: ${videoUrl || 'undefined'}`);
+    
+    // Early return if no video URL
+    if (!videoUrl || videoUrl === 'undefined') {
+      addDebugLog('No valid video URL provided, setting error state');
+      setAuthStatus('error');
+      setAuthError('No video URL provided');
+      return;
+    }
+    
     checkAuthAndLoadVideo();
   }, [videoUrl]);
 
@@ -38,6 +47,13 @@ export default function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
       const urlInfo = parseSharePointUrl(videoUrl);
       addDebugLog(`Parsed URL info: ${JSON.stringify(urlInfo)}`);
 
+      if (!urlInfo) {
+        addDebugLog('URL parsing failed, cannot proceed');
+        setAuthStatus('error');
+        setAuthError('Invalid video URL provided');
+        return;
+      }
+
       // Try multiple authentication strategies
       await tryAuthenticationStrategies(urlInfo);
 
@@ -49,6 +65,11 @@ export default function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
   };
 
   const parseSharePointUrl = (url: string) => {
+    if (!url || url === 'undefined' || url === 'null') {
+      addDebugLog(`Invalid URL provided: ${url}`);
+      return null;
+    }
+    
     try {
       const urlObj = new URL(url);
       const pathParts = urlObj.pathname.split('/');
@@ -150,34 +171,44 @@ export default function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
       document.body.appendChild(iframe);
 
       return new Promise((resolve) => {
+        const cleanupIframe = () => {
+          try {
+            if (iframe.parentNode) {
+              iframe.parentNode.removeChild(iframe);
+            }
+          } catch (e) {
+            addDebugLog(`Iframe cleanup error (non-critical): ${e}`);
+          }
+        };
+
         iframe.onload = () => {
           try {
             // Try to access iframe content (will fail if not authenticated)
             const iframeDoc = iframe.contentDocument;
             if (iframeDoc && !iframeDoc.body.innerHTML.includes('sign in')) {
               addDebugLog('Iframe auth test: Content loaded successfully');
-              document.body.removeChild(iframe);
+              cleanupIframe();
               resolve({ success: true, videoUrl: videoUrl });
             } else {
               addDebugLog('Iframe auth test: Sign in required');
-              document.body.removeChild(iframe);
+              cleanupIframe();
               resolve({ success: false, error: 'Sign in required' });
             }
           } catch (error) {
             addDebugLog(`Iframe auth test: Cross-origin error (expected): ${error}`);
-            document.body.removeChild(iframe);
+            cleanupIframe();
             resolve({ success: false, error: 'Cross-origin restriction' });
           }
         };
 
         iframe.onerror = () => {
           addDebugLog('Iframe auth test: Load error');
-          document.body.removeChild(iframe);
+          cleanupIframe();
           resolve({ success: false, error: 'Iframe load error' });
         };
 
         setTimeout(() => {
-          document.body.removeChild(iframe);
+          cleanupIframe();
           resolve({ success: false, error: 'Iframe test timeout' });
         }, 5000);
       });
