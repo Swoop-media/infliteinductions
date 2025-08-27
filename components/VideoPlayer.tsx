@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,12 +9,12 @@ interface VideoPlayerProps {
 }
 
 export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerProps) {
-  const [authStatus, setAuthStatus] = useState<'checking' | 'authenticated' | 'unauthenticated' | 'error'>('checking');
+  const [authStatus, setAuthStatus] = useState<'checking' | 'authenticated' | 'needs_auth' | 'error'>('checking');
   const [authError, setAuthError] = useState<string | null>(null);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [showDebugLogs, setShowDebugLogs] = useState(false);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
-  const [sessionInfo, setSessionInfo] = useState<any>(null);
+  const [attemptCount, setAttemptCount] = useState(0);
 
   const addDebugLog = (message: string) => {
     const timestamp = new Date().toISOString();
@@ -25,62 +24,56 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
   };
 
   useEffect(() => {
-    // Prevent duplicate execution during development
-    let mounted = true;
-    
-    addDebugLog(`Component mounted with videoUrl: ${videoUrl}`);
     if (!videoUrl) {
-      addDebugLog('VideoUrl is undefined - cannot proceed');
+      addDebugLog('No video URL provided');
       setAuthError('No video URL provided');
       setAuthStatus('error');
       return;
     }
-    
-    // Small delay to prevent duplicate mounting issues
-    const timer = setTimeout(() => {
-      if (mounted) {
-        checkAuthAndLoadVideo();
-      }
-    }, 100);
 
-    return () => {
-      mounted = false;
-      clearTimeout(timer);
-    };
-  }, [videoUrl]);
+    addDebugLog(`Component mounted with videoUrl: ${videoUrl}`);
+    checkVideoAccess();
+  }, [videoUrl, attemptCount]);
 
-  const checkAuthAndLoadVideo = async () => {
+  const checkVideoAccess = async () => {
     try {
-      addDebugLog('Starting authentication check...');
+      addDebugLog('Starting video access check...');
       setAuthStatus('checking');
       setAuthError(null);
 
-      // Parse the SharePoint URL to extract key information
+      // Parse the SharePoint URL
       const urlInfo = parseSharePointUrl(videoUrl);
       addDebugLog(`Parsed URL info: ${JSON.stringify(urlInfo)}`);
 
-      // Try multiple authentication strategies
-      await tryAuthenticationStrategies(urlInfo);
+      // Try a simple fetch to see if we can access the video
+      const testResult = await testVideoAccess();
+
+      if (testResult.success) {
+        addDebugLog('Video access successful - can embed directly');
+        setAuthStatus('authenticated');
+        setVideoSrc(videoUrl);
+      } else {
+        addDebugLog(`Video access failed: ${testResult.error}`);
+        setAuthStatus('needs_auth');
+        setAuthError(testResult.error || 'Authentication required');
+      }
 
     } catch (error) {
-      addDebugLog(`Authentication failed: ${error}`);
-      setAuthError(error instanceof Error ? error.message : 'Unknown authentication error');
-      setAuthStatus('error');
+      addDebugLog(`Video access check failed: ${error}`);
+      setAuthError(error instanceof Error ? error.message : 'Unknown error');
+      setAuthStatus('needs_auth');
     }
   };
 
   const parseSharePointUrl = (url: string) => {
     try {
       const urlObj = new URL(url);
-      const pathParts = urlObj.pathname.split('/');
-      
       return {
         origin: urlObj.origin,
         hostname: urlObj.hostname,
         pathname: urlObj.pathname,
         search: urlObj.search,
-        isMicrosoft365: urlObj.hostname.includes('.sharepoint.com') || urlObj.hostname.includes('microsoft.com'),
-        isVideo: pathParts.some(part => part.includes('.mp4') || part.includes('video')),
+        isSharePoint: urlObj.hostname.includes('.sharepoint.com'),
         tenantInfo: urlObj.hostname.split('.')[0]
       };
     } catch (error) {
@@ -89,143 +82,9 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
     }
   };
 
-  const tryAuthenticationStrategies = async (urlInfo: any) => {
-    // Check if we recently tried authentication to prevent loops
-    const lastAuthAttempt = sessionStorage.getItem('lastAuthAttempt');
-    const now = Date.now();
-    if (lastAuthAttempt && (now - parseInt(lastAuthAttempt)) < 5000) {
-      addDebugLog('Recent authentication attempt detected - preventing loop');
-      setAuthStatus('unauthenticated');
-      setAuthError('Authentication recently attempted - please wait before retrying');
-      return;
-    }
-    
-    sessionStorage.setItem('lastAuthAttempt', now.toString());
-
-    const strategies = [
-      'direct-embed',
-      'proxy-request', // Try proxy before iframe since it's more reliable
-      'popup-auth'
-    ];
-
-    for (const strategy of strategies) {
-      addDebugLog(`Trying strategy: ${strategy}`);
-      
-      try {
-        const result = await executeAuthStrategy(strategy, urlInfo);
-        if (result.success) {
-          addDebugLog(`Strategy ${strategy} succeeded`);
-          setAuthStatus('authenticated');
-          setVideoSrc(result.videoUrl);
-          setSessionInfo(result.sessionInfo);
-          return;
-        } else {
-          addDebugLog(`Strategy ${strategy} failed: ${result.error}`);
-          
-          // Don't try popup if it was blocked or is on cooldown
-          if (strategy === 'popup-auth' && (result.error === 'popup_blocked' || result.error === 'popup_cooldown' || result.error === 'popup_timeout')) {
-            addDebugLog('Popup strategy failed - skipping remaining strategies');
-            break;
-          }
-        }
-      } catch (error) {
-        addDebugLog(`Strategy ${strategy} threw error: ${error}`);
-      }
-    }
-
-    setAuthStatus('unauthenticated');
-    addDebugLog('All authentication strategies failed');
-  };
-
-  const executeAuthStrategy = async (strategy: string, urlInfo: any): Promise<{success: boolean, videoUrl?: string, sessionInfo?: any, error?: string}> => {
-    switch (strategy) {
-      case 'direct-embed':
-        return await testDirectEmbed(urlInfo);
-      
-      case 'iframe-with-auth':
-        return await testIframeWithAuth(urlInfo);
-      
-      case 'proxy-request':
-        return await testProxyRequest(urlInfo);
-      
-      case 'popup-auth':
-        return await testPopupAuth(urlInfo);
-      
-      case 'session-check':
-        return await testSessionCheck(urlInfo);
-      
-      default:
-        return { success: false, error: `Unknown strategy: ${strategy}` };
-    }
-  };
-
-  const testDirectEmbed = async (urlInfo: any): Promise<{success: boolean, videoUrl?: string, error?: string}> => {
-    return new Promise((resolve) => {
-      const testImg = new Image();
-      testImg.onload = () => {
-        addDebugLog('Direct embed test: Image loaded (likely authenticated)');
-        resolve({ success: true, videoUrl: videoUrl });
-      };
-      testImg.onerror = () => {
-        addDebugLog('Direct embed test: Image failed (likely not authenticated)');
-        resolve({ success: false, error: 'Direct embed failed - authentication required' });
-      };
-      testImg.src = videoUrl + '?t=' + Date.now();
-      
-      setTimeout(() => {
-        resolve({ success: false, error: 'Direct embed test timeout' });
-      }, 5000);
-    });
-  };
-
-  const testIframeWithAuth = async (urlInfo: any): Promise<{success: boolean, videoUrl?: string, error?: string}> => {
+  const testVideoAccess = async (): Promise<{success: boolean, error?: string}> => {
     try {
-      // Create a hidden iframe to test auth
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = videoUrl;
-      document.body.appendChild(iframe);
-
-      return new Promise((resolve) => {
-        iframe.onload = () => {
-          try {
-            // Try to access iframe content (will fail if not authenticated)
-            const iframeDoc = iframe.contentDocument;
-            if (iframeDoc && !iframeDoc.body.innerHTML.includes('sign in')) {
-              addDebugLog('Iframe auth test: Content loaded successfully');
-              if (iframe.parentNode) document.body.removeChild(iframe);
-              resolve({ success: true, videoUrl: videoUrl });
-            } else {
-              addDebugLog('Iframe auth test: Sign in required');
-              if (iframe.parentNode) document.body.removeChild(iframe);
-              resolve({ success: false, error: 'Sign in required' });
-            }
-          } catch (error) {
-            addDebugLog(`Iframe auth test: Cross-origin error (expected): ${error}`);
-            if (iframe.parentNode) document.body.removeChild(iframe);
-            resolve({ success: false, error: 'Cross-origin restriction' });
-          }
-        };
-
-        iframe.onerror = () => {
-          addDebugLog('Iframe auth test: Load error');
-          if (iframe.parentNode) document.body.removeChild(iframe);
-          resolve({ success: false, error: 'Iframe load error' });
-        };
-
-        setTimeout(() => {
-          if (iframe.parentNode) document.body.removeChild(iframe);
-          resolve({ success: false, error: 'Iframe test timeout' });
-        }, 5000);
-      });
-    } catch (error) {
-      return { success: false, error: `Iframe test failed: ${error}` };
-    }
-  };
-
-  const testProxyRequest = async (urlInfo: any): Promise<{success: boolean, videoUrl?: string, error?: string}> => {
-    try {
-      addDebugLog('Testing proxy request...');
+      addDebugLog('Testing video access with proxy...');
       const response = await fetch('/api/video-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -237,310 +96,61 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
 
       if (response.ok) {
         const data = await response.json();
-        addDebugLog(`Proxy request response: ${JSON.stringify(data)}`);
-        
-        // Check if the proxy actually succeeded or just returned an error message
+        addDebugLog(`Proxy response: ${JSON.stringify(data)}`);
+
         if (data.success === true) {
-          return { 
-            success: true, 
-            videoUrl: data.proxyUrl || videoUrl,
-            sessionInfo: data 
-          };
+          return { success: true };
         } else {
-          addDebugLog(`Proxy indicated failure: ${data.error || 'Unknown error'}`);
-          return { success: false, error: data.error || 'Proxy authentication failed' };
+          return { success: false, error: data.error || 'Access denied' };
         }
       } else {
         const error = await response.text();
         addDebugLog(`Proxy request failed: ${response.status} - ${error}`);
-        return { success: false, error: `Proxy failed: ${error}` };
+        return { success: false, error: `Server error: ${error}` };
       }
     } catch (error) {
       addDebugLog(`Proxy request error: ${error}`);
-      return { success: false, error: `Proxy error: ${error}` };
+      return { success: false, error: `Network error: ${error}` };
     }
   };
 
-  const testPopupAuth = async (urlInfo: any): Promise<{success: boolean, videoUrl?: string, sessionInfo?: any, error?: string}> => {
-    return new Promise((resolve) => {
-      addDebugLog('Attempting popup authentication...');
-      
-      // Check if we're already in a popup auth cycle to prevent infinite popups
-      const lastPopupAttempt = sessionStorage.getItem('lastPopupAttempt');
-      const now = Date.now();
-      if (lastPopupAttempt && (now - parseInt(lastPopupAttempt)) < 10000) {
-        addDebugLog('Recent popup attempt detected - skipping to prevent spam');
-        resolve({ success: false, error: 'popup_cooldown' });
-        return;
-      }
-      
-      sessionStorage.setItem('lastPopupAttempt', now.toString());
-      
-      try {
-        // Close any existing auth windows first
-        if (window.authPopupRef && !window.authPopupRef.closed) {
-          window.authPopupRef.close();
-        }
-        
-        // Try to open popup with more permissive settings
-        const popup = window.open(
-          videoUrl,
-          'sharepoint-auth-' + now, // Unique name to prevent reuse
-          'width=1200,height=800,scrollbars=yes,resizable=yes,location=yes,menubar=yes,toolbar=yes,status=yes'
-        );
+  const openSharePointAuth = () => {
+    addDebugLog('Opening SharePoint authentication in new tab');
 
-        window.authPopupRef = popup; // Store reference globally
+    // Open SharePoint in a new tab for authentication
+    const authWindow = window.open(
+      videoUrl,
+      '_blank',
+      'noopener,noreferrer'
+    );
 
-        if (!popup || popup.closed) {
-          addDebugLog('Popup blocked by browser - will suggest manual authentication');
-          resolve({ success: false, error: 'popup_blocked' });
-          return;
-        }
-
-        addDebugLog('Popup opened successfully');
-        
-        // Shorter timeout to prevent stuck state
-        let checkCount = 0;
-        const maxChecks = 30; // Reduced to 30 seconds
-        let resolved = false;
-        
-        const checkPopup = setInterval(() => {
-          checkCount++;
-          
-          try {
-            if (popup.closed) {
-              if (!resolved) {
-                resolved = true;
-                addDebugLog('Popup closed by user - testing authentication state');
-                clearInterval(checkPopup);
-                
-                // Quick test without waiting too long
-                setTimeout(async () => {
-                  try {
-                    const authTest = await testDirectEmbedAfterAuth();
-                    if (authTest.success) {
-                      addDebugLog('Authentication verified - can embed directly');
-                      resolve({ 
-                        success: true,
-                        videoUrl: videoUrl,
-                        sessionInfo: { 
-                          authenticatedViaPopup: true, 
-                          timestamp: Date.now(),
-                          canEmbedDirectly: true 
-                        }
-                      });
-                    } else {
-                      addDebugLog('Direct embed still not working - will use new window mode');
-                      resolve({ 
-                        success: true,
-                        videoUrl: videoUrl,
-                        sessionInfo: { 
-                          authenticatedViaPopup: true, 
-                          timestamp: Date.now(),
-                          requiresNewWindow: true 
-                        }
-                      });
-                    }
-                  } catch (error) {
-                    addDebugLog(`Auth verification failed: ${error}`);
-                    resolve({ 
-                      success: true,
-                      videoUrl: videoUrl,
-                      sessionInfo: { 
-                        authenticatedViaPopup: true, 
-                        timestamp: Date.now(),
-                        requiresNewWindow: true 
-                      }
-                    });
-                  }
-                }, 1000); // Reduced wait time
-              }
-              return;
-            }
-
-            if (checkCount >= maxChecks) {
-              if (!resolved) {
-                resolved = true;
-                addDebugLog('Popup authentication timeout - closing popup');
-                if (!popup.closed) popup.close();
-                clearInterval(checkPopup);
-                resolve({ success: false, error: 'popup_timeout' });
-              }
-            }
-          } catch (error) {
-            addDebugLog(`Popup check error: ${error}`);
-          }
-        }, 1000);
-
-      } catch (error) {
-        addDebugLog(`Failed to open popup: ${error}`);
-        resolve({ success: false, error: `Failed to open authentication window: ${error}` });
-      }
-    });
-  };
-
-  const testDirectEmbedAfterAuth = async (): Promise<{success: boolean, error?: string}> => {
-    return new Promise((resolve) => {
-      addDebugLog('Testing direct embed after authentication...');
-      
-      // Create a test iframe to see if we can now embed directly
-      const testIframe = document.createElement('iframe');
-      testIframe.style.position = 'absolute';
-      testIframe.style.left = '-9999px';
-      testIframe.style.width = '1px';
-      testIframe.style.height = '1px';
-      // Add credentials and cache busting to ensure fresh auth state
-      testIframe.src = videoUrl + (videoUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
-      
-      let resolved = false;
-      let loadTimeout: NodeJS.Timeout;
-      
-      testIframe.onload = () => {
-        if (!resolved) {
-          resolved = true;
-          addDebugLog('Test iframe loaded successfully - direct embed should work');
-          clearTimeout(loadTimeout);
-          document.body.removeChild(testIframe);
-          resolve({ success: true });
-        }
-      };
-      
-      testIframe.onerror = () => {
-        if (!resolved) {
-          resolved = true;
-          addDebugLog('Test iframe failed to load - direct embed not possible');
-          clearTimeout(loadTimeout);
-          document.body.removeChild(testIframe);
-          resolve({ success: false, error: 'Direct embed not possible' });
-        }
-      };
-      
-      document.body.appendChild(testIframe);
-      
-      // Timeout after 8 seconds (increased for better reliability)
-      loadTimeout = setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          addDebugLog('Test iframe timeout - forcing success to try main embed');
-          if (testIframe.parentNode) {
-            document.body.removeChild(testIframe);
-          }
-          // Instead of failing, let's try the main embed anyway
-          resolve({ success: true });
-        }
-      }, 8000);
-    });
-  };
-
-  const testSessionCheck = async (urlInfo: any): Promise<{success: boolean, sessionInfo?: any, error?: string}> => {
-    try {
-      // Check for existing Microsoft session
-      addDebugLog('Checking for existing Microsoft session...');
-      
-      const sessionResponse = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/authorize', {
-        method: 'HEAD',
-        mode: 'no-cors'
-      });
-
-      addDebugLog(`Session check response status: ${sessionResponse.status}`);
-      
-      return { 
-        success: false, // We can't actually verify session this way due to CORS
-        error: 'Session verification inconclusive',
-        sessionInfo: { 
-          timestamp: Date.now(),
-          userAgent: navigator.userAgent,
-          cookies: document.cookie ? 'present' : 'none'
-        }
-      };
-    } catch (error) {
-      addDebugLog(`Session check error: ${error}`);
-      return { success: false, error: `Session check failed: ${error}` };
+    if (!authWindow) {
+      setAuthError('Popup blocked - please allow popups and try again');
+      addDebugLog('Failed to open authentication tab - popup blocked');
+    } else {
+      addDebugLog('Authentication tab opened successfully');
+      setAuthError('Please sign in to SharePoint in the new tab, then click "Try Again" below');
     }
   };
 
-  const retryAuthentication = () => {
-    addDebugLog('Retrying authentication...');
-    
-    // Clear any stuck authentication states
-    sessionStorage.removeItem('lastAuthAttempt');
-    sessionStorage.removeItem('lastPopupAttempt');
-    
-    // Close any existing popup windows
-    if (window.authPopupRef && !window.authPopupRef.closed) {
-      window.authPopupRef.close();
-    }
-    
+  const retryVideoAccess = () => {
+    addDebugLog('Retrying video access...');
+    setAttemptCount(prev => prev + 1);
     setDebugLogs([]);
-    setAuthStatus('checking');
-    setAuthError(null);
-    
-    // Small delay to ensure cleanup is complete
-    setTimeout(() => {
-      checkAuthAndLoadVideo();
-    }, 500);
   };
 
-  const clearAuthAndRetry = () => {
-    addDebugLog('Clearing authentication and retrying...');
-    setVideoSrc(null);
-    setSessionInfo(null);
-    setAuthStatus('checking');
-    setAuthError(null);
-    setDebugLogs([]);
-    
-    // Clear any potential cached auth
+  const clearAndRetry = () => {
+    addDebugLog('Clearing cache and retrying...');
+
+    // Clear any cached authentication
     if ('caches' in window) {
       caches.keys().then(names => {
         names.forEach(name => caches.delete(name));
       });
     }
-    
-    setTimeout(() => {
-      checkAuthAndLoadVideo();
-    }, 1000);
-  };
 
-  const openInNewWindow = () => {
-    addDebugLog('Opening video in new window for authentication...');
-    const newWindow = window.open(
-      videoUrl, 
-      'sharepoint_auth', 
-      'width=1200,height=800,scrollbars=yes,resizable=yes,location=yes,menubar=yes,toolbar=yes'
-    );
-    
-    if (!newWindow) {
-      setAuthError('Popup blocked - please allow popups and try again');
-    } else {
-      // Start monitoring for authentication completion
-      setAuthStatus('checking');
-      setAuthError('Please sign in to SharePoint in the new window...');
-      
-      // Monitor the auth window
-      const checkInterval = setInterval(() => {
-        try {
-          if (newWindow.closed) {
-            addDebugLog('Auth window closed - checking authentication status');
-            clearInterval(checkInterval);
-            
-            // Wait a moment then retry authentication check
-            setTimeout(() => {
-              retryAuthentication();
-            }, 1000);
-          }
-        } catch (error) {
-          addDebugLog(`Error monitoring auth window: ${error}`);
-        }
-      }, 1000);
-      
-      // Auto-cleanup after 5 minutes
-      setTimeout(() => {
-        clearInterval(checkInterval);
-        if (!newWindow.closed) {
-          newWindow.close();
-        }
-      }, 300000);
-    }
+    setDebugLogs([]);
+    setAttemptCount(prev => prev + 1);
   };
 
   if (authStatus === 'checking') {
@@ -548,7 +158,7 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
       <div className="w-full max-w-4xl mx-auto bg-white rounded-lg shadow-sm border p-6">
         <div className="text-center space-y-4">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-gray-600">Checking SharePoint authentication...</p>
+          <p className="text-gray-600">Checking video access...</p>
           <div className="text-xs text-gray-500">
             {debugLogs.length > 0 && debugLogs[debugLogs.length - 1].split('] ')[1]}
           </div>
@@ -559,7 +169,7 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
             {showDebugLogs ? 'Hide' : 'Show'} Debug Info
           </button>
         </div>
-        
+
         {showDebugLogs && (
           <div className="mt-4 p-3 bg-gray-100 rounded text-xs font-mono max-h-40 overflow-y-auto">
             {debugLogs.map((log, index) => (
@@ -572,9 +182,6 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
   }
 
   if (authStatus === 'authenticated' && videoSrc) {
-    // Check if we need to force new window due to embedding restrictions
-    const requiresNewWindow = sessionInfo?.requiresNewWindow;
-    
     return (
       <div className="w-full max-w-4xl mx-auto bg-white rounded-lg shadow-sm border p-6">
         <div className="space-y-4">
@@ -584,10 +191,10 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
             </h3>
             <div className="flex gap-2">
               <button
-                onClick={openInNewWindow}
+                onClick={openSharePointAuth}
                 className="text-xs text-blue-600 hover:text-blue-800 underline"
               >
-                Open in New Window
+                Open in New Tab
               </button>
               <button
                 onClick={() => setShowDebugLogs(!showDebugLogs)}
@@ -597,62 +204,33 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
               </button>
             </div>
           </div>
-          
-          {requiresNewWindow ? (
-            <div className="aspect-video bg-gray-50 rounded flex items-center justify-center border-2 border-dashed border-gray-300">
-              <div className="text-center space-y-3">
-                <div className="text-gray-600">
-                  <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </div>
-                <h4 className="text-lg font-medium text-gray-900">Video Ready to Play</h4>
-                <p className="text-sm text-gray-600 mb-4">
-                  Due to SharePoint security settings, this video needs to open in a new window.
-                </p>
-                <button
-                  onClick={openInNewWindow}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center gap-2 mx-auto"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m2 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Play Video
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="aspect-video bg-black rounded">
-              <iframe
-                key={sessionInfo?.timestamp || 'default'} // Force refresh when auth state changes
-                src={videoSrc + (videoSrc.includes('?') ? '&' : '?') + '_auth=' + (sessionInfo?.timestamp || Date.now())}
-                className="w-full h-full rounded"
-                allowFullScreen
-                allow="autoplay; fullscreen"
-                title={title || "Training Video"}
-                onLoad={() => {
-                  addDebugLog('Main iframe loaded successfully');
-                }}
-                onError={() => {
-                  addDebugLog('Main iframe failed to load - switching to new window mode');
-                  setSessionInfo(prev => ({ ...prev, requiresNewWindow: true }));
-                }}
-              />
-            </div>
-          )}
-          
-          {sessionInfo && (
-            <div className="text-xs text-green-600 bg-green-50 p-2 rounded">
-              ✓ Authenticated successfully
-              {sessionInfo.authenticatedViaPopup && " (via popup)"}
-              {requiresNewWindow && " - Video will open in new window"}
-            </div>
-          )}
+
+          <div className="aspect-video bg-black rounded">
+            <iframe
+              src={videoSrc}
+              className="w-full h-full rounded"
+              allowFullScreen
+              allow="autoplay; fullscreen"
+              title={title || "Training Video"}
+              onLoad={() => {
+                addDebugLog('Video iframe loaded successfully');
+              }}
+              onError={() => {
+                addDebugLog('Video iframe failed to load');
+                setAuthStatus('needs_auth');
+                setAuthError('Video failed to load - authentication may have expired');
+              }}
+            />
+          </div>
+
+          <div className="text-xs text-green-600 bg-green-50 p-2 rounded">
+            ✓ Video loaded successfully
+          </div>
         </div>
-        
+
         {showDebugLogs && (
           <div className="mt-4 p-3 bg-gray-100 rounded text-xs font-mono max-h-40 overflow-y-auto">
-            <div className="text-green-600 font-bold mb-2">✓ Authentication Successful</div>
+            <div className="text-green-600 font-bold mb-2">✓ Video Access Successful</div>
             {debugLogs.map((log, index) => (
               <div key={index} className="mb-1">{log}</div>
             ))}
@@ -662,105 +240,91 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
     );
   }
 
-  // Authentication failed or required
-  const isPopupBlocked = authError === 'popup_blocked' || debugLogs.some(log => log.includes('Popup blocked'));
-  const isPopupCooldown = authError === 'popup_cooldown' || debugLogs.some(log => log.includes('popup attempt detected'));
-  const isStuck = authStatus === 'checking' && debugLogs.some(log => log.includes('Popup opened successfully')) && debugLogs.length > 8;
-  
-  // If we detect the component is stuck, force it to unauthenticated state
-  if (isStuck) {
-    setTimeout(() => {
-      setAuthStatus('unauthenticated');
-      setAuthError('Authentication process was stuck - please try manual authentication');
-    }, 100);
-  }
-  
+  // Authentication needed
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded-lg shadow-sm border p-6">
-      <div className="text-center space-y-4">
-        <div className="text-red-500">
+      <div className="text-center space-y-6">
+        <div className="text-blue-500">
           <svg className="w-12 h-12 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.732 15.5c-.77.833.192 2.5 1.732 2.5z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
           </svg>
         </div>
-        
-        <h3 className="text-lg font-medium text-gray-900">
-          SharePoint Authentication Required
-        </h3>
-        
-        <div className="space-y-4">
-          {isPopupBlocked ? (
-            <div className="bg-orange-50 border border-orange-200 rounded p-3">
-              <h4 className="font-medium text-orange-900 text-sm mb-2">⚠️ Popups Blocked</h4>
-              <p className="text-xs text-orange-700 mb-3">
-                Your browser is blocking popups. Please enable popups for this site, or use manual authentication below.
-              </p>
-            </div>
-          ) : isPopupCooldown ? (
-            <div className="bg-blue-50 border border-blue-200 rounded p-3">
-              <h4 className="font-medium text-blue-900 text-sm mb-2">⏱️ Authentication Cooldown</h4>
-              <p className="text-xs text-blue-700 mb-3">
-                Please wait a moment before trying popup authentication again, or use manual authentication below.
-              </p>
-            </div>
-          ) : (
-            <p className="text-gray-600 text-sm">
-              This video requires SharePoint authentication. Please try one of these options:
-            </p>
-          )}
 
-          <div className="bg-blue-50 border border-blue-200 rounded p-3">
-            <h4 className="font-medium text-blue-900 text-sm mb-2">SharePoint Authentication</h4>
-            <p className="text-xs text-blue-700 mb-3">
-              Click below to authenticate with SharePoint. The video will load automatically after you sign in.
-            </p>
-            <button
-              onClick={openInNewWindow}
-              className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm flex items-center justify-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2m0 0V7a2 2 0 012-2h4zm-6 2a1 1 0 100 2 1 1 0 000-2z" />
-              </svg>
-              Authenticate with SharePoint
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            <button
-              onClick={retryAuthentication}
-              className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 text-sm"
-            >
-              Retry Authentication
-            </button>
-            
-            <button
-              onClick={clearAuthAndRetry}
-              className="w-full text-sm text-gray-600 hover:text-gray-800 underline"
-            >
-              Clear Cache and Retry
-            </button>
-            
-            <button
-              onClick={() => setShowDebugLogs(!showDebugLogs)}
-              className="w-full text-xs text-gray-500 hover:text-gray-700 underline"
-            >
-              {showDebugLogs ? 'Hide' : 'Show'} Debug Information
-            </button>
-          </div>
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            SharePoint Authentication Required
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            This video requires Microsoft SharePoint authentication to view.
+          </p>
         </div>
 
-        {authError && authError !== 'popup_blocked' && authError !== 'popup_closed_manually' && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
-            <p className="text-sm text-red-600">{authError}</p>
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-left">
+          <h4 className="font-medium text-blue-900 text-sm mb-3">Quick Authentication Steps:</h4>
+          <ol className="text-xs text-blue-800 space-y-2">
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
+              <span>Click "Authenticate with SharePoint" to open a new tab</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
+              <span>Sign in to Microsoft SharePoint in the new tab</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex-shrink-0 w-5 h-5 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
+              <span>Return to this page and click "Try Again"</span>
+            </li>
+          </ol>
+        </div>
+
+        <div className="space-y-3">
+          <button
+            onClick={openSharePointAuth}
+            className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 text-sm font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            Authenticate with SharePoint
+          </button>
+
+          <button
+            onClick={retryVideoAccess}
+            className="w-full bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 flex items-center justify-center gap-2 text-sm font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Try Again
+          </button>
+
+          <button
+            onClick={clearAndRetry}
+            className="w-full text-sm text-gray-600 hover:text-gray-800 underline"
+          >
+            Clear Cache and Retry
+          </button>
+
+          <button
+            onClick={() => setShowDebugLogs(!showDebugLogs)}
+            className="w-full text-xs text-gray-500 hover:text-gray-700 underline"
+          >
+            {showDebugLogs ? 'Hide' : 'Show'} Debug Information
+          </button>
+        </div>
+
+        {authError && (
+          <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
+            <p className="text-sm text-orange-800">{authError}</p>
           </div>
         )}
-        
+
         {showDebugLogs && (
           <div className="mt-4 p-3 bg-gray-100 rounded text-xs font-mono max-h-60 overflow-y-auto text-left">
-            <div className="text-red-600 font-bold mb-2">❌ Authentication Failed</div>
+            <div className="text-orange-600 font-bold mb-2">🔐 Authentication Required</div>
             <div className="mb-2"><strong>Video URL:</strong> {videoUrl}</div>
+            <div className="mb-2"><strong>Attempt:</strong> {attemptCount + 1}</div>
             <div className="mb-2"><strong>User Agent:</strong> {navigator.userAgent}</div>
-            <div className="mb-2"><strong>Cookies:</strong> {document.cookie ? 'Present' : 'None'}</div>
             <div className="mb-2"><strong>Timestamp:</strong> {new Date().toISOString()}</div>
             <div className="border-t pt-2 mt-2">
               <div className="font-bold mb-1">Debug Logs:</div>
