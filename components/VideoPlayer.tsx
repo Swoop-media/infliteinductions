@@ -267,20 +267,20 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
         
         // Give user time to authenticate
         let checkCount = 0;
-        const maxChecks = 30; // Reduce to 30 seconds for better UX
+        const maxChecks = 60; // Increase to 60 seconds for better UX
         
         const checkPopup = setInterval(() => {
           checkCount++;
           
           try {
             if (popup.closed) {
-              addDebugLog('Popup closed by user - assuming authentication completed');
+              addDebugLog('Popup closed by user - will automatically retry authentication check');
               clearInterval(checkPopup);
-              // Don't assume success immediately, let user manually retry
+              // Automatically retry authentication after popup closes
               resolve({ 
-                success: false, 
-                error: 'popup_closed_manually',
-                sessionInfo: { popupClosed: true, timestamp: Date.now() }
+                success: true, // Mark as success to trigger automatic retry
+                videoUrl: videoUrl,
+                sessionInfo: { popupClosed: true, timestamp: Date.now(), autoRetry: true }
               });
               return;
             }
@@ -378,15 +378,41 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
     addDebugLog('Opening video in new window for authentication...');
     const newWindow = window.open(
       videoUrl, 
-      '_blank', 
+      'sharepoint_auth', 
       'width=1200,height=800,scrollbars=yes,resizable=yes,location=yes,menubar=yes,toolbar=yes'
     );
     
     if (!newWindow) {
       setAuthError('Popup blocked - please allow popups and try again');
     } else {
-      // Give user feedback that they should authenticate in the new window
-      setAuthError('Please sign in to SharePoint in the new window, then return here and click "Retry Authentication"');
+      // Start monitoring for authentication completion
+      setAuthStatus('checking');
+      setAuthError('Please sign in to SharePoint in the new window...');
+      
+      // Monitor the auth window
+      const checkInterval = setInterval(() => {
+        try {
+          if (newWindow.closed) {
+            addDebugLog('Auth window closed - checking authentication status');
+            clearInterval(checkInterval);
+            
+            // Wait a moment then retry authentication check
+            setTimeout(() => {
+              retryAuthentication();
+            }, 1000);
+          }
+        } catch (error) {
+          addDebugLog(`Error monitoring auth window: ${error}`);
+        }
+      }, 1000);
+      
+      // Auto-cleanup after 5 minutes
+      setTimeout(() => {
+        clearInterval(checkInterval);
+        if (!newWindow.closed) {
+          newWindow.close();
+        }
+      }, 300000);
     }
   };
 
@@ -512,17 +538,18 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
           )}
 
           <div className="bg-blue-50 border border-blue-200 rounded p-3">
-            <h4 className="font-medium text-blue-900 text-sm mb-2">Manual Authentication (Recommended)</h4>
+            <h4 className="font-medium text-blue-900 text-sm mb-2">SharePoint Authentication</h4>
             <p className="text-xs text-blue-700 mb-3">
-              1. Click "Open & Authenticate" below<br/>
-              2. Sign in to SharePoint in the new window<br/>
-              3. Return here and click "Retry Authentication"
+              Click below to authenticate with SharePoint. The video will load automatically after you sign in.
             </p>
             <button
               onClick={openInNewWindow}
-              className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+              className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm flex items-center justify-center gap-2"
             >
-              Open & Authenticate in New Window
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2m0 0V7a2 2 0 012-2h4zm-6 2a1 1 0 100 2 1 1 0 000-2z" />
+              </svg>
+              Authenticate with SharePoint
             </button>
           </div>
 
