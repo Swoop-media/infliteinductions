@@ -1,131 +1,70 @@
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
-export async function POST(req: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
-    const { url, userAgent } = await req.json();
+    const { url, userAgent } = await request.json();
     
-    console.log('[VideoProxy] Request received:', {
-      url,
-      userAgent,
-      timestamp: new Date().toISOString(),
-      origin: req.headers.get('origin'),
-      referer: req.headers.get('referer')
-    });
-
     if (!url) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
-    // Parse the SharePoint URL
+    // For SharePoint embed URLs, we can't actually proxy the content due to CORS and authentication
+    // Instead, provide guidance on authentication
     const urlObj = new URL(url);
-    const isSharePoint = urlObj.hostname.includes('.sharepoint.com');
-    const isMicrosoft = urlObj.hostname.includes('microsoft.com');
     
-    console.log('[VideoProxy] URL analysis:', {
-      hostname: urlObj.hostname,
-      pathname: urlObj.pathname,
-      isSharePoint,
-      isMicrosoft,
-      search: urlObj.search
-    });
-
-    // Try to fetch the video with various strategies
-    const strategies = [
-      { name: 'direct', headers: {} },
-      { name: 'with-user-agent', headers: { 'User-Agent': userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } },
-      { name: 'with-referer', headers: { 'Referer': urlObj.origin } },
-      { name: 'with-full-headers', headers: {
-        'User-Agent': userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': urlObj.origin,
-        'Accept': 'video/mp4,video/*,*/*',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Cache-Control': 'no-cache'
-      }}
-    ];
-
-    for (const strategy of strategies) {
-      try {
-        console.log(`[VideoProxy] Trying strategy: ${strategy.name}`);
-        
-        const response = await fetch(url, {
-          method: 'HEAD',
-          headers: strategy.headers,
-          redirect: 'manual'
-        });
-
-        console.log(`[VideoProxy] Strategy ${strategy.name} response:`, {
-          status: response.status,
-          statusText: response.statusText,
-          headers: Object.fromEntries(response.headers.entries()),
-          redirected: response.redirected,
-          type: response.type
-        });
-
-        // Check if we're getting redirected to login
-        const location = response.headers.get('location');
-        if (location && (location.includes('login') || location.includes('signin'))) {
-          console.log(`[VideoProxy] Strategy ${strategy.name} redirects to login:`, location);
-          continue;
-        }
-
-        // Check content type
-        const contentType = response.headers.get('content-type');
-        console.log(`[VideoProxy] Content-Type: ${contentType}`);
-
-        if (response.ok || response.status === 206) {
-          console.log(`[VideoProxy] Strategy ${strategy.name} succeeded`);
-          return NextResponse.json({
-            success: true,
-            strategy: strategy.name,
-            proxyUrl: url, // Return original URL since we can't actually proxy due to CORS
-            status: response.status,
-            headers: Object.fromEntries(response.headers.entries()),
-            contentType,
-            timestamp: new Date().toISOString()
-          });
-        }
-
-      } catch (error) {
-        console.log(`[VideoProxy] Strategy ${strategy.name} failed:`, error);
-        continue;
-      }
+    if (urlObj.hostname.includes('.sharepoint.com')) {
+      return NextResponse.json({
+        success: false,
+        error: 'SharePoint authentication required',
+        suggestion: 'Use popup authentication or open in new window',
+        authUrl: url,
+        isSharePoint: true
+      }, { status: 200 });
     }
 
-    // If all strategies failed, return detailed error info
-    console.log('[VideoProxy] All strategies failed');
-    
-    return NextResponse.json({
-      success: false,
-      error: 'All authentication strategies failed',
-      url,
-      analysis: {
-        hostname: urlObj.hostname,
-        isSharePoint,
-        isMicrosoft,
-        timestamp: new Date().toISOString()
-      },
-      suggestions: [
-        'Video may require SharePoint authentication',
-        'Try opening video in new window to authenticate',
-        'Check if user has access to the SharePoint site',
-        'Verify video URL is publicly accessible'
-      ]
-    }, { status: 403 });
+    // For other URLs, attempt basic fetch
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'User-Agent': userAgent || 'Mozilla/5.0 (compatible; VideoProxy/1.0)',
+        },
+        redirect: 'manual'
+      });
+
+      if (response.status === 302 || response.status === 301) {
+        const location = response.headers.get('location');
+        return NextResponse.json({
+          success: false,
+          error: 'Redirect detected',
+          redirectUrl: location
+        });
+      }
+
+      if (!response.ok) {
+        return NextResponse.json({
+          success: false,
+          error: `HTTP ${response.status}: ${response.statusText}`
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        proxyUrl: url,
+        status: response.status
+      });
+
+    } catch (fetchError) {
+      return NextResponse.json({
+        success: false,
+        error: `Network error: ${fetchError.message}`
+      });
+    }
 
   } catch (error) {
-    console.error('[VideoProxy] Unexpected error:', error);
+    console.error('Video proxy error:', error);
     return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-      timestamp: new Date().toISOString()
+      error: 'Internal server error'
     }, { status: 500 });
   }
-}
-
-export async function GET(req: NextRequest) {
-  return NextResponse.json({
-    message: 'Video proxy endpoint - use POST with { url, userAgent }',
-    timestamp: new Date().toISOString()
-  });
 }

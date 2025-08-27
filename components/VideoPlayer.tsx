@@ -25,6 +25,9 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
   };
 
   useEffect(() => {
+    // Prevent duplicate execution during development
+    let mounted = true;
+    
     addDebugLog(`Component mounted with videoUrl: ${videoUrl}`);
     if (!videoUrl) {
       addDebugLog('VideoUrl is undefined - cannot proceed');
@@ -32,7 +35,18 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
       setAuthStatus('error');
       return;
     }
-    checkAuthAndLoadVideo();
+    
+    // Small delay to prevent duplicate mounting issues
+    const timer = setTimeout(() => {
+      if (mounted) {
+        checkAuthAndLoadVideo();
+      }
+    }, 100);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timer);
+    };
   }, [videoUrl]);
 
   const checkAuthAndLoadVideo = async () => {
@@ -226,55 +240,76 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
 
   const testPopupAuth = async (urlInfo: any): Promise<{success: boolean, videoUrl?: string, sessionInfo?: any, error?: string}> => {
     return new Promise((resolve) => {
-      addDebugLog('Opening popup for authentication...');
+      addDebugLog('Attempting popup authentication...');
       
-      const popup = window.open(
-        videoUrl,
-        'sharepoint-auth',
-        'width=800,height=600,scrollbars=yes,resizable=yes'
-      );
+      try {
+        const popup = window.open(
+          videoUrl,
+          'sharepoint-auth',
+          'width=1200,height=800,scrollbars=yes,resizable=yes,location=yes,menubar=no,toolbar=no'
+        );
 
-      if (!popup) {
-        resolve({ success: false, error: 'Popup blocked' });
-        return;
-      }
+        if (!popup) {
+          addDebugLog('Popup blocked by browser');
+          resolve({ success: false, error: 'Popup blocked - please allow popups and try again' });
+          return;
+        }
 
-      const checkPopup = setInterval(() => {
-        try {
-          if (popup.closed) {
-            addDebugLog('Popup closed by user');
-            clearInterval(checkPopup);
-            resolve({ success: false, error: 'Popup closed' });
-            return;
-          }
-
-          // Check if popup URL indicates successful auth
-          const popupUrl = popup.location.href;
-          addDebugLog(`Popup URL: ${popupUrl}`);
+        addDebugLog('Popup opened successfully');
+        
+        // Give user time to authenticate
+        let checkCount = 0;
+        const maxChecks = 60; // 60 seconds max
+        
+        const checkPopup = setInterval(() => {
+          checkCount++;
           
-          if (popupUrl && !popupUrl.includes('login') && !popupUrl.includes('signin')) {
-            addDebugLog('Popup authentication appears successful');
-            popup.close();
-            clearInterval(checkPopup);
-            resolve({ 
-              success: true, 
-              videoUrl: videoUrl,
-              sessionInfo: { authenticatedViaPopup: true, timestamp: Date.now() }
-            });
-          }
-        } catch (error) {
-          // Cross-origin error is expected, continue checking
-          addDebugLog(`Popup check error (expected): ${error}`);
-        }
-      }, 1000);
+          try {
+            if (popup.closed) {
+              addDebugLog('Popup closed by user');
+              clearInterval(checkPopup);
+              // Assume success if user closed it manually (they might have authenticated)
+              resolve({ 
+                success: true, 
+                videoUrl: videoUrl,
+                sessionInfo: { authenticatedViaPopup: true, timestamp: Date.now() }
+              });
+              return;
+            }
 
-      setTimeout(() => {
-        if (!popup.closed) {
-          popup.close();
-        }
-        clearInterval(checkPopup);
-        resolve({ success: false, error: 'Popup authentication timeout' });
-      }, 30000);
+            // Try to detect successful authentication by checking popup URL
+            try {
+              const popupUrl = popup.location.href;
+              if (popupUrl && !popupUrl.includes('login') && !popupUrl.includes('signin') && popupUrl.includes(urlInfo.hostname)) {
+                addDebugLog('Authentication detected - closing popup');
+                popup.close();
+                clearInterval(checkPopup);
+                resolve({ 
+                  success: true, 
+                  videoUrl: videoUrl,
+                  sessionInfo: { authenticatedViaPopup: true, timestamp: Date.now() }
+                });
+                return;
+              }
+            } catch (e) {
+              // Cross-origin error is expected, continue
+            }
+
+            if (checkCount >= maxChecks) {
+              addDebugLog('Popup authentication timeout');
+              if (!popup.closed) popup.close();
+              clearInterval(checkPopup);
+              resolve({ success: false, error: 'Authentication timeout - please try again' });
+            }
+          } catch (error) {
+            addDebugLog(`Popup check error: ${error}`);
+          }
+        }, 1000);
+
+      } catch (error) {
+        addDebugLog(`Failed to open popup: ${error}`);
+        resolve({ success: false, error: `Failed to open authentication window: ${error}` });
+      }
     });
   };
 
@@ -332,8 +367,19 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
   };
 
   const openInNewWindow = () => {
-    addDebugLog('Opening video in new window...');
-    window.open(videoUrl, '_blank', 'width=800,height=600,scrollbars=yes,resizable=yes');
+    addDebugLog('Opening video in new window for authentication...');
+    const newWindow = window.open(
+      videoUrl, 
+      '_blank', 
+      'width=1200,height=800,scrollbars=yes,resizable=yes,location=yes,menubar=yes,toolbar=yes'
+    );
+    
+    if (!newWindow) {
+      setAuthError('Popup blocked - please allow popups and try again');
+    } else {
+      // Give user feedback that they should authenticate in the new window
+      setAuthError('Please sign in to SharePoint in the new window, then return here and click "Retry Authentication"');
+    }
   };
 
   if (authStatus === 'checking') {
@@ -432,38 +478,48 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
           SharePoint Authentication Required
         </h3>
         
-        <p className="text-gray-600">
-          This video requires SharePoint authentication. Try one of the options below:
-        </p>
+        <div className="space-y-4">
+          <p className="text-gray-600 text-sm">
+            This video requires SharePoint authentication. Please try one of these options:
+          </p>
 
-        <div className="space-y-3">
-          <button
-            onClick={openInNewWindow}
-            className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            Open Video in New Window
-          </button>
-          
-          <button
-            onClick={retryAuthentication}
-            className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200"
-          >
-            Retry Authentication
-          </button>
-          
-          <button
-            onClick={clearAuthAndRetry}
-            className="w-full text-sm text-gray-600 hover:text-gray-800 underline"
-          >
-            Clear Cache and Retry
-          </button>
-          
-          <button
-            onClick={() => setShowDebugLogs(!showDebugLogs)}
-            className="w-full text-xs text-gray-500 hover:text-gray-700 underline"
-          >
-            {showDebugLogs ? 'Hide' : 'Show'} Debug Information
-          </button>
+          <div className="bg-blue-50 border border-blue-200 rounded p-3">
+            <h4 className="font-medium text-blue-900 text-sm mb-2">Recommended: Authenticate in New Window</h4>
+            <p className="text-xs text-blue-700 mb-3">
+              1. Click "Open & Authenticate" below<br/>
+              2. Sign in to SharePoint in the new window<br/>
+              3. Return here and click "Retry Authentication"
+            </p>
+            <button
+              onClick={openInNewWindow}
+              className="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm"
+            >
+              Open & Authenticate in New Window
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            <button
+              onClick={retryAuthentication}
+              className="w-full bg-gray-100 text-gray-700 px-4 py-2 rounded hover:bg-gray-200 text-sm"
+            >
+              Retry Authentication
+            </button>
+            
+            <button
+              onClick={clearAuthAndRetry}
+              className="w-full text-sm text-gray-600 hover:text-gray-800 underline"
+            >
+              Clear Cache and Retry
+            </button>
+            
+            <button
+              onClick={() => setShowDebugLogs(!showDebugLogs)}
+              className="w-full text-xs text-gray-500 hover:text-gray-700 underline"
+            >
+              {showDebugLogs ? 'Hide' : 'Show'} Debug Information
+            </button>
+          </div>
         </div>
 
         {authError && (
