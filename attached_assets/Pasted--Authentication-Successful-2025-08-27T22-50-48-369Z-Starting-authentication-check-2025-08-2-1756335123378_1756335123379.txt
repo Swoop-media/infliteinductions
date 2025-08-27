@@ -1,0 +1,22 @@
+✓ Authentication Successful
+[2025-08-27T22:50:48.369Z] Starting authentication check...
+[2025-08-27T22:50:48.370Z] Parsed URL info: {"origin":"https://charterinflight.sharepoint.com","hostname":"charterinflight.sharepoint.com","pathname":"/sites/INFLITEHeliAOC/_layouts/15/embed.aspx","search":"?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451","isMicrosoft365":true,"isVideo":false,"tenantInfo":"charterinflight"}
+[2025-08-27T22:50:48.370Z] Trying strategy: direct-embed
+[2025-08-27T22:50:48.606Z] Direct embed test: Image failed (likely not authenticated)
+[2025-08-27T22:50:48.607Z] Strategy direct-embed failed: Direct embed failed - authentication required
+[2025-08-27T22:50:48.607Z] Trying strategy: iframe-with-auth
+[2025-08-27T22:50:48.879Z] Iframe auth test: Sign in required
+[2025-08-27T22:50:48.880Z] Strategy iframe-with-auth failed: Sign in required
+[2025-08-27T22:50:48.880Z] Trying strategy: proxy-request
+[2025-08-27T22:50:48.880Z] Testing proxy request...
+[2025-08-27T22:50:49.142Z] Proxy request response: {"success":false,"error":"SharePoint authentication required","suggestion":"Use popup authentication or open in new window","authUrl":"https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451","isSharePoint":true}
+[2025-08-27T22:50:49.142Z] Proxy indicated failure: SharePoint authentication required
+[2025-08-27T22:50:49.142Z] Strategy proxy-request failed: SharePoint authentication required
+[2025-08-27T22:50:49.142Z] Trying strategy: popup-auth
+[2025-08-27T22:50:49.142Z] Attempting popup authentication...
+[2025-08-27T22:50:49.157Z] Popup opened successfully
+[2025-08-27T22:51:26.161Z] Popup closed by user - attempting to embed video directly
+[2025-08-27T22:51:28.169Z] Testing direct embed after authentication...
+[2025-08-27T22:51:28.450Z] Test iframe loaded successfully - direct embed should work
+[2025-08-27T22:51:28.451Z] Authentication verified - can embed directly
+[2025-08-27T22:51:28.451Z] Strategy popup-auth succeeded
