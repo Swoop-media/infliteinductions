@@ -1248,7 +1248,7 @@ async function BlockView({ block }: { block: any }) {
 
     return url ? (
       <VideoPlayer 
-                    url={url} 
+                    videoUrl={url} 
                     courseId={block.course_id}
                   />
     ) : (

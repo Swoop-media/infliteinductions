@@ -5,10 +5,11 @@ import { useState, useEffect } from "react";
 
 interface VideoPlayerProps {
   videoUrl: string;
+  courseId?: string;
   title?: string;
 }
 
-export default function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
+export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerProps) {
   const [authStatus, setAuthStatus] = useState<'checking' | 'authenticated' | 'unauthenticated' | 'error'>('checking');
   const [authError, setAuthError] = useState<string | null>(null);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
@@ -25,6 +26,12 @@ export default function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
 
   useEffect(() => {
     addDebugLog(`Component mounted with videoUrl: ${videoUrl}`);
+    if (!videoUrl) {
+      addDebugLog('VideoUrl is undefined - cannot proceed');
+      setAuthError('No video URL provided');
+      setAuthStatus('error');
+      return;
+    }
     checkAuthAndLoadVideo();
   }, [videoUrl]);
 
@@ -156,28 +163,28 @@ export default function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
             const iframeDoc = iframe.contentDocument;
             if (iframeDoc && !iframeDoc.body.innerHTML.includes('sign in')) {
               addDebugLog('Iframe auth test: Content loaded successfully');
-              document.body.removeChild(iframe);
+              if (iframe.parentNode) document.body.removeChild(iframe);
               resolve({ success: true, videoUrl: videoUrl });
             } else {
               addDebugLog('Iframe auth test: Sign in required');
-              document.body.removeChild(iframe);
+              if (iframe.parentNode) document.body.removeChild(iframe);
               resolve({ success: false, error: 'Sign in required' });
             }
           } catch (error) {
             addDebugLog(`Iframe auth test: Cross-origin error (expected): ${error}`);
-            document.body.removeChild(iframe);
+            if (iframe.parentNode) document.body.removeChild(iframe);
             resolve({ success: false, error: 'Cross-origin restriction' });
           }
         };
 
         iframe.onerror = () => {
           addDebugLog('Iframe auth test: Load error');
-          document.body.removeChild(iframe);
+          if (iframe.parentNode) document.body.removeChild(iframe);
           resolve({ success: false, error: 'Iframe load error' });
         };
 
         setTimeout(() => {
-          document.body.removeChild(iframe);
+          if (iframe.parentNode) document.body.removeChild(iframe);
           resolve({ success: false, error: 'Iframe test timeout' });
         }, 5000);
       });
