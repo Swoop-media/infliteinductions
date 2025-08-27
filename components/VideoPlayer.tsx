@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -58,7 +57,7 @@ export default function VideoPlayer({ url, courseId }: VideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  
+
   const { provider, embedUrl } = getVideoProvider(url);
 
   useEffect(() => {
@@ -132,7 +131,7 @@ export default function VideoPlayer({ url, courseId }: VideoPlayerProps) {
           </div>
         </div>
       )}
-      
+
       <iframe
         key={`${embedUrl}-${retryCount}`}
         src={embedUrl}
