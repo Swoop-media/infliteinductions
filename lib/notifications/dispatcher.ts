@@ -78,6 +78,16 @@ function formatTeamsText(
         .filter(Boolean)
         .join("\n");
 
+    case "onsite_training_ready":
+      return [
+        "🎯 Learner ready for onsite training",
+        learner ? `• Learner: ${learner}` : "",
+        course ? `• Course: ${course}` : "",
+        url ? `• Train/Assess dashboard: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
     case "course_assigned":
       return [
         "📚 Course assigned",

@@ -1,0 +1,164 @@
+
+-- Function to notify onsite trainers when a learner is ready for onsite training
+CREATE OR REPLACE FUNCTION notify_onsite_training_ready()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_enrolment_id UUID;
+  v_course_id UUID;
+  v_learner_id UUID;
+  v_learner_name TEXT;
+  v_learner_email TEXT;
+  v_course_title TEXT;
+  v_trainer_id UUID;
+  v_site_url TEXT := COALESCE(current_setting('app.site_url', true), 'http://localhost:3000');
+  v_digital_modules_count INTEGER;
+  v_completed_digital_count INTEGER;
+  v_has_onsite_training BOOLEAN := FALSE;
+  v_onsite_training_completed BOOLEAN := FALSE;
+BEGIN
+  -- Get the enrolment info
+  IF TG_TABLE_NAME = 'assignment_progress' THEN
+    -- For assignments
+    SELECT ca.course_id, ca.user_id, ca.id as assignment_id
+    INTO v_course_id, v_learner_id, v_enrolment_id
+    FROM course_assignments ca
+    WHERE ca.id = NEW.assignment_id;
+  ELSE
+    -- For regular enrolments
+    SELECT e.course_id, e.user_id, e.id
+    INTO v_course_id, v_learner_id, v_enrolment_id
+    FROM course_enrolments e
+    WHERE e.id = NEW.enrolment_id;
+  END IF;
+
+  -- Skip if we don't have the required info
+  IF v_course_id IS NULL OR v_learner_id IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  -- Get learner info
+  SELECT 
+    COALESCE(p.name, au.email) as name,
+    au.email
+  INTO v_learner_name, v_learner_email
+  FROM auth.users au
+  LEFT JOIN profiles p ON p.id = au.id
+  WHERE au.id = v_learner_id;
+
+  -- Get course title
+  SELECT title INTO v_course_title FROM courses WHERE id = v_course_id;
+
+  -- Check if course has onsite training module
+  SELECT EXISTS(
+    SELECT 1 FROM course_modules 
+    WHERE course_id = v_course_id AND type = 'onsite_training'
+  ) INTO v_has_onsite_training;
+
+  -- Skip if no onsite training required
+  IF NOT v_has_onsite_training THEN
+    RETURN NEW;
+  END IF;
+
+  -- Count total digital modules (training + assessment)
+  SELECT COUNT(*) INTO v_digital_modules_count
+  FROM course_modules
+  WHERE course_id = v_course_id 
+  AND type IN ('digital_training', 'digital_assessment_quiz');
+
+  -- Count completed digital modules
+  IF TG_TABLE_NAME = 'assignment_progress' THEN
+    SELECT COUNT(*) INTO v_completed_digital_count
+    FROM assignment_progress ap
+    JOIN course_modules cm ON ap.module_id = cm.id
+    WHERE ap.assignment_id = NEW.assignment_id
+    AND cm.type IN ('digital_training', 'digital_assessment_quiz');
+  ELSE
+    SELECT COUNT(*) INTO v_completed_digital_count
+    FROM module_progress mp
+    JOIN course_modules cm ON mp.module_id = cm.id
+    WHERE mp.enrolment_id = NEW.enrolment_id
+    AND cm.type IN ('digital_training', 'digital_assessment_quiz');
+  END IF;
+
+  -- Check if onsite training is already completed
+  IF TG_TABLE_NAME = 'assignment_progress' THEN
+    SELECT EXISTS(
+      SELECT 1 FROM assignment_progress ap
+      JOIN course_modules cm ON ap.module_id = cm.id
+      WHERE ap.assignment_id = NEW.assignment_id
+      AND cm.type = 'onsite_training'
+    ) INTO v_onsite_training_completed;
+  ELSE
+    SELECT EXISTS(
+      SELECT 1 FROM module_progress mp
+      JOIN course_modules cm ON mp.module_id = cm.id
+      WHERE mp.enrolment_id = NEW.enrolment_id
+      AND cm.type = 'onsite_training'
+    ) INTO v_onsite_training_completed;
+  END IF;
+
+  -- Only proceed if all digital modules are complete and onsite training is not yet done
+  IF v_completed_digital_count >= v_digital_modules_count AND NOT v_onsite_training_completed THEN
+    
+    RAISE LOG 'Learner % ready for onsite training in course %', v_learner_name, v_course_title;
+
+    -- Notify all onsite trainers assigned to this course
+    FOR v_trainer_id IN
+      SELECT DISTINCT ca.user_id
+      FROM course_assignments ca
+      WHERE ca.course_id = v_course_id 
+      AND ca.role = 'onsite_trainer'
+    LOOP
+      BEGIN
+        INSERT INTO notifications (
+          recipient_id,
+          type,
+          payload,
+          read
+        ) VALUES (
+          v_trainer_id,
+          'onsite_training_ready',
+          jsonb_build_object(
+            'learner_id', v_learner_id,
+            'course_id', v_course_id,
+            'enrolment_id', v_enrolment_id,
+            'learnerName', v_learner_name,
+            'learner_email', v_learner_email,
+            'courseTitle', v_course_title,
+            'course_title', v_course_title,
+            'url', v_site_url || '/app/train-assess',
+            'event_id', 'onsite_ready_' || v_learner_id::text || '_' || v_course_id::text
+          ),
+          false
+        );
+        
+        RAISE LOG 'Notification sent to trainer: %', v_trainer_id;
+        
+      EXCEPTION
+        WHEN OTHERS THEN
+          RAISE WARNING 'Failed to notify trainer %: % (SQLSTATE: %)', 
+            v_trainer_id, SQLERRM, SQLSTATE;
+      END;
+    END LOOP;
+
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+-- Create triggers for both assignment_progress and module_progress tables
+DROP TRIGGER IF EXISTS trg_notify_onsite_training_ready_assignment ON assignment_progress;
+CREATE TRIGGER trg_notify_onsite_training_ready_assignment
+  AFTER INSERT ON assignment_progress
+  FOR EACH ROW
+  EXECUTE FUNCTION notify_onsite_training_ready();
+
+DROP TRIGGER IF EXISTS trg_notify_onsite_training_ready_module ON module_progress;
+CREATE TRIGGER trg_notify_onsite_training_ready_module
+  AFTER INSERT ON module_progress
+  FOR EACH ROW
+  EXECUTE FUNCTION notify_onsite_training_ready();
