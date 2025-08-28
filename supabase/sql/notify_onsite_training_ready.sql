@@ -1,4 +1,3 @@
-
 -- Function to notify onsite trainers when a learner is ready for onsite training
 CREATE OR REPLACE FUNCTION notify_onsite_training_ready()
 RETURNS TRIGGER
@@ -20,7 +19,7 @@ DECLARE
   v_onsite_training_completed BOOLEAN := FALSE;
 BEGIN
   RAISE LOG 'notify_onsite_training_ready triggered: table=%, operation=%', TG_TABLE_NAME, TG_OP;
-  
+
   -- Get the enrolment info
   IF TG_TABLE_NAME = 'assignment_progress' THEN
     -- For assignments
@@ -113,7 +112,7 @@ BEGIN
 
   -- Only proceed if all digital modules are complete and onsite training is not yet done
   IF v_completed_digital_count >= v_digital_modules_count AND NOT v_onsite_training_completed THEN
-    
+
     RAISE LOG 'Learner % ready for onsite training in course %', v_learner_name, v_course_title;
 
     -- Notify all onsite trainers assigned to this course
@@ -145,9 +144,9 @@ BEGIN
           ),
           false
         );
-        
+
         RAISE LOG 'Notification sent to trainer: %', v_trainer_id;
-        
+
       EXCEPTION
         WHEN OTHERS THEN
           RAISE WARNING 'Failed to notify trainer %: % (SQLSTATE: %)', 
@@ -161,37 +160,6 @@ BEGIN
   END IF;
 
   RETURN NEW;
-END;
-$$;
-
--- Manual trigger function for debugging
-CREATE OR REPLACE FUNCTION notify_onsite_training_ready_manual(
-  p_assignment_id UUID,
-  p_user_id UUID,
-  p_course_id UUID
-)
-RETURNS TEXT
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-DECLARE
-  v_result TEXT := '';
-  fake_record assignment_progress;
-BEGIN
-  -- Create a fake NEW record to simulate the trigger
-  fake_record.assignment_id := p_assignment_id;
-  
-  -- Set trigger context
-  TG_TABLE_NAME := 'assignment_progress';
-  TG_OP := 'INSERT';
-  
-  -- Call the main function with our fake record
-  PERFORM notify_onsite_training_ready();
-  
-  v_result := 'Manual trigger executed for assignment: ' || p_assignment_id::text;
-  RAISE LOG '%', v_result;
-  
-  RETURN v_result;
 END;
 $$;
 
