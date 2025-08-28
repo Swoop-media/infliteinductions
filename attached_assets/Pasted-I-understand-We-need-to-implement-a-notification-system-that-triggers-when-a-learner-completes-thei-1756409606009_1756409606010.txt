@@ -1,0 +1,41 @@
+I understand! We need to implement a notification system that triggers when a learner completes their digital training and assessment phases, notifying the assigned onsite trainers and making the learner appear in the Train/Assess dashboard.
+
+Looking at your codebase, I can see you already have the notification infrastructure in place. We need to:
+
+Create a trigger that fires when learners complete digital phases
+Notify onsite trainers assigned to that course
+Ensure the Train/Assess page shows these learners
+Let me implement this system:
+
+supabase/sql/notify_onsite_training_ready.sql
+Create notification system for onsite training readiness
+lib/notifications/dispatcher.ts
+Add onsite training ready notification formatting
+Now we need to run this SQL to set up the notification system:
+
+npx supabase db push --file supabase/sql/notify_onsite_training_ready.sql
+The system I've implemented works as follows:
+
+Trigger Setup: When a learner completes a module (either through assignment_progress or module_progress), the trigger checks if:
+
+All digital training and assessment modules are completed
+The course has an onsite training module
+The onsite training hasn't been completed yet
+Notification Logic: If all conditions are met, it:
+
+Finds all users assigned as onsite_trainer for that course
+Creates notifications for each trainer
+Includes learner details, course info, and a link to the Train/Assess dashboard
+Integration: The existing Train/Assess page already filters correctly to show learners who have completed digital phases but not onsite training, so those learners will automatically appear in the dashboard.
+
+Teams Integration: The notification dispatcher will also send Teams messages to trainers (if they have Teams linked) letting them know a learner is ready.
+
+The beauty of this approach is that it leverages your existing notification infrastructure and the Train/Assess page logic, so trainers will be notified both in-app and via Teams, and the learners will automatically appear in their pending training list.
+
+Apply all:
+Edit file
+supabase/sql/notify_onsite_training_ready.sql
+Edit file
+lib/notifications/dispatcher.ts
+Run shell command:
+npx supabase db push --file supabase/sql/notify_onsite_training_ready.sq
