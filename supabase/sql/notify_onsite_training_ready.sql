@@ -19,6 +19,8 @@ DECLARE
   v_has_onsite_training BOOLEAN := FALSE;
   v_onsite_training_completed BOOLEAN := FALSE;
 BEGIN
+  RAISE LOG 'notify_onsite_training_ready triggered: table=%, operation=%', TG_TABLE_NAME, TG_OP;
+  
   -- Get the enrolment info
   IF TG_TABLE_NAME = 'assignment_progress' THEN
     -- For assignments
@@ -36,8 +38,11 @@ BEGIN
 
   -- Skip if we don't have the required info
   IF v_course_id IS NULL OR v_learner_id IS NULL THEN
+    RAISE LOG 'notify_onsite_training_ready: Missing course_id (%) or learner_id (%), skipping', v_course_id, v_learner_id;
     RETURN NEW;
   END IF;
+
+  RAISE LOG 'notify_onsite_training_ready: Processing course_id=%, learner_id=%, enrolment_id=%', v_course_id, v_learner_id, v_enrolment_id;
 
   -- Get learner info
   SELECT 
@@ -59,8 +64,11 @@ BEGIN
 
   -- Skip if no onsite training required
   IF NOT v_has_onsite_training THEN
+    RAISE LOG 'notify_onsite_training_ready: Course % has no onsite training module, skipping', v_course_title;
     RETURN NEW;
   END IF;
+
+  RAISE LOG 'notify_onsite_training_ready: Course % has onsite training module', v_course_title;
 
   -- Count total digital modules (training + assessment)
   SELECT COUNT(*) INTO v_digital_modules_count
@@ -99,6 +107,9 @@ BEGIN
       AND cm.type = 'onsite_training'
     ) INTO v_onsite_training_completed;
   END IF;
+
+  RAISE LOG 'notify_onsite_training_ready: Digital modules: %/% completed, onsite training completed: %', 
+    v_completed_digital_count, v_digital_modules_count, v_onsite_training_completed;
 
   -- Only proceed if all digital modules are complete and onsite training is not yet done
   IF v_completed_digital_count >= v_digital_modules_count AND NOT v_onsite_training_completed THEN
@@ -144,9 +155,43 @@ BEGIN
       END;
     END LOOP;
 
+  ELSE
+    RAISE LOG 'notify_onsite_training_ready: Conditions not met for %. Digital: %/%, onsite completed: %', 
+      v_learner_name, v_completed_digital_count, v_digital_modules_count, v_onsite_training_completed;
   END IF;
 
   RETURN NEW;
+END;
+$$;
+
+-- Manual trigger function for debugging
+CREATE OR REPLACE FUNCTION notify_onsite_training_ready_manual(
+  p_assignment_id UUID,
+  p_user_id UUID,
+  p_course_id UUID
+)
+RETURNS TEXT
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_result TEXT := '';
+  fake_record assignment_progress;
+BEGIN
+  -- Create a fake NEW record to simulate the trigger
+  fake_record.assignment_id := p_assignment_id;
+  
+  -- Set trigger context
+  TG_TABLE_NAME := 'assignment_progress';
+  TG_OP := 'INSERT';
+  
+  -- Call the main function with our fake record
+  PERFORM notify_onsite_training_ready();
+  
+  v_result := 'Manual trigger executed for assignment: ' || p_assignment_id::text;
+  RAISE LOG '%', v_result;
+  
+  RETURN v_result;
 END;
 $$;
 
