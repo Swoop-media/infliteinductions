@@ -54,7 +54,7 @@ export default async function TrainAssessPage() {
 
   // Fetch pending onsite training (where user is assigned as onsite_trainer)
   // First try course_enrolments
-  const { data: pendingTraining = [] } = trainerCourseIds.length > 0 
+  const pendingTrainingQuery = trainerCourseIds.length > 0 
     ? await supabase
         .from("course_enrolments")
         .select(`
@@ -70,10 +70,12 @@ export default async function TrainAssessPage() {
         .in("course_id", trainerCourseIds)
     : { data: [] };
 
+  const pendingTraining = pendingTrainingQuery.data || [];
+
   console.log('Pending training from course_enrolments:', pendingTraining);
 
   // Also fetch from course_assignments (trainee assignments)
-  const { data: pendingTrainingAssignments = [] } = trainerCourseIds.length > 0 
+  const pendingTrainingAssignmentsQuery = trainerCourseIds.length > 0 
     ? await supabase
         .from("course_assignments")
         .select(`
@@ -87,6 +89,8 @@ export default async function TrainAssessPage() {
         .eq("role", "trainee")
         .in("course_id", trainerCourseIds)
     : { data: [] };
+
+  const pendingTrainingAssignments = pendingTrainingAssignmentsQuery.data || [];
 
   console.log('Pending training from course_assignments:', pendingTrainingAssignments);
 
@@ -284,7 +288,7 @@ export default async function TrainAssessPage() {
 
   // Fetch pending assessments (where user is assigned as onsite_assessor)
   // First try course_enrolments
-  const { data: pendingAssessments = [] } = assessorCourseIds.length > 0
+  const pendingAssessmentsQuery = assessorCourseIds.length > 0
     ? await supabase
         .from("course_enrolments")
         .select(`
@@ -299,8 +303,10 @@ export default async function TrainAssessPage() {
         .in("course_id", assessorCourseIds)
     : { data: [] };
 
+  const pendingAssessments = pendingAssessmentsQuery.data || [];
+
   // Also fetch from course_assignments (trainee assignments)
-  const { data: pendingAssessmentAssignments = [] } = assessorCourseIds.length > 0 
+  const pendingAssessmentAssignmentsQuery = assessorCourseIds.length > 0 
     ? await supabase
         .from("course_assignments")
         .select(`
@@ -315,11 +321,13 @@ export default async function TrainAssessPage() {
         .in("course_id", assessorCourseIds)
     : { data: [] };
 
+  const pendingAssessmentAssignments = pendingAssessmentAssignmentsQuery.data || [];
+
   // Filter for enrolments that have completed onsite training but not assessment
   const pendingAssessmentItems: PendingAssessment[] = [];
 
   // Process regular enrolments
-  for (const enrolment of pendingAssessments || []) {
+  for (const enrolment of pendingAssessments) {
     // Check if course has onsite_assessment module
     const { data: onsiteAssessmentModule } = await supabase
       .from("course_modules")
@@ -370,7 +378,7 @@ export default async function TrainAssessPage() {
   }
 
   // Process course assignments for assessments
-  for (const assignment of pendingAssessmentAssignments || []) {
+  for (const assignment of pendingAssessmentAssignments) {
     // Check if course has onsite_assessment module
     const { data: onsiteAssessmentModule } = await supabase
       .from("course_modules")
