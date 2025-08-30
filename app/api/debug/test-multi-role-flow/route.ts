@@ -1,0 +1,159 @@
+
+import { NextResponse } from "next/server";
+import { createSupabaseService } from "@/lib/supabase/service";
+
+export async function POST(req: Request) {
+  try {
+    const supabase = await createSupabaseService();
+    const { userId, courseId, step } = await req.json();
+
+    console.log(`=== TESTING MULTI-ROLE FLOW: ${step} ===`);
+
+    if (step === "1_complete_digital") {
+      // Step 1: Complete all digital modules for the trainee
+      
+      // Get trainee assignment
+      const { data: assignment } = await supabase
+        .from("course_assignments")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("course_id", courseId)
+        .eq("role", "trainee")
+        .single();
+
+      if (!assignment) {
+        return NextResponse.json({ error: "No trainee assignment found" });
+      }
+
+      // Get all digital modules
+      const { data: digitalModules } = await supabase
+        .from("course_modules")
+        .select("id, title, type")
+        .eq("course_id", courseId)
+        .in("type", ["digital_training", "digital_assessment_quiz"]);
+
+      // Mark all digital modules as complete
+      for (const module of digitalModules || []) {
+        await supabase
+          .from("assignment_progress")
+          .upsert({
+            assignment_id: assignment.id,
+            module_id: module.id,
+            completed_at: new Date().toISOString()
+          });
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: `Completed ${digitalModules?.length} digital modules`,
+        nextStep: "2_complete_onsite_training"
+      });
+    }
+
+    if (step === "2_complete_onsite_training") {
+      // Step 2: Complete onsite training (trainer marks it complete)
+      
+      // Get trainer assignment
+      const { data: trainerAssignment } = await supabase
+        .from("course_assignments")
+        .select("id")
+        .eq("user_id", userId) // This should be the trainer's ID
+        .eq("course_id", courseId)
+        .eq("role", "onsite_trainer")
+        .single();
+
+      // Get trainee assignment (the one being trained)
+      const { data: traineeAssignment } = await supabase
+        .from("course_assignments")
+        .select("id")
+        .eq("course_id", courseId)
+        .eq("role", "trainee")
+        .single();
+
+      if (!traineeAssignment) {
+        return NextResponse.json({ error: "No trainee assignment found" });
+      }
+
+      // Get onsite training module
+      const { data: onsiteModule } = await supabase
+        .from("course_modules")
+        .select("id, title")
+        .eq("course_id", courseId)
+        .eq("type", "onsite_training")
+        .single();
+
+      if (onsiteModule) {
+        // Mark onsite training as complete for the trainee
+        await supabase
+          .from("assignment_progress")
+          .upsert({
+            assignment_id: traineeAssignment.id,
+            module_id: onsiteModule.id,
+            completed_at: new Date().toISOString()
+          });
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: "Onsite training completed",
+        nextStep: "3_complete_assessment"
+      });
+    }
+
+    if (step === "3_complete_assessment") {
+      // Step 3: Complete final assessment (assessor marks it complete)
+      
+      // Get trainee assignment
+      const { data: traineeAssignment } = await supabase
+        .from("course_assignments")
+        .select("id")
+        .eq("course_id", courseId)
+        .eq("role", "trainee")
+        .single();
+
+      if (!traineeAssignment) {
+        return NextResponse.json({ error: "No trainee assignment found" });
+      }
+
+      // Get onsite assessment module
+      const { data: assessmentModule } = await supabase
+        .from("course_modules")
+        .select("id, title")
+        .eq("course_id", courseId)
+        .eq("type", "onsite_assessment")
+        .single();
+
+      if (assessmentModule) {
+        // Mark assessment as complete for the trainee
+        await supabase
+          .from("assignment_progress")
+          .upsert({
+            assignment_id: traineeAssignment.id,
+            module_id: assessmentModule.id,
+            completed_at: new Date().toISOString()
+          });
+
+        // Mark the entire assignment as completed
+        await supabase
+          .from("course_assignments")
+          .update({
+            assignment_status: "completed",
+            completed_at: new Date().toISOString()
+          })
+          .eq("id", traineeAssignment.id);
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: "Final assessment completed - Course fully complete!",
+        nextStep: "complete"
+      });
+    }
+
+    return NextResponse.json({ error: "Invalid step" });
+
+  } catch (error: any) {
+    console.error("Multi-role flow test error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
