@@ -1,11 +1,10 @@
-
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 export default async function DebugNotificationsPage() {
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   if (!user) redirect("/auth/signin");
 
   // Get some test data
@@ -17,7 +16,7 @@ export default async function DebugNotificationsPage() {
 
   const { data: users } = await supabase
     .from("profiles")
-    .select("id, name, email")
+    .select("id, display_name, email")
     .limit(20);
 
   return (
@@ -39,12 +38,12 @@ export default async function DebugNotificationsPage() {
                 <option value="">Select a user...</option>
                 {users?.map(user => (
                   <option key={user.id} value={user.id}>
-                    {user.name || user.email} ({user.email})
+                    {user.display_name || user.email} ({user.email})
                   </option>
                 ))}
               </select>
             </div>
-            
+
             <div>
               <label className="block text-sm font-medium mb-2">Select Course:</label>
               <select name="courseId" required className="w-full border rounded px-3 py-2">
@@ -56,7 +55,7 @@ export default async function DebugNotificationsPage() {
                 ))}
               </select>
             </div>
-            
+
             <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
               Debug Flow
             </button>
@@ -76,12 +75,12 @@ export default async function DebugNotificationsPage() {
                   <option value="">Select a user...</option>
                   {users?.map(user => (
                     <option key={user.id} value={user.id}>
-                      {user.name || user.email} ({user.email})
+                      {user.display_name || user.email} ({user.email})
                     </option>
                   ))}
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium mb-2">Select Course:</label>
                 <select name="courseId" required className="w-full border rounded px-3 py-2">
@@ -93,7 +92,7 @@ export default async function DebugNotificationsPage() {
                   ))}
                 </select>
               </div>
-              
+
               <button type="submit" className="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">
                 Manual Trigger
               </button>
@@ -114,14 +113,14 @@ export default async function DebugNotificationsPage() {
             e.preventDefault();
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData);
-            
+
             try {
               const response = await fetch('/api/debug/test-trigger', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
               });
-              
+
               const result = await response.json();
               document.getElementById('triggerResult').innerHTML = 
                 '<pre class="bg-gray-100 p-2 rounded text-xs overflow-auto">' + 
@@ -139,7 +138,7 @@ export default async function DebugNotificationsPage() {
 
 async function RecentNotifications() {
   const supabase = await createSupabaseServer();
-  
+
   const { data: notifications } = await supabase
     .from("notifications")
     .select(`

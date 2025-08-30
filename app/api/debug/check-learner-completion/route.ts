@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
@@ -12,7 +11,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const userId = searchParams.get("userId");
   const courseId = searchParams.get("courseId");
-  
+
   if (!userId || !courseId) {
     return NextResponse.json({ error: "Missing userId or courseId" }, { status: 400 });
   }
@@ -29,7 +28,7 @@ export async function GET(request: NextRequest) {
     // 1. Get learner info
     const { data: learner, error: learnerError } = await supabase
       .from("profiles")
-      .select("name, email")
+      .select("display_name, email")
       .eq("id", userId)
       .single();
 
@@ -84,7 +83,7 @@ export async function GET(request: NextRequest) {
 
     // 5. Check progress based on assignment vs enrolment
     let completedModules: any[] = [];
-    
+
     if (assignment) {
       const { data: assignmentProgress, error: progressError } = await supabase
         .from("assignment_progress")
@@ -97,7 +96,7 @@ export async function GET(request: NextRequest) {
         data: assignmentProgress,
         error: progressError
       };
-      
+
       completedModules = assignmentProgress || [];
     } else if (enrolment) {
       const { data: moduleProgress, error: progressError } = await supabase
@@ -111,7 +110,7 @@ export async function GET(request: NextRequest) {
         data: moduleProgress,
         error: progressError
       };
-      
+
       completedModules = moduleProgress || [];
     }
 
@@ -169,12 +168,12 @@ export async function GET(request: NextRequest) {
       error: notificationsError
     };
 
-    // 9. Check onsite trainers for this course
+    // 10. Check onsite trainers for this course
     const { data: trainers, error: trainersError } = await supabase
       .from("course_assignments")
       .select(`
         user_id,
-        profiles!inner(name, email)
+        profiles!course_assignments_user_fk(display_name, email)
       `)
       .eq("course_id", courseId)
       .eq("role", "onsite_trainer");
@@ -183,7 +182,7 @@ export async function GET(request: NextRequest) {
       count: trainers?.length || 0,
       trainers: trainers?.map(t => ({
         user_id: t.user_id,
-        name: (t as any).profiles.name,
+        name: (t as any).profiles.display_name,
         email: (t as any).profiles.email
       })),
       error: trainersError
