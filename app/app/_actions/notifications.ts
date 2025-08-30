@@ -277,6 +277,11 @@ export async function createNotification(input: NotificationInput) {
   }
 
   if (error) {
+    // If it's a duplicate notification (unique constraint violation), that's fine - just return success
+    if (error.code === "23505") {
+      console.log(`Duplicate notification detected (event already exists), skipping: ${error.message}`);
+      return { id: "duplicate", skipped: true };
+    }
     throw new Error(`Failed to save notification: ${error.message}`);
   }
 

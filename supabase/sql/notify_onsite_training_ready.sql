@@ -148,6 +148,9 @@ BEGIN
         RAISE LOG 'Notification sent to trainer: %', v_trainer_id;
 
       EXCEPTION
+        WHEN unique_violation THEN
+          RAISE LOG 'Notification already exists for trainer % (learner % in course %), skipping', 
+            v_trainer_id, v_learner_name, v_course_title;
         WHEN OTHERS THEN
           RAISE WARNING 'Failed to notify trainer %: % (SQLSTATE: %)', 
             v_trainer_id, SQLERRM, SQLSTATE;
