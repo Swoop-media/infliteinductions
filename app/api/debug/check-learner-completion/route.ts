@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // 1. Get learner info
     const { data: learner, error: learnerError } = await supabase
       .from("profiles")
-      .select("display_name, email")
+      .select("full_name, email")
       .eq("id", userId)
       .single();
 
@@ -173,7 +173,7 @@ export async function GET(request: NextRequest) {
       .from("course_assignments")
       .select(`
         user_id,
-        profiles!course_assignments_user_fk(display_name, email)
+        profiles!course_assignments_user_fk(full_name, email)
       `)
       .eq("course_id", courseId)
       .eq("role", "onsite_trainer");
@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
       count: trainers?.length || 0,
       trainers: trainers?.map(t => ({
         user_id: t.user_id,
-        name: (t as any).profiles.display_name,
+        name: (t as any).profiles.full_name,
         email: (t as any).profiles.email
       })),
       error: trainersError

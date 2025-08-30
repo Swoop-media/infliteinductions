@@ -1,6 +1,65 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
+async function RecentNotifications() {
+  const supabase = await createSupabaseServer();
+
+  const { data: notifications } = await supabase
+    .from("notifications")
+    .select(`
+      *,
+      profiles!inner(full_name, email)
+    `)
+    .eq("type", "onsite_training_ready")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  return (
+    <div className="border rounded-lg overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-4 py-2 text-left">Recipient</th>
+            <th className="px-4 py-2 text-left">Course</th>
+            <th className="px-4 py-2 text-left">Learner</th>
+            <th className="px-4 py-2 text-left">Created</th>
+            <th className="px-4 py-2 text-left">Read</th>
+          </tr>
+        </thead>
+        <tbody>
+          {notifications?.map((notif) => (
+            <tr key={notif.id} className="border-t">
+              <td className="px-4 py-2">
+                {(notif as any).profiles?.full_name || (notif as any).profiles?.email}
+              </td>
+              <td className="px-4 py-2">
+                {notif.payload?.courseTitle || 'N/A'}
+              </td>
+              <td className="px-4 py-2">
+                {notif.payload?.learnerName || 'N/A'}
+              </td>
+              <td className="px-4 py-2">
+                {new Date(notif.created_at).toLocaleString()}
+              </td>
+              <td className="px-4 py-2">
+                <span className={`px-2 py-1 text-xs rounded ${notif.read ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                  {notif.read ? 'Read' : 'Unread'}
+                </span>
+              </td>
+            </tr>
+          )) || (
+            <tr>
+              <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                No notifications found
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default async function DebugNotificationsPage() {
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
@@ -16,7 +75,12 @@ export default async function DebugNotificationsPage() {
 
   const { data: users } = await supabase
     .from("profiles")
-    .select("id, display_name, email")
+    .select(`
+      id,
+      full_name,
+      email,
+      department
+    `)
     .limit(20);
 
   return (
@@ -38,7 +102,7 @@ export default async function DebugNotificationsPage() {
                 <option value="">Select a user...</option>
                 {users?.map(user => (
                   <option key={user.id} value={user.id}>
-                    {user.display_name || user.email} ({user.email})
+                    {user.full_name || user.email} ({user.department || 'No dept'})
                   </option>
                 ))}
               </select>
@@ -75,7 +139,7 @@ export default async function DebugNotificationsPage() {
                   <option value="">Select a user...</option>
                   {users?.map(user => (
                     <option key={user.id} value={user.id}>
-                      {user.display_name || user.email} ({user.email})
+                      {user.full_name || user.email} ({user.department || 'No dept'})
                     </option>
                   ))}
                 </select>
@@ -132,65 +196,6 @@ export default async function DebugNotificationsPage() {
           });
         `
       }} />
-    </div>
-  );
-}
-
-async function RecentNotifications() {
-  const supabase = await createSupabaseServer();
-
-  const { data: notifications } = await supabase
-    .from("notifications")
-    .select(`
-      *,
-      profiles!inner(name, email)
-    `)
-    .eq("type", "onsite_training_ready")
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  return (
-    <div className="border rounded-lg overflow-hidden">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50">
-          <tr>
-            <th className="px-4 py-2 text-left">Recipient</th>
-            <th className="px-4 py-2 text-left">Course</th>
-            <th className="px-4 py-2 text-left">Learner</th>
-            <th className="px-4 py-2 text-left">Created</th>
-            <th className="px-4 py-2 text-left">Read</th>
-          </tr>
-        </thead>
-        <tbody>
-          {notifications?.map((notif) => (
-            <tr key={notif.id} className="border-t">
-              <td className="px-4 py-2">
-                {(notif as any).profiles?.name || (notif as any).profiles?.email}
-              </td>
-              <td className="px-4 py-2">
-                {notif.payload?.courseTitle || 'N/A'}
-              </td>
-              <td className="px-4 py-2">
-                {notif.payload?.learnerName || 'N/A'}
-              </td>
-              <td className="px-4 py-2">
-                {new Date(notif.created_at).toLocaleString()}
-              </td>
-              <td className="px-4 py-2">
-                <span className={`px-2 py-1 text-xs rounded ${notif.read ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                  {notif.read ? 'Read' : 'Unread'}
-                </span>
-              </td>
-            </tr>
-          )) || (
-            <tr>
-              <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
-                No notifications found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
     </div>
   );
 }
