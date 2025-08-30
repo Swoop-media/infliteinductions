@@ -50,6 +50,9 @@ export default async function TrainAssessPage() {
 
   const trainerCourseIds = trainerCourses.map(c => c.course_id);
 
+  console.log('Current user:', user.id);
+  console.log('Trainer course IDs:', trainerCourseIds);
+
   // Fetch pending onsite training (where user is assigned as onsite_trainer)
   // First try course_enrolments
   const { data: pendingTraining = [] } = trainerCourseIds.length > 0 
@@ -60,12 +63,15 @@ export default async function TrainAssessPage() {
           course_id,
           user_id,
           created_at,
+          status,
           courses!inner(id, title),
-          profiles!inner(id, name, email)
+          profiles(id, name, email)
         `)
         .eq("status", "approved")
         .in("course_id", trainerCourseIds)
     : { data: [] };
+
+  console.log('Pending training from course_enrolments:', pendingTraining);
 
   // Also fetch from course_assignments (trainee assignments)
   const { data: pendingTrainingAssignments = [] } = trainerCourseIds.length > 0 
@@ -125,12 +131,14 @@ export default async function TrainAssessPage() {
           .maybeSingle();
 
         if (!onsiteProgress) {
+          // Handle missing profile data gracefully
+          const profileData = (enrolment as any).profiles;
           pendingTrainingItems.push({
             enrolment_id: enrolment.id,
             course_id: enrolment.course_id,
             course_title: (enrolment as any).courses.title,
-            learner_name: (enrolment as any).profiles.name,
-            learner_email: (enrolment as any).profiles.email,
+            learner_name: profileData?.name || profileData?.email || 'Unknown',
+            learner_email: profileData?.email || 'No email',
             user_id: enrolment.user_id,
             created_at: enrolment.created_at
           });
@@ -146,12 +154,14 @@ export default async function TrainAssessPage() {
         .maybeSingle();
 
       if (!onsiteProgress) {
+        console.log('Adding to pending training (no digital modules):', enrolment.id);
+        const profileData = (enrolment as any).profiles;
         pendingTrainingItems.push({
           enrolment_id: enrolment.id,
           course_id: enrolment.course_id,
           course_title: (enrolment as any).courses.title,
-          learner_name: (enrolment as any).profiles.name,
-          learner_email: (enrolment as any).profiles.email,
+          learner_name: profileData?.name || profileData?.email || 'Unknown',
+          learner_email: profileData?.email || 'No email',
           user_id: enrolment.user_id,
           created_at: enrolment.created_at
         });
@@ -378,6 +388,9 @@ export default async function TrainAssessPage() {
       }
     }
   }
+
+  console.log('Final pending training items:', pendingTrainingItems);
+  console.log('Final pending assessment items:', pendingAssessmentItems);
 
   return (
     <div className="space-y-6">
