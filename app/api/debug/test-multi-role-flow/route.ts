@@ -150,6 +150,43 @@ export async function POST(req: Request) {
       });
     }
 
+    if (step === "check_completion") {
+      // Check if all roles have completed their parts
+      const { data: allAssignments } = await supabase
+        .from("course_assignments")
+        .select(`
+          id,
+          role,
+          assignment_status,
+          completed_at,
+          user_id,
+          profiles!course_assignments_user_id_fkey(full_name)
+        `)
+        .eq("course_id", courseId);
+
+      // Count completed modules for each assignment
+      const assignmentProgress = await Promise.all(
+        (allAssignments || []).map(async (assignment) => {
+          const { data: progress } = await supabase
+            .from("assignment_progress")
+            .select("module_id, completed_at")
+            .eq("assignment_id", assignment.id);
+
+          return {
+            ...assignment,
+            modules_completed: progress?.length || 0,
+            progress: progress || []
+          };
+        })
+      );
+
+      return NextResponse.json({ 
+        success: true, 
+        message: "Completion status checked",
+        assignments: assignmentProgress
+      });
+    }
+
     return NextResponse.json({ error: "Invalid step" });
 
   } catch (error: any) {
