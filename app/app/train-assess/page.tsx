@@ -51,6 +51,7 @@ export default async function TrainAssessPage() {
   const trainerCourseIds = trainerCourses.map(c => c.course_id);
 
   // Fetch pending onsite training (where user is assigned as onsite_trainer)
+  // First try course_enrolments
   const { data: pendingTraining = [] } = trainerCourseIds.length > 0 
     ? await supabase
         .from("course_enrolments")
@@ -66,9 +67,27 @@ export default async function TrainAssessPage() {
         .in("course_id", trainerCourseIds)
     : { data: [] };
 
+  // Also fetch from course_assignments (trainee assignments)
+  const { data: pendingTrainingAssignments = [] } = trainerCourseIds.length > 0 
+    ? await supabase
+        .from("course_assignments")
+        .select(`
+          id,
+          course_id,
+          user_id,
+          created_at,
+          courses!inner(id, title),
+          profiles!inner(id, name, email)
+        `)
+        .eq("role", "trainee")
+        .eq("status", "active")
+        .in("course_id", trainerCourseIds)
+    : { data: [] };
+
   // Filter for enrolments that have completed digital phases but not onsite training
   const pendingTrainingItems: PendingTraining[] = [];
   
+  // Process regular enrolments
   for (const enrolment of pendingTraining || []) {
     // Check if course has onsite_training module
     const { data: onsiteTrainingModule } = await supabase
@@ -140,6 +159,78 @@ export default async function TrainAssessPage() {
     }
   }
 
+  // Process course assignments (trainee assignments)
+  for (const assignment of pendingTrainingAssignments || []) {
+    // Check if course has onsite_training module
+    const { data: onsiteTrainingModule } = await supabase
+      .from("course_modules")
+      .select("id")
+      .eq("course_id", assignment.course_id)
+      .eq("type", "onsite_training")
+      .maybeSingle();
+
+    if (!onsiteTrainingModule) continue;
+
+    // Check if learner has completed digital phases
+    const { data: digitalModules } = await supabase
+      .from("course_modules")
+      .select("id")
+      .eq("course_id", assignment.course_id)
+      .in("type", ["digital_training", "digital_assessment_quiz"]);
+
+    if (digitalModules && digitalModules.length > 0) {
+      // Check if all digital modules are completed (using assignment_progress)
+      const { data: completedDigital } = await supabase
+        .from("assignment_progress")
+        .select("module_id")
+        .eq("assignment_id", assignment.id)
+        .in("module_id", digitalModules.map(m => m.id));
+
+      // Only include if all digital modules are completed
+      if (completedDigital?.length === digitalModules.length) {
+        // Check if onsite training is NOT yet completed
+        const { data: onsiteProgress } = await supabase
+          .from("assignment_progress")
+          .select("id")
+          .eq("assignment_id", assignment.id)
+          .eq("module_id", onsiteTrainingModule.id)
+          .maybeSingle();
+
+        if (!onsiteProgress) {
+          pendingTrainingItems.push({
+            enrolment_id: assignment.id, // Use assignment ID as enrolment_id
+            course_id: assignment.course_id,
+            course_title: (assignment as any).courses.title,
+            learner_name: (assignment as any).profiles.name || (assignment as any).profiles.email,
+            learner_email: (assignment as any).profiles.email,
+            user_id: assignment.user_id,
+            created_at: assignment.created_at
+          });
+        }
+      }
+    } else {
+      // No digital modules, check if onsite training is not completed
+      const { data: onsiteProgress } = await supabase
+        .from("assignment_progress")
+        .select("id")
+        .eq("assignment_id", assignment.id)
+        .eq("module_id", onsiteTrainingModule.id)
+        .maybeSingle();
+
+      if (!onsiteProgress) {
+        pendingTrainingItems.push({
+          enrolment_id: assignment.id, // Use assignment ID as enrolment_id
+          course_id: assignment.course_id,
+          course_title: (assignment as any).courses.title,
+          learner_name: (assignment as any).profiles.name || (assignment as any).profiles.email,
+          learner_email: (assignment as any).profiles.email,
+          user_id: assignment.user_id,
+          created_at: assignment.created_at
+        });
+      }
+    }
+  }
+
   // First get courses where current user is onsite_assessor
   const { data: assessorCourses = [] } = await supabase
     .from("course_assignments")
@@ -150,6 +241,7 @@ export default async function TrainAssessPage() {
   const assessorCourseIds = assessorCourses.map(c => c.course_id);
 
   // Fetch pending assessments (where user is assigned as onsite_assessor)
+  // First try course_enrolments
   const { data: pendingAssessments = [] } = assessorCourseIds.length > 0
     ? await supabase
         .from("course_enrolments")
@@ -165,9 +257,27 @@ export default async function TrainAssessPage() {
         .in("course_id", assessorCourseIds)
     : { data: [] };
 
+  // Also fetch from course_assignments (trainee assignments)
+  const { data: pendingAssessmentAssignments = [] } = assessorCourseIds.length > 0 
+    ? await supabase
+        .from("course_assignments")
+        .select(`
+          id,
+          course_id,
+          user_id,
+          created_at,
+          courses!inner(id, title),
+          profiles!inner(id, name, email)
+        `)
+        .eq("role", "trainee")
+        .eq("status", "active")
+        .in("course_id", assessorCourseIds)
+    : { data: [] };
+
   // Filter for enrolments that have completed onsite training but not assessment
   const pendingAssessmentItems: PendingAssessment[] = [];
   
+  // Process regular enrolments
   for (const enrolment of pendingAssessments || []) {
     // Check if course has onsite_assessment module
     const { data: onsiteAssessmentModule } = await supabase
@@ -212,6 +322,57 @@ export default async function TrainAssessPage() {
             learner_email: (enrolment as any).profiles.email,
             user_id: enrolment.user_id,
             created_at: enrolment.created_at
+          });
+        }
+      }
+    }
+  }
+
+  // Process course assignments for assessments
+  for (const assignment of pendingAssessmentAssignments || []) {
+    // Check if course has onsite_assessment module
+    const { data: onsiteAssessmentModule } = await supabase
+      .from("course_modules")
+      .select("id")
+      .eq("course_id", assignment.course_id)
+      .eq("type", "onsite_assessment")
+      .maybeSingle();
+
+    if (!onsiteAssessmentModule) continue;
+
+    // Check if all previous modules are completed (digital + onsite training)
+    const { data: allPreviousModules } = await supabase
+      .from("course_modules")
+      .select("id")
+      .eq("course_id", assignment.course_id)
+      .in("type", ["digital_training", "digital_assessment_quiz", "onsite_training"]);
+
+    if (allPreviousModules && allPreviousModules.length > 0) {
+      const { data: completedPrevious } = await supabase
+        .from("assignment_progress")
+        .select("module_id")
+        .eq("assignment_id", assignment.id)
+        .in("module_id", allPreviousModules.map(m => m.id));
+
+      // Only include if all previous modules are completed
+      if (completedPrevious?.length === allPreviousModules.length) {
+        // Check if assessment is NOT yet completed
+        const { data: assessmentProgress } = await supabase
+          .from("assignment_progress")
+          .select("id")
+          .eq("assignment_id", assignment.id)
+          .eq("module_id", onsiteAssessmentModule.id)
+          .maybeSingle();
+
+        if (!assessmentProgress) {
+          pendingAssessmentItems.push({
+            enrolment_id: assignment.id, // Use assignment ID as enrolment_id
+            course_id: assignment.course_id,
+            course_title: (assignment as any).courses.title,
+            learner_name: (assignment as any).profiles.name || (assignment as any).profiles.email,
+            learner_email: (assignment as any).profiles.email,
+            user_id: assignment.user_id,
+            created_at: assignment.created_at
           });
         }
       }
