@@ -210,6 +210,70 @@ export async function POST(req: Request) {
       });
     }
 
+    if (step === "3_trigger_notifications") {
+      // Step 3: Manually create notification for onsite training
+      const henryId = "1b44c8f5-95aa-4f8c-8110-8f36106b4d10";
+
+      // Get learner info
+      const { data: learner } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", userId)
+        .single();
+
+      // Get course info
+      const { data: course } = await supabase
+        .from("courses")
+        .select("title")
+        .eq("id", courseId)
+        .single();
+
+      // Get trainee assignment
+      const { data: assignment } = await supabase
+        .from("course_assignments")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("course_id", courseId)
+        .eq("role", "trainee")
+        .single();
+
+      // Create notification manually
+      const { data: notification, error: notifError } = await supabase
+        .from("notifications")
+        .insert({
+          recipient_id: henryId,
+          type: "onsite_training_ready",
+          payload: {
+            learner_id: userId,
+            course_id: courseId,
+            enrolment_id: assignment?.id,
+            learnerName: learner?.full_name || learner?.email || "Unknown",
+            learner_email: learner?.email,
+            courseTitle: course?.title || "Unknown Course",
+            course_title: course?.title || "Unknown Course",
+            url: `${process.env.NEXT_PUBLIC_SITE_URL}/app/train-assess`,
+            event_id: `onsite_ready_${userId}_${courseId}`
+          },
+          read: false
+        })
+        .select()
+        .single();
+
+      if (notifError) {
+        return NextResponse.json({ 
+          error: "Failed to create notification",
+          details: notifError 
+        });
+      }
+
+      return NextResponse.json({ 
+        success: true, 
+        message: "Notification created successfully",
+        notification: notification,
+        nextStep: "Check /app/train-assess and /app/admin/debug-notifications"
+      });
+    }
+
     return NextResponse.json({ error: "Invalid step" });
 
   } catch (error: any) {
