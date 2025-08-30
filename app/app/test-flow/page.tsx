@@ -91,7 +91,15 @@ export default function TestFlowPage() {
               disabled={loading}
               className="w-full bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 disabled:opacity-50"
             >
-              {loading && step === "2_check_assignments" ? "Checking..." : "3. Check All Role Assignments"}
+              {loading && step === "2_check_assignments" ? "Checking..." : "3. Assign Onsite Trainer"}
+            </button>
+
+            <button
+              onClick={() => runTest("3_trigger_notifications")}
+              disabled={loading}
+              className="w-full bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 disabled:opacity-50"
+            >
+              {loading && step === "3_trigger_notifications" ? "Creating..." : "4. Create Notification"}
             </button>
           </div>
 

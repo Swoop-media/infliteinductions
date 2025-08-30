@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import { createSupabaseService } from "@/lib/supabase/service";
 
@@ -11,7 +10,7 @@ export async function POST(req: Request) {
 
     if (step === "1_complete_digital") {
       // Step 1: Complete all digital modules for the trainee
-      
+
       // Get trainee assignment
       const { data: assignment } = await supabase
         .from("course_assignments")
@@ -52,7 +51,7 @@ export async function POST(req: Request) {
 
     if (step === "2_complete_onsite_training") {
       // Step 2: Complete onsite training (trainer marks it complete)
-      
+
       // Get trainer assignment
       const { data: trainerAssignment } = await supabase
         .from("course_assignments")
@@ -102,7 +101,7 @@ export async function POST(req: Request) {
 
     if (step === "3_complete_assessment") {
       // Step 3: Complete final assessment (assessor marks it complete)
-      
+
       // Get trainee assignment
       const { data: traineeAssignment } = await supabase
         .from("course_assignments")
@@ -150,7 +149,31 @@ export async function POST(req: Request) {
       });
     }
 
-    if (step === "check_completion") {
+    if (step === "2_check_assignments") {
+      // First ensure Henry Morgan has onsite_trainer assignment
+      const henryId = "1b44c8f5-95aa-4f8c-8110-8f36106b4d10";
+
+      const { data: existingTrainer } = await supabase
+        .from("course_assignments")
+        .select("id")
+        .eq("user_id", henryId)
+        .eq("course_id", courseId)
+        .eq("role", "onsite_trainer")
+        .maybeSingle();
+
+      if (!existingTrainer) {
+        console.log("Creating onsite_trainer assignment for Henry Morgan");
+        await supabase
+          .from("course_assignments")
+          .insert({
+            user_id: henryId,
+            course_id: courseId,
+            role: "onsite_trainer",
+            created_by: henryId,
+            assignment_status: "assigned"
+          });
+      }
+
       // Check if all roles have completed their parts
       const { data: allAssignments } = await supabase
         .from("course_assignments")
@@ -182,7 +205,7 @@ export async function POST(req: Request) {
 
       return NextResponse.json({ 
         success: true, 
-        message: "Completion status checked",
+        message: "Onsite trainer assigned and completion status checked",
         assignments: assignmentProgress
       });
     }
