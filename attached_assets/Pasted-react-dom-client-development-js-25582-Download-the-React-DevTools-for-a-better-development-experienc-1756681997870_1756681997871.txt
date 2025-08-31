@@ -1,0 +1,82 @@
+react-dom-client.development.js:25582 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 1036ms
+page.tsx:93  Server  === ACCESS CHECK DEBUG START ===
+page.tsx:94  Server  Course assignment check: Object
+page.tsx:112  Server  ✅ Access granted via course assignment
+page.tsx:174  Server  Final access decision: Object
+page.tsx:179  Server  === ACCESS CHECK DEBUG END ===
+page.tsx:225  Server  Modules query result: Object
+page.tsx:243  Server  Assignment progress check: Object
+page.tsx:272  Server  Final progress calculation: Object
+page.tsx:282  Server  Completed module IDs: Array(0)
+page.tsx:283  Server  All module IDs: Array(7)
+page.tsx:319  Server  Blocks query result: Object
+page.tsx:93  Server  === ACCESS CHECK DEBUG START ===
+page.tsx:94  Server  Course assignment check: Object
+page.tsx:112  Server  ✅ Access granted via course assignment
+page.tsx:174  Server  Final access decision: Object
+page.tsx:179  Server  === ACCESS CHECK DEBUG END ===
+page.tsx:225  Server  Modules query result: Object
+page.tsx:243  Server  Assignment progress check: Object
+page.tsx:272  Server  Final progress calculation: Object
+page.tsx:282  Server  Completed module IDs: Array(0)
+page.tsx:283  Server  All module IDs: Array(7)
+page.tsx:319  Server  Blocks query result: Object
+page.tsx:93  Server  === ACCESS CHECK DEBUG START ===
+page.tsx:94  Server  Course assignment check: Object
+page.tsx:112  Server  ✅ Access granted via course assignment
+page.tsx:174  Server  Final access decision: Object
+page.tsx:179  Server  === ACCESS CHECK DEBUG END ===
+page.tsx:225  Server  Modules query result: Object
+page.tsx:243  Server  Assignment progress check: Object
+page.tsx:272  Server  Final progress calculation: Object
+page.tsx:282  Server  Completed module IDs: Array(0)
+page.tsx:283  Server  All module IDs: Array(7)
+page.tsx:319  Server  Blocks query result: Object
+page.tsx:93  Server  === ACCESS CHECK DEBUG START ===
+page.tsx:94  Server  Course assignment check: Object
+page.tsx:112  Server  ✅ Access granted via course assignment
+page.tsx:174  Server  Final access decision: Object
+page.tsx:179  Server  === ACCESS CHECK DEBUG END ===
+page.tsx:225  Server  Modules query result: Object
+page.tsx:243  Server  Assignment progress check: Object
+page.tsx:272  Server  Final progress calculation: Object
+page.tsx:282  Server  Completed module IDs: Array(0)
+page.tsx:283  Server  All module IDs: Array(7)
+page.tsx:319  Server  Blocks query result: Object
+VideoPlayer.tsx:22 VideoPlayer Debug: [2025-08-31T23:11:36.461Z] Component mounted with videoUrl: https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451
+VideoPlayer.tsx:22 VideoPlayer Debug: [2025-08-31T23:11:36.461Z] Starting video access check...
+VideoPlayer.tsx:22 VideoPlayer Debug: [2025-08-31T23:11:36.461Z] Parsed URL info: {"origin":"https://charterinflight.sharepoint.com","hostname":"charterinflight.sharepoint.com","pathname":"/sites/INFLITEHeliAOC/_layouts/15/embed.aspx","search":"?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451","isSharePoint":true,"tenantInfo":"charterinflight"}
+VideoPlayer.tsx:22 VideoPlayer Debug: [2025-08-31T23:11:36.461Z] Testing video access with proxy...
+VideoPlayer.tsx:22 VideoPlayer Debug: [2025-08-31T23:11:36.462Z] Component mounted with videoUrl: https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451
+VideoPlayer.tsx:22 VideoPlayer Debug: [2025-08-31T23:11:36.462Z] Starting video access check...
+VideoPlayer.tsx:22 VideoPlayer Debug: [2025-08-31T23:11:36.462Z] Parsed URL info: {"origin":"https://charterinflight.sharepoint.com","hostname":"charterinflight.sharepoint.com","pathname":"/sites/INFLITEHeliAOC/_layouts/15/embed.aspx","search":"?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451","isSharePoint":true,"tenantInfo":"charterinflight"}
+VideoPlayer.tsx:22 VideoPlayer Debug: [2025-08-31T23:11:36.462Z] Testing video access with proxy...
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+VideoPlayer.tsx:22 VideoPlayer Debug: [2025-08-31T23:11:37.310Z] Proxy response: {"success":false,"error":"SharePoint authentication required","suggestion":"Use popup authentication or open in new window","authUrl":"https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451","isSharePoint":true}
+VideoPlayer.tsx:22 VideoPlayer Debug: [2025-08-31T23:11:37.310Z] Video access failed: SharePoint authentication required
+VideoPlayer.tsx:22 VideoPlayer Debug: [2025-08-31T23:11:37.312Z] Proxy response: {"success":false,"error":"SharePoint authentication required","suggestion":"Use popup authentication or open in new window","authUrl":"https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=e7797233-bd98-4ced-8dbc-a8394116a7e1&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create&courseContext=c7e65bae-bb3d-49d0-b992-fe4c09b15451","isSharePoint":true}
+VideoPlayer.tsx:22 VideoPlayer Debug: [2025-08-31T23:11:37.312Z] Video access failed: SharePoint authentication required
+report-hmr-latency.js:14 [Fast Refresh] done in 869ms
+page.tsx:93  Server  === ACCESS CHECK DEBUG START ===
+page.tsx:94  Server  Course assignment check: {userId: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', assignment: {…}, hasAssignment: true, role: 'trainee', …}
+page.tsx:112  Server  ✅ Access granted via course assignment
+page.tsx:174  Server  Final access decision: {hasAssignmentAccess: true, enrolmentAccess: false, finalAccess: true}
+page.tsx:179  Server  === ACCESS CHECK DEBUG END ===
+page.tsx:225  Server  Modules query result: {courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', data: Array(7), error: null, count: 7, sampleModule: {…}}
+page.tsx:243  Server  Assignment progress check: {assignmentId: '291be35f-80c9-4713-a676-01fb7ecad8df', progressData: Array(0), error: null, count: 0}
+page.tsx:272  Server  Final progress calculation: {doneRows: Array(0), doneRowsCount: 0, totalModules: 7, assignmentId: '291be35f-80c9-4713-a676-01fb7ecad8df', enrolmentId: null}
+page.tsx:282  Server  Completed module IDs: []
+page.tsx:283  Server  All module IDs: (7) ['1990f2a0-ee10-4d18-b5e8-9db5950d761d', 'ebe5d860-0297-4da2-bb70-ce8b5e53087b', 'e4c55a18-e305-468e-b474-b97fd6f3796e', 'bc022ecb-a3f6-4f6c-b184-b170556b48d3', 'bd197e31-0928-4a06-95ba-298b1436d943', '9c9ca686-7aad-4908-9f8c-60183262d8bc', '31fdaf8b-b95f-4c4f-9a82-8dba416250fc']
+page.tsx:319  Server  Blocks query result: {moduleId: 'bd197e31-0928-4a06-95ba-298b1436d943', data: Array(1), error: null, count: 1, sampleBlock: {…}}
+page.tsx:93  Server  === ACCESS CHECK DEBUG START ===
+page.tsx:94  Server  Course assignment check: {userId: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', assignment: {…}, hasAssignment: true, role: 'trainee', …}
+page.tsx:112  Server  ✅ Access granted via course assignment
+page.tsx:174  Server  Final access decision: {hasAssignmentAccess: true, enrolmentAccess: false, finalAccess: true}
+page.tsx:179  Server  === ACCESS CHECK DEBUG END ===
+page.tsx:225  Server  Modules query result: {courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', data: Array(7), error: null, count: 7, sampleModule: {…}}
+page.tsx:243  Server  Assignment progress check: {assignmentId: '291be35f-80c9-4713-a676-01fb7ecad8df', progressData: Array(0), error: null, count: 0}
+page.tsx:272  Server  Final progress calculation: {doneRows: Array(0), doneRowsCount: 0, totalModules: 7, assignmentId: '291be35f-80c9-4713-a676-01fb7ecad8df', enrolmentId: null}
+page.tsx:282  Server  Completed module IDs: []
+page.tsx:283  Server  All module IDs: (7) ['1990f2a0-ee10-4d18-b5e8-9db5950d761d', 'ebe5d860-0297-4da2-bb70-ce8b5e53087b', 'e4c55a18-e305-468e-b474-b97fd6f3796e', 'bc022ecb-a3f6-4f6c-b184-b170556b48d3', 'bd197e31-0928-4a06-95ba-298b1436d943', '9c9ca686-7aad-4908-9f8c-60183262d8bc', '31fdaf8b-b95f-4c4f-9a82-8dba416250fc']
