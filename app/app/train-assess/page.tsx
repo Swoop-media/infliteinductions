@@ -29,8 +29,8 @@ type PendingAssessment = {
 export default async function TrainAssessPage() {
   // Enforce role-based access - only allow specific roles
   await enforceAnyRoleOrHome([
-    "Trainers and Assessors", 
-    "Senior Management", 
+    "Trainers and Assessors",
+    "Senior Management",
     "Admin"
   ]);
 
@@ -54,7 +54,7 @@ export default async function TrainAssessPage() {
 
   // Fetch pending onsite training (where user is assigned as onsite_trainer)
   // First try course_enrolments
-  const pendingTrainingQuery = trainerCourseIds.length > 0 
+  const pendingTrainingQuery = trainerCourseIds.length > 0
     ? await supabase
         .from("course_enrolments")
         .select(`
@@ -75,7 +75,7 @@ export default async function TrainAssessPage() {
   console.log('Pending training from course_enrolments:', pendingTraining);
 
   // Also fetch from course_assignments (trainee assignments)
-  const pendingTrainingAssignmentsQuery = trainerCourseIds.length > 0 
+  const pendingTrainingAssignmentsQuery = trainerCourseIds.length > 0
     ? await supabase
         .from("course_assignments")
         .select(`
@@ -306,7 +306,7 @@ export default async function TrainAssessPage() {
   const pendingAssessments = pendingAssessmentsQuery.data || [];
 
   // Also fetch from course_assignments (trainee assignments)
-  const pendingAssessmentAssignmentsQuery = assessorCourseIds.length > 0 
+  const pendingAssessmentAssignmentsQuery = assessorCourseIds.length > 0
     ? await supabase
         .from("course_assignments")
         .select(`
