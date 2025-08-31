@@ -51,8 +51,6 @@ export default async function TrainAssessPage() {
 
   console.log('Current user:', user.id);
   console.log('Trainer course IDs:', trainerCourseIds);
-  console.log('Pending training from course_enrolments:', pendingTraining);
-  console.log('Pending training from course_assignments:', pendingTrainingAssignments);
 
   // Fetch pending onsite training (where user is assigned as onsite_trainer)
   // First try course_enrolments
