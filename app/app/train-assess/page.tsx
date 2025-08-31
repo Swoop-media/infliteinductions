@@ -51,6 +51,8 @@ export default async function TrainAssessPage() {
 
   console.log('Current user:', user.id);
   console.log('Trainer course IDs:', trainerCourseIds);
+  console.log('Pending training from course_enrolments:', pendingTraining);
+  console.log('Pending training from course_assignments:', pendingTrainingAssignments);
 
   // Fetch pending onsite training (where user is assigned as onsite_trainer)
   // First try course_enrolments
@@ -209,6 +211,8 @@ export default async function TrainAssessPage() {
         .in("module_id", digitalModules.map(m => m.id));
 
       console.log('Completed digital modules (assignment):', completedDigital?.length || 0, 'of', digitalModules.length);
+      console.log('Digital module IDs:', digitalModules.map(m => m.id));
+      console.log('Completed digital module IDs:', completedDigital?.map(c => c.module_id) || []);
 
       // Only check if all digital modules are complete
       if (completedDigital && completedDigital.length >= digitalModules.length) {
