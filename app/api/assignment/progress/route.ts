@@ -16,6 +16,7 @@ export async function POST(req: Request) {
       error: userErr,
     } = await supabase.auth.getUser();
     if (userErr || !user) {
+      console.log("Assignment progress: Unauthorized user");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -23,7 +24,15 @@ export async function POST(req: Request) {
     const assignmentId = String(body.assignmentId || "");
     const moduleId = String(body.moduleId || "");
 
+    console.log("Assignment progress request:", {
+      userId: user.id,
+      assignmentId,
+      moduleId,
+      body
+    });
+
     if (!assignmentId || !moduleId) {
+      console.log("Assignment progress: Missing required fields");
       return NextResponse.json({ error: "Missing assignmentId or moduleId" }, { status: 400 });
     }
 
@@ -35,17 +44,30 @@ export async function POST(req: Request) {
       .eq("user_id", user.id)
       .single();
 
+    console.log("Assignment verification:", {
+      assignment,
+      error: assignmentErr?.message
+    });
+
     if (assignmentErr || !assignment) {
+      console.log("Assignment progress: Access denied");
       return NextResponse.json({ error: "Assignment not found or access denied" }, { status: 403 });
     }
 
     // Insert assignment progress (will be ignored if duplicate)
-    const { error: insertErr } = await supabase
+    const { error: insertErr, data: insertData } = await supabase
       .from("assignment_progress")
       .insert({ 
         assignment_id: assignmentId, 
         module_id: moduleId 
-      });
+      })
+      .select();
+
+    console.log("Assignment progress insert:", {
+      data: insertData,
+      error: insertErr?.message,
+      isDuplicate: insertErr?.message?.includes('duplicate')
+    });
 
     if (insertErr && !insertErr.message?.includes('duplicate')) {
       console.error("Assignment progress insert error:", insertErr);
@@ -54,12 +76,18 @@ export async function POST(req: Request) {
 
     // Try to complete assignment if all modules are done
     try { 
-      await supabase.rpc("try_complete_assignment", { p_assignment_id: assignmentId }); 
+      const { data: rpcData, error: rpcError } = await supabase.rpc("try_complete_assignment", { p_assignment_id: assignmentId }); 
+      console.log("try_complete_assignment result:", { data: rpcData, error: rpcError?.message });
     } catch (e) {
       console.warn("Ignoring error calling try_complete_assignment:", e);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ 
+      ok: true, 
+      inserted: !insertErr?.message?.includes('duplicate'),
+      assignmentId,
+      moduleId 
+    });
   } catch (e: any) {
     console.error("Assignment progress POST error", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

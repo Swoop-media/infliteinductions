@@ -257,26 +257,35 @@ export default function CoursePreview({
     if (mode !== "learner" || !page) return;
 
     const moduleId = page.module.id;
-    const currentPageIndex = clampedIdx;
-    const totalPages = total;
     const isLastPage = clampedIdx >= total - 1;
+
+    console.log("Progress tracking:", {
+      moduleId,
+      pageIndex: clampedIdx,
+      totalPages: total,
+      isLastPage,
+      assignmentId,
+      courseId
+    });
 
     // Use assignment progress tracking if assignmentId is provided
     if (assignmentId && isLastPage) {
-      // For assignments, directly insert into assignment_progress when module is completed
-      const response = fetch("/api/assignment/progress", {
+      console.log("Saving assignment progress for module:", moduleId);
+      fetch("/api/assignment/progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           assignmentId,
           moduleId,
         }),
-      }).catch(() => {
-        // swallow errors in UI; RLS or enrolment state might block it
-      });
-    } else {
+      })
+      .then(response => response.json())
+      .then(data => console.log("Assignment progress saved:", data))
+      .catch(error => console.error("Assignment progress error:", error));
+    } else if (!assignmentId) {
+      console.log("Saving learner progress for module:", moduleId);
       // Use existing learner progress for enrolment-based tracking
-      const response = fetch("/api/learner/progress", {
+      fetch("/api/learner/progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -285,10 +294,28 @@ export default function CoursePreview({
           blockId: page.block?.id ?? null,
           pageIndex: clampedIdx,
           totalPages: total,
-          completed: clampedIdx >= total - 1,
+          completed: isLastPage,
+        }),
+      })
+      .then(response => response.json())
+      .then(data => console.log("Learner progress saved:", data))
+      .catch(error => console.error("Learner progress error:", error));
+    }
+
+    // Also save progress on every page view, not just completion
+    if (assignmentId) {
+      // Save page-level progress for assignments
+      fetch("/api/assignment/progress", {
+        method: "POST", 
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignmentId,
+          moduleId,
+          pageIndex: clampedIdx,
+          totalPages: total
         }),
       }).catch(() => {
-        // swallow errors in UI; RLS or enrolment state might block it
+        // Ignore errors for page-level tracking
       });
     }
   }, [mode, page, clampedIdx, total, courseId, assignmentId]);
