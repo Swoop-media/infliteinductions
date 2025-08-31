@@ -21,15 +21,6 @@ type Block = {
   order_index: number;
 };
 
-type Props = {
-  courseId: string;
-  courseTitle: string;
-  courseDescription?: string;
-  modules: Module[];
-  blocks: Block[];
-  mode?: "preview" | "learner";
-};
-
 type Page = {
   module: Module;
   block?: Block;
@@ -147,6 +138,29 @@ function PageView({ page }: { page: Page }) {
   );
 }
 
+type CoursePreviewProps = {
+  courseId: string;
+  courseTitle: string;
+  courseDescription: string;
+  modules: Array<{
+    id: string;
+    course_id: string;
+    title: string;
+    type: string;
+    order_index: number;
+    stage?: string;
+  }>;
+  blocks: Array<{
+    id: string;
+    module_id: string;
+    kind: string;
+    data: any;
+    order_index: number;
+  }>;
+  mode?: "preview" | "learner";
+  assignmentId?: string;
+};
+
 export default function CoursePreview({
   courseId,
   courseTitle,
@@ -154,7 +168,8 @@ export default function CoursePreview({
   modules,
   blocks,
   mode = "preview",
-}: Props) {
+  assignmentId,
+}: CoursePreviewProps) {
   const pages: Page[] = useMemo(() => {
     const mods = [...modules].sort((a, b) => {
       if (a.order_index === b.order_index) return a.title.localeCompare(b.title);
@@ -241,24 +256,42 @@ export default function CoursePreview({
   useEffect(() => {
     if (mode !== "learner" || !page) return;
 
-    const payload = {
-      courseId,
-      moduleId: page.module.id,
-      blockId: page.block?.id ?? null,
-      pageIndex: clampedIdx,
-      totalPages: total,
-      completed: clampedIdx >= total - 1,
-    };
+    const moduleId = page.module.id;
+    const currentPageIndex = clampedIdx;
+    const totalPages = total;
+    const isLastPage = clampedIdx >= total - 1;
 
-    // No toast/noise; keep silent to avoid UI jitter
-    fetch("/api/learner/progress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).catch(() => {
-      // swallow errors in UI; RLS or enrolment state might block it
-    });
-  }, [mode, page, clampedIdx, total, courseId]);
+    // Use assignment progress tracking if assignmentId is provided
+    if (assignmentId && isLastPage) {
+      // For assignments, directly insert into assignment_progress when module is completed
+      const response = fetch("/api/assignment/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assignmentId,
+          moduleId,
+        }),
+      }).catch(() => {
+        // swallow errors in UI; RLS or enrolment state might block it
+      });
+    } else {
+      // Use existing learner progress for enrolment-based tracking
+      const response = fetch("/api/learner/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          courseId,
+          moduleId: page.module.id,
+          blockId: page.block?.id ?? null,
+          pageIndex: clampedIdx,
+          totalPages: total,
+          completed: clampedIdx >= total - 1,
+        }),
+      }).catch(() => {
+        // swallow errors in UI; RLS or enrolment state might block it
+      });
+    }
+  }, [mode, page, clampedIdx, total, courseId, assignmentId]);
 
   return (
     <div className="grid gap-6 md:grid-cols-[260px_1fr]">

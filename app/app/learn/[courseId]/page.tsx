@@ -75,6 +75,14 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
     notFound();
   }
 
+  // Check if user has an assignment for this course
+  const { data: assignment } = await supabase
+    .from("course_assignments")
+    .select("id, role")
+    .eq("course_id", courseId)
+    .eq("user_id", user.id)
+    .single();
+
   return (
     <div className="mx-auto w-full max-w-6xl p-6">
       <CoursePreview
@@ -84,6 +92,7 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
         modules={modules ?? []}
         blocks={blocks ?? []}
         mode="learner" // <-- persists to learner_progress via the API route you added
+        assignmentId={assignment?.id} // Pass assignment ID if exists
       />
     </div>
   );
