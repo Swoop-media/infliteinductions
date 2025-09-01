@@ -79,10 +79,9 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
     .maybeSingle();
   if (!course) return { error: "Course not found" } as const;
 
-  let enrolment: any = null; // This will hold the enrolment object if found and relevant
-  let assignment: any = null; // This will hold the assignment object if found and relevant
+  let assignment: any = null;
 
-  // Check access via assignment OR enrollment
+  // Check access via assignment ONLY
   const { data: assignmentData } = await supabase
     .from("course_assignments")
     .select("id, role")
@@ -90,118 +89,27 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
     .eq("course_id", courseId)
     .maybeSingle();
 
-  console.log("=== ACCESS CHECK DEBUG START ===");
+  console.log("=== ASSIGNMENT ACCESS CHECK ===");
   console.log("Course assignment check:", {
     userId: user.id,
     courseId,
     assignment: assignmentData,
     hasAssignment: !!assignmentData,
-    role: assignmentData?.role || null,
-    error: null
+    role: assignmentData?.role || null
   });
-
-  let hasAssignmentAccess = false;
-  let enrolmentAccess = false;
-  let enrolmentId: string | null = null;
-  let assignmentId: string | null = null;
 
   if (assignmentData) {
-    hasAssignmentAccess = true;
-    assignmentId = assignmentData.id;
-    assignment = assignmentData; // Store assignment data for later use
+    assignment = assignmentData;
     console.log("✅ Access granted via course assignment");
-  }
-
-  if (!hasAssignmentAccess) {
-    // Fallback to enrollment check
-    const { data: enrolData, error: enrolErr } = await supabase
-      .from("course_enrolments")
-      .select("id, status, user_id, course_id, created_at")
-      .eq("user_id", user.id)
-      .eq("course_id", courseId)
-      .maybeSingle();
-
-    console.log("Enrolment check debug (regular client):", {
-      table: "course_enrolments",
-      userId: user.id,
-      courseId,
-      enrolment: enrolData,
-      hasEnrolment: !!enrolData,
-      status: enrolData?.status,
-      error: enrolErr?.message || null
-    });
-
-    // Check legacy enrolments table
-    let legacyEnrolmentData: any = null;
-    if (!enrolData) {
-      const { data: legacyEnrol, error: legacyEnrolErr } = await supabase
-        .from("enrolments")
-        .select("id, status, user_id, course_id, created_at")
-        .eq("user_id", user.id)
-        .eq("course_id", courseId)
-        .maybeSingle();
-
-      console.log("Legacy enrolments table check:", {
-        table: "enrolments",
-        userId: user.id,
-        courseId,
-        enrolment: legacyEnrol,
-        hasEnrolment: !!legacyEnrol,
-        status: legacyEnrol?.status,
-        error: legacyEnrolErr?.message || null
-      });
-      legacyEnrolmentData = legacyEnrol;
-    }
-
-    let finalEnrolment = enrolData || legacyEnrolmentData;
-    enrolment = finalEnrolment;
-
-    if (enrolment?.status === "pending") {
-      return <div className="mx-auto max-w-4xl p-6">Waiting for enrolment approval...</div>;
-    }
-    if (enrolment?.status === "rejected") {
-      return <div className="mx-auto max-w-4xl p-6">Enrolment rejected.</div>;
-    }
-    if (enrolment && ["approved", "in_progress", "completed"].includes(enrolment.status)) {
-      enrolmentAccess = true;
-      enrolmentId = enrolment.id;
-      console.log("✅ Access granted via enrolment");
-    }
-  }
-
-  const finalAccess = hasAssignmentAccess || enrolmentAccess;
-
-  console.log("Final access decision:", {
-    hasAssignmentAccess,
-    enrolmentAccess,
-    finalAccess
-  });
-  console.log("=== ACCESS CHECK DEBUG END ===");
-
-  // Grant access if either assignment or enrolment allows it
-  if (!finalAccess) {
-    if (preview) {
-      console.log("Preview mode: User not enrolled, but showing preview");
-      // Continue with preview
-    } else {
-      console.log("User not enrolled, showing enrol button");
-      // Check if user can enroll (this assumes canUserEnrol exists and is correctly implemented)
-      const canEnrol = await canUserEnrol(supabase, user.id, courseId); 
-      if (!canEnrol) {
-        return (
-          <div className="mx-auto max-w-4xl p-6">
-            <p>You cannot enrol in this course at this time.</p>
-          </div>
-        );
-      }
-      return (
-        <div className="mx-auto max-w-4xl p-6">
-          <h1 className="text-2xl font-bold mb-4">{course.title}</h1>
-          <p className="mb-4 text-gray-600">{course.description}</p>
-          <CourseEnrolButton courseId={courseId} />
-        </div>
-      );
-    }
+  } else if (!preview) {
+    console.log("❌ No assignment found, access denied");
+    return (
+      <div className="mx-auto max-w-4xl p-6">
+        <h1 className="text-2xl font-bold mb-4">{course.title}</h1>
+        <p className="mb-4 text-gray-600">You do not have access to this course. Contact an administrator if you believe this is an error.</p>
+        <Link href="/app/courses" className="underline">Back to courses</Link>
+      </div>
+    );
   }
 
   // If we reach here, the user has access (either via assignment or enrolment)
@@ -230,18 +138,17 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
     sampleModule: modsResp.data?.[0] || null
   });
 
-  // Progress: done modules - check both assignment and enrollment progress
+  // Progress: done modules - assignment progress only
   let doneRows: any[] = [];
 
-  if (assignmentId) {
-    // For assignments, use assignment_progress table
+  if (assignment) {
     const { data: assignmentProgress, error: assignmentProgressError } = await supabase
       .from("assignment_progress")
       .select("module_id")
-      .eq("assignment_id", assignmentId);
+      .eq("assignment_id", assignment.id);
 
     console.log("Assignment progress check:", {
-      assignmentId,
+      assignmentId: assignment.id,
       progressData: assignmentProgress,
       error: assignmentProgressError?.message || null,
       count: assignmentProgress?.length || 0
@@ -250,31 +157,13 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
     if (assignmentProgress) {
       doneRows = assignmentProgress;
     }
-  } else if (enrolmentId) {
-    // Fallback to enrollment progress
-    const { data: enrollmentProgress, error: enrollmentProgressError } = await supabase
-      .from("module_progress")
-      .select("module_id")
-      .eq("enrolment_id", enrolmentId);
-
-    console.log("Enrollment progress check:", {
-      enrolmentId,
-      progressData: enrollmentProgress,
-      error: enrollmentProgressError?.message || null,
-      count: enrollmentProgress?.length || 0
-    });
-
-    if (enrollmentProgress) {
-      doneRows = enrollmentProgress;
-    }
   }
 
   console.log("Final progress calculation:", {
     doneRows,
     doneRowsCount: doneRows?.length || 0,
     totalModules: modules.length,
-    assignmentId,
-    enrolmentId
+    assignmentId: assignment?.id
   });
 
   const completedIds = new Set((doneRows ?? []).map((r: any) => r.module_id as string));
@@ -285,13 +174,11 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
 
   // Learner documents (for request_document)
   let docsByModule = new Map<string, any[]>();
-  if (!preview && (enrolmentId || assignmentId)) { // Check for either enrolment or assignment
+  if (!preview && assignment) {
     const docsResp = await supabase
       .from("learner_documents")
       .select("id, module_id, display_name, expiry_date, storage_path, status, created_at")
-      // Filter by either enrolment_id or assignment_id
-      .or(enrolmentId ? `enrolment_id.eq.${enrolmentId}` : "", { foreignTable: "learner_documents" })
-      .or(assignmentId ? `assignment_id.eq.${assignmentId}` : "", { foreignTable: "learner_documents" })
+      .eq("assignment_id", assignment.id)
       .order("created_at", { ascending: false });
 
     const docs = (docsResp.data ?? []) as any[];
@@ -302,7 +189,7 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
     }
   }
 
-  return { user, course, enrolment, assignment, modules, completedIds, docsByModule, preview, error: null as string | null };
+  return { user, course, assignment, modules, completedIds, docsByModule, preview, error: null as string | null };
 }
 
 /** Blocks loader (per module) */
@@ -723,7 +610,7 @@ export default async function LearnerCoursePage(props: {
   }
 
   // Destructure data after confirming no error
-  const { course, enrolment, assignment, modules, completedIds, docsByModule } = data;
+  const { course, assignment, modules, completedIds, docsByModule } = data;
   const total = modules.length;
   const doneCount = Array.from(completedIds).length;
   const percent = pct(doneCount, total);
@@ -764,7 +651,7 @@ export default async function LearnerCoursePage(props: {
 
   // Decide whether pager should render Next (for digital training we hide it only when the inline button is needed)
   const pagerShouldHideNext =
-    isDigitalTraining && !isDone && isUnlocked && !!(enrolment || assignment) && !readOnly;
+    isDigitalTraining && !isDone && isUnlocked && !!assignment && !readOnly;
 
   return (
     <div className="space-y-6">
@@ -816,8 +703,7 @@ export default async function LearnerCoursePage(props: {
           isUnlocked={isUnlocked}
           isDone={isDone}
           readOnly={readOnly}
-          enrolment={enrolment}
-          assignment={assignment} // Pass assignment down
+          assignment={assignment}
           docsByModule={docsByModule}
           preview={preview}
           step={step}
@@ -932,19 +818,20 @@ async function ModuleBody({
                   __html: `
 (function(){
   try {
-    const assignmentId = ${JSON.stringify(assignment.id)};
-    const moduleId = ${JSON.stringify(module.id)};
-    const moduleType = ${JSON.stringify(module.type)};
+    const assignmentId = "${assignment.id}";
+    const moduleId = "${module.id}";
+    const moduleType = "${module.type}";
+    const formId = "${formId}";
     
     console.log("🔍 Assignment progress tracking initialized:", {
-      assignmentId,
-      moduleId,
-      moduleType,
-      formId: ${JSON.stringify(formId)}
+      assignmentId: assignmentId,
+      moduleId: moduleId,
+      moduleType: moduleType,
+      formId: formId
     });
 
     // For digital training modules, track progress when form is submitted
-    const form = document.getElementById(${JSON.stringify(formId)});
+    const form = document.getElementById(formId);
     if (form && moduleType === "digital_training") {
       form.addEventListener('submit', function(e) {
         console.log("📤 Form submitted - sending assignment progress...");
@@ -955,8 +842,8 @@ async function ModuleBody({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             assignmentId: assignmentId,
-            moduleId: moduleId,
-          }),
+            moduleId: moduleId
+          })
         })
         .then(response => {
           console.log("📥 Assignment progress API response status:", response.status);
@@ -978,7 +865,7 @@ async function ModuleBody({
   } catch(e) {
     console.error("Assignment progress tracking error:", e);
   }
-})();`,
+})();`
                 }}
               />
             )}
@@ -1164,8 +1051,8 @@ async function ModuleBody({
               __html: `
 (function(){
   try {
-    const assignmentId = ${JSON.stringify(assignment.id)};
-    const moduleId = ${JSON.stringify(module.id)};
+    const assignmentId = "${assignment.id}";
+    const moduleId = "${module.id}";
     
     console.log("🎯 Auto-tracking quiz module progress:", { assignmentId: assignmentId, moduleId: moduleId });
     
@@ -1174,8 +1061,8 @@ async function ModuleBody({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         assignmentId: assignmentId,
-        moduleId: moduleId,
-      }),
+        moduleId: moduleId
+      })
     })
     .then(response => response.json())
     .then(data => console.log("Quiz progress tracked:", data))
@@ -1183,7 +1070,7 @@ async function ModuleBody({
   } catch(e) {
     console.error("Quiz progress tracking error:", e);
   }
-})();`,
+})();`
             }}
           />
         )}
@@ -1206,9 +1093,9 @@ async function ModuleBody({
               __html: `
 (function(){
   try {
-    const assignmentId = ${JSON.stringify(assignment.id)};
-    const moduleId = ${JSON.stringify(module.id)};
-    const moduleType = ${JSON.stringify(type)};
+    const assignmentId = "${assignment.id}";
+    const moduleId = "${module.id}";
+    const moduleType = "${type}";
     
     console.log("🎯 Auto-tracking onsite module progress:", { assignmentId: assignmentId, moduleId: moduleId, moduleType: moduleType });
     
@@ -1217,8 +1104,8 @@ async function ModuleBody({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         assignmentId: assignmentId,
-        moduleId: moduleId,
-      }),
+        moduleId: moduleId
+      })
     })
     .then(response => response.json())
     .then(data => console.log("Onsite progress tracked:", data))
@@ -1226,7 +1113,7 @@ async function ModuleBody({
   } catch(e) {
     console.error("Onsite progress tracking error:", e);
   }
-})();`,
+})();`
             }}
           />
         )}
