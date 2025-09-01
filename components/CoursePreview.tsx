@@ -257,7 +257,6 @@ export default function CoursePreview({
     if (mode !== "learner" || !page) return;
 
     const moduleId = page.module.id;
-    const isLastPageOfModule = clampedIdx >= total - 1;
     
     // For digital training modules, check if we're on the last page of THIS specific module
     const currentModulePages = pages.filter(p => p.module.id === moduleId);
@@ -270,9 +269,9 @@ export default function CoursePreview({
 
     console.log("Progress tracking:", {
       moduleId,
+      moduleType: page.module.type,
       pageIndex: clampedIdx,
       totalPages: total,
-      isLastPageOfModule,
       isLastPageOfCurrentModule,
       assignmentId,
       courseId,
@@ -282,27 +281,23 @@ export default function CoursePreview({
 
     // Use assignment progress tracking if assignmentId is provided
     if (assignmentId) {
-      // For digital training modules, save progress when completing the module
+      let shouldSaveProgress = false;
+      
+      // For digital training modules, save progress when completing the module (last page)
       if (page.module.type === "digital_training" && isLastPageOfCurrentModule) {
-        console.log("Saving assignment progress for completed digital training module:", moduleId);
-        fetch("/api/assignment/progress", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            assignmentId,
-            moduleId,
-          }),
-        })
-        .then(response => response.json())
-        .then(data => console.log("Assignment progress saved:", data))
-        .catch(error => console.error("Assignment progress error:", error));
+        shouldSaveProgress = true;
+        console.log("Triggering assignment progress for completed digital training module:", moduleId);
       }
       
-      // For quiz/assessment modules, save progress immediately
+      // For quiz/assessment/onsite modules, save progress immediately when viewed
       if (page.module.type === "digital_assessment_quiz" || 
           page.module.type === "onsite_assessment" || 
           page.module.type === "onsite_training") {
-        console.log("Saving assignment progress for assessment/training module:", moduleId);
+        shouldSaveProgress = true;
+        console.log("Triggering assignment progress for assessment/training module:", moduleId);
+      }
+
+      if (shouldSaveProgress) {
         fetch("/api/assignment/progress", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -311,13 +306,26 @@ export default function CoursePreview({
             moduleId,
           }),
         })
-        .then(response => response.json())
-        .then(data => console.log("Assignment progress saved:", data))
-        .catch(error => console.error("Assignment progress error:", error));
+        .then(response => {
+          console.log("Assignment progress API response status:", response.status);
+          return response.json();
+        })
+        .then(data => {
+          console.log("Assignment progress API response:", data);
+          if (data.ok) {
+            console.log("✅ Assignment progress saved successfully");
+          } else {
+            console.error("❌ Assignment progress failed:", data.error);
+          }
+        })
+        .catch(error => {
+          console.error("❌ Assignment progress request failed:", error);
+        });
       }
     } else {
       console.log("Saving learner progress for module:", moduleId);
       // Use existing learner progress for enrolment-based tracking
+      const isLastPageOfModule = clampedIdx >= total - 1;
       fetch("/api/learner/progress", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
