@@ -48,10 +48,12 @@ function typeIcon(t: ModuleType) {
     default: return "•";
   }
 }
+
 function pct(n: number, d: number) {
   if (!d) return 0;
   return Math.round((n / d) * 100);
 }
+
 function pageUrl(
   courseId: string,
   opts?: { notice?: string | null; step?: number; preview?: boolean }
@@ -81,41 +83,29 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
 
   let assignment: any = null;
 
-  // Check access via assignment ONLY
-  const { data: assignmentData } = await supabase
-    .from("course_assignments")
-    .select("id, role")
-    .eq("user_id", user.id)
-    .eq("course_id", courseId)
-    .maybeSingle();
+  // Check access via assignment
+  if (user) {
+    const { data: assignmentData } = await supabase
+      .from("course_assignments")
+      .select("id, role")
+      .eq("user_id", user.id)
+      .eq("course_id", courseId)
+      .maybeSingle();
 
-  console.log("=== ASSIGNMENT ACCESS CHECK ===");
-  console.log("Course assignment check:", {
-    userId: user.id,
-    courseId,
-    assignment: assignmentData,
-    hasAssignment: !!assignmentData,
-    role: assignmentData?.role || null
-  });
-
-  if (assignmentData) {
-    assignment = assignmentData;
-    console.log("✅ Access granted via course assignment");
-  } else if (!preview) {
-    console.log("❌ No assignment found, access denied");
-    return (
-      <div className="mx-auto max-w-4xl p-6">
-        <h1 className="text-2xl font-bold mb-4">{course.title}</h1>
-        <p className="mb-4 text-gray-600">You do not have access to this course. Contact an administrator if you believe this is an error.</p>
-        <Link href="/app/courses" className="underline">Back to courses</Link>
-      </div>
-    );
+    if (assignmentData) {
+      assignment = assignmentData;
+    } else if (!preview) {
+      return (
+        <div className="mx-auto max-w-4xl p-6">
+          <h1 className="text-2xl font-bold mb-4">{course.title}</h1>
+          <p className="mb-4 text-gray-600">You do not have access to this course. Contact an administrator if you believe this is an error.</p>
+          <Link href="/app/courses" className="underline">Back to courses</Link>
+        </div>
+      );
+    }
   }
 
-  // If we reach here, the user has access (either via assignment or enrolment)
-  // Continue loading course modules and progress, etc.
-
-  // Modules -> sort by global type + per-type order_index
+  // Load modules
   const modsResp = await supabase
     .from("course_modules")
     .select("id, course_id, type, title, order_index, created_at")
@@ -130,47 +120,20 @@ async function loadCourseForLearner(courseId: string, preview: boolean) {
     return oa === ob ? String(a.id).localeCompare(String(b.id)) : oa - ob;
   });
 
-  console.log("Modules query result:", {
-    courseId,
-    data: modsResp.data,
-    error: modsResp.error,
-    count: modsResp.data?.length || 0,
-    sampleModule: modsResp.data?.[0] || null
-  });
-
   // Progress: done modules - assignment progress only
   let doneRows: any[] = [];
-
   if (assignment) {
-    const { data: assignmentProgress, error: assignmentProgressError } = await supabase
+    const { data: assignmentProgress } = await supabase
       .from("assignment_progress")
       .select("module_id")
       .eq("assignment_id", assignment.id);
-
-    console.log("Assignment progress check:", {
-      assignmentId: assignment.id,
-      progressData: assignmentProgress,
-      error: assignmentProgressError?.message || null,
-      count: assignmentProgress?.length || 0
-    });
 
     if (assignmentProgress) {
       doneRows = assignmentProgress;
     }
   }
 
-  console.log("Final progress calculation:", {
-    doneRows,
-    doneRowsCount: doneRows?.length || 0,
-    totalModules: modules.length,
-    assignmentId: assignment?.id
-  });
-
   const completedIds = new Set((doneRows ?? []).map((r: any) => r.module_id as string));
-
-  console.log("Completed module IDs:", Array.from(completedIds));
-  console.log("All module IDs:", modules.map((m: any) => m.id));
-
 
   // Learner documents (for request_document)
   let docsByModule = new Map<string, any[]>();
@@ -203,17 +166,10 @@ async function loadBlocks(moduleId: string) {
     .order("order_index", { ascending: true })
     .order("created_at", { ascending: true });
 
-  console.log("Blocks query result:", {
-    moduleId,
-    data: resp.data,
-    error: resp.error,
-    count: resp.data?.length || 0,
-    sampleBlock: resp.data?.[0] || null
-  });
   return (resp.data ?? []) as any[];
 }
 
-/** Signed URL helper for private storage (now 1 hour) */
+/** Signed URL helper for private storage */
 async function signedUrl(path: string | null | undefined) {
   "use server";
   if (!path) return null;
@@ -252,10 +208,9 @@ async function markComplete(formData: FormData) {
   const courseId = String(formData.get("course_id") || "");
   const moduleId = String(formData.get("module_id") || "");
   const preview = formData.get("preview") === "1";
-  const readOnly = formData.get("readOnly") === "true"; // Assuming readOnly is passed similarly
 
   if (!courseId || !moduleId) throw new Error("missing data");
-  if (preview || readOnly) {
+  if (preview) {
     redirect(pageUrl(courseId, { notice: "no_save_preview", preview }));
   }
 
@@ -267,99 +222,45 @@ async function markComplete(formData: FormData) {
     .eq("course_id", courseId)
     .maybeSingle();
 
-  let progressKey: string;
-  let progressTable: string;
-
-  if (assignment) {
-    // Use assignment progress
-    progressKey = assignment.id;
-    progressTable = "assignment_progress";
-  } else {
-    // Fallback to enrollment
-    const { data: enrol } = await supabase
-      .from("course_enrolments")
-      .select("id")
-      .eq("course_id", courseId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    // Check legacy enrolments table if current enrolment not found
-    let enrolmentId: string | null = enrol?.id || null;
-    if (!enrolmentId) {
-      const { data: legacyEnrol } = await supabase
-        .from("enrolments")
-        .select("id")
-        .eq("course_id", courseId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      enrolmentId = legacyEnrol?.id || null;
-    }
-
-    if (!enrolmentId) throw new Error("not enrolled");
-    progressKey = enrolmentId;
-    progressTable = "module_progress";
-  }
+  if (!assignment) throw new Error("not assigned");
 
   // Load modules in correct order
   const { data: mods } = await loadModulesByOrder(supabase, courseId);
 
-  // Gating by order (skip in preview)
-  if (!preview) {
-    const progressQuery = progressTable === "assignment_progress"
-      ? supabase.from("assignment_progress").select("module_id").eq("assignment_id", progressKey)
-      : supabase.from("module_progress").select("module_id").eq("enrolment_id", progressKey);
+  // Gating by order
+  const { data: doneRows } = await supabase
+    .from("assignment_progress")
+    .select("module_id")
+    .eq("assignment_id", assignment.id);
 
-    const { data: doneRows } = await progressQuery;
-    const done = new Set((doneRows ?? []).map((r: any) => r.module_id as string));
-    const idx = mods.findIndex((m: any) => m.id === moduleId);
-    if (idx < 0) throw new Error("Module not found in course");
-    if (mods.slice(0, idx).some((m: any) => !done.has(m.id))) throw new Error("Module is locked.");
-  }
+  const done = new Set((doneRows ?? []).map((r: any) => r.module_id as string));
+  const idx = mods.findIndex((m: any) => m.id === moduleId);
+  if (idx < 0) throw new Error("Module not found in course");
+  if (mods.slice(0, idx).some((m: any) => !done.has(m.id))) throw new Error("Module is locked.");
 
   // Mark complete (idempotent)
   try {
-    if (progressTable === "assignment_progress") {
-      const { error: insertError } = await supabase
-        .from("assignment_progress")
-        .insert({ assignment_id: progressKey, module_id: moduleId });
+    const { error: insertError } = await supabase
+      .from("assignment_progress")
+      .insert({ assignment_id: assignment.id, module_id: moduleId });
 
-      if (insertError && !insertError.message?.includes('duplicate')) {
-        console.warn("Assignment progress insert error:", insertError);
-      }
-    } else {
-      const { error: insertError } = await supabase
-        .from("module_progress")
-        .insert({ enrolment_id: progressKey, module_id: moduleId });
-
-      if (insertError && !insertError.message?.includes('duplicate')) {
-        console.warn("Module progress insert error:", insertError);
-      }
+    if (insertError && !insertError.message?.includes('duplicate')) {
+      console.warn("Assignment progress insert error:", insertError);
     }
   } catch (e) {
-    // Ignore duplicate key errors, which might happen if called multiple times
     console.warn("Ignoring error during module progress insert:", e);
   }
 
-  // Try complete assignment/enrollment
-  if (progressTable === "assignment_progress") {
-    try { 
-      await supabase.rpc("try_complete_assignment", { p_assignment_id: progressKey }); 
-    } catch (e) {
-      // RPC might not exist yet or might fail, ignore
-      console.warn("Ignoring error calling try_complete_assignment:", e);
-    }
-  } else {
-    try { 
-      await supabase.rpc("try_complete_enrolment", { p_enrolment_id: progressKey }); 
-    } catch (e) {
-      // Ignore RPC errors
-      console.warn("Ignoring error calling try_complete_enrolment:", e);
-    }
+  // Try complete assignment
+  try { 
+    await supabase.rpc("try_complete_assignment", { p_assignment_id: assignment.id }); 
+  } catch (e) {
+    console.warn("Ignoring error calling try_complete_assignment:", e);
   }
 
   // Next step
-  const idx = mods.findIndex((m: any) => m.id === moduleId);
-  const nextStep = idx >= 0 ? Math.min(mods.length, idx + 2) : 1;
+  const idx_next = mods.findIndex((m: any) => m.id === moduleId);
+  const nextStep = idx_next >= 0 ? Math.min(mods.length, idx_next + 2) : 1;
 
   revalidatePath(`/app/learn/courses/${courseId}`);
   redirect(pageUrl(courseId, { notice: "saved", step: nextStep, preview }));
@@ -390,41 +291,11 @@ async function uploadLearnerDocument(formData: FormData) {
     .eq("course_id", courseId)
     .maybeSingle();
 
-  let progressKey: string | null = null;
-  let progressTable: string;
-
-  if (assignment) {
-    progressKey = assignment.id;
-    progressTable = "assignment_progress";
-  } else {
-    // Fallback to enrollment
-    const { data: enrol } = await supabase
-      .from("course_enrolments")
-      .select("id")
-      .eq("course_id", courseId)
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    let enrolmentId: string | null = enrol?.id || null;
-    if (!enrolmentId) {
-      const { data: legacyEnrol } = await supabase
-        .from("enrolments")
-        .select("id")
-        .eq("course_id", courseId)
-        .eq("user_id", user.id)
-        .maybeSingle();
-      enrolmentId = legacyEnrol?.id || null;
-    }
-
-    progressKey = enrolmentId;
-    progressTable = "module_progress";
+  if (!preview && !assignment) {
+    throw new Error("not assigned");
   }
 
-  if (!preview && !progressKey) {
-    throw new Error("not enrolled or assigned");
-  }
-
-  if (!preview && user.id) {
+  if (!preview && user.id && assignment) {
     const ext = file.name.includes(".") ? file.name.substring(file.name.lastIndexOf(".") + 1) : "bin";
     const path = `learner/${user.id}/${crypto.randomUUID()}.${ext}`;
     const ab = await file.arrayBuffer();
@@ -438,61 +309,33 @@ async function uploadLearnerDocument(formData: FormData) {
     await supabase.from("learner_documents").insert({
       course_id: courseId,
       module_id: moduleId,
-      enrolment_id: progressTable === "module_progress" ? progressKey : null,
-      assignment_id: progressTable === "assignment_progress" ? progressKey : null,
+      assignment_id: assignment.id,
       user_id: user.id,
       display_name: display,
       storage_path: path,
       expiry_date,
       status: "submitted",
     });
+
+    // Mark complete
+    try {
+      await supabase
+        .from("assignment_progress")
+        .insert({ assignment_id: assignment.id, module_id: moduleId });
+    } catch (e) {
+      console.warn("Ignoring error during document upload progress insert:", e);
+    }
+
+    // Try complete assignment
+    try { 
+      await supabase.rpc("try_complete_assignment", { p_assignment_id: assignment.id }); 
+    } catch (e) {
+      console.warn("Ignoring error calling try_complete_assignment for document upload:", e);
+    }
   }
 
   // Load modules for navigation
   const { data: mods } = await loadModulesByOrder(supabase, courseId);
-
-  // Mark complete & try complete assignment/enrollment
-  if (!preview && progressKey) {
-    try {
-      if (progressTable === "assignment_progress") {
-        const { error: insertError } = await supabase
-          .from("assignment_progress")
-          .insert({ assignment_id: progressKey, module_id: moduleId });
-
-        if (insertError && !insertError.message?.includes('duplicate')) {
-          console.warn("Assignment progress insert error during document upload:", insertError);
-        }
-      } else {
-        const { error: insertError } = await supabase
-          .from("module_progress")
-          .insert({ enrolment_id: progressKey, module_id: moduleId });
-
-        if (insertError && !insertError.message?.includes('duplicate')) {
-          console.warn("Module progress insert error during document upload:", insertError);
-        }
-      }
-    } catch (e) {
-      // Ignore duplicate key errors
-      console.warn("Ignoring error during document upload progress insert:", e);
-    }
-
-    // Try complete assignment/enrollment
-    if (progressTable === "assignment_progress") {
-      try { 
-        await supabase.rpc("try_complete_assignment", { p_assignment_id: progressKey }); 
-      } catch (e) {
-        // RPC might not exist yet, ignore
-        console.warn("Ignoring error calling try_complete_assignment for document upload:", e);
-      }
-    } else {
-      try { 
-        await supabase.rpc("try_complete_enrolment", { p_enrolment_id: progressKey }); 
-      } catch (e) {
-        // Ignore RPC errors
-        console.warn("Ignoring error calling try_complete_enrolment for document upload:", e);
-      }
-    }
-  }
 
   // advance
   const idx = mods.findIndex((m: any) => m.id === moduleId);
@@ -502,40 +345,36 @@ async function uploadLearnerDocument(formData: FormData) {
   redirect(pageUrl(courseId, { notice: "saved", step: nextStep, preview }));
 }
 
-/** Dummy function for canUserEnrol (replace with actual logic if needed) */
-async function canUserEnrol(supabase: any, userId: string, courseId: string): Promise<boolean> {
-  // Placeholder logic: Assume user can enrol if not already enrolled or assigned.
-  // In a real app, this would involve more checks.
+/** Helper to check if an assignment is completed */
+async function isAssignmentCompleted(supabase: any, assignmentId: string): Promise<boolean> {
+  try {
+    const { data: assignmentData } = await supabase
+      .from("course_assignments")
+      .select("course_id")
+      .eq("id", assignmentId)
+      .single();
 
-  // Check current enrolments
-  const { data: enrolmentData, error: enrolmentError } = await supabase
-    .from("course_enrolments")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("course_id", courseId)
-    .maybeSingle();
-  if (enrolmentData) return false; // Already enrolled
+    if (!assignmentData) return false;
 
-  // Check legacy enrolments
-  const { data: legacyEnrolmentData, error: legacyEnrolmentError } = await supabase
-    .from("enrolments")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("course_id", courseId)
-    .maybeSingle();
-  if (legacyEnrolmentData) return false; // Already enrolled (legacy)
+    const { data: modules } = await supabase
+      .from("course_modules")
+      .select("id")
+      .eq("course_id", assignmentData.course_id);
 
-  // Check assignments
-  const { data: assignmentData, error: assignmentError } = await supabase
-    .from("course_assignments")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("course_id", courseId)
-    .maybeSingle();
-  if (assignmentData) return false; // Already assigned
+    if (!modules || modules.length === 0) return false;
 
-  // If none of the above, assume they can enroll
-  return true;
+    const { data: completedModules } = await supabase
+      .from("assignment_progress")
+      .select("module_id")
+      .eq("assignment_id", assignmentId);
+
+    if (!completedModules) return false;
+
+    return completedModules.length === modules.length;
+  } catch (error) {
+    console.error("Error checking assignment completion status:", error);
+    return false;
+  }
 }
 
 /** PAGE */
@@ -551,55 +390,8 @@ export default async function LearnerCoursePage(props: {
 
   const data = await loadCourseForLearner(courseId, preview);
 
-  // Handle error cases directly from loadCourseForLearner return
+  // Handle error cases
   if (data.error) {
-    // Re-check for specific error types for better UI feedback
-    if (data.error === "not_enrolled") {
-      return (
-        <div className="min-h-screen bg-gray-50 p-8">
-          <div className="mx-auto max-w-4xl">
-            <h1 className="mb-6 text-3xl font-bold">{data.course?.title || "Course"}</h1> {/* Safely access course title */}
-            <div className="rounded-lg bg-white p-6 shadow">
-              <p className="mb-4">You are not enrolled in this course.</p>
-              <CourseEnrolButton courseId={courseId} />
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (data.error === "pending_approval") {
-      return (
-        <div className="min-h-screen bg-gray-50 p-8">
-          <div className="mx-auto max-w-4xl">
-            <h1 className="mb-6 text-3xl font-bold">{data.course?.title || "Course"}</h1>
-            <div className="rounded-lg bg-white p-6 shadow">
-              <p className="text-yellow-600">
-                Your enrolment is pending approval. Please wait for an administrator to approve your request.
-              </p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (data.error.startsWith("invalid_status:")) {
-      const status = data.error.split(":")[1];
-      return (
-        <div className="min-h-screen bg-gray-50 p-8">
-          <div className="mx-auto max-w-4xl">
-            <h1 className="mb-6 text-3xl font-bold">{data.course?.title || "Course"}</h1>
-            <div className="rounded-lg bg-white p-6 shadow">
-              <p className="text-red-600">
-                Your enrolment status is: {status}. Please contact an administrator.
-              </p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Generic error display
     return (
       <div className="p-6">
         <h1 className="text-xl font-semibold">Course</h1>
@@ -607,6 +399,11 @@ export default async function LearnerCoursePage(props: {
         <Link href="/app/courses" className="underline">Back</Link>
       </div>
     );
+  }
+
+  // Check if data is a JSX element (access denied case)
+  if (React.isValidElement(data)) {
+    return data;
   }
 
   // Destructure data after confirming no error
@@ -637,21 +434,18 @@ export default async function LearnerCoursePage(props: {
 
   const isUnlocked = unlocked.has(cur.id);
   const isDone = completedIds.has(cur.id);
-  // ReadOnly is true if in preview mode OR if the user has completed the course (via assignment)
+
+  // Check if assignment is completed
   const supabase = await createSupabaseServer();
   const assignmentCompleted = assignment ? await isAssignmentCompleted(supabase, assignment.id) : false;
   const readOnly = preview || assignmentCompleted;
-
 
   // Prev/Next URLs
   const prevUrl = step > 1 ? pageUrl(courseId, { step: step - 1, preview }) : null;
   const nextUrl = step < total ? pageUrl(courseId, { step: step + 1, preview }) : null;
 
   const isDigitalTraining = (cur.type as ModuleType) === "digital_training";
-
-  // Decide whether pager should render Next (for digital training we hide it only when the inline button is needed)
-  const pagerShouldHideNext =
-    isDigitalTraining && !isDone && isUnlocked && !!assignment && !readOnly;
+  const pagerShouldHideNext = isDigitalTraining && !isDone && isUnlocked && !!assignment && !readOnly;
 
   return (
     <div className="space-y-6">
@@ -673,7 +467,7 @@ export default async function LearnerCoursePage(props: {
         Step {step} of {total} • {TYPE_LABEL[cur.type as ModuleType]}{" "}
         {preview && (
           <span className="ml-2 rounded border border-yellow-300 bg-yellow-50 px-1.5 py-0.5 text-yellow-900">
-            Preview mode — all steps unlocked; progress isn’t saved.
+            Preview mode — all steps unlocked; progress isn't saved.
           </span>
         )}
       </div>
@@ -706,7 +500,6 @@ export default async function LearnerCoursePage(props: {
           assignment={assignment}
           docsByModule={docsByModule}
           preview={preview}
-          step={step}
         />
       </section>
 
@@ -746,8 +539,7 @@ async function ModuleBody({
   isUnlocked,
   isDone,
   readOnly,
-  enrolment,
-  assignment, // Receive assignment prop
+  assignment,
   docsByModule,
   preview,
 }: {
@@ -755,11 +547,9 @@ async function ModuleBody({
   isUnlocked: boolean;
   isDone: boolean;
   readOnly: boolean;
-  enrolment: any | null;
-  assignment: any | null; // Prop type for assignment
+  assignment: any | null;
   docsByModule: Map<string, any[]>;
   preview: boolean;
-  step: number;
 }) {
   "use server";
   const type = module.type as ModuleType;
@@ -767,15 +557,6 @@ async function ModuleBody({
   // Digital Training: blocks + optional gated "Next"
   if (type === "digital_training") {
     const blocks = await loadBlocks(module.id);
-
-    // Video gating disabled for now
-    let gateSeconds = 0;
-
-    // IDs for inline script targets
-    const formId = `nextForm_${module.id}`;
-    const btnId = `nextBtn_${module.id}`;
-    const counterId = `gateCounter_${module.id}`;
-    const storageKey = `gate_done_${module.id}`;
 
     return (
       <div className="space-y-4">
@@ -788,138 +569,17 @@ async function ModuleBody({
         {isDone && <div className="pt-2 text-sm text-green-700">You completed this step.</div>}
 
         {/* Show inline Next only when we actually need to mark complete */}
-        {isUnlocked && !isDone && (enrolment || assignment) && !readOnly && (
+        {isUnlocked && !isDone && assignment && !readOnly && (
           <div className="pt-2">
-            <form id={formId} action={markComplete} className="flex items-center justify-between gap-3">
+            <form action={markComplete} className="flex items-center justify-between gap-3">
               <input type="hidden" name="course_id" value={module.course_id} />
               <input type="hidden" name="module_id" value={module.id} />
-              {/* Conditionally add enrolment_id or assignment_id */}
-              {enrolment && <input type="hidden" name="enrolment_id" value={enrolment.id} />}
-              {assignment && <input type="hidden" name="assignment_id" value={assignment.id} />}
               <input type="hidden" name="preview" value={preview ? "1" : ""} />
 
-              <div id={counterId} className="text-sm text-gray-600" style={{ display: gateSeconds > 0 ? "block" : "none" }}>
-                ⏳ Please watch the video — Next unlocks in <span id={`${counterId}_time`}>{String(Math.floor(gateSeconds / 60)).padStart(2, '0')}:{String(gateSeconds % 60).padStart(2, '0')}</span>.
-              </div>
-
-              <button
-                id={btnId}
-                className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={gateSeconds > 0}
-              >
+              <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">
                 Next →
               </button>
             </form>
-
-            {/* Client-side progress tracking for assignments */}
-            {assignment && (
-              <script
-                dangerouslySetInnerHTML={{
-                  __html: `
-(function(){
-  try {
-    const assignmentId = "${assignment.id}";
-    const moduleId = "${module.id}";
-    const moduleType = "${module.type}";
-    const formId = "${formId}";
-
-    console.log("🔍 Assignment progress tracking initialized:", {
-      assignmentId: assignmentId,
-      moduleId: moduleId,
-      moduleType: moduleType,
-      formId: formId
-    });
-
-    // For digital training modules, track progress when form is submitted
-    const form = document.getElementById(formId);
-    if (form && moduleType === "digital_training") {
-      form.addEventListener('submit', function(e) {
-        console.log("📤 Form submitted - sending assignment progress...");
-
-        // Send progress tracking request (fire and forget)
-        fetch("/api/assignment/progress", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            assignmentId: assignmentId,
-            moduleId: moduleId
-          })
-        })
-        .then(response => {
-          console.log("📥 Assignment progress API response status:", response.status);
-          return response.json();
-        })
-        .then(data => {
-          console.log("📥 Assignment progress API response:", data);
-          if (data.ok) {
-            console.log("✅ Assignment progress saved successfully");
-          } else {
-            console.error("❌ Assignment progress failed:", data.error);
-          }
-        })
-        .catch(error => {
-          console.error("❌ Assignment progress request failed:", error);
-        });
-      });
-    }
-  } catch(e) {
-    console.error("Assignment progress tracking error:", e);
-  }
-})();`
-                }}
-              />
-            )}
-          </div>
-        )}
-
-            {gateSeconds > 0 && (
-              <script
-                dangerouslySetInnerHTML={{
-                  __html: `
-(function(){
-  try{
-    var KEY = ${JSON.stringify(storageKey)};
-    var done = false;
-    try { done = localStorage.getItem(KEY) === '1'; } catch(e){}
-    var btn = document.getElementById(${JSON.stringify(btnId)});
-    var ctr = document.getElementById(${JSON.stringify(counterId)});
-    if(!btn){ return; }
-    if(done){
-      btn.disabled = false;
-      if(ctr) ctr.style.display='none';
-      return;
-    }
-    var target = ${gateSeconds};
-    var remaining = target;
-    var lastTime = Date.now();
-    var timeSpan = document.getElementById(${JSON.stringify(`${counterId}_time`)});
-    function fmt(total){ var m=Math.floor(total/60), s=total%60; return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
-    function updateDisplay(){
-      if(timeSpan){ timeSpan.textContent = fmt(remaining); }
-    }
-    function tick(){
-      if(document.hidden){ return setTimeout(tick, 1000); }
-      var now = Date.now();
-      var delta = Math.floor((now - lastTime) / 1000);
-      if(delta >= 1){
-        remaining = Math.max(0, remaining - delta);
-        lastTime = now;
-        updateDisplay();
-        if(remaining <= 0){
-          btn.disabled = false;
-          if(ctr) ctr.style.display='none';
-          try { localStorage.setItem(KEY, '1'); } catch(e){}
-          return;
-        }
-      }
-      setTimeout(tick, 1000);
-    }
-    tick();
-  }catch(e){}
-})();`,
-                }}
-              />
-            )}
           </div>
         )}
       </div>
@@ -953,7 +613,7 @@ async function ModuleBody({
               <tbody>
                 {await Promise.all(
                   existing.map(async (d) => {
-                    const url = await signedUrl(d.storage_path); // 1 hour
+                    const url = await signedUrl(d.storage_path);
                     return (
                       <tr key={d.id} className="border-b">
                         <td className="px-3 py-2">{d.display_name ?? "Document"}</td>
@@ -982,9 +642,6 @@ async function ModuleBody({
         <form action={uploadLearnerDocument} className="flex flex-wrap items-end gap-3 pt-1">
           <input type="hidden" name="course_id" value={module.course_id} />
           <input type="hidden" name="module_id" value={module.id} />
-          {/* Conditionally add enrolment_id or assignment_id */}
-          {enrolment && <input type="hidden" name="enrolment_id" value={enrolment.id} />}
-          {assignment && <input type="hidden" name="assignment_id" value={assignment.id} />}
           <input type="hidden" name="preview" value={preview ? "1" : ""} />
 
           <div>
@@ -994,24 +651,24 @@ async function ModuleBody({
               defaultValue={cfg.label ?? ""}
               className="w-64 rounded-md border px-3 py-2 text-sm"
               placeholder="e.g., Driver licence"
-              disabled={!isUnlocked || readOnly || !(enrolment || assignment)}
+              disabled={!isUnlocked || readOnly || !assignment}
             />
           </div>
 
           {wantExpiry && (
             <div>
               <label className="mb-1 block text-xs text-gray-600">Expiry date</label>
-              <input type="date" name="expiry_date" className="rounded-md border px-3 py-2 text-sm" disabled={!isUnlocked || readOnly || !(enrolment || assignment)} />
+              <input type="date" name="expiry_date" className="rounded-md border px-3 py-2 text-sm" disabled={!isUnlocked || readOnly || !assignment} />
             </div>
           )}
 
           <div>
             <label className="mb-1 block text-xs text-gray-600">File</label>
-            <input type="file" name="file" required className="block w-64 text-sm" disabled={!isUnlocked || readOnly || !(enrolment || assignment)} />
+            <input type="file" name="file" required className="block w-64 text-sm" disabled={!isUnlocked || readOnly || !assignment} />
           </div>
 
           <div className="pb-2">
-            <button className="rounded-md bg-black px-4 py-2 text-sm text-white disabled:opacity-50" disabled={!isUnlocked || readOnly || !(enrolment || assignment)}>
+            <button className="rounded-md bg-black px-4 py-2 text-sm text-white disabled:opacity-50" disabled={!isUnlocked || readOnly || !assignment}>
               Upload & save
             </button>
           </div>
@@ -1036,44 +693,12 @@ async function ModuleBody({
           <Link
             href={`/app/learn/quiz/${module.id}${preview ? "?preview=1" : ""}`}
             className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
-            aria-disabled={!isUnlocked || readOnly}
           >
             Start quiz
           </Link>
         </div>
         {!isUnlocked && <p className="text-xs text-gray-500">Locked until previous steps are complete.</p>}
         {readOnly && <p className="text-xs text-gray-500">Preview mode — actions disabled.</p>}
-
-        {/* Auto-track progress for quiz modules when viewed */}
-        {assignment && isUnlocked && !preview && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-(function(){
-  try {
-    const assignmentId = "${assignment.id}";
-    const moduleId = "${module.id}";
-
-    console.log("🎯 Auto-tracking quiz module progress:", { assignmentId: assignmentId, moduleId: moduleId });
-
-    fetch("/api/assignment/progress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        assignmentId: assignmentId,
-        moduleId: moduleId
-      })
-    })
-    .then(response => response.json())
-    .then(data => console.log("Quiz progress tracked:", data))
-    .catch(error => console.error("Quiz progress tracking failed:", error));
-  } catch(e) {
-    console.error("Quiz progress tracking error:", e);
-  }
-})();`
-            }}
-          />
-        )}
       </div>
     );
   }
@@ -1085,82 +710,12 @@ async function ModuleBody({
           This step is recorded by your {type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.
         </p>
         {!isUnlocked && <p className="text-xs text-gray-500">Locked until previous steps are complete.</p>}
-
-        {/* Auto-track progress for onsite modules when viewed */}
-        {assignment && isUnlocked && !preview && (
-          <script
-            dangerouslySetInnerHTML={{
-              __html: `
-(function(){
-  try {
-    const assignmentId = "${assignment.id}";
-    const moduleId = "${module.id}";
-    const moduleType = "${type}";
-
-    console.log("🎯 Auto-tracking onsite module progress:", { assignmentId: assignmentId, moduleId: moduleId, moduleType: moduleType });
-
-    fetch("/api/assignment/progress", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        assignmentId: assignmentId,
-        moduleId: moduleId
-      })
-    })
-    .then(response => response.json())
-    .then(data => console.log("Onsite progress tracked:", data))
-    .catch(error => console.error("Onsite progress tracking failed:", error));
-  } catch(e) {
-    console.error("Onsite progress tracking error:", e);
-  }
-})();`
-            }}
-          />
-        )}
       </div>
     );
   }
 
   return <p className="text-sm text-gray-600">Unsupported module type.</p>;
 }
-
-// Helper to check if an assignment is completed
-async function isAssignmentCompleted(supabase: any, assignmentId: string): Promise<boolean> {
-  try {
-    // Get the assignment and course info
-    const { data: assignmentData } = await supabase
-      .from("course_assignments")
-      .select("course_id")
-      .eq("id", assignmentId)
-      .single();
-
-    if (!assignmentData) return false;
-
-    // Get all modules for this course
-    const { data: modules } = await supabase
-      .from("course_modules")
-      .select("id")
-      .eq("course_id", assignmentData.course_id);
-
-    if (!modules || modules.length === 0) return false;
-
-    // Get completed modules for this assignment
-    const { data: completedModules } = await supabase
-      .from("assignment_progress")
-      .select("module_id")
-      .eq("assignment_id", assignmentId);
-
-    if (!completedModules) return false;
-
-    // Check if all modules are completed
-    return completedModules.length === modules.length;
-
-  } catch (error) {
-    console.error("Error checking assignment completion status:", error);
-    return false;
-  }
-}
-
 
 /** Content block viewer */
 function escapeHtml(s: string) {
@@ -1209,9 +764,8 @@ function toEmbedUrl(raw: string, courseId?: string) {
       if (id) return `https://player.vimeo.com/video/${id}`;
     }
 
-    // SharePoint/OneDrive embed page - add authentication handling
+    // SharePoint/OneDrive embed page
     if (host.endsWith(".sharepoint.com") && u.pathname.includes("/_layouts/15/embed.aspx")) {
-      // Add course context for session management
       if (courseId) {
         const authUrl = new URL(input);
         authUrl.searchParams.set('courseContext', courseId);
@@ -1258,26 +812,24 @@ async function BlockView({ block }: { block: any }) {
 
     return url ? (
       <VideoPlayer 
-                    videoUrl={url} 
-                    courseId={block.course_id}
-                  />
+        videoUrl={url} 
+        courseId={block.course_id}
+      />
     ) : (
       <p className="text-sm text-gray-500">No video URL provided.</p>
     );
   }
 
   if (kind === "file") {
-    // Prefer a fresh signed URL whenever we have a storage path.
     const display = String(data.filename ?? data.display ?? "Download");
     const path: string | null = data.file_id ?? data.storage_path ?? null;
 
     let url: string | null = null;
     if (path) {
-      url = await signedUrl(path); // fresh (1h)
+      url = await signedUrl(path);
     } else if (data.public_url) {
       url = String(data.public_url);
     } else if (data.signed_url) {
-      // Last resort (may be stale)
       url = String(data.signed_url);
     }
 
@@ -1301,29 +853,5 @@ async function BlockView({ block }: { block: any }) {
     );
   }
 
-  // request_document is handled in ModuleBody
   return null;
 }
-
-async function CourseEnrolButton({ courseId }: { courseId: string }) {
-  return (
-    <form action="/app/courses/enrol" method="post">
-      <input type="hidden" name="course_id" value={courseId} />
-      <button className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800">
-        Request Enrolment
-      </button>
-    </form>
-  );
-}
-
-// Mock markModuleComplete for ModuleBody if it's not defined outside
-// This is a placeholder and should be replaced by the actual markComplete function
-// if it's intended to be used within ModuleBody's scope and not globally.
-// However, based on the original code, markComplete is defined globally.
-// If ModuleBody requires it and it's not in scope, this comment highlights a potential issue.
-
-// Mock for markModuleComplete if it's needed within ModuleBody but defined outside
-// This is usually handled by the server component rendering context.
-// If the original `markComplete` action is correctly imported or available in scope,
-// no mock is needed. Let's assume it's globally available in the server component context.
-// async function markComplete(formData: FormData) { ... } // Assuming this is globally defined
