@@ -59,20 +59,36 @@ export async function POST(req: Request) {
       .from("assignment_progress")
       .insert({ 
         assignment_id: assignmentId, 
-        module_id: moduleId 
+        module_id: moduleId,
+        created_at: new Date().toISOString()
       })
       .select();
 
     console.log("Assignment progress insert:", {
+      insertPayload: { assignment_id: assignmentId, module_id: moduleId },
       data: insertData,
       error: insertErr?.message,
-      isDuplicate: insertErr?.message?.includes('duplicate')
+      errorCode: insertErr?.code,
+      isDuplicate: insertErr?.message?.includes('duplicate') || insertErr?.code === '23505'
     });
 
     if (insertErr && !insertErr.message?.includes('duplicate')) {
       console.error("Assignment progress insert error:", insertErr);
       return NextResponse.json({ error: insertErr.message }, { status: 400 });
     }
+
+    // Verify the record was actually inserted
+    const { data: verifyData, error: verifyError } = await supabase
+      .from("assignment_progress")
+      .select("*")
+      .eq("assignment_id", assignmentId)
+      .eq("module_id", moduleId);
+
+    console.log("Assignment progress verification:", {
+      verifyData,
+      verifyError: verifyError?.message,
+      recordExists: verifyData && verifyData.length > 0
+    });
 
     // Try to complete assignment if all modules are done
     try { 
@@ -85,6 +101,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ 
       ok: true, 
       inserted: !insertErr?.message?.includes('duplicate'),
+      verified: verifyData && verifyData.length > 0,
       assignmentId,
       moduleId 
     });

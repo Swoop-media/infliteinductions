@@ -257,32 +257,65 @@ export default function CoursePreview({
     if (mode !== "learner" || !page) return;
 
     const moduleId = page.module.id;
-    const isLastPage = clampedIdx >= total - 1;
+    const isLastPageOfModule = clampedIdx >= total - 1;
+    
+    // For digital training modules, check if we're on the last page of THIS specific module
+    const currentModulePages = pages.filter(p => p.module.id === moduleId);
+    const currentModulePageIndex = currentModulePages.findIndex(p => 
+      p.module.id === page.module.id && 
+      p.block?.id === page.block?.id &&
+      p.pageKind === page.pageKind
+    );
+    const isLastPageOfCurrentModule = currentModulePageIndex === currentModulePages.length - 1;
 
     console.log("Progress tracking:", {
       moduleId,
       pageIndex: clampedIdx,
       totalPages: total,
-      isLastPage,
+      isLastPageOfModule,
+      isLastPageOfCurrentModule,
       assignmentId,
-      courseId
+      courseId,
+      currentModulePages: currentModulePages.length,
+      currentModulePageIndex
     });
 
     // Use assignment progress tracking if assignmentId is provided
-    if (assignmentId && isLastPage) {
-      console.log("Saving assignment progress for module:", moduleId);
-      fetch("/api/assignment/progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assignmentId,
-          moduleId,
-        }),
-      })
-      .then(response => response.json())
-      .then(data => console.log("Assignment progress saved:", data))
-      .catch(error => console.error("Assignment progress error:", error));
-    } else if (!assignmentId) {
+    if (assignmentId) {
+      // For digital training modules, save progress when completing the module
+      if (page.module.type === "digital_training" && isLastPageOfCurrentModule) {
+        console.log("Saving assignment progress for completed digital training module:", moduleId);
+        fetch("/api/assignment/progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            assignmentId,
+            moduleId,
+          }),
+        })
+        .then(response => response.json())
+        .then(data => console.log("Assignment progress saved:", data))
+        .catch(error => console.error("Assignment progress error:", error));
+      }
+      
+      // For quiz/assessment modules, save progress immediately
+      if (page.module.type === "digital_assessment_quiz" || 
+          page.module.type === "onsite_assessment" || 
+          page.module.type === "onsite_training") {
+        console.log("Saving assignment progress for assessment/training module:", moduleId);
+        fetch("/api/assignment/progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            assignmentId,
+            moduleId,
+          }),
+        })
+        .then(response => response.json())
+        .then(data => console.log("Assignment progress saved:", data))
+        .catch(error => console.error("Assignment progress error:", error));
+      }
+    } else {
       console.log("Saving learner progress for module:", moduleId);
       // Use existing learner progress for enrolment-based tracking
       fetch("/api/learner/progress", {
@@ -294,31 +327,14 @@ export default function CoursePreview({
           blockId: page.block?.id ?? null,
           pageIndex: clampedIdx,
           totalPages: total,
-          completed: isLastPage,
+          completed: isLastPageOfModule,
         }),
       })
       .then(response => response.json())
       .then(data => console.log("Learner progress saved:", data))
       .catch(error => console.error("Learner progress error:", error));
     }
-
-    // Also save progress on every page view, not just completion
-    if (assignmentId) {
-      // Save page-level progress for assignments
-      fetch("/api/assignment/progress", {
-        method: "POST", 
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assignmentId,
-          moduleId,
-          pageIndex: clampedIdx,
-          totalPages: total
-        }),
-      }).catch(() => {
-        // Ignore errors for page-level tracking
-      });
-    }
-  }, [mode, page, clampedIdx, total, courseId, assignmentId]);
+  }, [mode, page, clampedIdx, total, courseId, assignmentId, pages]);
 
   return (
     <div className="grid gap-6 md:grid-cols-[260px_1fr]">
