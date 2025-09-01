@@ -1,0 +1,44 @@
+Error: ./app/app/learn/courses/[id]/page.tsx
+Error:   [31m×[0m Expression expected
+     ╭─[[36;1;4m/home/runner/workspace/app/app/learn/courses/[id]/page.tsx[0m:925:1]
+ [2m922[0m │             )}
+ [2m923[0m │           </div>
+ [2m924[0m │         )}
+ [2m925[0m │       </div>
+     · [35;1m      ─[0m
+ [2m926[0m │     );
+ [2m927[0m │   }
+     ╰────
+  [31m×[0m Unterminated regexp literal
+     ╭─[[36;1;4m/home/runner/workspace/app/app/learn/courses/[id]/page.tsx[0m:925:1]
+ [2m922[0m │             )}
+ [2m923[0m │           </div>
+ [2m924[0m │         )}
+ [2m925[0m │       </div>
+     · [35;1m       ─────[0m
+ [2m926[0m │     );
+ [2m927[0m │   }
+     ╰────
+  [31m×[0m Expression expected
+     ╭─[[36;1;4m/home/runner/workspace/app/app/learn/courses/[id]/page.tsx[0m:925:1]
+ [2m922[0m │             )}
+ [2m923[0m │           </div>
+ [2m924[0m │         )}
+ [2m925[0m │       </div>
+     · [35;1m        ────[0m
+ [2m926[0m │     );
+ [2m927[0m │   }
+     ╰────
+
+Caused by:
+    Syntax Error
+    at tr (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:552:164429)
+    at o6 (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:62116)
+    at iP (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:81700)
+    at i$ (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:92800)
+    at sv (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:125399)
+    at eval (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:125244)
+    at sm (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:125252)
+    at sa (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:121554)
+    at sZ (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:143648)
+    at MessagePort._ (webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:541:196942)
