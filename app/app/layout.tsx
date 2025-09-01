@@ -31,7 +31,7 @@ export default async function AppSectionLayout({
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <nav className="flex items-center gap-4 text-sm">
             <Link href="/app/home">Home</Link>
-            <Link href="/app/courses">Courses</Link>
+            <Link href="/app/myprofile">My Profile</Link>
             <Link href="/app/creator">Creator</Link>
             <Link href="/app/train-assess">Train/Assess</Link>
             <Link href="/app/admin">Admin</Link>
