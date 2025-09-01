@@ -13,8 +13,7 @@ import {
 
 const links = [
   { href: "/app/home", label: "Home", icon: LayoutDashboard },
-  { href: "/app/courses", label: "Courses & Authorisations", icon: BookOpen },
-  { href: "/app/my", label: "My Training & Profile", icon: User },
+  { href: "/app/myprofile", label: "My Profile", icon: User },
   { href: "/app/creator", label: "Creator", icon: Wrench },
   { href: "/app/admin", label: "Admin Centre", icon: Shield },
   { href: "/app/admin/users", label: "Users", icon: Users }
