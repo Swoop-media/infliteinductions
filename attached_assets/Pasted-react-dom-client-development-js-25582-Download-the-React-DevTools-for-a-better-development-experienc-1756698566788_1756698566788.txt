@@ -1,0 +1,42 @@
+react-dom-client.development.js:25582 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 1093ms
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 742ms
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 1044ms
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 865ms
+page.tsx:93  Server  === ACCESS CHECK DEBUG START ===
+page.tsx:94  Server  Course assignment check: Object
+page.tsx:112  Server  ✅ Access granted via course assignment
+page.tsx:174  Server  Final access decision: Object
+page.tsx:179  Server  === ACCESS CHECK DEBUG END ===
+page.tsx:225  Server  Modules query result: Object
+page.tsx:243  Server  Assignment progress check: Object
+page.tsx:272  Server  Final progress calculation: Object
+page.tsx:282  Server  Completed module IDs: Array(0)
+page.tsx:283  Server  All module IDs: Array(7)
+page.tsx:319  Server  Blocks query result: Object
+page.tsx:93  Server  === ACCESS CHECK DEBUG START ===
+page.tsx:94  Server  Course assignment check: Object
+page.tsx:112  Server  ✅ Access granted via course assignment
+page.tsx:174  Server  Final access decision: Object
+page.tsx:179  Server  === ACCESS CHECK DEBUG END ===
+page.tsx:225  Server  Modules query result: Object
+page.tsx:243  Server  Assignment progress check: Object
+page.tsx:272  Server  Final progress calculation: Object
+page.tsx:282  Server  Completed module IDs: Array(0)
+page.tsx:283  Server  All module IDs: Array(7)
+page.tsx:319  Server  Blocks query result: Object
+page.tsx:93  Server  === ACCESS CHECK DEBUG START ===
+page.tsx:94  Server  Course assignment check: Object
+page.tsx:112  Server  ✅ Access granted via course assignment
+page.tsx:174  Server  Final access decision: Object
+page.tsx:179  Server  === ACCESS CHECK DEBUG END ===
+page.tsx:225  Server  Modules query result: Object
+page.tsx:243  Server  Assignment progress check: Object
+page.tsx:272  Server  Final progress calculation: Object
+page.tsx:282  Server  Completed module IDs: Array(0)
+page.tsx:283  Server  All module IDs: Array(7)
+page.tsx:319  Server  Blocks query result: Object
