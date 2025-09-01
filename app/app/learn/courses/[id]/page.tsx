@@ -24,14 +24,13 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
   // Must have a trainee assignment for this course
   const { data: assignment, error: assignmentErr } = await supabase
     .from("course_assignments")
-    .select("id, role")
+    .select("id, role, assignment_status")
     .eq("course_id", courseId)
     .eq("user_id", user.id)
     .eq("role", "trainee")
     .single();
 
   if (assignmentErr || !assignment) {
-    // eslint-disable-next-line no-console
     console.error("No trainee assignment", assignmentErr);
     redirect("/app/learn?error=not_assigned");
   }
@@ -43,7 +42,6 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
     .eq("id", courseId)
     .single();
   if (courseErr || !course) {
-    // eslint-disable-next-line no-console
     console.error("Course load error", courseErr);
     notFound();
   }
@@ -55,7 +53,6 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
     .eq("course_id", course.id)
     .order("order_index", { ascending: true });
   if (modErr) {
-    // eslint-disable-next-line no-console
     console.error("Modules load error", modErr);
     notFound();
   }
@@ -69,10 +66,15 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
         .order("order_index", { ascending: true })
     : { data: [], error: null as any };
   if (blockErr) {
-    // eslint-disable-next-line no-console
     console.error("Blocks load error", blockErr);
     notFound();
   }
+
+  // Load assignment progress
+  const { data: assignmentProgress } = await supabase
+    .from("assignment_progress")
+    .select("module_id, completed_at")
+    .eq("assignment_id", assignment.id);
 
   return (
     <div className="mx-auto w-full max-w-6xl p-6">
@@ -84,6 +86,7 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
         blocks={blocks ?? []}
         mode="learner"
         assignmentId={assignment.id}
+        assignmentProgress={assignmentProgress ?? []}
       />
     </div>
   );

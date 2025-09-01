@@ -169,7 +169,30 @@ export default function CoursePreview({
   blocks,
   mode = "preview",
   assignmentId,
-}: CoursePreviewProps) {
+  assignmentProgress = [],
+}: {
+  courseId: string;
+  courseTitle: string;
+  courseDescription: string;
+  modules: Array<{
+    id: string;
+    course_id: string;
+    title: string;
+    type: string;
+    order_index: number;
+    stage?: string;
+  }>;
+  blocks: Array<{
+    id: string;
+    module_id: string;
+    kind: string;
+    data: any;
+    order_index: number;
+  }>;
+  mode?: "preview" | "learner";
+  assignmentId?: string;
+  assignmentProgress?: Array<{ module_id: string; completed_at: string }>;
+}) {
   const pages: Page[] = useMemo(() => {
     const mods = [...modules].sort((a, b) => {
       if (a.order_index === b.order_index) return a.title.localeCompare(b.title);
@@ -252,6 +275,17 @@ export default function CoursePreview({
 
   const progress = total > 0 ? Math.round(((clampedIdx + 1) / total) * 100) : 0;
 
+  // Track module completion
+  const [completedModules, setCompletedModules] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (mode === "learner" && assignmentProgress) {
+      // Set completed modules from assignment progress
+      const completed = new Set(assignmentProgress.map(p => p.module_id));
+      setCompletedModules(completed);
+    }
+  }, [mode, assignmentProgress]);
+
   // Persist progress in learner mode (fire-and-forget)
   useEffect(() => {
     if (mode !== "learner" || !page) {
@@ -260,7 +294,7 @@ export default function CoursePreview({
     }
 
     const moduleId = page.module.id;
-    
+
     // For digital training modules, check if we're on the last page of THIS specific module
     const currentModulePages = pages.filter(p => p.module.id === moduleId);
     const currentModulePageIndex = currentModulePages.findIndex(p => 
@@ -290,14 +324,14 @@ export default function CoursePreview({
     if (assignmentId) {
       let shouldSaveProgress = false;
       let reason = "";
-      
+
       // For digital training modules, save progress when completing the module (last page)
       if (page.module.type === "digital_training" && isLastPageOfCurrentModule) {
         shouldSaveProgress = true;
         reason = "completed digital training module (last page)";
         console.log("🎯 Triggering assignment progress for completed digital training module:", moduleId);
       }
-      
+
       // For quiz/assessment/onsite modules, save progress immediately when viewed
       if (page.module.type === "digital_assessment_quiz" || 
           page.module.type === "onsite_assessment" || 
@@ -363,6 +397,26 @@ export default function CoursePreview({
       .catch(error => console.error("Learner progress error:", error));
     }
   }, [mode, page, clampedIdx, total, courseId, assignmentId, pages]);
+
+  const markModuleComplete = async (moduleId: string) => {
+    if (mode !== "learner" || !assignmentId) return;
+
+    try {
+      const response = await fetch("/api/assignment/progress", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ assignmentId, moduleId }),
+      });
+
+      if (response.ok) {
+        setCompletedModules((prev) => new Set([...prev, moduleId]));
+      } else {
+        console.error("Failed to mark module complete");
+      }
+    } catch (error) {
+      console.error("Error marking module complete:", error);
+    }
+  };
 
   return (
     <div className="grid gap-6 md:grid-cols-[260px_1fr]">

@@ -85,7 +85,7 @@ async function loadMyProfileAndLearning() {
     if (status === "completed") {
       completed.push({ course: c, status: "completed" });
     } else {
-      inProgress.push({ course: c, status: "assigned" });
+      inProgress.push({ course: c, status: status });
     }
   }
 
@@ -229,8 +229,8 @@ export default async function MyProfilePage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Pill tone={status === "approved" ? "gray" : status === "assigned" ? "green" : "blue"}>
-                      {status === "approved" ? "Approved" : status === "assigned" ? "Assigned" : "In progress"}
+                    <Pill tone={status === "assigned" ? "blue" : status === "in_progress" ? "green" : "gray"}>
+                      {status === "assigned" ? "Assigned" : status === "in_progress" ? "In Progress" : "Ready"}
                     </Pill>
                     <Link
                       href={`/app/learn/courses/${course.id}`}
