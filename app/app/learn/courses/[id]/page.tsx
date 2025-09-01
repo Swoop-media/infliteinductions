@@ -1167,7 +1167,7 @@ async function ModuleBody({
     const assignmentId = ${JSON.stringify(assignment.id)};
     const moduleId = ${JSON.stringify(module.id)};
     
-    console.log("🎯 Auto-tracking quiz module progress:", { assignmentId, moduleId });
+    console.log("🎯 Auto-tracking quiz module progress:", { assignmentId: assignmentId, moduleId: moduleId });
     
     fetch("/api/assignment/progress", {
       method: "POST",
@@ -1210,7 +1210,7 @@ async function ModuleBody({
     const moduleId = ${JSON.stringify(module.id)};
     const moduleType = ${JSON.stringify(type)};
     
-    console.log("🎯 Auto-tracking onsite module progress:", { assignmentId, moduleId, moduleType });
+    console.log("🎯 Auto-tracking onsite module progress:", { assignmentId: assignmentId, moduleId: moduleId, moduleType: moduleType });
     
     fetch("/api/assignment/progress", {
       method: "POST",
