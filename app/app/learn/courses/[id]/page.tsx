@@ -925,6 +925,66 @@ async function ModuleBody({
               </button>
             </form>
 
+            {/* Client-side progress tracking for assignments */}
+            {assignment && (
+              <script
+                dangerouslySetInnerHTML={{
+                  __html: `
+(function(){
+  try {
+    const assignmentId = ${JSON.stringify(assignment.id)};
+    const moduleId = ${JSON.stringify(module.id)};
+    const moduleType = ${JSON.stringify(module.type)};
+    
+    console.log("🔍 Assignment progress tracking initialized:", {
+      assignmentId,
+      moduleId,
+      moduleType,
+      formId: ${JSON.stringify(formId)}
+    });
+
+    // For digital training modules, track progress when form is submitted
+    const form = document.getElementById(${JSON.stringify(formId)});
+    if (form && moduleType === "digital_training") {
+      form.addEventListener('submit', function(e) {
+        console.log("📤 Form submitted - sending assignment progress...");
+        
+        // Send progress tracking request (fire and forget)
+        fetch("/api/assignment/progress", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            assignmentId: assignmentId,
+            moduleId: moduleId,
+          }),
+        })
+        .then(response => {
+          console.log("📥 Assignment progress API response status:", response.status);
+          return response.json();
+        })
+        .then(data => {
+          console.log("📥 Assignment progress API response:", data);
+          if (data.ok) {
+            console.log("✅ Assignment progress saved successfully");
+          } else {
+            console.error("❌ Assignment progress failed:", data.error);
+          }
+        })
+        .catch(error => {
+          console.error("❌ Assignment progress request failed:", error);
+        });
+      });
+    }
+  } catch(e) {
+    console.error("Assignment progress tracking error:", e);
+  }
+})();`,
+                }}
+              />
+            )}
+          </div>
+        )}
+
             {gateSeconds > 0 && (
               <script
                 dangerouslySetInnerHTML={{
@@ -1096,6 +1156,37 @@ async function ModuleBody({
         </div>
         {!isUnlocked && <p className="text-xs text-gray-500">Locked until previous steps are complete.</p>}
         {readOnly && <p className="text-xs text-gray-500">Preview mode — actions disabled.</p>}
+        
+        {/* Auto-track progress for quiz modules when viewed */}
+        {assignment && isUnlocked && !preview && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+(function(){
+  try {
+    const assignmentId = ${JSON.stringify(assignment.id)};
+    const moduleId = ${JSON.stringify(module.id)};
+    
+    console.log("🎯 Auto-tracking quiz module progress:", { assignmentId, moduleId });
+    
+    fetch("/api/assignment/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        assignmentId: assignmentId,
+        moduleId: moduleId,
+      }),
+    })
+    .then(response => response.json())
+    .then(data => console.log("Quiz progress tracked:", data))
+    .catch(error => console.error("Quiz progress tracking failed:", error));
+  } catch(e) {
+    console.error("Quiz progress tracking error:", e);
+  }
+})();`,
+            }}
+          />
+        )}
       </div>
     );
   }
@@ -1107,6 +1198,38 @@ async function ModuleBody({
           This step is recorded by your {type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.
         </p>
         {!isUnlocked && <p className="text-xs text-gray-500">Locked until previous steps are complete.</p>}
+        
+        {/* Auto-track progress for onsite modules when viewed */}
+        {assignment && isUnlocked && !preview && (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+(function(){
+  try {
+    const assignmentId = ${JSON.stringify(assignment.id)};
+    const moduleId = ${JSON.stringify(module.id)};
+    const moduleType = ${JSON.stringify(type)};
+    
+    console.log("🎯 Auto-tracking onsite module progress:", { assignmentId, moduleId, moduleType });
+    
+    fetch("/api/assignment/progress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        assignmentId: assignmentId,
+        moduleId: moduleId,
+      }),
+    })
+    .then(response => response.json())
+    .then(data => console.log("Onsite progress tracked:", data))
+    .catch(error => console.error("Onsite progress tracking failed:", error));
+  } catch(e) {
+    console.error("Onsite progress tracking error:", e);
+  }
+})();`,
+            }}
+          />
+        )}
       </div>
     );
   }
