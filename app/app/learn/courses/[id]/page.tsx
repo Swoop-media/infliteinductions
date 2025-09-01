@@ -822,7 +822,7 @@ async function ModuleBody({
     const moduleId = "${module.id}";
     const moduleType = "${module.type}";
     const formId = "${formId}";
-    
+
     console.log("🔍 Assignment progress tracking initialized:", {
       assignmentId: assignmentId,
       moduleId: moduleId,
@@ -835,7 +835,7 @@ async function ModuleBody({
     if (form && moduleType === "digital_training") {
       form.addEventListener('submit', function(e) {
         console.log("📤 Form submitted - sending assignment progress...");
-        
+
         // Send progress tracking request (fire and forget)
         fetch("/api/assignment/progress", {
           method: "POST",
@@ -1043,7 +1043,7 @@ async function ModuleBody({
         </div>
         {!isUnlocked && <p className="text-xs text-gray-500">Locked until previous steps are complete.</p>}
         {readOnly && <p className="text-xs text-gray-500">Preview mode — actions disabled.</p>}
-        
+
         {/* Auto-track progress for quiz modules when viewed */}
         {assignment && isUnlocked && !preview && (
           <script
@@ -1053,9 +1053,9 @@ async function ModuleBody({
   try {
     const assignmentId = "${assignment.id}";
     const moduleId = "${module.id}";
-    
+
     console.log("🎯 Auto-tracking quiz module progress:", { assignmentId: assignmentId, moduleId: moduleId });
-    
+
     fetch("/api/assignment/progress", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1085,7 +1085,7 @@ async function ModuleBody({
           This step is recorded by your {type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.
         </p>
         {!isUnlocked && <p className="text-xs text-gray-500">Locked until previous steps are complete.</p>}
-        
+
         {/* Auto-track progress for onsite modules when viewed */}
         {assignment && isUnlocked && !preview && (
           <script
@@ -1096,9 +1096,9 @@ async function ModuleBody({
     const assignmentId = "${assignment.id}";
     const moduleId = "${module.id}";
     const moduleType = "${type}";
-    
+
     console.log("🎯 Auto-tracking onsite module progress:", { assignmentId: assignmentId, moduleId: moduleId, moduleType: moduleType });
-    
+
     fetch("/api/assignment/progress", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
