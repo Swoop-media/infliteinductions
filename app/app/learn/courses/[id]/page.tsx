@@ -315,7 +315,7 @@ async function loadBlocks(moduleId: string) {
     .eq("module_id", moduleId)
     .order("order_index", { ascending: true })
     .order("created_at", { ascending: true });
-  
+
   console.log("Blocks query result:", {
     moduleId,
     data: resp.data,
