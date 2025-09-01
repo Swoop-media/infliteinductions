@@ -5,8 +5,8 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import CoursePreview from "@/components/CoursePreview";
 
 /**
- * Renders a course as a learner (mode="learner" persists progress).
- * Requires an APPROVED enrolment for the signed-in user.
+ * Renders a course as a learner (assignments-only approach).
+ * Requires a trainee assignment for the signed-in user.
  */
 type RouteParams = { id: string };
 
@@ -21,21 +21,19 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
   } = await supabase.auth.getUser();
   if (userErr || !user) redirect("/auth/login");
 
-  // Must have an approved enrolment for this course
-  const { data: enrol, error: enrolErr } = await supabase
-    .from("enrolments")
-    .select("id, status")
+  // Must have a trainee assignment for this course
+  const { data: assignment, error: assignmentErr } = await supabase
+    .from("course_assignments")
+    .select("id, role")
     .eq("course_id", courseId)
     .eq("user_id", user.id)
+    .eq("role", "trainee")
     .single();
 
-  if (enrolErr || !enrol) {
+  if (assignmentErr || !assignment) {
     // eslint-disable-next-line no-console
-    console.error("No enrolment", enrolErr);
-    redirect("/app/learn?error=not_enrolled");
-  }
-  if (enrol.status !== "approved") {
-    redirect("/app/learn?error=enrolment_not_approved");
+    console.error("No trainee assignment", assignmentErr);
+    redirect("/app/learn?error=not_assigned");
   }
 
   // Load course
@@ -76,14 +74,6 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
     notFound();
   }
 
-  // Check if user has an assignment for this course
-  const { data: assignment } = await supabase
-    .from("course_assignments")
-    .select("id, role")
-    .eq("course_id", courseId)
-    .eq("user_id", user.id)
-    .single();
-
   return (
     <div className="mx-auto w-full max-w-6xl p-6">
       <CoursePreview
@@ -93,7 +83,7 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
         modules={modules ?? []}
         blocks={blocks ?? []}
         mode="learner"
-        assignmentId={assignment?.id}
+        assignmentId={assignment.id}
       />
     </div>
   );

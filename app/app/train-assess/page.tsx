@@ -94,98 +94,8 @@ export default async function TrainAssessPage() {
 
   console.log('Pending training from course_assignments:', pendingTrainingAssignments);
 
-  // Filter for enrolments that have completed digital phases but not onsite training
+  // Filter for assignments that have completed digital phases but not onsite training
   const pendingTrainingItems: PendingTraining[] = [];
-
-  // Process course_enrolments
-  for (const enrolment of pendingTraining) {
-    console.log('Processing enrolment:', enrolment.id, 'for course:', enrolment.course_id);
-
-    // Check if this learner has completed all digital modules for this course
-    const { data: digitalModules } = await supabase
-      .from("course_modules")
-      .select("id")
-      .eq("course_id", enrolment.course_id)
-      .in("type", ["digital_training", "digital_assessment_quiz"]);
-
-    console.log('Digital modules for course:', digitalModules?.length || 0);
-
-    if (digitalModules && digitalModules.length > 0) {
-      // Check completed digital modules
-      const { data: completedDigital } = await supabase
-        .from("module_progress")
-        .select("module_id")
-        .eq("enrolment_id", enrolment.id)
-        .in("module_id", digitalModules.map(m => m.id));
-
-      console.log('Completed digital modules:', completedDigital?.length || 0, 'of', digitalModules.length);
-
-      // Only check if all digital modules are complete
-      if (completedDigital && completedDigital.length >= digitalModules.length) {
-        // Check if onsite training is already completed
-        const { data: onsiteModule } = await supabase
-          .from("course_modules")
-          .select("id")
-          .eq("course_id", enrolment.course_id)
-          .eq("type", "onsite_training")
-          .single();
-
-        if (onsiteModule) {
-          const { data: onsiteProgress } = await supabase
-            .from("module_progress")
-            .select("id")
-            .eq("enrolment_id", enrolment.id)
-            .eq("module_id", onsiteModule.id)
-            .maybeSingle();
-
-          if (!onsiteProgress) {
-            console.log('Adding to pending training (digital complete):', enrolment.id);
-            const profileData = (enrolment as any).profiles;
-            pendingTrainingItems.push({
-              enrolment_id: enrolment.id,
-              course_id: enrolment.course_id,
-              course_title: (enrolment as any).courses.title,
-              learner_name: profileData?.name || profileData?.email || 'Unknown',
-              learner_email: profileData?.email || 'No email',
-              user_id: enrolment.user_id,
-              created_at: enrolment.created_at
-            });
-          }
-        }
-      }
-    } else {
-      // No digital modules, so check onsite training directly
-      const { data: onsiteModule } = await supabase
-        .from("course_modules")
-        .select("id")
-        .eq("course_id", enrolment.course_id)
-        .eq("type", "onsite_training")
-        .single();
-
-      if (onsiteModule) {
-        const { data: onsiteProgress } = await supabase
-          .from("module_progress")
-          .select("id")
-          .eq("enrolment_id", enrolment.id)
-          .eq("module_id", onsiteModule.id)
-          .maybeSingle();
-
-        if (!onsiteProgress) {
-          console.log('Adding to pending training (no digital modules):', enrolment.id);
-          const profileData = (enrolment as any).profiles;
-          pendingTrainingItems.push({
-            enrolment_id: enrolment.id,
-            course_id: enrolment.course_id,
-            course_title: (enrolment as any).courses.title,
-            learner_name: profileData?.name || profileData?.email || 'Unknown',
-            learner_email: profileData?.email || 'No email',
-            user_id: enrolment.user_id,
-            created_at: enrolment.created_at
-          });
-        }
-      }
-    }
-  }
 
   // Process course_assignments (trainee assignments)
   for (const assignment of pendingTrainingAssignments) {
@@ -266,10 +176,10 @@ export default async function TrainAssessPage() {
           console.log('Adding to pending training (assignment no digital modules):', assignment.id);
           const profileData = (assignment as any).profiles;
           pendingTrainingItems.push({
-            enrolment_id: assignment.id,
+            enrolment_id: assignment.id, // Use assignment ID
             course_id: assignment.course_id,
             course_title: (assignment as any).courses.title,
-            learner_name: profileData?.name || profileData?.email || 'Unknown',
+            learner_name: profileData?.full_name || profileData?.email || 'Unknown',
             learner_email: profileData?.email || 'No email',
             user_id: assignment.user_id,
             created_at: assignment.created_at
@@ -417,7 +327,7 @@ export default async function TrainAssessPage() {
 
         if (!assessmentProgress) {
           pendingAssessmentItems.push({
-            enrolment_id: assignment.id, // Use assignment ID as enrolment_id
+            enrolment_id: assignment.id, // Use assignment ID
             course_id: assignment.course_id,
             course_title: (assignment as any).courses.title,
             learner_name: (assignment as any).profiles.name || (assignment as any).profiles.email,

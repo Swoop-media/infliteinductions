@@ -49,27 +49,15 @@ async function loadMyProfileAndLearning() {
     .eq("id", user.id)
     .maybeSingle();
 
-  // Get both enrolments and assignments
-  const [enrolsResult, assignmentsResult] = await Promise.all([
-    supabase
-      .from("course_enrolments")
-      .select("course_id, status, updated_at")
-      .eq("user_id", user.id),
-    supabase
-      .from("course_assignments")
-      .select("course_id, role, created_at")
-      .eq("user_id", user.id)
-      .eq("role", "trainee")
-  ]);
+  // Get trainee assignments only
+  const { data: assignments } = await supabase
+    .from("course_assignments")
+    .select("course_id, role, created_at, assignment_status")
+    .eq("user_id", user.id)
+    .eq("role", "trainee");
 
-  const enrols = enrolsResult.data ?? [];
-  const assignments = assignmentsResult.data ?? [];
-
-  // Collect all unique course IDs
-  const courseIds = Array.from(new Set([
-    ...enrols.map((e) => e.course_id),
-    ...assignments.map((a) => a.course_id)
-  ]));
+  const assignmentList = assignments ?? [];
+  const courseIds = assignmentList.map((a) => a.course_id);
 
   let courses: CourseRow[] = [];
   if (courseIds.length) {
@@ -83,34 +71,20 @@ async function loadMyProfileAndLearning() {
   const courseMap = new Map<string, CourseRow>();
   courses.forEach((c) => courseMap.set(c.id, c));
 
-  // Categorize
+  // Categorize based on assignment_status
   const inProgress: Array<{ course: CourseRow; status: string }> = [];
   const completed: Array<{ course: CourseRow; status: string }> = [];
 
-  // Process enrolments
-  for (const e of enrols as EnrolRow[]) {
-    const c = courseMap.get(e.course_id);
-    if (!c) continue;
-    const s = (e.status || "").toLowerCase();
-
-    if (s === "approved" || s === "in_progress") {
-      inProgress.push({ course: c, status: s });
-    } else if (s === "completed") {
-      completed.push({ course: c, status: s });
-    }
-    // ignore: pending, rejected, cancelled, etc.
-  }
-
-  // Process assignments (trainees are automatically "approved")
-  for (const a of assignments) {
+  // Process assignments
+  for (const a of assignmentList) {
     const c = courseMap.get(a.course_id);
     if (!c) continue;
     
-    // Check if this course is already in the list from enrolments
-    const alreadyExists = inProgress.some(item => item.course.id === a.course_id) ||
-                         completed.some(item => item.course.id === a.course_id);
+    const status = a.assignment_status || "assigned";
     
-    if (!alreadyExists) {
+    if (status === "completed") {
+      completed.push({ course: c, status: "completed" });
+    } else {
       inProgress.push({ course: c, status: "assigned" });
     }
   }
