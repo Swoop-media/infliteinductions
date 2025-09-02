@@ -32,27 +32,33 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   // Get current user
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
+    console.log("❌ No user found, redirecting to login");
     redirect("/auth/login");
   }
 
   if (!assignmentId) {
-    console.log("No assignmentId provided, redirecting to train-assess");
+    console.log("❌ No assignmentId provided, redirecting to train-assess");
     redirect("/app/train-assess");
   }
 
+  console.log("✅ Assignment ID found:", assignmentId);
+
   // Get course info
-  const { data: course } = await supabase
+  const { data: course, error: courseError } = await supabase
     .from("courses")
     .select("title, description")
     .eq("id", courseId)
     .single();
 
+  console.log("Course query result:", { course, courseError });
+
   if (!course) {
+    console.log("❌ No course found, redirecting to train-assess");
     redirect("/app/train-assess");
   }
 
   // Get trainee assignment and profile
-  const { data: assignment } = await supabase
+  const { data: assignment, error: assignmentError } = await supabase
     .from("course_assignments")
     .select(`
       id,
@@ -65,12 +71,17 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("role", "trainee")
     .single();
 
+  console.log("Assignment query result:", { assignment, assignmentError });
+
   if (!assignment) {
+    console.log("❌ No assignment found, redirecting to train-assess");
     redirect("/app/train-assess");
   }
 
+  console.log("✅ Assignment found:", assignment.id);
+
   // Verify trainer/assessor has access to this course
-  const { data: trainerAssignment } = await supabase
+  const { data: trainerAssignment, error: trainerError } = await supabase
     .from("course_assignments")
     .select("role")
     .eq("user_id", user.id)
@@ -78,9 +89,14 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .in("role", ["onsite_trainer", "onsite_assessor"])
     .single();
 
+  console.log("Trainer assignment query result:", { trainerAssignment, trainerError });
+
   if (!trainerAssignment) {
+    console.log("❌ No trainer assignment found, redirecting to train-assess");
     redirect("/app/train-assess");
   }
+
+  console.log("✅ Trainer assignment verified:", trainerAssignment.role);
 
   // Get course modules
   const moduleType = sessionType === 'training' ? 'onsite_training' : 'onsite_assessment';
