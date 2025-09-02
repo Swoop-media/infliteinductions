@@ -8,6 +8,52 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle, Circle, User, BookOpen, ClipboardCheck, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import CompleteModuleButton from "./CompleteModuleButton";
+import InteractiveRequirements from "./InteractiveRequirements";
+
+async function saveRequirementResponses(moduleId: string, assignmentId: string, responses: Record<string, any>) {
+  "use server";
+  
+  const supabase = await createSupabaseServer();
+  
+  // Get current user
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    throw new Error("Authentication required");
+  }
+
+  // Save or update requirement responses
+  const responseEntries = Object.entries(responses).map(([requirementId, value]) => ({
+    requirement_id: requirementId,
+    module_id: moduleId,
+    assignment_id: assignmentId,
+    trainer_id: user.id,
+    response_value: value,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  }));
+
+  // First, delete existing responses for this module/assignment/trainer combination
+  await supabase
+    .from("requirement_responses")
+    .delete()
+    .eq("module_id", moduleId)
+    .eq("assignment_id", assignmentId)
+    .eq("trainer_id", user.id);
+
+  // Insert new responses
+  if (responseEntries.length > 0) {
+    const { error } = await supabase
+      .from("requirement_responses")
+      .insert(responseEntries);
+    
+    if (error) {
+      console.error("Error saving requirement responses:", error);
+      throw new Error("Failed to save responses");
+    }
+  }
+
+  console.log("Successfully saved requirement responses:", responseEntries);
+}
 
 interface CoursePlayerProps {
   params: {
@@ -306,40 +352,16 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
                       </div>
                     </div>
 
-                    {/* Requirements Checklist */}
+                    {/* Interactive Requirements */}
                     {moduleRequirements.length > 0 && (
-                      <div className="p-4">
-                        <h4 className="text-sm font-medium text-muted-foreground mb-3">
-                          {sessionType === 'training' ? 'Training Requirements' : 'Assessment Requirements'}
-                        </h4>
-                        <div className="space-y-3">
-                          {moduleRequirements.map((req) => (
-                            <div key={req.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
-                              <div className="flex items-center justify-center w-5 h-5 rounded border-2 border-muted-foreground/30 bg-background">
-                                {isCompleted && (
-                                  <CheckCircle className="h-4 w-4 text-green-600" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium">{req.label}</p>
-                                {req.help_text && (
-                                  <p className="text-xs text-muted-foreground mt-1">{req.help_text}</p>
-                                )}
-                                <div className="flex items-center gap-2 mt-1">
-                                  <Badge variant="outline" className="text-xs">
-                                    {req.field_type}
-                                  </Badge>
-                                  {req.required && (
-                                    <Badge variant="outline" className="text-xs text-red-600 border-red-200">
-                                      Required
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
+                      <InteractiveRequirements
+                        requirements={moduleRequirements}
+                        moduleId={module.id}
+                        isCompleted={isCompleted}
+                        sessionType={sessionType}
+                        assignmentId={assignmentId}
+                        onSave={saveRequirementResponses}
+                      />
                     )}
 
                     {/* No Requirements Message */}
