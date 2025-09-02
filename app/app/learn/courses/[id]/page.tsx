@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import CompleteModuleButton from "./CompleteModuleButton";
 
 /**
  * Renders a course as a learner (assignments-only approach).
@@ -385,6 +386,15 @@ export default async function LearnerCoursePage(props: {
 
         {/* Module Content */}
         <div className="flex-1 overflow-y-auto">
+          {searchParams?.error === "completion_failed" && (
+            <div className="mx-auto max-w-4xl p-6">
+              <div className="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
+                <div className="text-sm text-red-800">
+                  ⚠️ Failed to mark module as complete. Please try again.
+                </div>
+              </div>
+            </div>
+          )}
           {currentModule ? (
             <div className="max-w-4xl mx-auto p-6">
               <div className="bg-white rounded-xl border shadow-sm p-8 space-y-6">
@@ -438,32 +448,12 @@ export default async function LearnerCoursePage(props: {
                       )}
 
                       {currentModule.type === "digital_training" && !isCurrentModuleCompleted && (
-                        <form action={async () => {
-                          "use server";
-                          const supabase = await createSupabaseServer();
-                          await supabase
-                            .from("assignment_progress")
-                            .insert({
-                              assignment_id: assignment.id,
-                              module_id: currentModule!.id,
-                              completed_at: new Date().toISOString(),
-                            })
-                            .select()
-                            .single();
-                          
-                          // Find next module and redirect to it
-                          const nextModuleIndex = currentModuleIndex + 1;
-                          if (nextModuleIndex < sortedModules.length) {
-                            const nextModule = sortedModules[nextModuleIndex];
-                            redirect(`/app/learn/courses/${courseId}?module=${nextModule.id}`);
-                          } else {
-                            redirect(`/app/learn/courses/${courseId}`);
-                          }
-                        }}>
-                          <button className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
-                            Mark as Complete →
-                          </button>
-                        </form>
+                        <CompleteModuleButton
+                          assignmentId={assignment.id}
+                          moduleId={currentModule.id}
+                          courseId={courseId}
+                          nextModuleId={currentModuleIndex + 1 < sortedModules.length ? sortedModules[currentModuleIndex + 1].id : undefined}
+                        />
                       )}
 
                       {(currentModule.type === "onsite_training" || currentModule.type === "onsite_assessment") && (
