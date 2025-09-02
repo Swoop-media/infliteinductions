@@ -37,12 +37,22 @@ export default function CompleteModuleButton({
       });
 
       if (response.ok) {
+        const result = await response.json();
+        console.log('Module completed successfully:', result);
+        // Force a page refresh to show updated progress
         router.refresh();
+        // Small delay to ensure the refresh happens
+        setTimeout(() => {
+          window.location.reload();
+        }, 100);
       } else {
-        console.error('Failed to complete module');
+        const error = await response.json();
+        console.error('Failed to complete module:', error);
+        alert('Failed to complete module. Please try again.');
       }
     } catch (error) {
       console.error('Error completing module:', error);
+      alert('Network error. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }

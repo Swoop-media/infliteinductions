@@ -22,12 +22,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify user owns this assignment
+    // Get assignment details (could be for current user or trainee)
     const { data: assignment, error: assignmentErr } = await supabase
       .from("course_assignments")
       .select("id, user_id, course_id, role")
       .eq("id", assignmentId)
-      .eq("user_id", user.id)
       .single();
 
     console.log("🔍 Assignment verification:", {
@@ -40,8 +39,36 @@ export async function POST(request: NextRequest) {
     });
 
     if (assignmentErr || !assignment) {
+      console.log("❌ Assignment progress: Assignment not found");
+      return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
+    }
+
+    // Check if user has permission to update this assignment
+    let hasPermission = false;
+    
+    // Case 1: User owns the assignment (learner completing their own modules)
+    if (assignment.user_id === user.id) {
+      hasPermission = true;
+      console.log("✅ User owns assignment");
+    } else {
+      // Case 2: User is trainer/assessor for this course
+      const { data: trainerAssignment } = await supabase
+        .from("course_assignments")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("course_id", assignment.course_id)
+        .in("role", ["onsite_trainer", "onsite_assessor"])
+        .single();
+      
+      if (trainerAssignment) {
+        hasPermission = true;
+        console.log("✅ User is trainer/assessor for this course");
+      }
+    }
+
+    if (!hasPermission) {
       console.log("❌ Assignment progress: Access denied");
-      return NextResponse.json({ error: "Assignment not found or access denied" }, { status: 403 });
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
     // Insert assignment progress (will be ignored if duplicate)
