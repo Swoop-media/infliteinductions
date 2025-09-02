@@ -64,7 +64,7 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
       id,
       user_id,
       course_id,
-      profiles(full_name, email)
+      profiles!course_assignments_user_id_fkey(full_name, email)
     `)
     .eq("id", assignmentId)
     .eq("course_id", courseId)

@@ -1,0 +1,29 @@
+react-dom-client.development.js:25581 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+page.tsx?2:34  Server  Current user: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+page.tsx?4:40  Server  Trainer course IDs: Array(4)
+page.tsx?5:54  Server  Trainee assignments query error: null
+page.tsx?6:55  Server  Trainee assignments found: 2
+page.tsx:62  Server  Trainee assignments data: Array(2)
+page.tsx:155  Server  Final pending training items: 1
+page.tsx:156  Server  Final pending assessment items: 0
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 965ms
+page.tsx?81:39  Server  Course page params: {courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', assignmentId: '291be35f-80c9-4713-a676-01fb7ecad8df', sessionType: 'training'}
+page.tsx:44  Server  ✅ Assignment ID found: 291be35f-80c9-4713-a676-01fb7ecad8df
+page.tsx:53  Server  Course query result: {course: {…}, courseError: null}
+page.tsx:74  Server  Assignment query result: {assignment: null, assignmentError: {…}}
+page.tsx:77  Server  ❌ No assignment found, redirecting to train-assess
+page.tsx?2:34  Server  Current user: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+page.tsx?4:40  Server  Trainer course IDs: (4) ['c7e65bae-bb3d-49d0-b992-fe4c09b15451', 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', 'f7a8ab68-57f8-4029-837b-7a8c808fc1fd', 'f7a8ab68-57f8-4029-837b-7a8c808fc1fd']
+page.tsx?5:54  Server  Trainee assignments query error: null
+page.tsx?6:55  Server  Trainee assignments found: 2
+page.tsx:62  Server  Trainee assignments data: (2) [{…}, {…}]
+page.tsx:155  Server  Final pending training items: 1
+page.tsx:156  Server  Final pending assessment items: 0
+page.tsx?2:34  Server  Current user: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+page.tsx?4:40  Server  Trainer course IDs: (4) ['c7e65bae-bb3d-49d0-b992-fe4c09b15451', 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', 'f7a8ab68-57f8-4029-837b-7a8c808fc1fd', 'f7a8ab68-57f8-4029-837b-7a8c808fc1fd']
+page.tsx?5:54  Server  Trainee assignments query error: null
+page.tsx?6:55  Server  Trainee assignments found: 2
+page.tsx:62  Server  Trainee assignments data: (2) [{…}, {…}]
+page.tsx:155  Server  Final pending training items: 1
+page.tsx:156  Server  Final pending assessment items: 0
