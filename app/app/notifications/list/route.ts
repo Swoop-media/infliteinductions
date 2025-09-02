@@ -1,10 +1,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServer } from "@/lib/supabase/server";
+import { createSupabaseRoute } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServer();
+    const supabase = await createSupabaseRoute();
     
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
