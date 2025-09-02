@@ -195,11 +195,11 @@ async function notifyOnsiteTrainers(supabase: any, createNotification: any, cour
     // Get trainee name
     const { data: traineeProfile } = await supabase
       .from("profiles")
-      .select("name, email")
+      .select("full_name, email")
       .eq("id", traineeUserId)
       .single();
 
-    const traineeName = traineeProfile?.name || traineeProfile?.email || "A trainee";
+    const traineeName = traineeProfile?.full_name || traineeProfile?.email || "A trainee";
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
@@ -239,11 +239,11 @@ async function notifyOnsiteAssessors(supabase: any, createNotification: any, cou
     // Get trainee name
     const { data: traineeProfile } = await supabase
       .from("profiles")
-      .select("name, email")
+      .select("full_name, email")
       .eq("id", traineeUserId)
       .single();
 
-    const traineeName = traineeProfile?.name || traineeProfile?.email || "A trainee";
+    const traineeName = traineeProfile?.full_name || traineeProfile?.email || "A trainee";
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
