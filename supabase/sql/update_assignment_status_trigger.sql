@@ -32,22 +32,23 @@ BEGIN
         NEW.assignment_id, total_modules_count, completed_modules_count, current_status;
     
     -- Update assignment status based on progress
-    IF completed_modules_count >= total_modules_count THEN
+    IF completed_modules_count >= total_modules_count AND total_modules_count > 0 THEN
         -- All modules completed
         UPDATE course_assignments
         SET assignment_status = 'completed',
             completed_at = NOW()
-        WHERE id = NEW.assignment_id;
+        WHERE id = NEW.assignment_id
+        AND assignment_status != 'completed'; -- Only update if not already completed
         
-        RAISE LOG 'Assignment % marked as completed', NEW.assignment_id;
+        RAISE LOG 'Assignment % marked as completed (% of % modules)', NEW.assignment_id, completed_modules_count, total_modules_count;
     ELSIF completed_modules_count > 0 THEN
         -- Some modules completed
         UPDATE course_assignments
         SET assignment_status = 'in_progress'
         WHERE id = NEW.assignment_id
-        AND assignment_status = 'assigned';
+        AND assignment_status = 'assigned'; -- Only update from assigned to in_progress
         
-        RAISE LOG 'Assignment % marked as in_progress', NEW.assignment_id;
+        RAISE LOG 'Assignment % marked as in_progress (% of % modules)', NEW.assignment_id, completed_modules_count, total_modules_count;
     END IF;
     
     RETURN NEW;
