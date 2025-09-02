@@ -88,6 +88,26 @@ function formatTeamsText(
         .filter(Boolean)
         .join("\n");
 
+    case "onsite_assessment_ready":
+      return [
+        "📋 Learner ready for onsite assessment",
+        learner ? `• Learner: ${learner}` : "",
+        course ? `• Course: ${course}` : "",
+        url ? `• Train/Assess dashboard: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "course_completed":
+      return [
+        "🏆 Course completed",
+        learner ? `• Learner: ${learner}` : "",
+        course ? `• Course: ${course}` : "",
+        url ? `• View certificate: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
     case "course_assigned":
       return [
         "📚 Course assigned",

@@ -241,6 +241,32 @@ function teamsTextFor(n: NotificationInput) {
         .filter(Boolean)
         .join("\n");
 
+    case "onsite_assessment_ready":
+      const assessmentLearnerInfo = n.data?.learnerName || n.data?.traineeName || n.data?.learner_email || "A learner";
+      const assessmentCourse = n.data?.courseTitle;
+      const assessmentUrl = n.data?.url;
+      return [
+        "📋 Learner ready for onsite assessment",
+        `• Learner: ${assessmentLearnerInfo}`,
+        assessmentCourse ? `• Course: ${assessmentCourse}` : "",
+        assessmentUrl ? `• Train/Assess dashboard: ${assessmentUrl}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "course_completed":
+      const completedLearnerInfo = n.data?.learnerName || n.data?.traineeName || n.data?.learner_email || "A learner";
+      const completedCourse = n.data?.courseTitle;
+      const completedUrl = n.data?.url;
+      return [
+        "🏆 Course completed",
+        `• Learner: ${completedLearnerInfo}`,
+        completedCourse ? `• Course: ${completedCourse}` : "",
+        completedUrl ? `• View certificate: ${completedUrl}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
     default:
       return `🔔 ${n.title}${n.body ? `\n\n${n.body}` : ""}`;
   }
