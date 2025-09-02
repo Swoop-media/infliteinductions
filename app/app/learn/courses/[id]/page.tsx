@@ -398,30 +398,7 @@ export default async function LearnerCoursePage(props: {
           {currentModule ? (
             <div className="max-w-4xl mx-auto p-6">
               <div className="bg-white rounded-xl border shadow-sm p-8 space-y-6">
-                {/* Module Header */}
-                <div className="flex items-start gap-4 pb-4 border-b">
-                  <span className="text-3xl">
-                    {isCurrentModuleCompleted ? '✅' : typeIcon(currentModule.type as ModuleType)}
-                  </span>
-                  <div className="flex-1">
-                    <h1 className="text-2xl font-bold mb-2">
-                      {currentModule.title || TYPE_LABEL[currentModule.type as ModuleType]}
-                    </h1>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <span>{TYPE_LABEL[currentModule.type as ModuleType]}</span>
-                      {isCurrentModuleCompleted && (
-                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                          ✓ Complete
-                        </span>
-                      )}
-                      {!isCurrentModuleUnlocked && (
-                        <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                          🔒 Locked
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                
 
                 {/* Module Content */}
                 {isCurrentModuleUnlocked ? (
