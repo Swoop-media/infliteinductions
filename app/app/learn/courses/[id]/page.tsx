@@ -224,7 +224,7 @@ export default async function LearnerCoursePage(props: {
   // Load modules
   const { data: modules, error: modErr } = await supabase
     .from("course_modules")
-    .select("id, course_id, title, type, order_index, stage, video_url")
+    .select("id, course_id, title, type, order_index, stage")
     .eq("course_id", course.id)
     .order("order_index", { ascending: true });
   if (modErr) {
@@ -457,16 +457,7 @@ export default async function LearnerCoursePage(props: {
                                    dangerouslySetInnerHTML={{ __html: currentModule.content }} />
                             )}
 
-                            {/* Video Player Section */}
-                            {currentModule.video_url && (
-                              <div className="mb-6">
-                                <VideoPlayer
-                                  videoUrl={currentModule.video_url}
-                                  courseId={course.id}
-                                  title={currentModule.title}
-                                />
-                              </div>
-                            )}
+                            {/* Video content will be rendered through content blocks */}
 
                             {isCurrentModuleCompleted ? (
                               <div className="flex items-center gap-2 text-green-600">
