@@ -1,0 +1,215 @@
+main-app.js?v=1756842720049:1116 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+page.tsx:75  Server  Course page params: {courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', assignmentId: '291be35f-80c9-4713-a676-01fb7ecad8df', sessionType: 'training'}
+page.tsx:89  Server  ✅ Assignment ID found: 291be35f-80c9-4713-a676-01fb7ecad8df
+page.tsx:98  Server  Course query result: {course: {…}, courseError: null}
+page.tsx:125  Server  Assignment query result: {assignment: {…}, assignmentError: null}
+page.tsx:137  Server  ✅ Assignment found: 291be35f-80c9-4713-a676-01fb7ecad8df
+page.tsx:147  Server  Trainer assignments query result: {trainerAssignments: Array(2), trainerError: null}
+page.tsx:155  Server  ✅ Trainer assignments verified: (2) ['onsite_assessor', 'onsite_trainer']
+page.tsx:166  Server  ✅ User has required role 'onsite_trainer' for session type 'training'
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 1703ms
+InteractiveRequirements.tsx:63   POST https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/api/assignment/progress 500 (Internal Server Error)
+handleSave @ InteractiveRequirements.tsx:63
+await in handleSave
+executeDispatch @ react-dom-client.development.js:16921
+runWithFiberInDEV @ react-dom-client.development.js:872
+processDispatchQueue @ react-dom-client.development.js:16971
+eval @ react-dom-client.development.js:17572
+batchedUpdates$1 @ react-dom-client.development.js:3312
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17125
+dispatchEvent @ react-dom-client.development.js:21308
+dispatchDiscreteEvent @ react-dom-client.development.js:21276
+<button>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:345
+_c @ button.tsx:46
+react_stack_bottom_frame @ react-dom-client.development.js:23552
+renderWithHooksAgain @ react-dom-client.development.js:6863
+renderWithHooks @ react-dom-client.development.js:6775
+updateForwardRef @ react-dom-client.development.js:8777
+beginWork @ react-dom-client.development.js:11018
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15677
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15671
+renderRootConcurrent @ react-dom-client.development.js:15646
+performWorkOnRoot @ react-dom-client.development.js:14940
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16766
+performWorkUntilDeadline @ scheduler.development.js:45
+<Button>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:345
+InteractiveRequirements @ InteractiveRequirements.tsx:256
+react_stack_bottom_frame @ react-dom-client.development.js:23552
+renderWithHooksAgain @ react-dom-client.development.js:6863
+renderWithHooks @ react-dom-client.development.js:6775
+updateFunctionComponent @ react-dom-client.development.js:9069
+beginWork @ react-dom-client.development.js:10628
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15677
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15671
+renderRootConcurrent @ react-dom-client.development.js:15646
+performWorkOnRoot @ react-dom-client.development.js:14940
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16766
+performWorkUntilDeadline @ scheduler.development.js:45
+"use client"
+eval @ page.tsx:349
+Array.map @ <anonymous>:1
+CoursePlayerPage @ page.tsx:307
+initializeElement @ react-server-dom-webpack-client.browser.development.js:1207
+eval @ react-server-dom-webpack-client.browser.development.js:2830
+initializeModelChunk @ react-server-dom-webpack-client.browser.development.js:1109
+getOutlinedModel @ react-server-dom-webpack-client.browser.development.js:1485
+parseModelString @ react-server-dom-webpack-client.browser.development.js:1822
+eval @ react-server-dom-webpack-client.browser.development.js:2760
+initializeModelChunk @ react-server-dom-webpack-client.browser.development.js:1109
+getOutlinedModel @ react-server-dom-webpack-client.browser.development.js:1485
+parseModelString @ react-server-dom-webpack-client.browser.development.js:1822
+eval @ react-server-dom-webpack-client.browser.development.js:2760
+initializeModelChunk @ react-server-dom-webpack-client.browser.development.js:1109
+readChunk @ react-server-dom-webpack-client.browser.development.js:935
+react_stack_bottom_frame @ react-dom-client.development.js:23659
+createChild @ react-dom-client.development.js:5464
+reconcileChildrenArray @ react-dom-client.development.js:5771
+reconcileChildFibersImpl @ react-dom-client.development.js:6094
+eval @ react-dom-client.development.js:6199
+reconcileChildren @ react-dom-client.development.js:8753
+beginWork @ react-dom-client.development.js:11027
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15677
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15671
+renderRootConcurrent @ react-dom-client.development.js:15646
+performWorkOnRoot @ react-dom-client.development.js:14940
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16766
+performWorkUntilDeadline @ scheduler.development.js:45
+<CoursePlayerPage>
+initializeFakeTask @ react-server-dom-webpack-client.browser.development.js:2408
+resolveDebugInfo @ react-server-dom-webpack-client.browser.development.js:2433
+processFullStringRow @ react-server-dom-webpack-client.browser.development.js:2634
+processFullBinaryRow @ react-server-dom-webpack-client.browser.development.js:2606
+processBinaryChunk @ react-server-dom-webpack-client.browser.development.js:2733
+progress @ react-server-dom-webpack-client.browser.development.js:2997
+"use server"
+ResponseInstance @ react-server-dom-webpack-client.browser.development.js:1870
+createResponseFromOptions @ react-server-dom-webpack-client.browser.development.js:2858
+exports.createFromReadableStream @ react-server-dom-webpack-client.browser.development.js:3228
+eval @ app-index.tsx:157
+(app-pages-browser)/./node_modules/next/dist/client/app-index.js @ main-app.js?v=1756842720049:149
+options.factory @ webpack.js?v=1756842720049:692
+__webpack_require__ @ webpack.js?v=1756842720049:29
+fn @ webpack.js?v=1756842720049:349
+eval @ app-next-dev.ts:17
+eval @ app-bootstrap.ts:78
+loadScriptsInSequence @ app-bootstrap.ts:20
+appBootstrap @ app-bootstrap.ts:60
+eval @ app-next-dev.ts:16
+(app-pages-browser)/./node_modules/next/dist/client/app-next-dev.js @ main-app.js?v=1756842720049:171
+options.factory @ webpack.js?v=1756842720049:692
+__webpack_require__ @ webpack.js?v=1756842720049:29
+__webpack_exec__ @ main-app.js?v=1756842720049:1790
+(anonymous) @ main-app.js?v=1756842720049:1791
+webpackJsonpCallback @ webpack.js?v=1756842720049:1368
+(anonymous) @ main-app.js?v=1756842720049:9
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+InteractiveRequirements.tsx:82  Failed to complete module: {error: 'Failed to track progress'}
+error @ intercept-console-error.js:62
+handleSave @ InteractiveRequirements.tsx:82
+await in handleSave
+executeDispatch @ react-dom-client.development.js:16921
+runWithFiberInDEV @ react-dom-client.development.js:872
+processDispatchQueue @ react-dom-client.development.js:16971
+eval @ react-dom-client.development.js:17572
+batchedUpdates$1 @ react-dom-client.development.js:3312
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17125
+dispatchEvent @ react-dom-client.development.js:21308
+dispatchDiscreteEvent @ react-dom-client.development.js:21276
+<button>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:345
+_c @ button.tsx:46
+react_stack_bottom_frame @ react-dom-client.development.js:23552
+renderWithHooksAgain @ react-dom-client.development.js:6863
+renderWithHooks @ react-dom-client.development.js:6775
+updateForwardRef @ react-dom-client.development.js:8777
+beginWork @ react-dom-client.development.js:11018
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15677
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15671
+renderRootConcurrent @ react-dom-client.development.js:15646
+performWorkOnRoot @ react-dom-client.development.js:14940
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16766
+performWorkUntilDeadline @ scheduler.development.js:45
+<Button>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:345
+InteractiveRequirements @ InteractiveRequirements.tsx:256
+react_stack_bottom_frame @ react-dom-client.development.js:23552
+renderWithHooksAgain @ react-dom-client.development.js:6863
+renderWithHooks @ react-dom-client.development.js:6775
+updateFunctionComponent @ react-dom-client.development.js:9069
+beginWork @ react-dom-client.development.js:10628
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15677
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15671
+renderRootConcurrent @ react-dom-client.development.js:15646
+performWorkOnRoot @ react-dom-client.development.js:14940
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16766
+performWorkUntilDeadline @ scheduler.development.js:45
+"use client"
+eval @ page.tsx:349
+Array.map @ <anonymous>:1
+CoursePlayerPage @ page.tsx:307
+initializeElement @ react-server-dom-webpack-client.browser.development.js:1207
+eval @ react-server-dom-webpack-client.browser.development.js:2830
+initializeModelChunk @ react-server-dom-webpack-client.browser.development.js:1109
+getOutlinedModel @ react-server-dom-webpack-client.browser.development.js:1485
+parseModelString @ react-server-dom-webpack-client.browser.development.js:1822
+eval @ react-server-dom-webpack-client.browser.development.js:2760
+initializeModelChunk @ react-server-dom-webpack-client.browser.development.js:1109
+getOutlinedModel @ react-server-dom-webpack-client.browser.development.js:1485
+parseModelString @ react-server-dom-webpack-client.browser.development.js:1822
+eval @ react-server-dom-webpack-client.browser.development.js:2760
+initializeModelChunk @ react-server-dom-webpack-client.browser.development.js:1109
+readChunk @ react-server-dom-webpack-client.browser.development.js:935
+react_stack_bottom_frame @ react-dom-client.development.js:23659
+createChild @ react-dom-client.development.js:5464
+reconcileChildrenArray @ react-dom-client.development.js:5771
+reconcileChildFibersImpl @ react-dom-client.development.js:6094
+eval @ react-dom-client.development.js:6199
+reconcileChildren @ react-dom-client.development.js:8753
+beginWork @ react-dom-client.development.js:11027
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15677
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15671
+renderRootConcurrent @ react-dom-client.development.js:15646
+performWorkOnRoot @ react-dom-client.development.js:14940
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16766
+performWorkUntilDeadline @ scheduler.development.js:45
+<CoursePlayerPage>
+initializeFakeTask @ react-server-dom-webpack-client.browser.development.js:2408
+resolveDebugInfo @ react-server-dom-webpack-client.browser.development.js:2433
+processFullStringRow @ react-server-dom-webpack-client.browser.development.js:2634
+processFullBinaryRow @ react-server-dom-webpack-client.browser.development.js:2606
+processBinaryChunk @ react-server-dom-webpack-client.browser.development.js:2733
+progress @ react-server-dom-webpack-client.browser.development.js:2997
+"use server"
+ResponseInstance @ react-server-dom-webpack-client.browser.development.js:1870
+createResponseFromOptions @ react-server-dom-webpack-client.browser.development.js:2858
+exports.createFromReadableStream @ react-server-dom-webpack-client.browser.development.js:3228
+eval @ app-index.tsx:157
+(app-pages-browser)/./node_modules/next/dist/client/app-index.js @ main-app.js?v=1756842720049:149
+options.factory @ webpack.js?v=1756842720049:692
+__webpack_require__ @ webpack.js?v=1756842720049:29
+fn @ webpack.js?v=1756842720049:349
+eval @ app-next-dev.ts:17
+eval @ app-bootstrap.ts:78
+loadScriptsInSequence @ app-bootstrap.ts:20
+appBootstrap @ app-bootstrap.ts:60
+eval @ app-next-dev.ts:16
+(app-pages-browser)/./node_modules/next/dist/client/app-next-dev.js @ main-app.js?v=1756842720049:171
+options.factory @ webpack.js?v=1756842720049:692
+__webpack_require__ @ webpack.js?v=1756842720049:29
+__webpack_exec__ @ main-app.js?v=1756842720049:1790
+(anonymous) @ main-app.js?v=1756842720049:1791
+webpackJsonpCallback @ webpack.js?v=1756842720049:1368
+(anonymous) @ main-app.js?v=1756842720049:9
