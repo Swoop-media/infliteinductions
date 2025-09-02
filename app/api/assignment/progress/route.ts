@@ -1,11 +1,10 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
     console.log("🚀 Assignment progress API called");
-    
+
     const supabase = await createSupabaseServer();
     const { assignmentId, moduleId } = await request.json();
 
@@ -46,8 +45,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Insert assignment progress (will be ignored if duplicate)
-    const insertPayload = { 
-      assignment_id: assignmentId, 
+    const insertPayload = {
+      assignment_id: assignmentId,
       module_id: moduleId,
       completed_at: new Date().toISOString()
     };
@@ -97,7 +96,7 @@ export async function POST(request: NextRequest) {
 async function checkAndTriggerNotifications(supabase: any, assignment: any, completedModuleId: string) {
   try {
     console.log("🔔 Checking for notification triggers...");
-    
+
     const { createNotification } = await import("@/app/app/_actions/notifications");
     const courseId = assignment.course_id;
     const assignmentId = assignment.id;
@@ -121,7 +120,7 @@ async function checkAndTriggerNotifications(supabase: any, assignment: any, comp
 
     if (!allModules) return;
 
-    const digitalModules = allModules.filter(m => 
+    const digitalModules = allModules.filter(m =>
       m.type === "digital_training" || m.type === "digital_assessment_quiz"
     );
     const onsiteTrainingModules = allModules.filter(m => m.type === "onsite_training");
@@ -145,7 +144,7 @@ async function checkAndTriggerNotifications(supabase: any, assignment: any, comp
     });
 
     // Check if all digital modules are complete (and we just completed one)
-    const allDigitalComplete = digitalModules.length > 0 && 
+    const allDigitalComplete = digitalModules.length > 0 &&
       digitalModules.every(m => completedModuleIds.has(m.id));
     const justCompletedDigital = digitalModules.some(m => m.id === completedModuleId);
 
@@ -165,11 +164,11 @@ async function checkAndTriggerNotifications(supabase: any, assignment: any, comp
     const allModulesComplete = allModules.every(m => completedModuleIds.has(m.id));
     if (allModulesComplete) {
       console.log("🏆 Full course completed! Updating assignment status and notifying trainee...");
-      
+
       // Update assignment status to completed
       await supabase
         .from("course_assignments")
-        .update({ 
+        .update({
           assignment_status: "completed",
           completed_at: new Date().toISOString()
         })
@@ -196,13 +195,11 @@ async function notifyOnsiteTrainers(supabase: any, createNotification: any, cour
     // Get trainee name
     const { data: traineeProfile } = await supabase
       .from("profiles")
-      .select("full_name, first_name, last_name")
+      .select("name, email")
       .eq("id", traineeUserId)
       .single();
 
-    const traineeName = traineeProfile?.full_name || 
-      (traineeProfile?.first_name && traineeProfile?.last_name ? 
-        `${traineeProfile.first_name} ${traineeProfile.last_name}` : "A trainee");
+    const traineeName = traineeProfile?.name || traineeProfile?.email || "A trainee";
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
@@ -242,13 +239,11 @@ async function notifyOnsiteAssessors(supabase: any, createNotification: any, cou
     // Get trainee name
     const { data: traineeProfile } = await supabase
       .from("profiles")
-      .select("full_name, first_name, last_name")
+      .select("name, email")
       .eq("id", traineeUserId)
       .single();
 
-    const traineeName = traineeProfile?.full_name || 
-      (traineeProfile?.first_name && traineeProfile?.last_name ? 
-        `${traineeProfile.first_name} ${traineeProfile.last_name}` : "A trainee");
+    const traineeName = traineeProfile?.name || traineeProfile?.email || "A trainee";
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
