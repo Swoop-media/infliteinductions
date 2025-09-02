@@ -45,7 +45,7 @@ BEGIN
 
   -- Get learner info
   SELECT 
-    COALESCE(p.name, au.email) as name,
+    COALESCE(p.full_name, au.email) as name,
     au.email
   INTO v_learner_name, v_learner_email
   FROM auth.users au
