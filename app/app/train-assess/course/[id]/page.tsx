@@ -57,24 +57,35 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     redirect("/app/train-assess");
   }
 
-  // Get trainee assignment and profile
+  // Get trainee assignment (without profile for now)
   const { data: assignment, error: assignmentError } = await supabase
     .from("course_assignments")
-    .select(`
-      id,
-      user_id,
-      course_id,
-      profiles!course_assignments_user_id_fkey(full_name, email)
-    `)
+    .select("id, user_id, course_id")
     .eq("id", assignmentId)
     .eq("course_id", courseId)
     .eq("role", "trainee")
     .single();
 
+  // Get profile separately if assignment found
+  let profile = null;
+  if (assignment) {
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", assignment.user_id)
+      .single();
+    profile = profileData;
+  }
+
   console.log("Assignment query result:", { assignment, assignmentError });
+  
+  if (assignmentError) {
+    console.log("❌ Assignment query error details:", assignmentError);
+  }
 
   if (!assignment) {
     console.log("❌ No assignment found, redirecting to train-assess");
+    console.log("Query params used:", { assignmentId, courseId });
     redirect("/app/train-assess");
   }
 
@@ -115,8 +126,8 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
 
   const completedModuleIds = new Set(progress?.map(p => p.module_id) || []);
 
-  const traineeName = assignment.profiles?.full_name || assignment.profiles?.email || "Unknown";
-  const traineeEmail = assignment.profiles?.email || "";
+  const traineeName = profile?.full_name || profile?.email || "Unknown";
+  const traineeEmail = profile?.email || "";
 
   // Calculate progress
   const totalModules = modules?.length || 0;
