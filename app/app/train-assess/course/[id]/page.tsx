@@ -27,6 +27,8 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   const assignmentId = resolvedSearchParams.trainee;
   const sessionType = resolvedSearchParams.type || 'training';
   
+  console.log("Course page params:", { courseId, assignmentId, sessionType });
+  
   // Get current user
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
@@ -34,6 +36,7 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   }
 
   if (!assignmentId) {
+    console.log("No assignmentId provided, redirecting to train-assess");
     redirect("/app/train-assess");
   }
 

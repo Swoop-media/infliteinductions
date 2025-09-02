@@ -1,4 +1,3 @@
-
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,7 +19,7 @@ interface PendingTrainingItem {
 
 export default async function TrainAssessPage() {
   const supabase = await createSupabaseServer();
-  
+
   // Get current user
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
@@ -53,13 +52,20 @@ export default async function TrainAssessPage() {
         id,
         user_id,
         course_id,
-        created_at
+        courses(title),
+        profiles(full_name, email)
       `)
       .eq("role", "trainee")
       .in("course_id", trainerCourseIds);
 
     console.log("Trainee assignments query error:", traineeError);
     console.log("Trainee assignments found:", traineeAssignments?.length);
+    console.log("Trainee assignments data:", traineeAssignments?.map(ta => ({
+      id: ta.id,
+      user_id: ta.user_id,
+      course_id: ta.course_id,
+      course_title: ta.courses?.title
+    })));
 
     if (traineeAssignments) {
       for (const assignment of traineeAssignments) {
@@ -198,12 +204,14 @@ export default async function TrainAssessPage() {
                       </span>
                     </div>
                   </div>
-                  <Link href={`/app/train-assess/course/${item.course_id}?trainee=${item.assignment_id}&type=training`}>
-                    <Button>
-                      Start Training
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
+                  <Link 
+                      href={`/app/train-assess/course/${item.course_id}?trainee=${item.assignment_id}&type=training`}
+                    >
+                      <Button size="sm">
+                        Start Training
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </Link>
                 </div>
               ))}
             </div>
