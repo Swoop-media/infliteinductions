@@ -52,17 +52,23 @@ export async function POST(request: NextRequest) {
       console.log("✅ User owns assignment");
     } else {
       // Case 2: User is trainer/assessor for this course
-      const { data: trainerAssignment } = await supabase
+      const { data: trainerAssignments, error: trainerError } = await supabase
         .from("course_assignments")
         .select("role")
         .eq("user_id", user.id)
         .eq("course_id", assignment.course_id)
-        .in("role", ["onsite_trainer", "onsite_assessor"])
-        .single();
+        .in("role", ["onsite_trainer", "onsite_assessor"]);
       
-      if (trainerAssignment) {
+      console.log("🔍 Trainer permission check:", {
+        userId: user.id,
+        courseId: assignment.course_id,
+        trainerAssignments,
+        trainerError: trainerError?.message
+      });
+      
+      if (trainerAssignments && trainerAssignments.length > 0) {
         hasPermission = true;
-        console.log("✅ User is trainer/assessor for this course");
+        console.log("✅ User is trainer/assessor for this course:", trainerAssignments);
       }
     }
 
