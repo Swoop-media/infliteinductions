@@ -20,9 +20,11 @@ interface CoursePlayerProps {
 
 export default async function CoursePlayerPage({ params, searchParams }: CoursePlayerProps) {
   const supabase = await createSupabaseServer();
-  const courseId = params.id;
-  const assignmentId = searchParams.trainee;
-  const sessionType = searchParams.type || 'training';
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const courseId = resolvedParams.id;
+  const assignmentId = resolvedSearchParams.trainee;
+  const sessionType = resolvedSearchParams.type || 'training';
   
   // Get current user
   const { data: { user }, error: userError } = await supabase.auth.getUser();
