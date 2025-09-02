@@ -459,21 +459,13 @@ export default async function LearnerCoursePage(props: {
 
                             {/* Video content will be rendered through content blocks */}
 
-                            {isCurrentModuleCompleted ? (
+                            {isCurrentModuleCompleted && (
                               <div className="flex items-center gap-2 text-green-600">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                                 </svg>
                                 <span className="text-sm font-medium">Completed</span>
                               </div>
-                            ) : (
-                              <CompleteModuleButton
-                                assignmentId={assignment.id}
-                                moduleId={currentModule.id}
-                                // This callback should ideally be handled by the parent component or state management
-                                // For now, we'll assume the parent handles the completion state update
-                                // onCompleted={() => setCompletedModules(prev => [...prev, currentModule.id])}
-                              />
                             )}
                           </div>
                         </div>
