@@ -1,9 +1,9 @@
-
 // app/app/learn/courses/[id]/page.tsx
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import CompleteModuleButton from "./CompleteModuleButton";
+import VideoPlayer from "../../../../../components/VideoPlayer";
 
 /**
  * Renders a course as a learner (assignments-only approach).
@@ -179,14 +179,14 @@ async function BlockView({ block }: { block: any }) {
   return null;
 }
 
-export default async function LearnerCoursePage(props: { 
+export default async function LearnerCoursePage(props: {
   params: Promise<RouteParams>;
   searchParams?: Promise<{ module?: string }>;
 }) {
   const { id: courseId } = await props.params;
   const searchParams = await props.searchParams;
   const selectedModuleId = searchParams?.module;
-  
+
   const supabase = await createSupabaseServer();
 
   // Require auth
@@ -224,7 +224,7 @@ export default async function LearnerCoursePage(props: {
   // Load modules
   const { data: modules, error: modErr } = await supabase
     .from("course_modules")
-    .select("id, course_id, title, type, order_index, stage")
+    .select("id, course_id, title, type, order_index, stage, video_url")
     .eq("course_id", course.id)
     .order("order_index", { ascending: true });
   if (modErr) {
@@ -256,7 +256,7 @@ export default async function LearnerCoursePage(props: {
   if (selectedModuleId) {
     currentModule = sortedModules.find(m => m.id === selectedModuleId);
   }
-  
+
   // If no selected module or invalid selection, find the first incomplete module
   if (!currentModule) {
     currentModule = sortedModules.find((module, index) => {
@@ -288,7 +288,7 @@ export default async function LearnerCoursePage(props: {
   const currentModuleIndex = currentModule ? sortedModules.findIndex(m => m.id === currentModule!.id) : -1;
   const isCurrentModuleCompleted = currentModule ? completedModules.has(currentModule.id) : false;
   const isCurrentModuleUnlocked = currentModule ? (
-    currentModuleIndex === 0 || 
+    currentModuleIndex === 0 ||
     sortedModules.slice(0, currentModuleIndex).every(m => completedModules.has(m.id))
   ) : false;
 
@@ -308,8 +308,8 @@ export default async function LearnerCoursePage(props: {
             {completedCount} / {totalModules} modules complete
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-green-600 h-2 rounded-full transition-all duration-300" 
+            <div
+              className="bg-green-600 h-2 rounded-full transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -322,19 +322,19 @@ export default async function LearnerCoursePage(props: {
               const isCompleted = completedModules.has(module.id);
               const isUnlocked = index === 0 || sortedModules.slice(0, index).every(m => completedModules.has(m.id));
               const isCurrent = currentModule?.id === module.id;
-              
+
               return (
                 <Link
                   key={module.id}
-                  href={isUnlocked ? `/app/learn/modules/${module.id}` : '#'}
+                  href={isUnlocked ? `/app/learn/courses/${courseId}?module=${module.id}` : '#'}
                   className={`
                     block p-3 rounded-lg border text-sm transition-all
-                    ${isCurrent 
-                      ? 'bg-blue-50 border-blue-200 text-blue-800 ring-2 ring-blue-200' 
-                      : isCompleted 
-                        ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100' 
-                        : isUnlocked 
-                          ? 'bg-white border-gray-200 hover:bg-gray-50' 
+                    ${isCurrent
+                      ? 'bg-blue-50 border-blue-200 text-blue-800 ring-2 ring-blue-200'
+                      : isCompleted
+                        ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100'
+                        : isUnlocked
+                          ? 'bg-white border-gray-200 hover:bg-gray-50'
                           : 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed'
                     }
                   `}
@@ -434,6 +434,59 @@ export default async function LearnerCoursePage(props: {
                           <BlockView block={block} />
                         </div>
                       ))
+                    )}
+
+                    {/* Digital Training Module Content */}
+                    {currentModule.type === 'digital_training' && (
+                      <div className="bg-white p-6 rounded-lg border">
+                        <div className="flex items-start gap-4">
+                          <div className="flex-shrink-0">
+                            <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m-6 4h6M5 18h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                              </svg>
+                            </div>
+                          </div>
+
+                          <div className="flex-1">
+                            <h2 className="text-xl font-semibold text-gray-900 mb-2">{currentModule.title}</h2>
+                            <div className="text-sm text-gray-600 mb-4">Digital Training</div>
+
+                            {currentModule.content && (
+                              <div className="prose prose-sm max-w-none mb-6"
+                                   dangerouslySetInnerHTML={{ __html: currentModule.content }} />
+                            )}
+
+                            {/* Video Player Section */}
+                            {currentModule.video_url && (
+                              <div className="mb-6">
+                                <VideoPlayer
+                                  videoUrl={currentModule.video_url}
+                                  courseId={course.id}
+                                  title={currentModule.title}
+                                />
+                              </div>
+                            )}
+
+                            {isCurrentModuleCompleted ? (
+                              <div className="flex items-center gap-2 text-green-600">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                <span className="text-sm font-medium">Completed</span>
+                              </div>
+                            ) : (
+                              <CompleteModuleButton
+                                assignmentId={assignment.id}
+                                moduleId={currentModule.id}
+                                // This callback should ideally be handled by the parent component or state management
+                                // For now, we'll assume the parent handles the completion state update
+                                // onCompleted={() => setCompletedModules(prev => [...prev, currentModule.id])}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     )}
 
                     {/* Module Actions */}
