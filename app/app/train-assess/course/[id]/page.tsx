@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, Circle, Play, User, BookOpen, ClipboardCheck, ArrowLeft } from "lucide-react";
+import { CheckCircle, Circle, User, BookOpen, ClipboardCheck, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import CompleteModuleButton from "./CompleteModuleButton";
 
 interface CoursePlayerProps {
   params: {
@@ -102,29 +103,6 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   const totalModules = modules?.length || 0;
   const completedModules = modules?.filter(m => completedModuleIds.has(m.id)).length || 0;
   const progressPercentage = totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
-
-  const handleCompleteModule = async (moduleId: string) => {
-    try {
-      const response = await fetch('/api/assignment/progress', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          assignmentId: assignmentId,
-          moduleId: moduleId,
-        }),
-      });
-
-      if (response.ok) {
-        window.location.reload();
-      } else {
-        console.error('Failed to complete module');
-      }
-    } catch (error) {
-      console.error('Error completing module:', error);
-    }
-  };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -257,13 +235,12 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
                           Completed
                         </Badge>
                       ) : (
-                        <Button
-                          onClick={() => handleCompleteModule(module.id)}
-                          size="sm"
-                        >
-                          <Play className="h-4 w-4 mr-2" />
-                          {sessionType === 'training' ? 'Complete Training' : 'Complete Assessment'}
-                        </Button>
+                        <CompleteModuleButton
+                          moduleId={module.id}
+                          assignmentId={assignmentId}
+                          sessionType={sessionType}
+                          isCompleted={isCompleted}
+                        />
                       )}
                     </div>
                   </div>
