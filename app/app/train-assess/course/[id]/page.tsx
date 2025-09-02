@@ -129,6 +129,27 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("type", moduleType)
     .order("order_index");
 
+  // Get onsite requirements for each module
+  const moduleIds = modules?.map(m => m.id) || [];
+  const requiredRole = sessionType === 'training' ? 'onsite_trainer' : 'onsite_assessor';
+  
+  let requirementsByModule: Record<string, any[]> = {};
+  if (moduleIds.length > 0) {
+    const { data: requirements } = await supabase
+      .from("onsite_requirements")
+      .select("*")
+      .in("module_id", moduleIds)
+      .eq("role", requiredRole)
+      .order("order_index");
+    
+    // Group requirements by module
+    requirementsByModule = (requirements || []).reduce((acc, req) => {
+      if (!acc[req.module_id]) acc[req.module_id] = [];
+      acc[req.module_id].push(req);
+      return acc;
+    }, {} as Record<string, any[]>);
+  }
+
   // Get trainee's progress
   const { data: progress } = await supabase
     .from("assignment_progress")
@@ -238,52 +259,97 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
               No {sessionType} modules found for this course.
             </p>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {modules.map((module, index) => {
                 const isCompleted = completedModuleIds.has(module.id);
+                const moduleRequirements = requirementsByModule[module.id] || [];
                 
                 return (
-                  <div
-                    key={module.id}
-                    className={`flex items-center justify-between p-4 border rounded-lg ${
-                      isCompleted ? 'bg-green-50 border-green-200' : 'bg-card'
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full border-2">
+                  <div key={module.id} className="border rounded-lg bg-card">
+                    {/* Module Header */}
+                    <div className={`flex items-center justify-between p-4 border-b ${
+                      isCompleted ? 'bg-green-50' : ''
+                    }`}>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full border-2">
+                          {isCompleted ? (
+                            <CheckCircle className="h-5 w-5 text-green-600" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{module.title}</h3>
+                          {module.description && (
+                            <p className="text-sm text-muted-foreground">{module.description}</p>
+                          )}
+                          {isCompleted && (
+                            <p className="text-xs text-green-600 mt-1">
+                              Completed {new Date(progress?.find(p => p.module_id === module.id)?.completed_at || '').toLocaleString()}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
                         {isCompleted ? (
-                          <CheckCircle className="h-5 w-5 text-green-600" />
+                          <Badge variant="outline" className="text-green-600 border-green-600">
+                            Completed
+                          </Badge>
                         ) : (
-                          <Circle className="h-5 w-5 text-muted-foreground" />
-                        )}
-                      </div>
-                      <div>
-                        <h3 className="font-medium">{module.title}</h3>
-                        {module.description && (
-                          <p className="text-sm text-muted-foreground">{module.description}</p>
-                        )}
-                        {isCompleted && (
-                          <p className="text-xs text-green-600 mt-1">
-                            Completed {new Date(progress?.find(p => p.module_id === module.id)?.completed_at || '').toLocaleString()}
-                          </p>
+                          <CompleteModuleButton
+                            moduleId={module.id}
+                            assignmentId={assignmentId}
+                            sessionType={sessionType}
+                            isCompleted={isCompleted}
+                          />
                         )}
                       </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {isCompleted ? (
-                        <Badge variant="outline" className="text-green-600 border-green-600">
-                          Completed
-                        </Badge>
-                      ) : (
-                        <CompleteModuleButton
-                          moduleId={module.id}
-                          assignmentId={assignmentId}
-                          sessionType={sessionType}
-                          isCompleted={isCompleted}
-                        />
-                      )}
-                    </div>
+
+                    {/* Requirements Checklist */}
+                    {moduleRequirements.length > 0 && (
+                      <div className="p-4">
+                        <h4 className="text-sm font-medium text-muted-foreground mb-3">
+                          {sessionType === 'training' ? 'Training Requirements' : 'Assessment Requirements'}
+                        </h4>
+                        <div className="space-y-3">
+                          {moduleRequirements.map((req) => (
+                            <div key={req.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                              <div className="flex items-center justify-center w-5 h-5 rounded border-2 border-muted-foreground/30 bg-background">
+                                {isCompleted && (
+                                  <CheckCircle className="h-4 w-4 text-green-600" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium">{req.label}</p>
+                                {req.help_text && (
+                                  <p className="text-xs text-muted-foreground mt-1">{req.help_text}</p>
+                                )}
+                                <div className="flex items-center gap-2 mt-1">
+                                  <Badge variant="outline" className="text-xs">
+                                    {req.field_type}
+                                  </Badge>
+                                  {req.required && (
+                                    <Badge variant="outline" className="text-xs text-red-600 border-red-200">
+                                      Required
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* No Requirements Message */}
+                    {moduleRequirements.length === 0 && !isCompleted && (
+                      <div className="p-4 text-center text-muted-foreground">
+                        <p className="text-sm">No specific requirements configured for this module.</p>
+                        <p className="text-xs mt-1">Use the "Complete Training" button when finished.</p>
+                      </div>
+                    )}
                   </div>
                 );
               })}
