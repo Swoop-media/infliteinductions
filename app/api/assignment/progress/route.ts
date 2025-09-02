@@ -102,8 +102,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to track progress" }, { status: 500 });
     }
 
-    // Check if this completion triggers any notifications
-    await checkAndTriggerNotifications(supabase, assignment, moduleId);
+    // Check if this completion triggers any notifications or progression
+    await checkAndTriggerNotifications(supabase, assignment, moduleId, user.id);
 
     const response = {
       success: true,
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function checkAndTriggerNotifications(supabase: any, assignment: any, completedModuleId: string) {
+async function checkAndTriggerNotifications(supabase: any, assignment: any, completedModuleId: string, completedByUserId: string) {
   try {
     console.log("🔔 Checking for notification triggers...");
 
@@ -180,11 +180,27 @@ async function checkAndTriggerNotifications(supabase: any, assignment: any, comp
       await notifyOnsiteTrainers(supabase, createNotification, courseId, courseTitle, userId);
     }
 
-    // Check if onsite training just completed
+    // Check if onsite training module just completed
     const justCompletedOnsiteTraining = onsiteTrainingModules.some(m => m.id === completedModuleId);
     if (justCompletedOnsiteTraining) {
-      console.log("🏢 Onsite training completed! Notifying onsite assessors...");
-      await notifyOnsiteAssessors(supabase, createNotification, courseId, courseTitle, userId);
+      console.log("🏢 Onsite training module completed! Checking for next steps...");
+      
+      // Check if there are more onsite training modules to complete
+      const remainingOnsiteTraining = onsiteTrainingModules.filter(m => !completedModuleIds.has(m.id));
+      
+      if (remainingOnsiteTraining.length === 0) {
+        // All onsite training complete - check if onsite assessment exists
+        if (onsiteAssessmentModules.length > 0) {
+          console.log("🏢 All onsite training completed! Notifying onsite assessors...");
+          await notifyOnsiteAssessors(supabase, createNotification, courseId, courseTitle, userId);
+        } else {
+          // No onsite assessment - course is complete
+          console.log("🏆 Course completed (no onsite assessment)! Updating assignment status...");
+          await completeCourseAssignment(supabase, createNotification, assignmentId, courseTitle, userId);
+        }
+      } else {
+        console.log(`📚 ${remainingOnsiteTraining.length} onsite training modules remaining`);
+      }
     }
 
     // Check if all modules are complete (full course completion)
@@ -311,6 +327,26 @@ async function notifyOnsiteAssessors(supabase: any, createNotification: any, cou
     console.log(`✅ Notified ${assessors?.length || 0} onsite assessors`);
   } catch (error) {
     console.error("❌ Error notifying onsite assessors:", error);
+  }
+}
+
+async function completeCourseAssignment(supabase: any, createNotification: any, assignmentId: string, courseTitle: string, traineeUserId: string) {
+  try {
+    // Update assignment status to completed
+    await supabase
+      .from("course_assignments")
+      .update({
+        assignment_status: "completed",
+        completed_at: new Date().toISOString()
+      })
+      .eq("id", assignmentId);
+
+    // Notify trainee of completion
+    await notifyTraineeCompletion(supabase, createNotification, courseTitle, traineeUserId);
+    
+    console.log("✅ Course assignment completed and trainee notified");
+  } catch (error) {
+    console.error("❌ Error completing course assignment:", error);
   }
 }
 

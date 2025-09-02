@@ -56,8 +56,32 @@ export default function InteractiveRequirements({
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      // Save requirement responses first
       await onSave(moduleId, assignmentId, responses);
-      alert("Responses saved successfully!");
+      
+      // Mark module as completed and handle progression
+      const progressResponse = await fetch('/api/assignment/progress', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          assignmentId: assignmentId,
+          moduleId: moduleId,
+        }),
+      });
+
+      if (progressResponse.ok) {
+        const result = await progressResponse.json();
+        console.log('Module completed successfully:', result);
+        
+        // Force a page refresh to show updated progress and handle progression
+        window.location.reload();
+      } else {
+        const error = await progressResponse.json();
+        console.error('Failed to complete module:', error);
+        alert('Failed to complete module. Please try again.');
+      }
     } catch (error) {
       console.error("Failed to save responses:", error);
       alert("Failed to save responses. Please try again.");

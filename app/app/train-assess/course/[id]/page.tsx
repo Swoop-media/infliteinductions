@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle, Circle, User, BookOpen, ClipboardCheck, ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import CompleteModuleButton from "./CompleteModuleButton";
 import InteractiveRequirements from "./InteractiveRequirements";
 
 async function saveRequirementResponses(moduleId: string, assignmentId: string, responses: Record<string, any>) {
@@ -337,17 +336,10 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        {isCompleted ? (
+                        {isCompleted && (
                           <Badge variant="outline" className="text-green-600 border-green-600">
                             Completed
                           </Badge>
-                        ) : (
-                          <CompleteModuleButton
-                            moduleId={module.id}
-                            assignmentId={assignmentId}
-                            sessionType={sessionType}
-                            isCompleted={isCompleted}
-                          />
                         )}
                       </div>
                     </div>
