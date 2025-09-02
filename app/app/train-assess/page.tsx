@@ -54,8 +54,8 @@ export default async function TrainAssessPage() {
         user_id,
         course_id,
         created_at,
-        courses(title),
-        profiles(full_name, email)
+        courses!course_assignments_course_id_fkey(title),
+        profiles!course_assignments_user_id_fkey(full_name, email)
       `)
       .eq("role", "trainee")
       .in("course_id", trainerCourseIds);
