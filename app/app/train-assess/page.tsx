@@ -47,18 +47,20 @@ export default async function TrainAssessPage() {
 
   if (trainerCourseIds.length > 0) {
     // Get trainee assignments for courses where this user is a trainer/assessor
-    const { data: traineeAssignments } = await supabase
+    const { data: traineeAssignments, error: traineeError } = await supabase
       .from("course_assignments")
       .select(`
         id,
         user_id,
         course_id,
         created_at,
-        courses!inner(title),
+        courses(title),
         profiles(full_name, email)
       `)
       .eq("role", "trainee")
       .in("course_id", trainerCourseIds);
+
+    console.log("Trainee assignments query error:", traineeError);
 
     console.log("Trainee assignments found:", traineeAssignments?.length);
 
@@ -99,6 +101,7 @@ export default async function TrainAssessPage() {
 
         const traineeName = assignment.profiles?.full_name || assignment.profiles?.email || "Unknown";
         const traineeEmail = assignment.profiles?.email || "";
+        const courseTitle = assignment.courses?.title || course?.title || "Unknown Course";
 
         // Add to pending training if digital complete but onsite training not done
         if (allDigitalComplete && !onsiteTrainingComplete && isOnsiteTrainer) {
@@ -106,7 +109,7 @@ export default async function TrainAssessPage() {
             id: assignmentId,
             trainee_name: traineeName,
             trainee_email: traineeEmail,
-            course_title: assignment.courses.title,
+            course_title: courseTitle,
             course_id: courseId,
             assignment_id: assignmentId,
             created_at: assignment.created_at,
@@ -122,7 +125,7 @@ export default async function TrainAssessPage() {
               id: assignmentId,
               trainee_name: traineeName,
               trainee_email: traineeEmail,
-              course_title: assignment.courses.title,
+              course_title: courseTitle,
               course_id: courseId,
               assignment_id: assignmentId,
               created_at: assignment.created_at,
