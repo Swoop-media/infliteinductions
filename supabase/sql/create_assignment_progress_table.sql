@@ -126,9 +126,18 @@ WITH CHECK (
 ALTER TABLE public.assignment_progress 
 ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
+-- Create specific updated_at function for assignment_progress
+CREATE OR REPLACE FUNCTION public.update_assignment_progress_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 -- Create trigger for updated_at (only if it doesn't exist)
 DROP TRIGGER IF EXISTS trg_assignment_progress_updated_at ON public.assignment_progress;
 CREATE TRIGGER trg_assignment_progress_updated_at
     BEFORE UPDATE ON public.assignment_progress
     FOR EACH ROW
-    EXECUTE FUNCTION public.handle_updated_at();
+    EXECUTE FUNCTION public.update_assignment_progress_updated_at();

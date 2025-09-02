@@ -121,7 +121,15 @@ USING (
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = NOW();
+    -- Check if the table has an updated_at column
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = TG_TABLE_SCHEMA 
+        AND table_name = TG_TABLE_NAME 
+        AND column_name = 'updated_at'
+    ) THEN
+        NEW.updated_at = NOW();
+    END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
