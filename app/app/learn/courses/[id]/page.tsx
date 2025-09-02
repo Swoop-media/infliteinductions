@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import CoursePreview from "@/components/CoursePreview";
 
 /**
  * Renders a course as a learner (assignments-only approach).
@@ -179,20 +178,14 @@ async function BlockView({ block }: { block: any }) {
   return null;
 }
 
-async function loadBlocks(moduleId: string) {
-  "use server";
-  const supabase = await createSupabaseServer();
-  const resp = await supabase
-    .from("module_content_blocks")
-    .select("id, module_id, kind, data, order_index, created_at")
-    .eq("module_id", moduleId)
-    .order("order_index", { ascending: true })
-    .order("created_at", { ascending: true });
-  return resp.data ?? [];
-}
-
-export default async function LearnerCoursePage(props: { params: Promise<RouteParams> }) {
+export default async function LearnerCoursePage(props: { 
+  params: Promise<RouteParams>;
+  searchParams?: Promise<{ module?: string }>;
+}) {
   const { id: courseId } = await props.params;
+  const searchParams = await props.searchParams;
+  const selectedModuleId = searchParams?.module;
+  
   const supabase = await createSupabaseServer();
 
   // Require auth
@@ -227,7 +220,7 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
     notFound();
   }
 
-  // Load modules + blocks
+  // Load modules
   const { data: modules, error: modErr } = await supabase
     .from("course_modules")
     .select("id, course_id, title, type, order_index, stage")
@@ -246,20 +239,6 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
     return (a.order_index ?? 0) - (b.order_index ?? 0);
   });
 
-  // Load all blocks for all modules
-  const moduleIds = sortedModules.map((m) => m.id);
-  const { data: blocks, error: blockErr } = moduleIds.length
-    ? await supabase
-        .from("module_content_blocks")
-        .select("id, module_id, kind, data, order_index")
-        .in("module_id", moduleIds)
-        .order("order_index", { ascending: true })
-    : { data: [], error: null as any };
-  if (blockErr) {
-    console.error("Blocks load error", blockErr);
-    notFound();
-  }
-
   // Load assignment progress
   const { data: assignmentProgress } = await supabase
     .from("assignment_progress")
@@ -270,6 +249,47 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
   const totalModules = sortedModules.length;
   const completedCount = completedModules.size;
   const progressPercent = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
+
+  // Determine current module
+  let currentModule = null;
+  if (selectedModuleId) {
+    currentModule = sortedModules.find(m => m.id === selectedModuleId);
+  }
+  
+  // If no selected module or invalid selection, find the first incomplete module
+  if (!currentModule) {
+    currentModule = sortedModules.find((module, index) => {
+      const isCompleted = completedModules.has(module.id);
+      const isUnlocked = index === 0 || sortedModules.slice(0, index).every(m => completedModules.has(m.id));
+      return !isCompleted && isUnlocked;
+    });
+  }
+
+  // If all modules are complete, show the last module
+  if (!currentModule && sortedModules.length > 0) {
+    currentModule = sortedModules[sortedModules.length - 1];
+  }
+
+  // Load blocks for current module
+  const { data: blocks, error: blockErr } = currentModule
+    ? await supabase
+        .from("module_content_blocks")
+        .select("id, module_id, kind, data, order_index")
+        .eq("module_id", currentModule.id)
+        .order("order_index", { ascending: true })
+    : { data: [], error: null as any };
+
+  if (blockErr) {
+    console.error("Blocks load error", blockErr);
+    notFound();
+  }
+
+  const currentModuleIndex = currentModule ? sortedModules.findIndex(m => m.id === currentModule!.id) : -1;
+  const isCurrentModuleCompleted = currentModule ? completedModules.has(currentModule.id) : false;
+  const isCurrentModuleUnlocked = currentModule ? (
+    currentModuleIndex === 0 || 
+    sortedModules.slice(0, currentModuleIndex).every(m => completedModules.has(m.id))
+  ) : false;
 
   return (
     <div className="flex h-screen">
@@ -300,23 +320,28 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
             {sortedModules.map((module, index) => {
               const isCompleted = completedModules.has(module.id);
               const isUnlocked = index === 0 || sortedModules.slice(0, index).every(m => completedModules.has(m.id));
+              const isCurrent = currentModule?.id === module.id;
               
               return (
-                <div
+                <Link
                   key={module.id}
+                  href={`/app/learn/courses/${courseId}?module=${module.id}`}
                   className={`
-                    p-3 rounded-lg border text-sm cursor-pointer transition-all
-                    ${isCompleted 
-                      ? 'bg-green-50 border-green-200 text-green-800' 
-                      : isUnlocked 
-                        ? 'bg-white border-gray-200 hover:bg-gray-50' 
-                        : 'bg-gray-100 border-gray-200 text-gray-500'
+                    block p-3 rounded-lg border text-sm transition-all
+                    ${isCurrent 
+                      ? 'bg-blue-50 border-blue-200 text-blue-800 ring-2 ring-blue-200' 
+                      : isCompleted 
+                        ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100' 
+                        : isUnlocked 
+                          ? 'bg-white border-gray-200 hover:bg-gray-50' 
+                          : 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed'
                     }
                   `}
+                  onClick={!isUnlocked ? (e) => e.preventDefault() : undefined}
                 >
                   <div className="flex items-start gap-2">
                     <span className="text-base mt-0.5">
-                      {isCompleted ? '✅' : typeIcon(module.type as ModuleType)}
+                      {isCompleted ? '✅' : isCurrent ? '👁️' : typeIcon(module.type as ModuleType)}
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium truncate">
@@ -332,7 +357,7 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
                       )}
                     </div>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -345,9 +370,11 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
         <div className="p-4 border-b bg-white">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold">Learning Progress</h2>
+              <h2 className="text-xl font-semibold">
+                {currentModule?.title || TYPE_LABEL[currentModule?.type as ModuleType] || "No Module Selected"}
+              </h2>
               <p className="text-sm text-gray-600 mt-1">
-                Complete modules in order to progress through the course
+                {currentModule ? `Module ${currentModuleIndex + 1} of ${totalModules}` : "Select a module to begin"}
               </p>
             </div>
             <div className="text-right">
@@ -357,116 +384,120 @@ export default async function LearnerCoursePage(props: { params: Promise<RoutePa
           </div>
         </div>
 
-        {/* Course Content */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="space-y-6">
-              {sortedModules.map((module, index) => {
-                const isCompleted = completedModules.has(module.id);
-                const isUnlocked = index === 0 || sortedModules.slice(0, index).every(m => completedModules.has(m.id));
-                const moduleBlocks = (blocks ?? []).filter(b => b.module_id === module.id);
-
-                return (
-                  <div
-                    key={module.id}
-                    className={`
-                      rounded-xl border p-6 transition-all
-                      ${isCompleted 
-                        ? 'bg-green-50 border-green-200' 
-                        : isUnlocked 
-                          ? 'bg-white border-gray-200 shadow-sm' 
-                          : 'bg-gray-50 border-gray-200 opacity-60'
-                      }
-                    `}
-                  >
-                    <div className="flex items-start gap-4 mb-4">
-                      <span className="text-2xl">
-                        {isCompleted ? '✅' : typeIcon(module.type as ModuleType)}
-                      </span>
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold flex items-center gap-2">
-                          {module.title || TYPE_LABEL[module.type as ModuleType]}
-                          {isCompleted && (
-                            <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                              Complete
-                            </span>
-                          )}
-                          {!isUnlocked && (
-                            <span className="text-sm bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                              🔒 Locked
-                            </span>
-                          )}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {TYPE_LABEL[module.type as ModuleType]}
-                        </p>
-                      </div>
+        {/* Module Content */}
+        <div className="flex-1 overflow-y-auto">
+          {currentModule ? (
+            <div className="max-w-4xl mx-auto p-6">
+              <div className="bg-white rounded-xl border shadow-sm p-8 space-y-6">
+                {/* Module Header */}
+                <div className="flex items-start gap-4 pb-4 border-b">
+                  <span className="text-3xl">
+                    {isCurrentModuleCompleted ? '✅' : typeIcon(currentModule.type as ModuleType)}
+                  </span>
+                  <div className="flex-1">
+                    <h1 className="text-2xl font-bold mb-2">
+                      {currentModule.title || TYPE_LABEL[currentModule.type as ModuleType]}
+                    </h1>
+                    <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <span>{TYPE_LABEL[currentModule.type as ModuleType]}</span>
+                      {isCurrentModuleCompleted && (
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                          ✓ Complete
+                        </span>
+                      )}
+                      {!isCurrentModuleUnlocked && (
+                        <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                          🔒 Locked
+                        </span>
+                      )}
                     </div>
-
-                    {/* Module Content */}
-                    {isUnlocked ? (
-                      <div className="space-y-4">
-                        {moduleBlocks.length === 0 ? (
-                          <p className="text-sm text-gray-600">No content available.</p>
-                        ) : (
-                          moduleBlocks.map((block) => (
-                            <BlockView key={block.id} block={block} />
-                          ))
-                        )}
-
-                        {/* Module Actions */}
-                        {module.type === "digital_assessment_quiz" && (
-                          <div className="pt-4">
-                            <Link
-                              href={`/app/learn/quiz/${courseId}?module=${module.id}`}
-                              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                            >
-                              Start Quiz
-                            </Link>
-                          </div>
-                        )}
-
-                        {module.type === "digital_training" && !isCompleted && (
-                          <div className="pt-4">
-                            <form action={async () => {
-                              "use server";
-                              const supabase = await createSupabaseServer();
-                              await supabase
-                                .from("assignment_progress")
-                                .insert({
-                                  assignment_id: assignment.id,
-                                  module_id: module.id,
-                                  completed_at: new Date().toISOString(),
-                                })
-                                .select()
-                                .single();
-                              redirect(`/app/learn/courses/${courseId}`);
-                            }}>
-                              <button className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                                Mark as Complete
-                              </button>
-                            </form>
-                          </div>
-                        )}
-
-                        {(module.type === "onsite_training" || module.type === "onsite_assessment") && (
-                          <div className="pt-4">
-                            <p className="text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
-                              This step will be completed by your {module.type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="text-sm text-gray-500 bg-gray-100 p-4 rounded-lg">
-                        Complete the previous modules to unlock this content.
-                      </div>
-                    )}
                   </div>
-                );
-              })}
+                </div>
+
+                {/* Module Content */}
+                {isCurrentModuleUnlocked ? (
+                  <div className="space-y-6">
+                    {blocks?.length === 0 ? (
+                      <p className="text-gray-600">No content available for this module.</p>
+                    ) : (
+                      blocks?.map((block) => (
+                        <div key={block.id} className="space-y-4">
+                          <BlockView block={block} />
+                        </div>
+                      ))
+                    )}
+
+                    {/* Module Actions */}
+                    <div className="pt-6 border-t">
+                      {currentModule.type === "digital_assessment_quiz" && (
+                        <Link
+                          href={`/app/learn/quiz/${courseId}?module=${currentModule.id}`}
+                          className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                        >
+                          Start Quiz →
+                        </Link>
+                      )}
+
+                      {currentModule.type === "digital_training" && !isCurrentModuleCompleted && (
+                        <form action={async () => {
+                          "use server";
+                          const supabase = await createSupabaseServer();
+                          await supabase
+                            .from("assignment_progress")
+                            .insert({
+                              assignment_id: assignment.id,
+                              module_id: currentModule!.id,
+                              completed_at: new Date().toISOString(),
+                            })
+                            .select()
+                            .single();
+                          
+                          // Find next module and redirect to it
+                          const nextModuleIndex = currentModuleIndex + 1;
+                          if (nextModuleIndex < sortedModules.length) {
+                            const nextModule = sortedModules[nextModuleIndex];
+                            redirect(`/app/learn/courses/${courseId}?module=${nextModule.id}`);
+                          } else {
+                            redirect(`/app/learn/courses/${courseId}`);
+                          }
+                        }}>
+                          <button className="inline-flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+                            Mark as Complete →
+                          </button>
+                        </form>
+                      )}
+
+                      {(currentModule.type === "onsite_training" || currentModule.type === "onsite_assessment") && (
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <p className="text-sm text-blue-800">
+                            <strong>Note:</strong> This step will be completed by your {currentModule.type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <div className="text-6xl mb-4">🔒</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Module Locked</h3>
+                    <p className="text-gray-600">
+                      Complete the previous modules to unlock this content.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="text-6xl mb-4">📚</div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Welcome to the Course</h3>
+                <p className="text-gray-600">
+                  Select a module from the sidebar to begin your learning journey.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
