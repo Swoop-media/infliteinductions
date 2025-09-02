@@ -53,15 +53,12 @@ export default async function TrainAssessPage() {
         id,
         user_id,
         course_id,
-        created_at,
-        courses!course_assignments_course_id_fkey(title),
-        profiles!course_assignments_user_id_fkey(full_name, email)
+        created_at
       `)
       .eq("role", "trainee")
       .in("course_id", trainerCourseIds);
 
     console.log("Trainee assignments query error:", traineeError);
-
     console.log("Trainee assignments found:", traineeAssignments?.length);
 
     if (traineeAssignments) {
@@ -99,9 +96,23 @@ export default async function TrainAssessPage() {
         // Check if onsite training is complete
         const onsiteTrainingComplete = onsiteTrainingModules.every(m => completedModuleIds.has(m.id));
 
-        const traineeName = assignment.profiles?.full_name || assignment.profiles?.email || "Unknown";
-        const traineeEmail = assignment.profiles?.email || "";
-        const courseTitle = assignment.courses?.title || course?.title || "Unknown Course";
+        // Get trainee profile separately
+        const { data: traineeProfile } = await supabase
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", traineeId)
+          .single();
+
+        // Get course info separately
+        const { data: courseInfo } = await supabase
+          .from("courses")
+          .select("title")
+          .eq("id", courseId)
+          .single();
+
+        const traineeName = traineeProfile?.full_name || traineeProfile?.email || "Unknown";
+        const traineeEmail = traineeProfile?.email || "";
+        const courseTitle = courseInfo?.title || "Unknown Course";
 
         // Add to pending training if digital complete but onsite training not done
         if (allDigitalComplete && !onsiteTrainingComplete && isOnsiteTrainer) {
