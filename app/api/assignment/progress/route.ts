@@ -254,11 +254,15 @@ async function checkAndTriggerNotifications(supabase: any, assignment: any, comp
 async function notifyOnsiteTrainers(supabase: any, createNotification: any, courseId: string, courseTitle: string, traineeUserId: string) {
   try {
     // Get onsite trainers for this course
-    const { data: trainers } = await supabase
+    console.log("🔍 Looking for onsite trainers for course:", courseId);
+    
+    const { data: trainers, error: trainersError } = await supabase
       .from("course_assignments")
-      .select("user_id")
+      .select("user_id, role")
       .eq("course_id", courseId)
       .eq("role", "onsite_trainer");
+
+    console.log("👨‍🏫 Trainers query result:", { trainers, trainersError, courseId });
 
     // Get trainee name - try profiles first, then auth.users
     let traineeName = "A trainee";
@@ -284,7 +288,19 @@ async function notifyOnsiteTrainers(supabase: any, createNotification: any, cour
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-    for (const trainer of trainers || []) {
+    if (!trainers || trainers.length === 0) {
+      console.log("⚠️ No onsite trainers found for course:", courseId);
+      // Let's also check if there are any trainers at all for debugging
+      const { data: allTrainers } = await supabase
+        .from("course_assignments")
+        .select("user_id, role, course_id")
+        .eq("course_id", courseId);
+      console.log("🔍 All assignments for course:", allTrainers);
+      return;
+    }
+
+    for (const trainer of trainers) {
+      console.log("📤 Sending notification to trainer:", trainer.user_id);
       await createNotification({
         recipientUserId: trainer.user_id,
         type: "onsite_training_ready",
@@ -314,11 +330,20 @@ async function notifyOnsiteTrainers(supabase: any, createNotification: any, cour
 async function notifyOnsiteAssessors(supabase: any, createNotification: any, courseId: string, courseTitle: string, traineeUserId: string) {
   try {
     // Get onsite assessors for this course
-    const { data: assessors } = await supabase
+    console.log("🔍 Looking for onsite assessors for course:", courseId);
+    
+    const { data: assessors, error: assessorsError } = await supabase
       .from("course_assignments")
-      .select("user_id")
+      .select("user_id, role")
       .eq("course_id", courseId)
       .eq("role", "onsite_assessor");
+
+    console.log("👨‍⚖️ Assessors query result:", { assessors, assessorsError, courseId });
+
+    if (!assessors || assessors.length === 0) {
+      console.log("⚠️ No onsite assessors found for course:", courseId);
+      return;
+    }
 
     // Get trainee name
     const { data: traineeProfile } = await supabase
@@ -331,7 +356,8 @@ async function notifyOnsiteAssessors(supabase: any, createNotification: any, cou
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-    for (const assessor of assessors || []) {
+    for (const assessor of assessors) {
+      console.log("📤 Sending notification to assessor:", assessor.user_id);
       await createNotification({
         recipientUserId: assessor.user_id,
         type: "onsite_assessment_ready",
@@ -342,6 +368,9 @@ async function notifyOnsiteAssessors(supabase: any, createNotification: any, cou
           courseId,
           traineeUserId,
           traineeName,
+          traineeEmail: traineeProfile?.email || "",
+          learnerName: traineeName,
+          learner_email: traineeProfile?.email || "",
           url: `${siteUrl}/app/train-assess`,
           event_id: `onsite_assessment_ready_${courseId}_${traineeUserId}_${Date.now()}`
         },
