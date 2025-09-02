@@ -1,0 +1,62 @@
+[
+  {
+    "schemaname": "public",
+    "tablename": "assignment_progress",
+    "policyname": "Admins and creators can insert all assignment progress",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(EXISTS ( SELECT 1\n   FROM (user_roles ur\n     JOIN roles r ON ((r.id = ur.role_id)))\n  WHERE ((ur.user_id = auth.uid()) AND (r.name = ANY (ARRAY['Admin'::text, 'Course Creators'::text])))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "assignment_progress",
+    "policyname": "Admins and creators can update all assignment progress",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM (user_roles ur\n     JOIN roles r ON ((r.id = ur.role_id)))\n  WHERE ((ur.user_id = auth.uid()) AND (r.name = ANY (ARRAY['Admin'::text, 'Course Creators'::text])))))",
+    "with_check": "(EXISTS ( SELECT 1\n   FROM (user_roles ur\n     JOIN roles r ON ((r.id = ur.role_id)))\n  WHERE ((ur.user_id = auth.uid()) AND (r.name = ANY (ARRAY['Admin'::text, 'Course Creators'::text])))))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "assignment_progress",
+    "policyname": "Admins and creators can view all assignment progress",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM (user_roles ur\n     JOIN roles r ON ((r.id = ur.role_id)))\n  WHERE ((ur.user_id = auth.uid()) AND (r.name = ANY (ARRAY['Admin'::text, 'Course Creators'::text])))))",
+    "with_check": null
+  },
+  {
+    "schemaname": "public",
+    "tablename": "assignment_progress",
+    "policyname": "Users can insert their own assignment progress",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(assignment_id IN ( SELECT course_assignments.id\n   FROM course_assignments\n  WHERE (course_assignments.user_id = auth.uid())))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "assignment_progress",
+    "policyname": "Users can update their own assignment progress",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(assignment_id IN ( SELECT course_assignments.id\n   FROM course_assignments\n  WHERE (course_assignments.user_id = auth.uid())))",
+    "with_check": "(assignment_id IN ( SELECT course_assignments.id\n   FROM course_assignments\n  WHERE (course_assignments.user_id = auth.uid())))"
+  },
+  {
+    "schemaname": "public",
+    "tablename": "assignment_progress",
+    "policyname": "Users can view their own assignment progress",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "(assignment_id IN ( SELECT course_assignments.id\n   FROM course_assignments\n  WHERE (course_assignments.user_id = auth.uid())))",
+    "with_check": null
+  }
+]

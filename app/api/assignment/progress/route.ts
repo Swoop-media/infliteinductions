@@ -106,14 +106,25 @@ export async function POST(request: NextRequest) {
       data: insertData,
       error: insertErr?.message,
       errorCode: insertErr?.code,
+      errorDetails: insertErr?.details,
+      errorHint: insertErr?.hint,
       isDuplicate,
       insertedCount: insertData?.length || 0
     });
 
     // If it's a duplicate, it's still a success from user perspective
     if (insertErr && !isDuplicate) {
-      console.log("❌ Failed to insert assignment progress:", insertErr);
-      return NextResponse.json({ error: "Failed to track progress" }, { status: 500 });
+      console.log("❌ Failed to insert assignment progress:", {
+        error: insertErr,
+        payload: insertPayload,
+        user: user.id,
+        assignment: assignment
+      });
+      return NextResponse.json({ 
+        error: "Failed to track progress", 
+        details: insertErr?.message,
+        code: insertErr?.code 
+      }, { status: 500 });
     }
 
     // Check if this completion triggers any notifications or progression
