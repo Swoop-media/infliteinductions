@@ -1,0 +1,39 @@
+react-dom-client.development.js:25581 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+page.tsx:75  Server  Course page params: Object
+page.tsx:89  Server  ✅ Assignment ID found: 291be35f-80c9-4713-a676-01fb7ecad8df
+page.tsx:98  Server  Course query result: Object
+page.tsx:125  Server  Assignment query result: Object
+page.tsx:137  Server  ✅ Assignment found: 291be35f-80c9-4713-a676-01fb7ecad8df
+page.tsx:147  Server  Trainer assignments query result: Object
+page.tsx:155  Server  ✅ Trainer assignments verified: Array(2)
+page.tsx:166  Server  ✅ User has required role 'onsite_trainer' for session type 'training'
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 1695ms
+InteractiveRequirements.tsx:63   POST https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/api/assignment/progress 500 (Internal Server Error)
+handleSave @ InteractiveRequirements.tsx:63
+await in handleSave
+executeDispatch @ react-dom-client.development.js:16921
+runWithFiberInDEV @ react-dom-client.development.js:872
+processDispatchQueue @ react-dom-client.development.js:16971
+eval @ react-dom-client.development.js:17572
+batchedUpdates$1 @ react-dom-client.development.js:3312
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17125
+dispatchEvent @ react-dom-client.development.js:21308
+dispatchDiscreteEvent @ react-dom-client.development.js:21276
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+InteractiveRequirements.tsx:82  Failed to complete module: {error: 'Failed to track progress'}
+error @ intercept-console-error.js:62
+handleSave @ InteractiveRequirements.tsx:82
+await in handleSave
+executeDispatch @ react-dom-client.development.js:16921
+runWithFiberInDEV @ react-dom-client.development.js:872
+processDispatchQueue @ react-dom-client.development.js:16971
+eval @ react-dom-client.development.js:17572
+batchedUpdates$1 @ react-dom-client.development.js:3312
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17125
+dispatchEvent @ react-dom-client.development.js:21308
+dispatchDiscreteEvent @ react-dom-client.development.js:21276
