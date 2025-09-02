@@ -24,7 +24,7 @@ BEGIN
         -- All modules completed
         UPDATE course_assignments
         SET assignment_status = 'completed',
-            completed_at = NEW.completed_at
+            completed_at = NOW()
         WHERE id = NEW.assignment_id;
     ELSIF completed_modules_count > 0 THEN
         -- Some modules completed
