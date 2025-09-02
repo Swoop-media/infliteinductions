@@ -122,7 +122,7 @@ function teamsTextFor(n: NotificationInput) {
       ]
         .filter(Boolean)
         .join("\n");
-    
+
     case "enrolment_approved":
       // Handle both regular enrolment approvals and course assignments
       const role = n.data?.role;
@@ -130,7 +130,7 @@ function teamsTextFor(n: NotificationInput) {
       const emoji = role === "trainee" ? "📚" : 
                    role === "onsite_trainer" ? "👨‍🏫" : 
                    role === "onsite_assessor" ? "📋" : "📚";
-      
+
       // If it's a course assignment (has role data), use assignment formatting
       if (role) {
         return [
@@ -145,7 +145,7 @@ function teamsTextFor(n: NotificationInput) {
           .filter(Boolean)
           .join("\n");
       }
-      
+
       // Default enrolment approved formatting
       return [
         "📚 *Enrolment approved*",
@@ -203,7 +203,7 @@ function teamsTextFor(n: NotificationInput) {
     case "enrolment_revoked":
       // Handle both regular enrolment revocations and assignment revocations
       const revokedRole = n.data?.roleDisplayName || n.data?.role;
-      
+
       // If it's a role assignment revocation (has role data), use assignment formatting
       if (revokedRole) {
         return [
@@ -217,13 +217,26 @@ function teamsTextFor(n: NotificationInput) {
           .filter(Boolean)
           .join("\n");
       }
-      
+
       // Default enrolment revoked formatting
       return [
         "⚠️ *Enrolment revoked*",
         n.data?.courseTitle ? `• Course: ${n.data.courseTitle}` : "",
         "",
         n.body || "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "onsite_training_ready":
+      const learnerInfo = n.data?.learnerName || n.data?.traineeName || n.data?.learner_email || "A learner";
+      const course = n.data?.courseTitle;
+      const url = n.data?.url;
+      return [
+        "🎯 Learner ready for onsite training",
+        `• Learner: ${learnerInfo}`,
+        course ? `• Course: ${course}` : "",
+        url ? `• Train/Assess dashboard: ${url}` : "",
       ]
         .filter(Boolean)
         .join("\n");
@@ -289,7 +302,7 @@ export async function createNotification(input: NotificationInput) {
   if (n.sendTeams) {
     try {
       await trySendTeamsDM(n.recipientUserId, teamsTextFor(n));
-      
+
       // Also try direct API call if the above module approach fails
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
       await fetch(`${baseUrl}/api/teams/bot/debug-send`, {

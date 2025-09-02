@@ -192,14 +192,27 @@ async function notifyOnsiteTrainers(supabase: any, createNotification: any, cour
       .eq("course_id", courseId)
       .eq("role", "onsite_trainer");
 
-    // Get trainee name
+    // Get trainee name - try profiles first, then auth.users
+    let traineeName = "A trainee";
+    let traineeEmail = "";
+    
     const { data: traineeProfile } = await supabase
       .from("profiles")
       .select("full_name, email")
       .eq("id", traineeUserId)
       .single();
-
-    const traineeName = traineeProfile?.full_name || traineeProfile?.email || "A trainee";
+    
+    if (traineeProfile?.full_name || traineeProfile?.email) {
+      traineeName = traineeProfile.full_name || traineeProfile.email;
+      traineeEmail = traineeProfile.email || "";
+    } else {
+      // Fallback to auth.users table
+      const { data: authUser } = await supabase.auth.admin.getUserById(traineeUserId);
+      if (authUser?.user?.email) {
+        traineeName = authUser.user.user_metadata?.full_name || authUser.user.email;
+        traineeEmail = authUser.user.email;
+      }
+    }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
@@ -214,6 +227,9 @@ async function notifyOnsiteTrainers(supabase: any, createNotification: any, cour
           courseId,
           traineeUserId,
           traineeName,
+          traineeEmail,
+          learnerName: traineeName,
+          learner_email: traineeEmail,
           url: `${siteUrl}/app/train-assess`,
           event_id: `onsite_training_ready_${courseId}_${traineeUserId}_${Date.now()}`
         },
