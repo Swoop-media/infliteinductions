@@ -122,6 +122,10 @@ WITH CHECK (
     )
 );
 
+-- Ensure the table has updated_at column
+ALTER TABLE public.assignment_progress 
+ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
 -- Create trigger for updated_at (only if it doesn't exist)
 DROP TRIGGER IF EXISTS trg_assignment_progress_updated_at ON public.assignment_progress;
 CREATE TRIGGER trg_assignment_progress_updated_at

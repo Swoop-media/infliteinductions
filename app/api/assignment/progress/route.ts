@@ -86,6 +86,14 @@ export async function POST(request: NextRequest) {
 
     console.log("💾 Attempting to insert assignment progress:", insertPayload);
 
+    // First, let's check the table structure
+    const { data: tableInfo, error: tableError } = await supabase
+      .from("assignment_progress")
+      .select("*")
+      .limit(1);
+    
+    console.log("📋 Table structure check:", { tableInfo, tableError });
+
     const { error: insertErr, data: insertData } = await supabase
       .from("assignment_progress")
       .insert(insertPayload)
