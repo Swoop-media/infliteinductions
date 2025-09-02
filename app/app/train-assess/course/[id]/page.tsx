@@ -91,23 +91,34 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
 
   console.log("✅ Assignment found:", assignment.id);
 
-  // Verify trainer/assessor has access to this course
-  const { data: trainerAssignment, error: trainerError } = await supabase
+  // Verify trainer/assessor has access to this course (can have multiple roles)
+  const { data: trainerAssignments, error: trainerError } = await supabase
     .from("course_assignments")
     .select("role")
     .eq("user_id", user.id)
     .eq("course_id", courseId)
-    .in("role", ["onsite_trainer", "onsite_assessor"])
-    .single();
+    .in("role", ["onsite_trainer", "onsite_assessor"]);
 
-  console.log("Trainer assignment query result:", { trainerAssignment, trainerError });
+  console.log("Trainer assignments query result:", { trainerAssignments, trainerError });
 
-  if (!trainerAssignment) {
-    console.log("❌ No trainer assignment found, redirecting to train-assess");
+  if (!trainerAssignments || trainerAssignments.length === 0) {
+    console.log("❌ No trainer/assessor assignment found, redirecting to train-assess");
     redirect("/app/train-assess");
   }
 
-  console.log("✅ Trainer assignment verified:", trainerAssignment.role);
+  const userRoles = trainerAssignments.map(a => a.role);
+  console.log("✅ Trainer assignments verified:", userRoles);
+
+  // Check if user has the right role for this session type
+  const requiredRole = sessionType === 'training' ? 'onsite_trainer' : 'onsite_assessor';
+  const hasRequiredRole = userRoles.includes(requiredRole);
+  
+  if (!hasRequiredRole) {
+    console.log(`❌ User doesn't have required role '${requiredRole}' for session type '${sessionType}'`);
+    redirect("/app/train-assess");
+  }
+
+  console.log(`✅ User has required role '${requiredRole}' for session type '${sessionType}'`);
 
   // Get course modules
   const moduleType = sessionType === 'training' ? 'onsite_training' : 'onsite_assessment';
