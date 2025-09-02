@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import ModuleLink from "./ModuleLink";
 
 /**
  * Renders a course as a learner (assignments-only approach).
@@ -324,15 +323,40 @@ export default async function LearnerCoursePage(props: {
               const isCurrent = currentModule?.id === module.id;
               
               return (
-                <ModuleLink
+                <Link
                   key={module.id}
-                  moduleId={module.id}
-                  courseId={courseId}
-                  isUnlocked={isUnlocked}
-                  isCurrent={isCurrent}
-                  isCompleted={isCompleted}
-                  module={module}
-                />
+                  href={isUnlocked ? `/app/learn/modules/${module.id}` : '#'}
+                  className={`
+                    block p-3 rounded-lg border text-sm transition-all
+                    ${isCurrent 
+                      ? 'bg-blue-50 border-blue-200 text-blue-800 ring-2 ring-blue-200' 
+                      : isCompleted 
+                        ? 'bg-green-50 border-green-200 text-green-800 hover:bg-green-100' 
+                        : isUnlocked 
+                          ? 'bg-white border-gray-200 hover:bg-gray-50' 
+                          : 'bg-gray-100 border-gray-200 text-gray-500 cursor-not-allowed'
+                    }
+                  `}
+                >
+                  <div className="flex items-start gap-2">
+                    <span className="text-base mt-0.5">
+                      {isCompleted ? '✅' : isCurrent ? '👁️' : typeIcon(module.type as ModuleType)}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">
+                        {module.title || TYPE_LABEL[module.type as ModuleType]}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {TYPE_LABEL[module.type as ModuleType]}
+                      </div>
+                      {!isUnlocked && (
+                        <div className="text-xs text-gray-400 mt-1">
+                          🔒 Complete previous modules to unlock
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </Link>
               );
             })}
           </div>
