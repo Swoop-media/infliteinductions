@@ -52,8 +52,7 @@ export default async function TrainAssessPage() {
         id,
         user_id,
         course_id,
-        courses(title),
-        profiles(full_name, email)
+        created_at
       `)
       .eq("role", "trainee")
       .in("course_id", trainerCourseIds);
@@ -63,8 +62,7 @@ export default async function TrainAssessPage() {
     console.log("Trainee assignments data:", traineeAssignments?.map(ta => ({
       id: ta.id,
       user_id: ta.user_id,
-      course_id: ta.course_id,
-      course_title: ta.courses?.title
+      course_id: ta.course_id
     })));
 
     if (traineeAssignments) {
