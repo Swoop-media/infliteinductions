@@ -131,7 +131,6 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
 
   // Get onsite requirements for each module
   const moduleIds = modules?.map(m => m.id) || [];
-  const requiredRole = sessionType === 'training' ? 'onsite_trainer' : 'onsite_assessor';
   
   let requirementsByModule: Record<string, any[]> = {};
   if (moduleIds.length > 0) {
