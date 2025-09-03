@@ -54,7 +54,8 @@ async function loadMyProfileAndLearning() {
     .from("course_assignments")
     .select("course_id, role, created_at, assignment_status")
     .eq("user_id", user.id)
-    .eq("role", "trainee");
+    .eq("role", "trainee")
+    .eq("status", "active");
 
   const assignmentList = assignments ?? [];
   const courseIds = assignmentList.map((a) => a.course_id);

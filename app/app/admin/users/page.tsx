@@ -93,7 +93,15 @@ export default async function AdminUsersPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Admin: Users & Roles</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">Admin: Users & Roles</h1>
+        <Link
+          href="/app/admin/users/new"
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+        >
+          Add New User
+        </Link>
+      </div>
 
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
