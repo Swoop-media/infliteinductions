@@ -381,32 +381,39 @@ export default async function MyProfilePage() {
                 const totalCourses = assignment.courses.length;
                 
                 return (
-                  <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4 bg-purple-50">
-                    <div className="flex-1">
-                      <h3 className="font-medium">{auth.title}</h3>
-                      <p className="text-sm text-gray-600">
-                        Authorization • Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {completedCoursesCount} of {totalCourses} courses completed
-                      </p>
-                      {/* Show all courses in authorization */}
-                      {assignment.courses.length > 0 && (
-                        <div className="mt-2">
-                          <p className="text-xs text-gray-600 font-medium">Courses:</p>
-                          {assignment.courses.map((c: any) => (
-                            <p key={c.course_id} className={`text-xs ${
-                              c.assignment?.assignment_status === "completed" 
-                                ? "text-green-600" 
-                                : "text-gray-500"
-                            }`}>
-                              {c.assignment?.assignment_status === "completed" ? "✓" : "○"} {c.courses.title}
-                            </p>
-                          ))}
-                        </div>
-                      )}
+                  <div key={assignment.id} className="rounded-lg border p-4 bg-green-50">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="font-medium">{auth.title}</h3>
+                        <p className="text-sm text-gray-600">
+                          Authorization • Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          All {totalCourses} courses completed
+                        </p>
+                        
+                        {/* Show completed courses */}
+                        {assignment.courses.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs text-gray-600 font-medium">Courses completed:</p>
+                            <div className="ml-2 space-y-1">
+                              {assignment.courses.map((c: any) => (
+                                <div key={c.course_id} className="flex items-center gap-1">
+                                  <span className="text-green-600 text-xs">✓</span>
+                                  <Link
+                                    href={`/app/learn/courses/${c.course_id}`}
+                                    className="text-xs text-blue-600 hover:underline"
+                                  >
+                                    {c.courses.title}
+                                  </Link>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <Pill tone="green">Completed</Pill>
                     </div>
-                    <Pill tone="green">Completed</Pill>
                   </div>
                 );
               })}
