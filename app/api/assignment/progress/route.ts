@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
   try {
@@ -253,10 +254,17 @@ async function checkAndTriggerNotifications(supabase: any, assignment: any, comp
 
 async function notifyOnsiteTrainers(supabase: any, createNotification: any, courseId: string, courseTitle: string, traineeUserId: string) {
   try {
-    // Get onsite trainers for this course
+    // Get onsite trainers for this course - use service role to see all assignments
     console.log("🔍 Looking for onsite trainers for course:", courseId);
     
-    const { data: trainers, error: trainersError } = await supabase
+    // Create a service role client to ensure we can see all course assignments
+    const serviceSupabase = createClient(
+      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+      { auth: { persistSession: false } }
+    );
+    
+    const { data: trainers, error: trainersError } = await serviceSupabase
       .from("course_assignments")
       .select("user_id, role")
       .eq("course_id", courseId)
@@ -329,10 +337,17 @@ async function notifyOnsiteTrainers(supabase: any, createNotification: any, cour
 
 async function notifyOnsiteAssessors(supabase: any, createNotification: any, courseId: string, courseTitle: string, traineeUserId: string) {
   try {
-    // Get onsite assessors for this course
+    // Get onsite assessors for this course - use service role to see all assignments
     console.log("🔍 Looking for onsite assessors for course:", courseId);
     
-    const { data: assessors, error: assessorsError } = await supabase
+    // Create a service role client to ensure we can see all course assignments
+    const serviceSupabase = createClient(
+      process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+      process.env.SUPABASE_SERVICE_ROLE_KEY || "",
+      { auth: { persistSession: false } }
+    );
+    
+    const { data: assessors, error: assessorsError } = await serviceSupabase
       .from("course_assignments")
       .select("user_id, role")
       .eq("course_id", courseId)
