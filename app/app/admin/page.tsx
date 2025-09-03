@@ -48,13 +48,15 @@ function banner(ok?: string | null, error?: string | null) {
 type CompletedCourseRow = {
   assignment_id: string;
   user_id: string;
-  course_id: string;
   completed_at: string;
-  full_name: string | null;
-  email: string | null;
-  course_title: string | null;
-  valid_for_days: number | null;
-  created_by: string | null;
+  title: string;
+  valid_for_days: number;
+  retake_reminder_days: number;
+  new_due_date: string;
+  days_until_expiry: string;
+  notification_status: string;
+  trainee_email: string;
+  trainee_name: string;
 };
 
 async function loadCompletedCoursesWithDueDates(q: string | null) {
@@ -100,21 +102,42 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
   const profileMap = new Map((profiles || []).map(p => [p.id, p]));
   const courseMap = new Map((courses || []).map(c => [c.id, c]));
 
-  // Combine data and apply search filter
-  let completedCourses: CompletedCourseRow[] = assignments.map((assignment) => {
+  // Transform data to match client component expectations
+  let completedCourses = assignments.map((assignment) => {
     const profile = profileMap.get(assignment.user_id);
     const course = courseMap.get(assignment.course_id);
+    
+    // Calculate due date
+    const completedDate = new Date(assignment.completed_at);
+    const validForDays = course?.valid_for_days || 365;
+    const dueDate = new Date(completedDate);
+    dueDate.setDate(dueDate.getDate() + validForDays);
+    
+    // Calculate days until expiry
+    const today = new Date();
+    const timeDiff = dueDate.getTime() - today.getTime();
+    const daysUntilExpiry = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    
+    // Determine notification status
+    let notificationStatus = "NO NOTIFICATION";
+    if (daysUntilExpiry <= 30 && daysUntilExpiry > 0) {
+      notificationStatus = "SHOULD TRIGGER REMINDER";
+    } else if (daysUntilExpiry <= 0) {
+      notificationStatus = "REMINDER SENT";
+    }
 
     return {
       assignment_id: assignment.id,
       user_id: assignment.user_id,
-      course_id: assignment.course_id,
       completed_at: assignment.completed_at,
-      full_name: profile?.full_name ?? null,
-      email: profile?.email ?? null,
-      course_title: course?.title ?? null,
-      valid_for_days: course?.valid_for_days ?? null,
-      created_by: course?.created_by ?? null,
+      title: course?.title || "Unknown Course",
+      valid_for_days: validForDays,
+      retake_reminder_days: 30, // Default reminder threshold
+      new_due_date: dueDate.toISOString(),
+      days_until_expiry: daysUntilExpiry.toString(),
+      notification_status: notificationStatus,
+      trainee_email: profile?.email || "",
+      trainee_name: profile?.full_name || "",
     };
   });
 
@@ -122,9 +145,9 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
   if (q && q.trim()) {
     const searchTerm = q.trim().toLowerCase();
     completedCourses = completedCourses.filter(course =>
-      (course.full_name?.toLowerCase().includes(searchTerm)) ||
-      (course.email?.toLowerCase().includes(searchTerm)) ||
-      (course.course_title?.toLowerCase().includes(searchTerm))
+      (course.trainee_name?.toLowerCase().includes(searchTerm)) ||
+      (course.trainee_email?.toLowerCase().includes(searchTerm)) ||
+      (course.title?.toLowerCase().includes(searchTerm))
     );
   }
 
