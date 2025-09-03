@@ -49,8 +49,8 @@ async function loadMyProfileAndLearning() {
     .eq("id", user.id)
     .maybeSingle();
 
-  // Fetch course assignments and progress
-  const { data: assignments } = await supabase
+  // Fetch all course assignments for this user
+  const { data: allAssignments } = await supabase
     .from("course_assignments")
     .select(`
       id,
@@ -65,11 +65,10 @@ async function loadMyProfileAndLearning() {
     `)
     .eq("user_id", user.id)
     .eq("role", "trainee")
-    .in("assignment_status", ["assigned", "in_progress"])
     .order("created_at", { ascending: false });
 
-  // Fetch authorization assignments
-  const { data: authAssignments } = await supabase
+  // Fetch all authorization assignments for this user
+  const { data: allAuthAssignments } = await supabase
     .from("authorisation_assignments")
     .select(`
       id,
@@ -84,16 +83,30 @@ async function loadMyProfileAndLearning() {
     `)
     .eq("user_id", user.id)
     .eq("role", "trainee")
-    .in("assignment_status", ["assigned", "in_progress"])
     .order("created_at", { ascending: false });
 
-  // The rest of the original logic for completed courses is not directly affected
-  // by these changes, so we'll keep it as is.
-  // However, if the intention was to also show completed authorizations,
-  // additional logic would be needed here.
+  // Split assignments into in progress and completed
+  const inProgressCourses = (allAssignments ?? []).filter(a => 
+    a.assignment_status === "assigned" || a.assignment_status === "in_progress"
+  );
+  const completedCourses = (allAssignments ?? []).filter(a => 
+    a.assignment_status === "completed"
+  );
 
-  // We will return the fetched data. The UI will handle displaying it.
-  return { profile, inProgress: assignments ?? [], completed: [], authorizationProgress: authAssignments ?? [] };
+  const inProgressAuth = (allAuthAssignments ?? []).filter(a => 
+    a.assignment_status === "assigned" || a.assignment_status === "in_progress"
+  );
+  const completedAuth = (allAuthAssignments ?? []).filter(a => 
+    a.assignment_status === "completed"
+  );
+
+  return { 
+    profile, 
+    inProgress: inProgressCourses, 
+    completed: completedCourses, 
+    authorizationProgress: inProgressAuth,
+    authorizationCompleted: completedAuth
+  };
 }
 
 /* ---------------- UI helpers ---------------- */
@@ -119,7 +132,7 @@ function Pill({
 
 /* ---------------- Page ---------------- */
 export default async function MyProfilePage() {
-  const { profile, inProgress, completed, authorizationProgress } = await loadMyProfileAndLearning();
+  const { profile, inProgress, completed, authorizationProgress, authorizationCompleted } = await loadMyProfileAndLearning();
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -259,33 +272,53 @@ export default async function MyProfilePage() {
         <section className="space-y-3 rounded-xl border bg-white p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Completed</h2>
-            <Pill tone="green">{completed.length}</Pill>
+            <Pill tone="green">{completed.length + (authorizationCompleted?.length ?? 0)}</Pill>
           </div>
 
-          {completed.length === 0 ? (
+          {(completed.length === 0 && (authorizationCompleted?.length ?? 0) === 0) ? (
             <p className="text-sm text-gray-500">No completions yet.</p>
           ) : (
-            <ul className="divide-y rounded-md border">
-              {completed.map(({ course }) => (
-                <li key={course.id} className="flex items-center justify-between p-3">
-                  <div>
-                    <div className="font-medium">{course.title ?? "Untitled"}</div>
-                    <div className="text-xs text-gray-500">
-                      Updated {new Date(course.updated_at ?? Date.now()).toLocaleString()}
+            <div className="space-y-3">
+              {/* Completed Courses */}
+              {completed.map((assignment) => {
+                const course = assignment.courses;
+                return (
+                  <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <h3 className="font-medium">{course.title ?? "Untitled"}</h3>
+                      <p className="text-sm text-gray-600">
+                        Course • Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Pill tone="green">Completed</Pill>
+                      <Link
+                        href={`/app/learn/courses/${course.id}`}
+                        className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
+                      >
+                        View
+                      </Link>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                );
+              })}
+
+              {/* Completed Authorizations */}
+              {(authorizationCompleted ?? []).map((assignment) => {
+                const auth = assignment.authorisations;
+                return (
+                  <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4 bg-purple-50">
+                    <div>
+                      <h3 className="font-medium">{auth.title}</h3>
+                      <p className="text-sm text-gray-600">
+                        Authorization • Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
+                      </p>
+                    </div>
                     <Pill tone="green">Completed</Pill>
-                    <Link
-                      href={`/app/learn/courses/${course.id}`}
-                      className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
-                    >
-                      View
-                    </Link>
                   </div>
-                </li>
-              ))}
-            </ul>
+                );
+              })}
+            </div>
           )}
         </section>
       </div>
