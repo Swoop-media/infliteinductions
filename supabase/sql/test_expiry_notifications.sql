@@ -50,6 +50,7 @@ INSERT INTO course_assignments (
   course_id,
   role,
   assigned_by,
+  created_by,
   assignment_status,
   completed_at,
   created_at
@@ -60,13 +61,14 @@ SELECT
   c.id as course_id,
   'trainee' as role,
   current_setting('test.admin_id')::uuid as assigned_by,
+  current_setting('test.admin_id')::uuid as created_by,
   'completed',
   (CURRENT_DATE - INTERVAL '340 days') as completed_at,
   now()
 FROM profiles p 
 CROSS JOIN courses c 
 WHERE c.valid_for_days IS NOT NULL
-AND p.id != COALESCE(c.created_by, current_setting('test.admin_id')::uuid)  -- Don't assign course to its creator
+AND p.id != current_setting('test.admin_id')::uuid  -- Don't assign course to the admin user we're using as creator
 LIMIT 1
 ON CONFLICT (user_id, course_id, role) DO NOTHING;
 
@@ -76,12 +78,17 @@ SELECT
   ca.user_id,
   ca.course_id,
   ca.completed_at,
+  ca.assigned_by,
+  ca.created_by,
   c.title as course_title,
   c.valid_for_days,
   c.retake_reminder_days,
+  p.full_name as user_name,
+  p.email as user_email,
   (ca.completed_at::date + INTERVAL '1 day' * c.valid_for_days) as due_date,
   ((ca.completed_at::date + INTERVAL '1 day' * c.valid_for_days) - CURRENT_DATE) as days_until_expiry
 FROM course_assignments ca
 JOIN courses c ON ca.course_id = c.id
+JOIN profiles p ON p.id = ca.user_id
 WHERE ca.assignment_status = 'completed'
 AND c.valid_for_days IS NOT NULL;
