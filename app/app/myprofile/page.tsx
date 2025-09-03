@@ -84,6 +84,47 @@ async function loadMyProfileAndLearning() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  // For each authorization, fetch its courses and the user's progress
+  const authWithCourses = await Promise.all(
+    (allAuthAssignments ?? []).map(async (authAssignment) => {
+      // Get courses for this authorization
+      const { data: authCourses } = await supabase
+        .from("authorisation_courses")
+        .select(`
+          course_id,
+          order_index,
+          courses!inner(
+            id,
+            title,
+            status
+          )
+        `)
+        .eq("authorisation_id", authAssignment.authorisation_id)
+        .order("order_index", { ascending: true });
+
+      // Get user's course assignments for these courses
+      const courseIds = (authCourses ?? []).map(ac => ac.course_id);
+      const { data: userCourseAssignments } = courseIds.length > 0 ? await supabase
+        .from("course_assignments")
+        .select("course_id, assignment_status, completed_at")
+        .eq("user_id", user.id)
+        .eq("role", "trainee")
+        .in("course_id", courseIds) : { data: [] };
+
+      const courseAssignmentMap = new Map(
+        (userCourseAssignments ?? []).map(ca => [ca.course_id, ca])
+      );
+
+      return {
+        ...authAssignment,
+        courses: (authCourses ?? []).map(ac => ({
+          ...ac,
+          assignment: courseAssignmentMap.get(ac.course_id)
+        }))
+      };
+    })
+  );
+
   // Split assignments into in progress and completed
   const inProgressCourses = (allAssignments ?? []).filter(a => 
     a.assignment_status === "assigned" || a.assignment_status === "in_progress"
@@ -92,10 +133,10 @@ async function loadMyProfileAndLearning() {
     a.assignment_status === "completed"
   );
 
-  const inProgressAuth = (allAuthAssignments ?? []).filter(a => 
+  const inProgressAuth = (authWithCourses ?? []).filter(a => 
     a.assignment_status === "assigned" || a.assignment_status === "in_progress"
   );
-  const completedAuth = (allAuthAssignments ?? []).filter(a => 
+  const completedAuth = (authWithCourses ?? []).filter(a => 
     a.assignment_status === "completed"
   );
 
@@ -246,18 +287,47 @@ export default async function MyProfilePage() {
                 })}
 
                 {/* Authorization assignments */}
-                {(authorizationProgress ?? []).map((assignment: any) => {
+                {(inProgressAuth ?? []).map((assignment: any) => {
                   const auth = assignment.authorisations;
+                  const completedCoursesCount = assignment.courses.filter((c: any) => 
+                    c.assignment?.assignment_status === "completed"
+                  ).length;
+                  const totalCourses = assignment.courses.length;
+                  const firstCourse = assignment.courses[0];
+                  
                   return (
                     <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4 bg-purple-50">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="font-medium">{auth.title}</h3>
                         <p className="text-sm text-gray-600 capitalize">
                           Authorization • {assignment.assignment_status.replace('_', ' ')}
                         </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {completedCoursesCount} of {totalCourses} courses completed
+                        </p>
+                        {/* Show completed courses */}
+                        {assignment.courses.filter((c: any) => c.assignment?.assignment_status === "completed").length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-xs text-green-600 font-medium">Completed:</p>
+                            {assignment.courses
+                              .filter((c: any) => c.assignment?.assignment_status === "completed")
+                              .map((c: any) => (
+                                <p key={c.course_id} className="text-xs text-green-600">
+                                  ✓ {c.courses.title}
+                                </p>
+                              ))}
+                          </div>
+                        )}
                       </div>
-                      <div className="rounded-md bg-purple-100 px-4 py-2 text-sm text-purple-800">
-                        Assigned
+                      <div className="flex items-center gap-2">
+                        {firstCourse && (
+                          <Link
+                            href={`/app/learn/courses/${firstCourse.course_id}`}
+                            className="rounded-md bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-700"
+                          >
+                            Continue Authorization
+                          </Link>
+                        )}
                       </div>
                     </div>
                   );
@@ -303,15 +373,38 @@ export default async function MyProfilePage() {
               })}
 
               {/* Completed Authorizations */}
-              {(authorizationCompleted ?? []).map((assignment) => {
+              {(completedAuth ?? []).map((assignment) => {
                 const auth = assignment.authorisations;
+                const completedCoursesCount = assignment.courses.filter((c: any) => 
+                  c.assignment?.assignment_status === "completed"
+                ).length;
+                const totalCourses = assignment.courses.length;
+                
                 return (
                   <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4 bg-purple-50">
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-medium">{auth.title}</h3>
                       <p className="text-sm text-gray-600">
                         Authorization • Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
                       </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {completedCoursesCount} of {totalCourses} courses completed
+                      </p>
+                      {/* Show all courses in authorization */}
+                      {assignment.courses.length > 0 && (
+                        <div className="mt-2">
+                          <p className="text-xs text-gray-600 font-medium">Courses:</p>
+                          {assignment.courses.map((c: any) => (
+                            <p key={c.course_id} className={`text-xs ${
+                              c.assignment?.assignment_status === "completed" 
+                                ? "text-green-600" 
+                                : "text-gray-500"
+                            }`}>
+                              {c.assignment?.assignment_status === "completed" ? "✓" : "○"} {c.courses.title}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <Pill tone="green">Completed</Pill>
                   </div>
