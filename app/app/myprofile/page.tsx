@@ -82,7 +82,6 @@ async function loadMyProfileAndLearning() {
       )
     `)
     .eq("user_id", user.id)
-    .eq("role", "trainee")
     .order("created_at", { ascending: false });
 
   // Split assignments into in progress and completed
