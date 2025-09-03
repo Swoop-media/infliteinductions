@@ -37,15 +37,15 @@ export async function markNotificationRead(formData: FormData) {
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
     .eq("id", id)
-    .eq("user_id", user.id);
+    .eq("recipient_id", user.id);
 
-  // If read_at column doesn't exist, fallback to is_read
+  // If read_at column doesn't exist, fallback to is_read/read
   if (error && (error as any).code === "42703") {
     await supabase
       .from("notifications")
-      .update({ is_read: true })
+      .update({ read: true })
       .eq("id", id)
-      .eq("user_id", user.id);
+      .eq("recipient_id", user.id);
   }
 
   // Revalidate current page
@@ -70,16 +70,16 @@ export async function markAllNotificationsRead() {
   let { error } = await supabase
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
-    .eq("user_id", user.id)
+    .eq("recipient_id", user.id)
     .is("read_at", null);
 
-  // Fallback: boolean is_read
+  // Fallback: boolean read
   if (error && (error as any).code === "42703") {
     await supabase
       .from("notifications")
-      .update({ is_read: true })
-      .eq("user_id", user.id)
-      .eq("is_read", false);
+      .update({ read: true })
+      .eq("recipient_id", user.id)
+      .eq("read", false);
   }
 
   const referer = headers().get("referer") || "/app/home";
@@ -284,32 +284,32 @@ export async function createNotification(input: NotificationInput) {
   let data: any;
   let error: any;
 
-  // Try new schema with user_id, title, body columns
+  // Try old schema with recipient_id and payload first (based on your table structure)
   ({ data, error } = await supabase
     .from("notifications")
     .insert({
-      user_id: n.recipientUserId,
+      recipient_id: n.recipientUserId,
       type: n.type,
-      title: n.title,
-      body: n.body ?? null,
-      data: n.data ?? null,
+      payload: {
+        title: n.title,
+        body: n.body ?? null,
+        ...n.data ?? {},
+      },
+      read: false,
     })
     .select("id")
     .single());
 
-  // If that fails due to missing columns, try old schema with recipient_id and payload
+  // If that fails due to missing columns, try new schema with user_id, title, body columns
   if (error && (error.code === "42703" || error.message.includes("Could not find") || error.message.includes("column"))) {
     ({ data, error } = await supabase
       .from("notifications")
       .insert({
-        recipient_id: n.recipientUserId,
+        user_id: n.recipientUserId,
         type: n.type,
-        payload: {
-          title: n.title,
-          body: n.body ?? null,
-          ...n.data ?? {},
-        },
-        read: false,
+        title: n.title,
+        body: n.body ?? null,
+        data: n.data ?? null,
       })
       .select("id")
       .single());
