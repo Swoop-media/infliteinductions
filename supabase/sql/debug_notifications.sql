@@ -30,8 +30,9 @@ SELECT
   p.id,
   p.email,
   p.full_name,
-  p.first_name,
-  p.last_name
+  p.department,
+  p.job_description,
+  p.microsoft_id
 FROM profiles p
 WHERE p.id = '6a0bf6d0-6da6-496c-933c-ea0d6fcf0633';
 
@@ -64,7 +65,7 @@ DECLARE
 BEGIN
   -- Get learner details
   SELECT 
-    COALESCE(p.full_name, p.first_name || ' ' || p.last_name, p.email, 'User') as name,
+    COALESCE(p.full_name, p.email, 'User') as name,
     p.email
   INTO v_learner_name, v_learner_email
   FROM profiles p
