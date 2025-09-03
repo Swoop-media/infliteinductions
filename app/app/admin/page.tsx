@@ -5,6 +5,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import SendExpiryRemindersButton from "./_components/SendExpiryRemindersButton";
+import React from 'react'; // Import React
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +120,7 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
   // Apply search filter if provided
   if (q && q.trim()) {
     const searchTerm = q.trim().toLowerCase();
-    completedCourses = completedCourses.filter(course => 
+    completedCourses = completedCourses.filter(course =>
       (course.full_name?.toLowerCase().includes(searchTerm)) ||
       (course.email?.toLowerCase().includes(searchTerm)) ||
       (course.course_title?.toLowerCase().includes(searchTerm))
@@ -329,56 +330,94 @@ async function DueDatesSection({ q }: { q: string | null }) {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full border-collapse rounded-md border">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="border-b px-4 py-2 text-left text-sm font-medium">Trainee</th>
-                <th className="border-b px-4 py-2 text-left text-sm font-medium">Course</th>
-                <th className="border-b px-4 py-2 text-left text-sm font-medium">Completed</th>
-                <th className="border-b px-4 py-2 text-left text-sm font-medium">Due Date</th>
-                <th className="border-b px-4 py-2 text-left text-sm font-medium">Status</th>
+            <thead className="bg-gray-50">
+              <tr>
+                <th 
+                  className="px-4 py-3 text-left font-medium text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('trainee')}
+                  title="Click to sort by trainee name"
+                >
+                  Trainee {getSortIcon('trainee')}
+                </th>
+                <th 
+                  className="px-4 py-3 text-left font-medium text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('course')}
+                  title="Click to sort by course name"
+                >
+                  Course {getSortIcon('course')}
+                </th>
+                <th 
+                  className="px-4 py-3 text-left font-medium text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('completed')}
+                  title="Click to sort by completion date"
+                >
+                  Completed {getSortIcon('completed')}
+                </th>
+                <th 
+                  className="px-4 py-3 text-left font-medium text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('due_date')}
+                  title="Click to sort by due date (soonest first)"
+                >
+                  Due Date {getSortIcon('due_date')}
+                </th>
+                <th 
+                  className="px-4 py-3 text-left font-medium text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+                  onClick={() => handleSort('status')}
+                  title="Click to sort by status (expired first, then expiring soon)"
+                >
+                  Status {getSortIcon('status')}
+                </th>
               </tr>
             </thead>
-            <tbody>
-              {completedCourses.map((course) => {
-                const completedDate = new Date(course.completed_at).toLocaleDateString();
-                const dueDate = calculateDueDate(course.completed_at, course.valid_for_days);
-                const daysUntilDue = getDaysUntilDue(course.completed_at, course.valid_for_days);
+            <tbody className="divide-y divide-gray-200">
+              {sortedAssignments.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-4 py-3 text-sm text-center text-gray-500">
+                    {q ? "No completed courses found matching your search." : "No completed courses found."}
+                  </td>
+                </tr>
+              ) : (
+                sortedAssignments.map((course) => {
+                  const completedDate = new Date(course.completed_at).toLocaleDateString();
+                  const dueDate = calculateDueDate(course.completed_at, course.valid_for_days);
+                  const daysUntilDue = getDaysUntilDue(course.completed_at, course.valid_for_days);
 
-                let statusColor = "text-green-600";
-                let statusText = "Current";
+                  let statusColor = "text-green-600";
+                  let statusText = "Current";
 
-                if (daysUntilDue !== null) {
-                  if (daysUntilDue < 0) {
-                    statusColor = "text-red-600";
-                    statusText = `Expired (${Math.abs(daysUntilDue)} days ago)`;
-                  } else if (daysUntilDue <= 30) {
-                    statusColor = "text-yellow-600";
-                    statusText = `Expires in ${daysUntilDue} days`;
-                  } else {
-                    statusText = `Expires in ${daysUntilDue} days`;
+                  if (daysUntilDue !== null) {
+                    if (daysUntilDue < 0) {
+                      statusColor = "text-red-600";
+                      statusText = `Expired (${Math.abs(daysUntilDue)} days ago)`;
+                    } else if (daysUntilDue <= 30) {
+                      statusColor = "text-yellow-600";
+                      statusText = `Expires in ${daysUntilDue} days`;
+                    } else {
+                      statusText = `Expires in ${daysUntilDue} days`;
+                    }
                   }
-                }
 
-                return (
-                  <tr key={course.assignment_id} className="hover:bg-gray-50">
-                    <td className="border-b px-4 py-3">
-                      <div className="font-medium">{course.full_name ?? "Unknown"}</div>
-                      <div className="text-xs text-gray-500">{course.email}</div>
-                    </td>
-                    <td className="border-b px-4 py-3">
-                      <div className="font-medium">{course.course_title}</div>
-                      <div className="text-xs text-gray-500">
-                        Valid for: {course.valid_for_days ? `${course.valid_for_days} day${course.valid_for_days > 1 ? 's' : ''}` : 'No expiry'}
-                      </div>
-                    </td>
-                    <td className="border-b px-4 py-3 text-sm">{completedDate}</td>
-                    <td className="border-b px-4 py-3 text-sm">{dueDate}</td>
-                    <td className={`border-b px-4 py-3 text-sm font-medium ${statusColor}`}>
-                      {statusText}
-                    </td>
-                  </tr>
-                );
-              })}
+                  return (
+                    <tr key={course.assignment_id} className="hover:bg-gray-50">
+                      <td className="border-b px-4 py-3">
+                        <div className="font-medium">{course.full_name ?? "Unknown"}</div>
+                        <div className="text-xs text-gray-500">{course.email}</div>
+                      </td>
+                      <td className="border-b px-4 py-3">
+                        <div className="font-medium">{course.course_title}</div>
+                        <div className="text-xs text-gray-500">
+                          Valid for: {course.valid_for_days ? `${course.valid_for_days} day${course.valid_for_days > 1 ? 's' : ''}` : 'No expiry'}
+                        </div>
+                      </td>
+                      <td className="border-b px-4 py-3 text-sm">{completedDate}</td>
+                      <td className="border-b px-4 py-3 text-sm">{dueDate}</td>
+                      <td className={`border-b px-4 py-3 text-sm font-medium ${statusColor}`}>
+                        {statusText}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
