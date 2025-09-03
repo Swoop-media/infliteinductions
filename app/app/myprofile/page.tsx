@@ -287,7 +287,7 @@ export default async function MyProfilePage() {
                 })}
 
                 {/* Authorization assignments */}
-                {(inProgressAuth ?? []).map((assignment: any) => {
+                {(authorizationProgress ?? []).map((assignment: any) => {
                   const auth = assignment.authorisations;
                   const completedCoursesCount = assignment.courses.filter((c: any) => 
                     c.assignment?.assignment_status === "completed"
@@ -373,7 +373,7 @@ export default async function MyProfilePage() {
               })}
 
               {/* Completed Authorizations */}
-              {(completedAuth ?? []).map((assignment) => {
+              {(authorizationCompleted ?? []).map((assignment) => {
                 const auth = assignment.authorisations;
                 const completedCoursesCount = assignment.courses.filter((c: any) => 
                   c.assignment?.assignment_status === "completed"
