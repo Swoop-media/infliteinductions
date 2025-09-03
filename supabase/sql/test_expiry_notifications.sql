@@ -10,12 +10,12 @@ WHERE id = (SELECT id FROM courses LIMIT 1);
 -- Create a test assignment that will expire soon (completed 340 days ago, so expires in 25 days)
 -- This should trigger a reminder since it's within the 30-day reminder window
 
--- First, let's ensure we have an admin user to assign from
+-- First, let's ensure we have a valid user to assign from
 DO $$
 DECLARE
   v_admin_id uuid;
 BEGIN
-  -- Get the first admin user using the app_has_role function
+  -- Try to get the first admin user using the app_has_role function
   SELECT id INTO v_admin_id 
   FROM profiles p
   WHERE public.app_has_role(p.id, 'Admin')
@@ -29,11 +29,18 @@ BEGIN
     LIMIT 1;
   END IF;
   
+  -- If still no admin, just get any user from profiles
+  IF v_admin_id IS NULL THEN
+    SELECT id INTO v_admin_id
+    FROM profiles
+    LIMIT 1;
+  END IF;
+  
   -- Store in a temporary setting for the insert
   IF v_admin_id IS NOT NULL THEN
     PERFORM set_config('test.admin_id', v_admin_id::text, true);
   ELSE
-    RAISE EXCEPTION 'No valid admin user found for test data';
+    RAISE EXCEPTION 'No users found in profiles table for test data';
   END IF;
 END $$;
 
@@ -52,15 +59,14 @@ SELECT
   p.id as user_id,
   c.id as course_id,
   'trainee' as role,
-  COALESCE(c.created_by, current_setting('test.admin_id')::uuid) as assigned_by,
+  current_setting('test.admin_id')::uuid as assigned_by,
   'completed',
   (CURRENT_DATE - INTERVAL '340 days') as completed_at,
   now()
 FROM profiles p 
 CROSS JOIN courses c 
 WHERE c.valid_for_days IS NOT NULL
-AND c.created_by IS NOT NULL  -- Ensure course has a creator
-AND p.id != c.created_by  -- Don't assign course to its creator
+AND p.id != COALESCE(c.created_by, current_setting('test.admin_id')::uuid)  -- Don't assign course to its creator
 LIMIT 1
 ON CONFLICT (user_id, course_id, role) DO NOTHING;
 
