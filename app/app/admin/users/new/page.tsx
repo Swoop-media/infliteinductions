@@ -14,36 +14,54 @@ async function fetchData() {
     .eq("status", "published")
     .order("title");
 
-  // Fetch authorizations (assuming we have this table)
+  // Fetch authorizations
   const { data: authsData } = await supabase
     .from("authorisations")
     .select("id, title, status")
     .eq("status", "published")
     .order("title");
 
+  // Fetch departments
+  const { data: departmentsData } = await supabase
+    .from("departments")
+    .select("id, name, active")
+    .eq("active", true)
+    .order("name");
+
+  // Fetch job descriptions
+  const { data: jobDescriptionsData } = await supabase
+    .from("job_descriptions")
+    .select("id, name, active")
+    .eq("active", true)
+    .order("name");
+
   return {
     courses: coursesData ?? [],
-    authorizations: authsData ?? []
+    authorizations: authsData ?? [],
+    departments: departmentsData ?? [],
+    jobDescriptions: jobDescriptionsData ?? []
   };
 }
 
 export default async function NewUserPage({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const isAdmin = await hasRole("Admin");
   if (!isAdmin) redirect("/app/home");
 
-  const { courses, authorizations } = await fetchData();
+  const { courses, authorizations, departments, jobDescriptions } = await fetchData();
 
-  const error = Array.isArray(searchParams?.error) 
-    ? searchParams?.error[0] 
-    : searchParams?.error;
+  // Await searchParams before accessing its properties
+  const params = await searchParams;
+  const error = Array.isArray(params?.error) 
+    ? params?.error[0] 
+    : params?.error;
   
-  const success = Array.isArray(searchParams?.ok) 
-    ? searchParams?.ok[0] 
-    : searchParams?.ok;
+  const success = Array.isArray(params?.ok) 
+    ? params?.ok[0] 
+    : params?.ok;
 
   return (
     <div className="space-y-6">
@@ -107,24 +125,34 @@ export default async function NewUserPage({
               <label className="block text-sm font-medium text-gray-700">
                 Department
               </label>
-              <input
-                type="text"
+              <select
                 name="department"
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="Engineering"
-              />
+              >
+                <option value="">Select Department</option>
+                {departments.map((dept) => (
+                  <option key={dept.id} value={dept.name}>
+                    {dept.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700">
                 Job Description
               </label>
-              <input
-                type="text"
+              <select
                 name="job_description"
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="Software Engineer"
-              />
+              >
+                <option value="">Select Job Description</option>
+                {jobDescriptions.map((job) => (
+                  <option key={job.id} value={job.name}>
+                    {job.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>

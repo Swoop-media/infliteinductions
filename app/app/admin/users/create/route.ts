@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createSupabaseServer } from "@/lib/supabase/server";
@@ -24,7 +23,7 @@ export async function POST(req: Request) {
   const full_name = String(form.get("full_name") || "").trim();
   const department = String(form.get("department") || "").trim();
   const job_description = String(form.get("job_description") || "").trim();
-  
+
   // Get selected course and authorization IDs
   const course_ids = form.getAll("course_ids").map(id => String(id));
   const authorization_ids = form.getAll("authorization_ids").map(id => String(id));
@@ -52,7 +51,7 @@ export async function POST(req: Request) {
     // Create a placeholder user entry in auth.users using admin client
     // We'll use a temporary UUID that will be replaced when they actually sign in
     const tempUserId = crypto.randomUUID();
-    
+
     // Create profile record with the email for future linking
     const { data: profile, error: profileError } = await supabaseService
       .from("profiles")
