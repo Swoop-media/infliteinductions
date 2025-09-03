@@ -68,8 +68,8 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
       user_id,
       course_id,
       completed_at,
-      profiles!course_assignments_user_id_fkey(full_name, email),
-      courses!course_assignments_course_id_fkey(title, valid_for_years, created_by)
+      profiles!user_id(full_name, email),
+      courses!course_id(title, valid_for_years, created_by)
     `)
     .eq("assignment_status", "completed")
     .not("completed_at", "is", null)
