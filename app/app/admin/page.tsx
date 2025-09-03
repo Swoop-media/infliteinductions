@@ -50,7 +50,7 @@ type CompletedCourseRow = {
   full_name: string | null;
   email: string | null;
   course_title: string | null;
-  valid_for_years: number | null;
+  valid_for_days: number | null;
   created_by: string | null;
 };
 
@@ -88,7 +88,7 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
   // Get courses
   const { data: courses, error: courseError } = await supabase
     .from("courses")
-    .select("id, title, valid_for_years, created_by")
+    .select("id, title, valid_for_days, created_by")
     .in("id", courseIds);
 
   if (courseError) throw new Error(courseError.message);
@@ -110,7 +110,7 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
       full_name: profile?.full_name ?? null,
       email: profile?.email ?? null,
       course_title: course?.title ?? null,
-      valid_for_years: course?.valid_for_years ?? null,
+      valid_for_days: course?.valid_for_days ?? null,
       created_by: course?.created_by ?? null,
     };
   });
@@ -280,22 +280,22 @@ export default async function AdminPage({
 async function DueDatesSection({ q }: { q: string | null }) {
   const completedCourses = await loadCompletedCoursesWithDueDates(q);
 
-  function calculateDueDate(completedAt: string, validForYears: number | null): string {
-    if (!validForYears) return "No expiry";
+  function calculateDueDate(completedAt: string, validForDays: number | null): string {
+    if (!validForDays) return "No expiry";
     
     const completedDate = new Date(completedAt);
     const dueDate = new Date(completedDate);
-    dueDate.setFullYear(dueDate.getFullYear() + validForYears);
+    dueDate.setDate(dueDate.getDate() + validForDays);
     
     return dueDate.toLocaleDateString();
   }
 
-  function getDaysUntilDue(completedAt: string, validForYears: number | null): number | null {
-    if (!validForYears) return null;
+  function getDaysUntilDue(completedAt: string, validForDays: number | null): number | null {
+    if (!validForDays) return null;
     
     const completedDate = new Date(completedAt);
     const dueDate = new Date(completedDate);
-    dueDate.setFullYear(dueDate.getFullYear() + validForYears);
+    dueDate.setDate(dueDate.getDate() + validForDays);
     
     const today = new Date();
     const diffTime = dueDate.getTime() - today.getTime();
@@ -339,8 +339,8 @@ async function DueDatesSection({ q }: { q: string | null }) {
             <tbody>
               {completedCourses.map((course) => {
                 const completedDate = new Date(course.completed_at).toLocaleDateString();
-                const dueDate = calculateDueDate(course.completed_at, course.valid_for_years);
-                const daysUntilDue = getDaysUntilDue(course.completed_at, course.valid_for_years);
+                const dueDate = calculateDueDate(course.completed_at, course.valid_for_days);
+                const daysUntilDue = getDaysUntilDue(course.completed_at, course.valid_for_days);
                 
                 let statusColor = "text-green-600";
                 let statusText = "Current";
@@ -366,7 +366,7 @@ async function DueDatesSection({ q }: { q: string | null }) {
                     <td className="border-b px-4 py-3">
                       <div className="font-medium">{course.course_title}</div>
                       <div className="text-xs text-gray-500">
-                        Valid for: {course.valid_for_years ? `${course.valid_for_years} year${course.valid_for_years > 1 ? 's' : ''}` : 'No expiry'}
+                        Valid for: {course.valid_for_days ? `${course.valid_for_days} day${course.valid_for_days > 1 ? 's' : ''}` : 'No expiry'}
                       </div>
                     </td>
                     <td className="border-b px-4 py-3 text-sm">{completedDate}</td>

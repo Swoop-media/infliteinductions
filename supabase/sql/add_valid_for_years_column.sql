@@ -1,7 +1,10 @@
 
--- Add valid_for_years column to courses table for tracking certification validity
+-- Add valid_for_days column to courses table for tracking certification validity
 ALTER TABLE courses 
-ADD COLUMN IF NOT EXISTS valid_for_years INTEGER DEFAULT NULL;
+DROP COLUMN IF EXISTS valid_for_years;
+
+ALTER TABLE courses 
+ADD COLUMN IF NOT EXISTS valid_for_days INTEGER DEFAULT NULL;
 
 -- Add a comment to explain the column
-COMMENT ON COLUMN courses.valid_for_years IS 'Number of years this course certification is valid for. NULL means no expiry.';
+COMMENT ON COLUMN courses.valid_for_days IS 'Number of days this course certification is valid for. NULL means no expiry.';

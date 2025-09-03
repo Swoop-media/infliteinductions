@@ -67,12 +67,12 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
   return completedAuthorisations;
 }
 
-function calculateDueDate(completedAt: string, validForYears: number | null): string {
-  if (!validForYears) return "No expiry";
+function calculateDueDate(completedAt: string, validForDays: number | null): string {
+  if (!validForDays) return "No expiry";
   
   const completedDate = new Date(completedAt);
   const dueDate = new Date(completedDate);
-  dueDate.setFullYear(dueDate.getFullYear() + validForYears);
+  dueDate.setDate(dueDate.getDate() + validForDays);
   
   return dueDate.toLocaleDateString();
 }
