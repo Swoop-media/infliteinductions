@@ -18,7 +18,7 @@ async function fetchData() {
   const { data: authsData } = await supabase
     .from("authorisations")
     .select("id, title, status")
-    .eq("status", "published")
+    .in("status", ["published", "active"])
     .order("title");
 
   // Fetch departments
@@ -176,9 +176,9 @@ export default async function NewUserPage({
           </div>
         )}
 
-        {authorizations.length > 0 && (
-          <div className="rounded-lg border bg-white p-6">
-            <h2 className="mb-4 text-lg font-medium">Assign Authorizations</h2>
+        <div className="rounded-lg border bg-white p-6">
+          <h2 className="mb-4 text-lg font-medium">Assign Authorizations</h2>
+          {authorizations.length > 0 ? (
             <div className="space-y-2">
               {authorizations.map((auth) => (
                 <label key={auth.id} className="flex items-center">
@@ -192,8 +192,10 @@ export default async function NewUserPage({
                 </label>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <p className="text-sm text-gray-500">No authorizations available</p>
+          )}
+        </div>
 
         <div className="flex gap-3">
           <button
