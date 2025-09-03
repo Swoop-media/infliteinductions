@@ -239,6 +239,19 @@ export default async function AdminPage({
         <div className="flex gap-2">
           <Link href="/app/courses" className="rounded-md border px-3 py-1 text-sm">Courses</Link>
           <Link href="/app/admin/authorisations" className="rounded-md border px-3 py-1 text-sm">Authorisation Due Dates</Link>
+          <button
+            onClick={() => {
+              fetch('/api/admin/send-expiry-reminders', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                  alert(data.success ? 'Expiry reminders sent!' : `Error: ${data.error}`);
+                })
+                .catch(err => alert(`Error: ${err.message}`));
+            }}
+            className="rounded-md bg-blue-600 text-white px-3 py-1 text-sm hover:bg-blue-700"
+          >
+            Send Expiry Reminders
+          </button>
         </div>
       </div>
 
