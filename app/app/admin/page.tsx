@@ -61,41 +61,69 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
   const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
   if (!allowed) redirect("/app/home?banner=no_access");
 
-  let query = supabase
+  // First get the completed course assignments
+  const { data: assignments, error: assignError } = await supabase
     .from("course_assignments")
-    .select(`
-      id,
-      user_id,
-      course_id,
-      completed_at,
-      profiles:user_id(full_name, email),
-      courses:course_id(title, valid_for_years, created_by)
-    `)
+    .select("id, user_id, course_id, completed_at")
     .eq("assignment_status", "completed")
     .not("completed_at", "is", null)
-    .order("completed_at", { ascending: false });
+    .order("completed_at", { ascending: false })
+    .limit(100);
+
+  if (assignError) throw new Error(assignError.message);
+  if (!assignments || assignments.length === 0) return [];
+
+  // Get unique user and course IDs
+  const userIds = [...new Set(assignments.map(a => a.user_id))];
+  const courseIds = [...new Set(assignments.map(a => a.course_id))];
+
+  // Get profiles
+  const { data: profiles, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", userIds);
+
+  if (profileError) throw new Error(profileError.message);
+
+  // Get courses
+  const { data: courses, error: courseError } = await supabase
+    .from("courses")
+    .select("id, title, valid_for_years, created_by")
+    .in("id", courseIds);
+
+  if (courseError) throw new Error(courseError.message);
+
+  // Create lookup maps
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+  const courseMap = new Map((courses || []).map(c => [c.id, c]));
+
+  // Combine data and apply search filter
+  let completedCourses: CompletedCourseRow[] = assignments.map((assignment) => {
+    const profile = profileMap.get(assignment.user_id);
+    const course = courseMap.get(assignment.course_id);
+    
+    return {
+      assignment_id: assignment.id,
+      user_id: assignment.user_id,
+      course_id: assignment.course_id,
+      completed_at: assignment.completed_at,
+      full_name: profile?.full_name ?? null,
+      email: profile?.email ?? null,
+      course_title: course?.title ?? null,
+      valid_for_years: course?.valid_for_years ?? null,
+      created_by: course?.created_by ?? null,
+    };
+  });
 
   // Apply search filter if provided
   if (q && q.trim()) {
-    const searchTerm = `%${q.trim()}%`;
-    query = query.or(`profiles.full_name.ilike.${searchTerm},profiles.email.ilike.${searchTerm},courses.title.ilike.${searchTerm}`);
+    const searchTerm = q.trim().toLowerCase();
+    completedCourses = completedCourses.filter(course => 
+      (course.full_name?.toLowerCase().includes(searchTerm)) ||
+      (course.email?.toLowerCase().includes(searchTerm)) ||
+      (course.course_title?.toLowerCase().includes(searchTerm))
+    );
   }
-
-  const { data: rows, error } = await query.limit(100);
-
-  if (error) throw new Error(error.message);
-
-  const completedCourses: CompletedCourseRow[] = (rows ?? []).map((row: any) => ({
-    assignment_id: row.id,
-    user_id: row.user_id,
-    course_id: row.course_id,
-    completed_at: row.completed_at,
-    full_name: row.profiles?.full_name ?? null,
-    email: row.profiles?.email ?? null,
-    course_title: row.courses?.title ?? null,
-    valid_for_years: row.courses?.valid_for_years ?? null,
-    created_by: row.courses?.created_by ?? null,
-  }));
 
   return completedCourses;
 }
