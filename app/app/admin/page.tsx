@@ -6,17 +6,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import SendExpiryRemindersButton from "./_components/SendExpiryRemindersButton";
 import SortableDueDatesTable from "./_components/SortableDueDatesTable";
-import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
-// Sort icon helper function
-function getSortIcon(column: string, sortField: string | null, sortDirection: 'asc' | 'desc') {
-  if (sortField !== column) {
-    return <ChevronsUpDown className="h-4 w-4 text-gray-400" />;
-  }
-  return sortDirection === 'asc' 
-    ? <ChevronUp className="h-4 w-4 text-blue-600" />
-    : <ChevronDown className="h-4 w-4 text-blue-600" />;
-}
 
 export const dynamic = "force-dynamic";
 
