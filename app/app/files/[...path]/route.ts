@@ -10,20 +10,19 @@ export const dynamic = "force-dynamic";
  * - Issues a short redirect to a fresh signed URL (1 hour)
  */
 export async function GET(
-  req: NextRequest,
-  { params }: { params: { path: string[] } }
+  request: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   const supabase = await createSupabaseServer();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.redirect(new URL("/auth/login?banner=login_required", req.url));
+  // Get the current user
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const fileId = decodeURIComponent((params.path || []).join("/"));
+  const resolvedParams = await params;
+  const fileId = decodeURIComponent((resolvedParams.path || []).join("/"));
   if (!fileId) return new NextResponse("Missing file path", { status: 400 });
 
   const { data, error } = await supabase
