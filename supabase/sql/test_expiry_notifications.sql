@@ -15,14 +15,10 @@ DO $$
 DECLARE
   v_admin_id uuid;
 BEGIN
-  -- Get the first admin user
+  -- Get the first admin user using the app_has_role function
   SELECT id INTO v_admin_id 
   FROM profiles p
-  WHERE EXISTS (
-    SELECT 1 FROM user_roles ur 
-    WHERE ur.user_id = p.id 
-    AND ur.role = 'Admin'
-  )
+  WHERE public.app_has_role(p.id, 'Admin')
   LIMIT 1;
   
   -- If no admin, get any user with course creation rights
