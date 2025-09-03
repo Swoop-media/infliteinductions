@@ -7,11 +7,11 @@ import { hasRole } from "@/lib/roles";
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "enrolments" | "users";
+type TabKey = "due_dates" | "users";
 
 function tabFromSearch(sp: Record<string, string | string[] | undefined>): TabKey {
   const raw = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab || "";
-  return raw === "users" ? "users" : "enrolments";
+  return raw === "users" ? "users" : "due_dates";
 }
 
 function banner(ok?: string | null, error?: string | null) {
@@ -24,8 +24,6 @@ function banner(ok?: string | null, error?: string | null) {
   }
   if (ok) {
     const msg =
-      ok === "enrolment_approved" ? "Enrolment approved." :
-      ok === "enrolment_revoked" ? "Enrolment revoked." :
       ok === "role_granted" ? "Role granted." :
       ok === "role_revoked" ? "Role revoked." :
       ok === "profile_saved" ? "Profile saved." :
@@ -39,53 +37,67 @@ function banner(ok?: string | null, error?: string | null) {
   return null;
 }
 
+
+
 /* --------------------------
-   ENROLMENTS (unchanged logic)
+   DUE DATES
 ---------------------------*/
-async function detectEnrolmentTable(supabase: Awaited<ReturnType<typeof createSupabaseServer>>): Promise<"course_enrolments"|"enrolments"> {
-  let { error } = await supabase.from("course_enrolments").select("id").limit(1);
-  if (!error) return "course_enrolments";
-  return "enrolments";
-}
+type CompletedCourseRow = {
+  assignment_id: string;
+  user_id: string;
+  course_id: string;
+  completed_at: string;
+  full_name: string | null;
+  email: string | null;
+  course_title: string | null;
+  valid_for_years: number | null;
+  created_by: string | null;
+};
 
-type EnrolRow = { id: string; course_id: string; user_id: string; status: string | null; created_at: string | null };
-
-async function loadPendingEnrolments() {
+async function loadCompletedCoursesWithDueDates(q: string | null) {
   "use server";
   noStore();
   const supabase = await createSupabaseServer();
   const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
   if (!allowed) redirect("/app/home?banner=no_access");
 
-  const table = await detectEnrolmentTable(supabase);
-  const { data: rows, error } = await supabase
-    .from(table)
-    .select("id, course_id, user_id, status, created_at")
-    .eq("status", "pending")
-    .order("created_at", { ascending: false })
-    .limit(100);
+  let query = supabase
+    .from("course_assignments")
+    .select(`
+      id,
+      user_id,
+      course_id,
+      completed_at,
+      profiles!inner(full_name, email),
+      courses!inner(title, valid_for_years, created_by)
+    `)
+    .eq("assignment_status", "completed")
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: false });
+
+  // Apply search filter if provided
+  if (q && q.trim()) {
+    const searchTerm = `%${q.trim()}%`;
+    query = query.or(`profiles.full_name.ilike.${searchTerm},profiles.email.ilike.${searchTerm},courses.title.ilike.${searchTerm}`);
+  }
+
+  const { data: rows, error } = await query.limit(100);
 
   if (error) throw new Error(error.message);
-  const enrols = (rows ?? []) as EnrolRow[];
 
-  const courseIds = Array.from(new Set(enrols.map(r => r.course_id).filter(Boolean)));
-  const userIds = Array.from(new Set(enrols.map(r => r.user_id).filter(Boolean)));
+  const completedCourses: CompletedCourseRow[] = (rows ?? []).map((row: any) => ({
+    assignment_id: row.id,
+    user_id: row.user_id,
+    course_id: row.course_id,
+    completed_at: row.completed_at,
+    full_name: row.profiles?.full_name ?? null,
+    email: row.profiles?.email ?? null,
+    course_title: row.courses?.title ?? null,
+    valid_for_years: row.courses?.valid_for_years ?? null,
+    created_by: row.courses?.created_by ?? null,
+  }));
 
-  const [{ data: courses }, { data: profiles }] = await Promise.all([
-    courseIds.length
-      ? supabase.from("courses").select("id, title").in("id", courseIds)
-      : Promise.resolve({ data: [] }),
-    userIds.length
-      ? supabase.from("profiles").select("id, full_name, email").in("id", userIds)
-      : Promise.resolve({ data: [] }),
-  ]);
-
-  const courseMap = new Map<string, any>();
-  (courses ?? []).forEach(c => courseMap.set(c.id, c));
-  const profileMap = new Map<string, any>();
-  (profiles ?? []).forEach(p => profileMap.set(p.id, p));
-
-  return { enrols, courseMap, profileMap, table };
+  return completedCourses;
 }
 
 /* --------------------------
@@ -188,7 +200,7 @@ export default async function AdminPage({
     (Array.isArray(resolvedSearchParams?.q) ? resolvedSearchParams?.q[0] : resolvedSearchParams?.q) ?? null;
 
   const tabs: { key: TabKey; label: string; href: string }[] = [
-    { key: "enrolments", label: "Enrolments", href: "/app/admin?tab=enrolments" },
+    { key: "due_dates", label: "Due Dates", href: "/app/admin?tab=due_dates" },
     { key: "users", label: "Users & Roles", href: "/app/admin?tab=users" },
   ];
 
@@ -198,7 +210,7 @@ export default async function AdminPage({
         <h1 className="text-2xl font-bold">Admin</h1>
         <div className="flex gap-2">
           <Link href="/app/courses" className="rounded-md border px-3 py-1 text-sm">Courses</Link>
-          <Link href="/app/authorisations" className="rounded-md border px-3 py-1 text-sm">Authorisations</Link>
+          <Link href="/app/admin/authorisations" className="rounded-md border px-3 py-1 text-sm">Authorisation Due Dates</Link>
         </div>
       </div>
 
@@ -223,8 +235,8 @@ export default async function AdminPage({
       </div>
 
       <div className="rounded-xl border bg-white p-4">
-        {tab === "enrolments" ? (
-          <EnrolmentsSection />
+        {tab === "due_dates" ? (
+          <DueDatesSection q={q} />
         ) : (
           <UsersSection q={q} />
         )}
@@ -237,52 +249,110 @@ export default async function AdminPage({
    SUBSECTIONS
 ---------------------------*/
 
-async function EnrolmentsSection() {
-  const { enrols, courseMap, profileMap, table } = await loadPendingEnrolments();
+async function DueDatesSection({ q }: { q: string | null }) {
+  const completedCourses = await loadCompletedCoursesWithDueDates(q);
 
-  if (enrols.length === 0) {
-    return <p className="text-sm text-gray-600">No pending enrolments.</p>;
+  function calculateDueDate(completedAt: string, validForYears: number | null): string {
+    if (!validForYears) return "No expiry";
+    
+    const completedDate = new Date(completedAt);
+    const dueDate = new Date(completedDate);
+    dueDate.setFullYear(dueDate.getFullYear() + validForYears);
+    
+    return dueDate.toLocaleDateString();
+  }
+
+  function getDaysUntilDue(completedAt: string, validForYears: number | null): number | null {
+    if (!validForYears) return null;
+    
+    const completedDate = new Date(completedAt);
+    const dueDate = new Date(completedDate);
+    dueDate.setFullYear(dueDate.getFullYear() + validForYears);
+    
+    const today = new Date();
+    const diffTime = dueDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays;
   }
 
   return (
-    <div className="space-y-3">
-      <div className="text-sm text-gray-600">
-        Showing pending from <code>{table}</code>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Course Due Dates</h2>
+        <form method="get" action="/app/admin" className="flex items-center gap-2">
+          <input type="hidden" name="tab" value="due_dates" />
+          <input
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Search trainee, course, or email"
+            className="w-80 rounded-md border px-3 py-2 text-sm"
+          />
+          <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Search</button>
+        </form>
       </div>
 
-      <ul className="divide-y rounded-md border">
-        {enrols.map((e) => {
-          const c = courseMap.get(e.course_id);
-          const p = profileMap.get(e.user_id);
-          return (
-            <li key={e.id} className="flex items-center justify-between p-3">
-              <div className="space-y-0.5">
-                <div className="font-medium">{p?.full_name ?? e.user_id}</div>
-                <div className="text-xs text-gray-500">
-                  {p?.email ?? ""} • {c?.title ?? e.course_id} • {e.status ?? "pending"}
-                </div>
-              </div>
+      {completedCourses.length === 0 ? (
+        <p className="text-sm text-gray-600">
+          {q ? "No completed courses found matching your search." : "No completed courses found."}
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse rounded-md border">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="border-b px-4 py-2 text-left text-sm font-medium">Trainee</th>
+                <th className="border-b px-4 py-2 text-left text-sm font-medium">Course</th>
+                <th className="border-b px-4 py-2 text-left text-sm font-medium">Completed</th>
+                <th className="border-b px-4 py-2 text-left text-sm font-medium">Due Date</th>
+                <th className="border-b px-4 py-2 text-left text-sm font-medium">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {completedCourses.map((course) => {
+                const completedDate = new Date(course.completed_at).toLocaleDateString();
+                const dueDate = calculateDueDate(course.completed_at, course.valid_for_years);
+                const daysUntilDue = getDaysUntilDue(course.completed_at, course.valid_for_years);
+                
+                let statusColor = "text-green-600";
+                let statusText = "Current";
+                
+                if (daysUntilDue !== null) {
+                  if (daysUntilDue < 0) {
+                    statusColor = "text-red-600";
+                    statusText = `Expired (${Math.abs(daysUntilDue)} days ago)`;
+                  } else if (daysUntilDue <= 30) {
+                    statusColor = "text-yellow-600";
+                    statusText = `Expires in ${daysUntilDue} days`;
+                  } else {
+                    statusText = `Expires in ${daysUntilDue} days`;
+                  }
+                }
 
-              {/* Actions: Approve & Revoke (separate forms; no nesting) */}
-              <div className="flex gap-2">
-                <form action="/app/admin/enrolments/approve" method="post">
-                  <input type="hidden" name="enrolment_id" value={e.id} />
-                  <button className="rounded-md border px-3 py-1 text-xs hover:bg-green-50">
-                    Approve
-                  </button>
-                </form>
-
-                <form action="/app/admin/enrolments/revoke" method="post">
-                  <input type="hidden" name="enrolment_id" value={e.id} />
-                  <button className="rounded-md border px-3 py-1 text-xs hover:bg-red-50">
-                    Revoke
-                  </button>
-                </form>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+                return (
+                  <tr key={course.assignment_id} className="hover:bg-gray-50">
+                    <td className="border-b px-4 py-3">
+                      <div className="font-medium">{course.full_name ?? "Unknown"}</div>
+                      <div className="text-xs text-gray-500">{course.email}</div>
+                    </td>
+                    <td className="border-b px-4 py-3">
+                      <div className="font-medium">{course.course_title}</div>
+                      <div className="text-xs text-gray-500">
+                        Valid for: {course.valid_for_years ? `${course.valid_for_years} year${course.valid_for_years > 1 ? 's' : ''}` : 'No expiry'}
+                      </div>
+                    </td>
+                    <td className="border-b px-4 py-3 text-sm">{completedDate}</td>
+                    <td className="border-b px-4 py-3 text-sm">{dueDate}</td>
+                    <td className={`border-b px-4 py-3 text-sm font-medium ${statusColor}`}>
+                      {statusText}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
