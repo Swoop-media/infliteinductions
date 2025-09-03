@@ -390,7 +390,7 @@ async function updateCourseDetails(formData: FormData) {
   const title = String(formData.get("title") || "").trim();
   const description = String(formData.get("description") || "").trim();
 
-  const validForMonthsStr = String(formData.get("valid_for_months") || "");
+  const validForDaysStr = String(formData.get("valid_for_days") || "");
   const retakeDaysStr = String(formData.get("retake_reminder_days") || "");
   const notifyLeadDaysStr = String(formData.get("notification_lead_days") || "");
 
@@ -410,9 +410,9 @@ async function updateCourseDetails(formData: FormData) {
   if (title.length > 0) updatePayload.title = title;
   updatePayload.description = description;
 
-  if (validForMonthsStr !== "") {
-    const val = Number(validForMonthsStr);
-    updatePayload.valid_for_months = Number.isFinite(val) ? val : null;
+  if (validForDaysStr !== "") {
+    const val = Number(validForDaysStr);
+    updatePayload.valid_for_days = Number.isFinite(val) && val >= 0 ? val : null;
   }
 
   if (retakeDaysStr) updatePayload.retake_reminder_days = Number(retakeDaysStr);
@@ -827,8 +827,8 @@ function DetailsTab({
   const title = (course?.title as string) ?? "";
   const description = (course?.description as string) ?? "";
 
-  const hasValidFor = Object.prototype.hasOwnProperty.call(course ?? {}, "valid_for_months");
-  const validForMonths = hasValidFor ? (course.valid_for_months as number | null) : null;
+  const hasValidFor = Object.prototype.hasOwnProperty.call(course ?? {}, "valid_for_days");
+  const validForDays = hasValidFor ? (course.valid_for_days as number | null) : null;
 
   const hasRetakeDays = Object.prototype.hasOwnProperty.call(course ?? {}, "retake_reminder_days");
   const hasNotifyLead = Object.prototype.hasOwnProperty.call(course ?? {}, "notification_lead_days");
@@ -900,22 +900,17 @@ function DetailsTab({
 
         {hasValidFor && (
           <div className="grid gap-2">
-            <label className="text-sm">Valid for</label>
-            <select
-              name="valid_for_months"
-              defaultValue={validForMonths == null ? "" : String(validForMonths)}
+            <label className="text-sm">Valid for (days)</label>
+            <input
+              type="number"
+              name="valid_for_days"
+              min={0}
+              defaultValue={course.valid_for_days == null ? "" : String(course.valid_for_days)}
               className="w-full rounded-md border px-3 py-2"
-            >
-              <option value="">— Select period —</option>
-              <option value="0">No expiry</option>
-              <option value="3">3 months</option>
-              <option value="6">6 months</option>
-              <option value="12">1 year</option>
-              <option value="24">2 years</option>
-              <option value="36">3 years</option>
-            </select>
+              placeholder="e.g., 365 (leave empty for no expiry)"
+            />
             <p className="text-xs text-gray-500">
-              The certificate/competency will expire this many months after the learner completes the course.
+              The certificate/competency will expire this many days after the learner completes the course. Leave empty for no expiry.
             </p>
           </div>
         )}
