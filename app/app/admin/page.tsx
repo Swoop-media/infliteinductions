@@ -106,18 +106,18 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
   let completedCourses = assignments.map((assignment) => {
     const profile = profileMap.get(assignment.user_id);
     const course = courseMap.get(assignment.course_id);
-    
+
     // Calculate due date
     const completedDate = new Date(assignment.completed_at);
     const validForDays = course?.valid_for_days || 365;
     const dueDate = new Date(completedDate);
     dueDate.setDate(dueDate.getDate() + validForDays);
-    
+
     // Calculate days until expiry
     const today = new Date();
     const timeDiff = dueDate.getTime() - today.getTime();
     const daysUntilExpiry = Math.ceil(timeDiff / (1000 * 3600 * 24));
-    
+
     // Determine notification status
     let notificationStatus = "NO NOTIFICATION";
     if (daysUntilExpiry <= 30 && daysUntilExpiry > 0) {
@@ -333,6 +333,15 @@ async function UsersSection({ q }: { q: string | null }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-medium">Users & Roles</h3>
+            <Link
+              href="/app/admin/users/new"
+              className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            >
+              Add New User
+            </Link>
+          </div>
       <form method="get" action="/app/admin" className="flex items-center gap-2">
         <input type="hidden" name="tab" value="users" />
         <input
