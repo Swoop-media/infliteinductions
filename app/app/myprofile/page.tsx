@@ -142,10 +142,10 @@ async function loadMyProfileAndLearning() {
 
   return { 
     profile, 
-    inProgress: inProgressCourses, 
-    completed: completedCourses, 
-    authorizationProgress: inProgressAuth,
-    authorizationCompleted: completedAuth
+    inProgressCourses, 
+    completedCourses, 
+    inProgressAuth,
+    completedAuth
   };
 }
 
@@ -172,7 +172,7 @@ function Pill({
 
 /* ---------------- Page ---------------- */
 export default async function MyProfilePage() {
-  const { profile, inProgress, completed, authorizationProgress, authorizationCompleted } = await loadMyProfileAndLearning();
+  const { profile, inProgressCourses, completedCourses, inProgressAuth, completedAuth } = await loadMyProfileAndLearning();
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -255,18 +255,18 @@ export default async function MyProfilePage() {
         <section className="space-y-3 rounded-xl border bg-white p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">In progress</h2>
-            <Pill tone="blue">{inProgress.length + authorizationProgress.length}</Pill>
+            <Pill tone="blue">{inProgressCourses.length + inProgressAuth.length}</Pill>
           </div>
 
           <div className="space-y-4">
-            {(inProgress.length === 0 && authorizationProgress.length === 0) ? (
+            {(inProgressCourses.length === 0 && inProgressAuth.length === 0) ? (
               <p className="text-sm text-gray-500">
                 You don't have any assigned courses yet. Visit <Link href="/app/courses" className="underline">Courses</Link> to enrol.
               </p>
             ) : (
               <div className="space-y-3">
                 {/* Course assignments */}
-                {(inProgress ?? []).map((assignment: any) => {
+                {(inProgressCourses ?? []).map((assignment: any) => {
                   const course = assignment.courses;
                   return (
                     <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
@@ -287,14 +287,14 @@ export default async function MyProfilePage() {
                 })}
 
                 {/* Authorization assignments */}
-                {(authorizationProgress ?? []).map((assignment: any) => {
+                {(inProgressAuth ?? []).map((assignment: any) => {
                   const auth = assignment.authorisations;
                   const completedCoursesCount = assignment.courses.filter((c: any) => 
                     c.assignment?.assignment_status === "completed"
                   ).length;
                   const totalCourses = assignment.courses.length;
                   const firstCourse = assignment.courses[0];
-                  
+
                   return (
                     <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4 bg-purple-50">
                       <div className="flex-1">
@@ -341,15 +341,15 @@ export default async function MyProfilePage() {
         <section className="space-y-3 rounded-xl border bg-white p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Completed</h2>
-            <Pill tone="green">{completed.length + (authorizationCompleted?.length ?? 0)}</Pill>
+            <Pill tone="green">{completedCourses.length + completedAuth.length}</Pill>
           </div>
 
-          {(completed.length === 0 && (authorizationCompleted?.length ?? 0) === 0) ? (
+          {(completedCourses.length === 0 && completedAuth.length === 0) ? (
             <p className="text-sm text-gray-500">No completions yet.</p>
           ) : (
             <div className="space-y-3">
               {/* Completed Courses */}
-              {completed.map((assignment) => {
+              {completedCourses.map((assignment) => {
                 const course = assignment.courses;
                 return (
                   <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
@@ -373,13 +373,13 @@ export default async function MyProfilePage() {
               })}
 
               {/* Completed Authorizations */}
-              {(authorizationCompleted ?? []).map((assignment) => {
+              {(completedAuth ?? []).map((assignment) => {
                 const auth = assignment.authorisations;
                 const completedCoursesCount = assignment.courses.filter((c: any) => 
                   c.assignment?.assignment_status === "completed"
                 ).length;
                 const totalCourses = assignment.courses.length;
-                
+
                 return (
                   <div key={assignment.id} className="rounded-lg border p-4 bg-green-50">
                     <div className="flex items-start justify-between">
@@ -391,7 +391,7 @@ export default async function MyProfilePage() {
                         <p className="text-xs text-gray-500 mt-1">
                           All {totalCourses} courses completed
                         </p>
-                        
+
                         {/* Show completed courses */}
                         {assignment.courses.length > 0 && (
                           <div className="mt-2">
