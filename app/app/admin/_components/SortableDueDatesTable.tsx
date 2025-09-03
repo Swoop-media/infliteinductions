@@ -1,134 +1,110 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
+import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
-type CompletedCourseRow = {
-  assignment_id: string;
-  user_id: string;
-  course_id: string;
-  completed_at: string;
-  full_name: string | null;
-  email: string | null;
-  course_title: string | null;
-  valid_for_days: number | null;
-  created_by: string | null;
-};
-
-type SortKey = 'trainee' | 'course' | 'completed' | 'due_date' | 'status';
+type SortField = 'trainee' | 'course' | 'completed' | 'due_date' | 'status';
 type SortDirection = 'asc' | 'desc';
 
-export default function SortableDueDatesTable({ 
-  completedCourses 
-}: { 
-  completedCourses: CompletedCourseRow[] 
-}) {
-  const [sortKey, setSortKey] = useState<SortKey>('due_date');
+interface CompletedCourse {
+  assignment_id: string;
+  user_id: string;
+  completed_at: string;
+  title: string;
+  valid_for_days: number;
+  retake_reminder_days: number;
+  new_due_date: string;
+  days_until_expiry: string;
+  notification_status: string;
+  trainee_email?: string;
+  trainee_name?: string;
+}
+
+interface Props {
+  completedCourses: CompletedCourse[];
+}
+
+// Consistent date formatting function
+function formatDate(dateString: string): string {
+  try {
+    const date = new Date(dateString);
+    // Use ISO string format to avoid locale differences
+    return date.toLocaleDateString('en-AU', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+  } catch {
+    return dateString;
+  }
+}
+
+// Sort icon helper function
+function getSortIcon(column: SortField, sortField: SortField | null, sortDirection: SortDirection) {
+  if (sortField !== column) {
+    return <ChevronsUpDown className="h-4 w-4 text-gray-400" />;
+  }
+  return sortDirection === 'asc'
+    ? <ChevronUp className="h-4 w-4 text-blue-600" />
+    : <ChevronDown className="h-4 w-4 text-blue-600" />;
+}
+
+export default function SortableDueDatesTable({ completedCourses }: Props) {
+  const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
-  function calculateDueDate(completedAt: string, validForDays: number | null): string {
-    if (!validForDays) return "No expiry";
-
-    const completedDate = new Date(completedAt);
-    const dueDate = new Date(completedDate);
-    dueDate.setDate(dueDate.getDate() + validForDays);
-
-    return dueDate.toLocaleDateString();
-  }
-
-  function getDaysUntilDue(completedAt: string, validForDays: number | null): number | null {
-    if (!validForDays) return null;
-
-    const completedDate = new Date(completedAt);
-    const dueDate = new Date(completedDate);
-    dueDate.setDate(dueDate.getDate() + validForDays);
-
-    const today = new Date();
-    const diffTime = dueDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    return diffDays;
-  }
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      setSortKey(key);
+      setSortField(field);
       setSortDirection('asc');
     }
   };
 
-  const getSortIcon = (key: SortKey) => {
-    if (sortKey !== key) return '↕️';
-    return sortDirection === 'asc' ? '↑' : '↓';
-  };
+  const sortedData = useMemo(() => {
+    if (!sortField) return completedCourses;
 
-  const sortedCourses = useMemo(() => {
     return [...completedCourses].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+      let aValue: string | number;
+      let bValue: string | number;
 
-      switch (sortKey) {
+      switch (sortField) {
         case 'trainee':
-          aValue = a.full_name || '';
-          bValue = b.full_name || '';
+          aValue = a.trainee_name || a.trainee_email || '';
+          bValue = b.trainee_name || b.trainee_email || '';
           break;
         case 'course':
-          aValue = a.course_title || '';
-          bValue = b.course_title || '';
+          aValue = a.title;
+          bValue = b.title;
           break;
         case 'completed':
-          aValue = new Date(a.completed_at);
-          bValue = new Date(b.completed_at);
+          aValue = new Date(a.completed_at).getTime();
+          bValue = new Date(b.completed_at).getTime();
           break;
         case 'due_date':
-          const aDays = getDaysUntilDue(a.completed_at, a.valid_for_days);
-          const bDays = getDaysUntilDue(b.completed_at, b.valid_for_days);
-          
-          // Handle null values (no expiry) - put them at the end
-          if (aDays === null && bDays === null) return 0;
-          if (aDays === null) return 1;
-          if (bDays === null) return -1;
-          
-          aValue = aDays;
-          bValue = bDays;
+          aValue = new Date(a.new_due_date).getTime();
+          bValue = new Date(b.new_due_date).getTime();
           break;
         case 'status':
-          const aStatus = getDaysUntilDue(a.completed_at, a.valid_for_days);
-          const bStatus = getDaysUntilDue(b.completed_at, b.valid_for_days);
-          
-          // Sort by priority: expired (negative), expiring soon (0-30), then current (>30), then no expiry (null)
-          const getStatusPriority = (days: number | null) => {
-            if (days === null) return 4; // No expiry - lowest priority
-            if (days < 0) return 1; // Expired - highest priority
-            if (days <= 30) return 2; // Expiring soon
-            return 3; // Current
-          };
-          
-          aValue = getStatusPriority(aStatus);
-          bValue = getStatusPriority(bStatus);
-          
-          // If same priority, sort by days (for expired/expiring)
-          if (aValue === bValue && aStatus !== null && bStatus !== null) {
-            aValue = aStatus;
-            bValue = bStatus;
-          }
+          aValue = a.notification_status;
+          bValue = b.notification_status;
           break;
         default:
           return 0;
       }
 
       if (typeof aValue === 'string' && typeof bValue === 'string') {
-        const result = aValue.localeCompare(bValue);
-        return sortDirection === 'asc' ? result : -result;
+        return sortDirection === 'asc'
+          ? aValue.localeCompare(bValue)
+          : bValue.localeCompare(aValue);
+      } else {
+        return sortDirection === 'asc'
+          ? (aValue as number) - (bValue as number)
+          : (bValue as number) - (aValue as number);
       }
-
-      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-      return 0;
     });
-  }, [completedCourses, sortKey, sortDirection]);
+  }, [completedCourses, sortField, sortDirection]);
 
   if (completedCourses.length === 0) {
     return (
@@ -140,87 +116,89 @@ export default function SortableDueDatesTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full border-collapse rounded-md border">
-        <thead className="bg-gray-50">
-          <tr>
-            <th 
-              className="px-4 py-3 text-left font-medium text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+      <table className="w-full border-collapse border border-gray-300">
+        <thead>
+          <tr className="bg-gray-50">
+            <th
+              className="border-b border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('trainee')}
-              title="Click to sort by trainee name"
             >
-              Trainee {getSortIcon('trainee')}
+              <div className="flex items-center justify-between">
+                Trainee
+                {getSortIcon('trainee', sortField, sortDirection)}
+              </div>
             </th>
-            <th 
-              className="px-4 py-3 text-left font-medium text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+            <th
+              className="border-b border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('course')}
-              title="Click to sort by course name"
             >
-              Course {getSortIcon('course')}
+              <div className="flex items-center justify-between">
+                Course
+                {getSortIcon('course', sortField, sortDirection)}
+              </div>
             </th>
-            <th 
-              className="px-4 py-3 text-left font-medium text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+            <th
+              className="border-b border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('completed')}
-              title="Click to sort by completion date"
             >
-              Completed {getSortIcon('completed')}
+              <div className="flex items-center justify-between">
+                Completed
+                {getSortIcon('completed', sortField, sortDirection)}
+              </div>
             </th>
-            <th 
-              className="px-4 py-3 text-left font-medium text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+            <th
+              className="border-b border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('due_date')}
-              title="Click to sort by due date (soonest first)"
             >
-              Due Date {getSortIcon('due_date')}
+              <div className="flex items-center justify-between">
+                Due Date
+                {getSortIcon('due_date', sortField, sortDirection)}
+              </div>
             </th>
-            <th 
-              className="px-4 py-3 text-left font-medium text-gray-900 cursor-pointer hover:bg-gray-100 select-none"
+            <th
+              className="border-b border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('status')}
-              title="Click to sort by status (expired first, then expiring soon)"
             >
-              Status {getSortIcon('status')}
+              <div className="flex items-center justify-between">
+                Status
+                {getSortIcon('status', sortField, sortDirection)}
+              </div>
             </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-200">
-          {sortedCourses.map((course) => {
-            const completedDate = new Date(course.completed_at).toLocaleDateString();
-            const dueDate = calculateDueDate(course.completed_at, course.valid_for_days);
-            const daysUntilDue = getDaysUntilDue(course.completed_at, course.valid_for_days);
-
-            let statusColor = "text-green-600";
-            let statusText = "Current";
-
-            if (daysUntilDue !== null) {
-              if (daysUntilDue < 0) {
-                statusColor = "text-red-600";
-                statusText = `Expired (${Math.abs(daysUntilDue)} days ago)`;
-              } else if (daysUntilDue <= 30) {
-                statusColor = "text-yellow-600";
-                statusText = `Expires in ${daysUntilDue} days`;
-              } else {
-                statusText = `Expires in ${daysUntilDue} days`;
-              }
-            }
-
-            return (
-              <tr key={course.assignment_id} className="hover:bg-gray-50">
-                <td className="border-b px-4 py-3">
-                  <div className="font-medium">{course.full_name ?? "Unknown"}</div>
-                  <div className="text-xs text-gray-500">{course.email}</div>
-                </td>
-                <td className="border-b px-4 py-3">
-                  <div className="font-medium">{course.course_title}</div>
-                  <div className="text-xs text-gray-500">
-                    Valid for: {course.valid_for_days ? `${course.valid_for_days} day${course.valid_for_days > 1 ? 's' : ''}` : 'No expiry'}
-                  </div>
-                </td>
-                <td className="border-b px-4 py-3 text-sm">{completedDate}</td>
-                <td className="border-b px-4 py-3 text-sm">{dueDate}</td>
-                <td className={`border-b px-4 py-3 text-sm font-medium ${statusColor}`}>
-                  {statusText}
-                </td>
-              </tr>
-            );
-          })}
+          {sortedData.map((course) => (
+            <tr key={course.assignment_id} className="hover:bg-gray-50">
+              <td className="border-b px-4 py-3 text-sm">
+                {course.trainee_name || course.trainee_email || 'Unknown'}
+              </td>
+              <td className="border-b px-4 py-3 text-sm">
+                {course.title}
+                <div className="text-xs text-gray-500">
+                  Valid for {course.valid_for_days} days
+                </div>
+              </td>
+              <td className="border-b px-4 py-3 text-sm">
+                {formatDate(course.completed_at)}
+              </td>
+              <td className="border-b px-4 py-3 text-sm">
+                {formatDate(course.new_due_date)}
+              </td>
+              <td className="border-b px-4 py-3 text-sm">
+                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                  course.notification_status === 'SHOULD TRIGGER REMINDER'
+                    ? 'bg-red-100 text-red-800'
+                    : course.notification_status === 'REMINDER SENT'
+                    ? 'bg-yellow-100 text-yellow-800'
+                    : 'bg-green-100 text-green-800'
+                }`}>
+                  {course.notification_status === 'SHOULD TRIGGER REMINDER' && `Expires in ${course.days_until_expiry} days`}
+                  {course.notification_status === 'REMINDER SENT' && 'Reminder sent'}
+                  {course.notification_status === 'NO NOTIFICATION' && 'Current'}
+                </span>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
