@@ -13,24 +13,27 @@ INSERT INTO course_assignments (
   id,
   user_id,
   course_id,
+  role,
+  assigned_by,
   assignment_status,
   completed_at,
-  created_at,
-  updated_at
+  created_at
 ) 
 SELECT 
   gen_random_uuid(),
   p.id as user_id,
   c.id as course_id,
+  'trainee' as role,
+  c.created_by as assigned_by,
   'completed',
   (CURRENT_DATE - INTERVAL '340 days') as completed_at,
-  now(),
   now()
 FROM profiles p 
 CROSS JOIN courses c 
 WHERE c.valid_for_days IS NOT NULL
+AND p.id != c.created_by  -- Don't assign course to its creator
 LIMIT 1
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (user_id, course_id, role) DO NOTHING;
 
 -- Check what we created
 SELECT 
