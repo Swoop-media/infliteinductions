@@ -108,6 +108,28 @@ function formatTeamsText(
         .filter(Boolean)
         .join("\n");
 
+    case "course_expiry_reminder":
+      const daysLeft = payload?.daysUntilExpiry || 0;
+      return [
+        `⏰ Course expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`,
+        course ? `• Course: ${course}` : "",
+        payload?.dueDate ? `• Due date: ${payload.dueDate}` : "",
+        url ? `• Retake now: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "course_expired":
+      const daysOverdue = payload?.daysOverdue || 0;
+      return [
+        `🚨 Course expired ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} ago`,
+        course ? `• Course: ${course}` : "",
+        payload?.dueDate ? `• Was due: ${payload.dueDate}` : "",
+        url ? `• Retake now: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
     case "course_assigned":
       return [
         "📚 Course assigned",

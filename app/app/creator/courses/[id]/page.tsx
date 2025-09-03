@@ -392,7 +392,6 @@ async function updateCourseDetails(formData: FormData) {
 
   const validForDaysStr = String(formData.get("valid_for_days") || "");
   const retakeDaysStr = String(formData.get("retake_reminder_days") || "");
-  const notifyLeadDaysStr = String(formData.get("notification_lead_days") || "");
 
   // NEW: department (select or new)
   const deptSelect = String(formData.get("department_select") || "").trim();
@@ -416,7 +415,6 @@ async function updateCourseDetails(formData: FormData) {
   }
 
   if (retakeDaysStr) updatePayload.retake_reminder_days = Number(retakeDaysStr);
-  if (notifyLeadDaysStr) updatePayload.notification_lead_days = Number(notifyLeadDaysStr);
 
   // NEW fields
   updatePayload.department = department;
@@ -831,7 +829,6 @@ function DetailsTab({
   const validForDays = hasValidFor ? (course.valid_for_days as number | null) : null;
 
   const hasRetakeDays = Object.prototype.hasOwnProperty.call(course ?? {}, "retake_reminder_days");
-  const hasNotifyLead = Object.prototype.hasOwnProperty.call(course ?? {}, "notification_lead_days");
 
   const department = (course?.department as string | null) ?? "";
   const tagsArray: string[] = Array.isArray(course?.tags) ? course.tags : [];
@@ -915,34 +912,22 @@ function DetailsTab({
           </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          {hasRetakeDays && (
-            <div className="grid gap-2">
-              <label className="text-sm">Retake reminder (days)</label>
-              <input
-                type="number"
-                name="retake_reminder_days"
-                min={0}
-                defaultValue={course.retake_reminder_days ?? ""}
-                className="w-full rounded-md border px-3 py-2"
-                placeholder="e.g., 365"
-              />
-            </div>
-          )}
-          {hasNotifyLead && (
-            <div className="grid gap-2">
-              <label className="text-sm">Notification lead (days)</label>
-              <input
-                type="number"
-                name="notification_lead_days"
-                min={0}
-                defaultValue={course.notification_lead_days ?? ""}
-                className="w-full rounded-md border px-3 py-2"
-                placeholder="e.g., 30"
-              />
-            </div>
-          )}
-        </div>
+        {hasRetakeDays && (
+          <div className="grid gap-2">
+            <label className="text-sm">Retake reminder (days)</label>
+            <input
+              type="number"
+              name="retake_reminder_days"
+              min={0}
+              defaultValue={course.retake_reminder_days ?? ""}
+              className="w-full rounded-md border px-3 py-2"
+              placeholder="e.g., 30"
+            />
+            <p className="text-xs text-gray-500">
+              Users will receive daily notifications starting this many days before their certification expires.
+            </p>
+          </div>
+        )}
 
         <div className="pt-2">
           <button className="rounded-md bg-black px-4 py-2 text-white">Save</button>

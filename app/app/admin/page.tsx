@@ -101,7 +101,7 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
   let completedCourses: CompletedCourseRow[] = assignments.map((assignment) => {
     const profile = profileMap.get(assignment.user_id);
     const course = courseMap.get(assignment.course_id);
-    
+
     return {
       assignment_id: assignment.id,
       user_id: assignment.user_id,
@@ -282,25 +282,25 @@ async function DueDatesSection({ q }: { q: string | null }) {
 
   function calculateDueDate(completedAt: string, validForDays: number | null): string {
     if (!validForDays) return "No expiry";
-    
+
     const completedDate = new Date(completedAt);
     const dueDate = new Date(completedDate);
     dueDate.setDate(dueDate.getDate() + validForDays);
-    
+
     return dueDate.toLocaleDateString();
   }
 
   function getDaysUntilDue(completedAt: string, validForDays: number | null): number | null {
     if (!validForDays) return null;
-    
+
     const completedDate = new Date(completedAt);
     const dueDate = new Date(completedDate);
     dueDate.setDate(dueDate.getDate() + validForDays);
-    
+
     const today = new Date();
     const diffTime = dueDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+
     return diffDays;
   }
 
@@ -341,10 +341,10 @@ async function DueDatesSection({ q }: { q: string | null }) {
                 const completedDate = new Date(course.completed_at).toLocaleDateString();
                 const dueDate = calculateDueDate(course.completed_at, course.valid_for_days);
                 const daysUntilDue = getDaysUntilDue(course.completed_at, course.valid_for_days);
-                
+
                 let statusColor = "text-green-600";
                 let statusText = "Current";
-                
+
                 if (daysUntilDue !== null) {
                   if (daysUntilDue < 0) {
                     statusColor = "text-red-600";
