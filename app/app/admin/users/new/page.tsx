@@ -18,7 +18,7 @@ async function fetchData() {
   const { data: authsData } = await supabase
     .from("authorisations")
     .select("id, title, status")
-    .in("status", ["published", "active"])
+    .eq("status", "active")
     .order("title");
 
   // Fetch departments

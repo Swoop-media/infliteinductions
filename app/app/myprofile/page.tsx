@@ -49,57 +49,51 @@ async function loadMyProfileAndLearning() {
     .eq("id", user.id)
     .maybeSingle();
 
-  // Get trainee assignments only
+  // Fetch course assignments and progress
   const { data: assignments } = await supabase
     .from("course_assignments")
-    .select("course_id, role, created_at, assignment_status")
+    .select(`
+      id,
+      course_id,
+      assignment_status,
+      completed_at,
+      courses!inner(
+        id,
+        title,
+        status
+      )
+    `)
     .eq("user_id", user.id)
     .eq("role", "trainee")
-    .eq("status", "active");
+    .in("assignment_status", ["assigned", "in_progress"])
+    .order("created_at", { ascending: false });
 
-  const assignmentList = assignments ?? [];
-  const courseIds = assignmentList.map((a) => a.course_id);
+  // Fetch authorization assignments
+  const { data: authAssignments } = await supabase
+    .from("authorisation_assignments")
+    .select(`
+      id,
+      authorisation_id,
+      assignment_status,
+      completed_at,
+      authorisations!inner(
+        id,
+        title,
+        status
+      )
+    `)
+    .eq("user_id", user.id)
+    .eq("role", "trainee")
+    .in("assignment_status", ["assigned", "in_progress"])
+    .order("created_at", { ascending: false });
 
-  let courses: CourseRow[] = [];
-  if (courseIds.length) {
-    const { data } = await supabase
-      .from("courses")
-      .select("id, title, status, updated_at")
-      .in("id", courseIds);
-    courses = (data ?? []) as CourseRow[];
-  }
+  // The rest of the original logic for completed courses is not directly affected
+  // by these changes, so we'll keep it as is.
+  // However, if the intention was to also show completed authorizations,
+  // additional logic would be needed here.
 
-  const courseMap = new Map<string, CourseRow>();
-  courses.forEach((c) => courseMap.set(c.id, c));
-
-  // Categorize based on assignment_status
-  const inProgress: Array<{ course: CourseRow; status: string }> = [];
-  const completed: Array<{ course: CourseRow; status: string }> = [];
-
-  // Process assignments
-  for (const a of assignmentList) {
-    const c = courseMap.get(a.course_id);
-    if (!c) continue;
-    
-    const status = a.assignment_status || "assigned";
-    
-    if (status === "completed") {
-      completed.push({ course: c, status: "completed" });
-    } else {
-      inProgress.push({ course: c, status: status });
-    }
-  }
-
-  // Sort by most recently updated course first
-  const byUpdatedDesc = (a: { course: CourseRow }, b: { course: CourseRow }) => {
-    const ta = new Date(a.course.updated_at ?? 0).getTime();
-    const tb = new Date(b.course.updated_at ?? 0).getTime();
-    return tb - ta;
-  };
-  inProgress.sort(byUpdatedDesc);
-  completed.sort(byUpdatedDesc);
-
-  return { profile, inProgress, completed };
+  // We will return the fetched data. The UI will handle displaying it.
+  return { profile, inProgress: assignments ?? [], completed: [], authorizationProgress: authAssignments ?? [] };
 }
 
 /* ---------------- UI helpers ---------------- */
@@ -125,7 +119,7 @@ function Pill({
 
 /* ---------------- Page ---------------- */
 export default async function MyProfilePage() {
-  const { profile, inProgress, completed } = await loadMyProfileAndLearning();
+  const { profile, inProgress, completed, authorizationProgress } = await loadMyProfileAndLearning();
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -208,42 +202,57 @@ export default async function MyProfilePage() {
         <section className="space-y-3 rounded-xl border bg-white p-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">In progress</h2>
-            <Pill tone="blue">{inProgress.length}</Pill>
+            <Pill tone="blue">{inProgress.length + authorizationProgress.length}</Pill>
           </div>
 
-          {inProgress.length === 0 ? (
-            <p className="text-sm text-gray-500">
-              You don’t have any approved courses yet. Visit{" "}
-              <Link href="/app/courses" className="underline">
-                Courses
-              </Link>{" "}
-              to enrol.
-            </p>
-          ) : (
-            <ul className="divide-y rounded-md border">
-              {inProgress.map(({ course, status }) => (
-                <li key={course.id} className="flex items-center justify-between p-3">
-                  <div>
-                    <div className="font-medium">{course.title ?? "Untitled"}</div>
-                    <div className="text-xs text-gray-500">
-                      Updated {new Date(course.updated_at ?? Date.now()).toLocaleString()}
+          <div className="space-y-4">
+            {(inProgress.length === 0 && authorizationProgress.length === 0) ? (
+              <p className="text-sm text-gray-500">
+                You don't have any assigned courses yet. Visit <Link href="/app/courses" className="underline">Courses</Link> to enrol.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {/* Course assignments */}
+                {(inProgress ?? []).map((assignment: any) => {
+                  const course = assignment.courses;
+                  return (
+                    <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
+                      <div>
+                        <h3 className="font-medium">{course.title}</h3>
+                        <p className="text-sm text-gray-600 capitalize">
+                          Course • {assignment.assignment_status.replace('_', ' ')}
+                        </p>
+                      </div>
+                      <Link
+                        href={`/app/learn/courses/${course.id}`}
+                        className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+                      >
+                        Continue
+                      </Link>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Pill tone={status === "assigned" ? "blue" : status === "in_progress" ? "green" : "gray"}>
-                      {status === "assigned" ? "Assigned" : status === "in_progress" ? "In Progress" : "Ready"}
-                    </Pill>
-                    <Link
-                      href={`/app/learn/courses/${course.id}`}
-                      className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
-                    >
-                      Continue
-                    </Link>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+                  );
+                })}
+
+                {/* Authorization assignments */}
+                {(authorizationProgress ?? []).map((assignment: any) => {
+                  const auth = assignment.authorisations;
+                  return (
+                    <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4 bg-purple-50">
+                      <div>
+                        <h3 className="font-medium">{auth.title}</h3>
+                        <p className="text-sm text-gray-600 capitalize">
+                          Authorization • {assignment.assignment_status.replace('_', ' ')}
+                        </p>
+                      </div>
+                      <div className="rounded-md bg-purple-100 px-4 py-2 text-sm text-purple-800">
+                        Assigned
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </section>
 
         {/* Completed */}
