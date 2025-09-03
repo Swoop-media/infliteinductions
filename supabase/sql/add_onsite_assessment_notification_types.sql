@@ -24,6 +24,28 @@ BEGIN
         ALTER TYPE notif_type ADD VALUE 'course_completed';
     END IF;
     
+    -- Add course_expiry_reminder type  
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_enum 
+        WHERE enumlabel = 'course_expiry_reminder' 
+        AND enumtypid = (
+            SELECT oid FROM pg_type WHERE typname = 'notif_type'
+        )
+    ) THEN
+        ALTER TYPE notif_type ADD VALUE 'course_expiry_reminder';
+    END IF;
+    
+    -- Add course_expired type  
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_enum 
+        WHERE enumlabel = 'course_expired' 
+        AND enumtypid = (
+            SELECT oid FROM pg_type WHERE typname = 'notif_type'
+        )
+    ) THEN
+        ALTER TYPE notif_type ADD VALUE 'course_expired';
+    END IF;
+    
 EXCEPTION
     WHEN undefined_object THEN
         -- If notif_type enum doesn't exist, create it with all needed values
@@ -40,7 +62,9 @@ EXCEPTION
             'quiz_passed',
             'onsite_training_ready',
             'onsite_assessment_ready',
-            'course_completed'
+            'course_completed',
+            'course_expiry_reminder',
+            'course_expired'
         );
 END $$;
 
