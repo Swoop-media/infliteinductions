@@ -30,37 +30,40 @@ async function loadArchivedUsers() {
   return profiles || [];
 }
 
+async function restoreUserAction(userId: string) {
+  "use server";
+  
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user || !(await hasRole("Admin"))) {
+    throw new Error("Unauthorized");
+  }
+
+  // Restore the user by setting archived_at to null
+  const { error } = await supabase
+    .from("profiles")
+    .update({ archived_at: null })
+    .eq("id", userId);
+
+  if (error) {
+    throw new Error("Failed to restore user");
+  }
+
+  // Redirect back to refresh the page
+  redirect("/app/admin/users/archived");
+}
+
 function RestoreButton({ userId }: { userId: string }) {
-  const restoreUser = async () => {
-    if (!confirm("Are you sure you want to restore this user? They will be visible in the system again.")) {
-      return;
-    }
-
-    try {
-      const response = await fetch("/app/admin/users/restore", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-
-      if (response.ok) {
-        window.location.reload();
-      } else {
-        alert("Failed to restore user");
-      }
-    } catch (error) {
-      console.error("Error restoring user:", error);
-      alert("Error restoring user");
-    }
-  };
-
   return (
-    <button
-      onClick={restoreUser}
-      className="rounded border border-green-500 bg-green-50 px-2 py-1 text-xs text-green-700 hover:bg-green-100"
-    >
-      Restore
-    </button>
+    <form action={restoreUserAction.bind(null, userId)}>
+      <button
+        type="submit"
+        className="rounded border border-green-500 bg-green-50 px-2 py-1 text-xs text-green-700 hover:bg-green-100"
+      >
+        Restore
+      </button>
+    </form>
   );
 }
 
