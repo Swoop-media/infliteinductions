@@ -1,44 +1,41 @@
-import { NextResponse } from "next/server";
-import { headers } from "next/headers";
-import { createSupabaseServer } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import { hasRole } from "@/lib/roles";
 
-export async function POST(request: Request) {
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+
+export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServer();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const { user_id } = await request.json();
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check if user has admin role
-    const isAdmin = await hasRole(user.id, "Admin");
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const { userId } = await request.json();
-
-    if (!userId) {
+    if (!user_id) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }
 
-    // Use admin client to archive the user
-    const admin = supabaseAdmin();
+    // Use service role for admin operations
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
 
-    // Archive the user profile
-    const { error: archiveError } = await admin
+    console.log("Attempting to archive user:", user_id);
+
+    // Update the user's archived_at timestamp
+    const { error: updateError } = await supabase
       .from("profiles")
       .update({ archived_at: new Date().toISOString() })
-      .eq("id", userId);
+      .eq("id", user_id);
 
-    if (archiveError) {
-      console.error("Archive error:", archiveError);
+    if (updateError) {
+      console.error("Archive user error:", updateError);
       return NextResponse.json({ error: "Failed to archive user" }, { status: 500 });
     }
 
+    console.log("Successfully archived user:", user_id);
     return NextResponse.json({ success: true });
 
   } catch (error) {

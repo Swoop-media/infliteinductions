@@ -1,54 +1,33 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
-import { NextResponse } from "next/server";
-import { createSupabaseServer } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
-import { hasRole } from "@/lib/roles";
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServer();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      console.error("Auth error in delete route:", authError);
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check if user has admin role
-    const isAdmin = await hasRole(user.id, "Admin");
-    console.log("Delete user request - User ID:", user.id, "Is Admin:", isAdmin);
-    
-    if (!isAdmin) {
-      console.error("User attempted delete without admin role:", user.id);
-      return NextResponse.json({ error: "Forbidden - Admin role required" }, { status: 403 });
-    }
-
     const { userId } = await request.json();
 
     if (!userId) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }
 
-    // Use admin client to delete the user
-    const admin = supabaseAdmin();
+    // Use service role for admin operations
+    const supabase = createClient(
+      process.env.SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
+        }
+      }
+    );
 
-    // First, delete related data
-    await admin.from("user_roles").delete().eq("user_id", userId);
-    await admin.from("course_assignments").delete().eq("user_id", userId);
-    await admin.from("authorisation_assignments").delete().eq("user_id", userId);
-    await admin.from("assignment_progress").delete().eq("user_id", userId);
-    await admin.from("teams_links").delete().eq("user_id", userId);
-    await admin.from("teams_link_codes").delete().eq("user_id", userId);
-    await admin.from("notifications").delete().eq("user_id", userId);
+    console.log("Attempting to delete user:", userId);
 
-    // Finally, delete the profile
-    const { error: deleteError } = await admin
-      .from("profiles")
-      .delete()
-      .eq("id", userId);
+    // Delete from auth.users (this will cascade to profiles)
+    const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
 
     if (deleteError) {
-      console.error("Delete error:", deleteError);
+      console.error("Delete user error:", deleteError);
       return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
     }
 
