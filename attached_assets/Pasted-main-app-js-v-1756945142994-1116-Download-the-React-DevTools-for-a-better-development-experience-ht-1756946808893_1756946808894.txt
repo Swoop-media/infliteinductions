@@ -1,0 +1,74 @@
+main-app.js?v=1756945142994:1116 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+page.tsx:89  Server  Authorization assignments: Array(1)
+page.tsx:131  Server  Authorization with courses: Array(1)
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 1821ms
+page.tsx:89  Server  Authorization assignments: Array(1)
+page.tsx:131  Server  Authorization with courses: Array(1)
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 2687ms
+page.tsx:75  Server  Assignment fetch error: Objectcode: "PGRST201"details: (2) [{…}, {…}]hint: "Try changing 'courses' to one of the following: 'courses!course_assignments_course_fk', 'courses!course_assignments_course_id_fkey'. Find the desired relationship in the 'details' key."message: "Could not embed because more than one relationship was found for 'course_assignments' and 'courses'"[[Prototype]]: Object
+error @ intercept-console-error.js:57
+loadMyProfileAndLearning @ page.tsx:75
+MyProfilePage @ page.tsx:198
+react_stack_bottom_frame @ react-server-dom-webpack-client.browser.development.js:3173
+resolveConsoleEntry @ react-server-dom-webpack-client.browser.development.js:2507
+processFullStringRow @ react-server-dom-webpack-client.browser.development.js:2644
+processFullBinaryRow @ react-server-dom-webpack-client.browser.development.js:2606
+processBinaryChunk @ react-server-dom-webpack-client.browser.development.js:2733
+progress @ react-server-dom-webpack-client.browser.development.js:2997
+page.tsx:75  Server  Raw course assignments query result: null
+page.tsx:99  Server  Authorization assignments: Array(1)
+page.tsx:99  Server  All course assignments: null
+page.tsx:152  Server  Authorization with courses: Array(1)
+page.tsx:160  Server  In progress courses: Array(0)
+page.tsx:161  Server  Completed courses: Array(0)
+page.tsx:162  Server  In progress auth: Array(1)
+page.tsx:163  Server  Completed auth: Array(0)
+notifications/list:1  Failed to load resource: the server responded with a status of 502 (Bad Gateway)
+notifications/list:1  Failed to load resource: the server responded with a status of 502 (Bad Gateway)
+notifications/list:1  Failed to load resource: the server responded with a status of 502 (Bad Gateway)
+page.tsx:29  Server   Error: Route "/app/home" used `searchParams.notice`. `searchParams` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at HomePage (page.tsx:29:8)
+    at resolveErrorDev (react-server-dom-webpack-client.browser.development.js:2172:46)
+    at getOutlinedModel (react-server-dom-webpack-client.browser.development.js:1547:22)
+    at parseModelString (react-server-dom-webpack-client.browser.development.js:1713:15)
+    at Object.eval (react-server-dom-webpack-client.browser.development.js:2760:18)
+    at JSON.parse (<anonymous>)
+    at initializeModelChunk (react-server-dom-webpack-client.browser.development.js:1109:26)
+    at getOutlinedModel (react-server-dom-webpack-client.browser.development.js:1485:11)
+    at parseModelString (react-server-dom-webpack-client.browser.development.js:1822:15)
+    at Array.eval (react-server-dom-webpack-client.browser.development.js:2760:18)
+    at JSON.parse (<anonymous>)
+    at resolveConsoleEntry (react-server-dom-webpack-client.browser.development.js:2501:28)
+    at processFullStringRow (react-server-dom-webpack-client.browser.development.js:2644:11)
+    at processFullBinaryRow (react-server-dom-webpack-client.browser.development.js:2606:7)
+    at processBinaryChunk (react-server-dom-webpack-client.browser.development.js:2733:15)
+    at progress (react-server-dom-webpack-client.browser.development.js:2997:13)
+HomePage @ page.tsx:29
+page.tsx:37  Server   Error: Route "/app/home" used `searchParams.banner`. `searchParams` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at HomePage (page.tsx:37:8)
+    at resolveErrorDev (react-server-dom-webpack-client.browser.development.js:2172:46)
+    at getOutlinedModel (react-server-dom-webpack-client.browser.development.js:1547:22)
+    at parseModelString (react-server-dom-webpack-client.browser.development.js:1713:15)
+    at Object.eval (react-server-dom-webpack-client.browser.development.js:2760:18)
+    at JSON.parse (<anonymous>)
+    at initializeModelChunk (react-server-dom-webpack-client.browser.development.js:1109:26)
+    at getOutlinedModel (react-server-dom-webpack-client.browser.development.js:1485:11)
+    at parseModelString (react-server-dom-webpack-client.browser.development.js:1822:15)
+    at Array.eval (react-server-dom-webpack-client.browser.development.js:2760:18)
+    at JSON.parse (<anonymous>)
+    at resolveConsoleEntry (react-server-dom-webpack-client.browser.development.js:2501:28)
+    at processFullStringRow (react-server-dom-webpack-client.browser.development.js:2644:11)
+    at processFullBinaryRow (react-server-dom-webpack-client.browser.development.js:2606:7)
+    at processBinaryChunk (react-server-dom-webpack-client.browser.development.js:2733:15)
+    at progress (react-server-dom-webpack-client.browser.development.js:2997:13)
+HomePage @ page.tsx:37
+page.tsx:70  Server  All course assignments: null
+page.tsx:90  Server  Authorization assignments: [{…}]
+page.tsx:91  Server  All course assignments: null
+page.tsx:135  Server  Authorization with courses: [{…}]
+page.tsx:153  Server  In progress courses: []
+page.tsx:154  Server  Completed courses: []
+page.tsx:155  Server  In progress auth: [{…}]
+page.tsx:156  Server  Completed auth: []
