@@ -288,6 +288,26 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
   "use server";
   const supabase = await createSupabaseServer();
 
+  // Get module data first
+  const { data: moduleData } = await supabase
+    .from("course_modules")
+    .select("course_id, type")
+    .eq("id", moduleId)
+    .single();
+
+  if (!moduleData || moduleData.type !== "digital_assessment_quiz") {
+    return (
+      <div className="bg-white p-6 rounded-lg border">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
+        <div className="text-center py-8">
+          <div className="text-red-400 text-4xl mb-2">⚠️</div>
+          <h3 className="font-medium text-red-600">Invalid Module Type</h3>
+          <p className="text-sm text-red-500">This module is not configured as a quiz module.</p>
+        </div>
+      </div>
+    );
+  }
+
   // First, try to get quiz by module_id
   let { data: quizData, error: quizErr } = await supabase
     .from("quizzes")
@@ -297,23 +317,37 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
 
   // If no quiz found by module_id, try by course_id (fallback for legacy quizzes)
   if (quizErr || !quizData) {
-    const { data: moduleData } = await supabase
-      .from("course_modules")
-      .select("course_id")
-      .eq("id", moduleId)
+    console.log("No quiz found by module_id, trying course_id fallback...");
+    
+    const { data: legacyQuiz, error: legacyErr } = await supabase
+      .from("quizzes")
+      .select("id, pass_mark, max_attempts, shuffle")
+      .eq("course_id", moduleData.course_id)
       .maybeSingle();
 
-    if (moduleData) {
-      const { data: legacyQuiz, error: legacyErr } = await supabase
-        .from("quizzes")
-        .select("id, pass_mark, max_attempts, shuffle")
-        .eq("course_id", moduleData.course_id)
-        .maybeSingle();
+    if (!legacyErr && legacyQuiz) {
+      quizData = legacyQuiz;
+      quizErr = null;
+      console.log("Found legacy quiz by course_id");
+    }
+  }
 
-      if (!legacyErr && legacyQuiz) {
-        quizData = legacyQuiz;
-        quizErr = null;
+  // If still no quiz found, try to create one using RPC function
+  if (!quizData) {
+    console.log("No quiz found, attempting to create one...");
+    
+    try {
+      const { data: newQuiz, error: rpcErr } = await supabase
+        .rpc("ensure_quiz_for_module", { p_module_id: moduleId });
+
+      if (!rpcErr && newQuiz) {
+        quizData = newQuiz;
+        console.log("Created new quiz:", newQuiz);
+      } else {
+        console.error("RPC error:", rpcErr);
       }
+    } catch (error) {
+      console.error("Failed to create quiz:", error);
     }
   }
 
@@ -330,10 +364,14 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
           <div className="text-gray-400 text-4xl mb-2">❓</div>
           <h3 className="font-medium text-gray-600">No Quiz Available</h3>
           <p className="text-sm text-gray-500">No quiz has been configured for this module yet.</p>
+          <p className="text-sm text-gray-400 mt-2">Module ID: {moduleId}</p>
+          <p className="text-sm text-gray-400">Course ID: {moduleData.course_id}</p>
         </div>
       </div>
     );
   }
+
+  console.log("Quiz found, fetching questions for quiz ID:", quizData.id);
 
   // Fetch quiz questions
   const { data: questions, error: questionsErr } = await supabase
@@ -353,7 +391,11 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
     .eq("quiz_id", quizData.id)
     .order("order_index", { ascending: true });
 
+  console.log("Questions fetch result:", { questions, questionsErr });
+
   if (questionsErr || !questions || questions.length === 0) {
+    console.log("No questions found by quiz_id, trying module_id fallback...");
+    
     // Try fallback by module_id
     const { data: fallbackQuestions, error: fallbackErr } = await supabase
       .from("quiz_questions")
@@ -372,9 +414,22 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       .eq("module_id", moduleId)
       .order("order_index", { ascending: true });
 
+    console.log("Fallback questions fetch result:", { fallbackQuestions, fallbackErr });
+
     if (fallbackErr || !fallbackQuestions || fallbackQuestions.length === 0) {
-      console.error("Questions fetch error", questionsErr || fallbackErr);
-      return <p className="text-sm text-red-500">No quiz questions found.</p>;
+      console.error("No questions found anywhere", { questionsErr, fallbackErr, quizId: quizData.id, moduleId });
+      return (
+        <div className="bg-white p-6 rounded-lg border">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
+          <div className="text-center py-8">
+            <div className="text-yellow-400 text-4xl mb-2">📝</div>
+            <h3 className="font-medium text-yellow-600">Quiz Ready, No Questions</h3>
+            <p className="text-sm text-gray-500">The quiz exists but no questions have been added yet.</p>
+            <p className="text-sm text-gray-400 mt-2">Quiz ID: {quizData.id}</p>
+            <p className="text-sm text-gray-400">Module ID: {moduleId}</p>
+          </div>
+        </div>
+      );
     }
     
     questions = fallbackQuestions;
