@@ -5,14 +5,18 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ;
 -- Add index for performance
 CREATE INDEX IF NOT EXISTS idx_profiles_archived_at ON profiles(archived_at);
 
+-- Drop existing policies first to avoid conflicts
+DROP POLICY IF EXISTS "Users can view active profiles" ON profiles;
+DROP POLICY IF EXISTS "Admins can view all profiles" ON profiles;
+
 -- Update RLS policies to exclude archived users from normal queries
 -- This will help hide archived users from regular lists
-CREATE OR REPLACE POLICY "Users can view active profiles"
+CREATE POLICY "Users can view active profiles"
 ON profiles FOR SELECT
 USING (archived_at IS NULL OR auth.uid() = id);
 
 -- Admins can see all profiles including archived ones
-CREATE OR REPLACE POLICY "Admins can view all profiles"
+CREATE POLICY "Admins can view all profiles"
 ON profiles FOR SELECT
 TO authenticated
 USING (

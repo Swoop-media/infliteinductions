@@ -1,9 +1,9 @@
-
 "use client";
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { useRouter } from 'next/navigation';
 
 type Profile = { 
   id: string; 
@@ -34,6 +34,7 @@ function getSortIcon(column: SortField, sortField: SortField | null, sortDirecti
 export default function SortableUsersTable({ profiles, roleMap, grantablePool }: Props) {
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const router = useRouter();
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -73,6 +74,52 @@ export default function SortableUsersTable({ profiles, roleMap, grantablePool }:
         : bValue.localeCompare(aValue);
     });
   }, [profiles, sortField, sortDirection]);
+
+  const archiveUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to archive this user? They will be moved to archived users and hidden from lists.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/app/admin/users/archive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (response.ok) {
+        router.refresh();
+      } else {
+        alert("Failed to archive user");
+      }
+    } catch (error) {
+      console.error("Error archiving user:", error);
+      alert("Error archiving user");
+    }
+  };
+
+  const deleteUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to DELETE this user? This action cannot be undone and will remove all their data.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch("/app/admin/users/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      });
+
+      if (response.ok) {
+        router.refresh();
+      } else {
+        alert("Failed to delete user");
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      alert("Error deleting user");
+    }
+  };
 
   return (
     <div className="overflow-x-auto rounded-md border">
@@ -203,34 +250,18 @@ export default function SortableUsersTable({ profiles, roleMap, grantablePool }:
                     >
                       Edit
                     </Link>
-                    <form action="/app/admin/users/archive" method="post" className="inline">
-                      <input type="hidden" name="user_id" value={p.id} />
-                      <button
-                        type="submit"
-                        className="rounded border border-yellow-500 bg-yellow-50 px-2 py-1 text-xs text-yellow-700 hover:bg-yellow-100"
-                        onClick={(e) => {
-                          if (!confirm(`Archive user ${p.full_name || p.email}? This will hide them from all lists but preserve their data.`)) {
-                            e.preventDefault();
-                          }
-                        }}
-                      >
-                        Archive
-                      </button>
-                    </form>
-                    <form action="/app/admin/users/delete" method="post" className="inline">
-                      <input type="hidden" name="user_id" value={p.id} />
-                      <button
-                        type="submit"
-                        className="rounded border border-red-500 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
-                        onClick={(e) => {
-                          if (!confirm(`DELETE user ${p.full_name || p.email}? This will permanently remove all their data. This action cannot be undone!`)) {
-                            e.preventDefault();
-                          }
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </form>
+                    <button
+                      onClick={() => archiveUser(p.id)}
+                      className="rounded border border-yellow-500 bg-yellow-50 px-2 py-1 text-xs text-yellow-700 hover:bg-yellow-100"
+                    >
+                      Archive
+                    </button>
+                    <button
+                      onClick={() => deleteUser(p.id)}
+                      className="rounded border border-red-500 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
+                    >
+                      Delete
+                    </button>
                   </div>
                 </td>
               </tr>

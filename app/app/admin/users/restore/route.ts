@@ -1,50 +1,48 @@
 
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 
-function makeURL(path: string): URL {
-  const h = headers();
-  const proto = h.get("x-forwarded-proto") ?? "http";
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
-  return new URL(path, `${proto}://${host}`);
-}
-
-export async function POST(req: Request) {
-  const isAdmin = await hasRole("Admin");
-  if (!isAdmin) return NextResponse.redirect(makeURL("/app/home"));
-
-  const supabase = await createSupabaseServer();
-  const form = await req.formData();
-
-  const user_id = String(form.get("user_id") || "").trim();
-
-  const back = makeURL("/app/admin/users/archived");
-  if (!user_id) {
-    back.searchParams.set("error", "Missing user_id");
-    return NextResponse.redirect(back);
-  }
-
+export async function POST(request: Request) {
   try {
-    // Restore the user by setting archived_at to null
-    const { error: restoreError } = await supabase
+    const supabase = await createSupabaseServer();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Check if user has admin role
+    const isAdmin = await hasRole(user.id, "Admin");
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { userId } = await request.json();
+
+    if (!userId) {
+      return NextResponse.json({ error: "User ID is required" }, { status: 400 });
+    }
+
+    // Use admin client to restore the user
+    const admin = supabaseAdmin();
+    
+    // Restore the user profile by setting archived_at to null
+    const { error: restoreError } = await admin
       .from("profiles")
       .update({ archived_at: null })
-      .eq("id", user_id);
+      .eq("id", userId);
 
     if (restoreError) {
       console.error("Restore error:", restoreError);
-      back.searchParams.set("error", `Failed to restore user: ${restoreError.message}`);
-      return NextResponse.redirect(back);
+      return NextResponse.json({ error: "Failed to restore user" }, { status: 500 });
     }
 
-    back.searchParams.set("ok", "User restored successfully");
-    return NextResponse.redirect(back);
+    return NextResponse.json({ success: true });
 
   } catch (error) {
     console.error("Restore user error:", error);
-    back.searchParams.set("error", "Failed to restore user");
-    return NextResponse.redirect(back);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
