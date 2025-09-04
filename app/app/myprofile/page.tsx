@@ -50,13 +50,15 @@ async function loadMyProfileAndLearning() {
     .maybeSingle();
 
   // Fetch all course assignments for this user
-  const { data: allAssignments } = await supabase
+  const { data: allAssignments, error: assignmentError } = await supabase
     .from("course_assignments")
     .select(`
       id,
       course_id,
       assignment_status,
       completed_at,
+      created_at,
+      role,
       courses!inner(
         id,
         title,
@@ -66,6 +68,12 @@ async function loadMyProfileAndLearning() {
     .eq("user_id", user.id)
     .eq("role", "trainee")
     .order("created_at", { ascending: false });
+
+  // Debug: Log any assignment errors and all assignments
+  if (assignmentError) {
+    console.error('Assignment fetch error:', assignmentError);
+  }
+  console.log('Raw course assignments query result:', allAssignments);
 
   // Fetch all authorization assignments for this user
   const { data: allAuthAssignments } = await supabase
@@ -86,6 +94,7 @@ async function loadMyProfileAndLearning() {
 
   // Debug: Log authorization assignments to see the structure
   console.log('Authorization assignments:', allAuthAssignments);
+  console.log('All course assignments:', allAssignments);
 
   // For each authorization, fetch its courses and the user's progress
   const authWithCourses = await Promise.all(
@@ -145,6 +154,12 @@ async function loadMyProfileAndLearning() {
   const completedAuth = (authWithCourses ?? []).filter(a => 
     a.assignment_status === "completed"
   );
+
+  // Debug: Log filtered results
+  console.log('In progress courses:', inProgressCourses);
+  console.log('Completed courses:', completedCourses);
+  console.log('In progress auth:', inProgressAuth);
+  console.log('Completed auth:', completedAuth);
 
   return { 
     profile, 
