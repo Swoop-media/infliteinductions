@@ -182,7 +182,7 @@ async function loadUsersAndRoles(q: string | null) {
   const isAdmin = await hasRole("Admin");
   if (!isAdmin) redirect("/app/home?banner=no_access");
 
-  // Profiles
+  // Profiles (exclude archived users)
   let profs: Profile[] = [];
   if (q && q.trim()) {
     const like = `%${q.trim()}%`;
@@ -190,6 +190,7 @@ async function loadUsersAndRoles(q: string | null) {
       .from("profiles")
       .select("id, full_name, email, department, job_description")
       .or(`full_name.ilike.${like},email.ilike.${like}`)
+      .is("archived_at", null)
       .order("full_name", { ascending: true })
       .limit(50);
     if (error) throw new Error(error.message);
@@ -198,6 +199,7 @@ async function loadUsersAndRoles(q: string | null) {
     const { data, error } = await supabase
       .from("profiles")
       .select("id, full_name, email, department, job_description")
+      .is("archived_at", null)
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) throw new Error(error.message);
@@ -430,12 +432,20 @@ async function UsersSection({ q }: { q: string | null }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-medium">Users & Roles</h3>
-        <Link
-          href="/app/admin/users/new"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-        >
-          Add New User
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/app/admin/users/archived"
+            className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
+          >
+            View Archived Users
+          </Link>
+          <Link
+            href="/app/admin/users/new"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+          >
+            Add New User
+          </Link>
+        </div>
       </div>
 
       <form method="get" action="/app/admin" className="flex items-center gap-2">

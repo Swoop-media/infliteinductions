@@ -196,12 +196,42 @@ export default function SortableUsersTable({ profiles, roleMap, grantablePool }:
                   </form>
                 </td>
                 <td className="px-3 py-2">
-                  <Link
-                    href={`/app/admin/users/${p.id}`}
-                    className="rounded border px-2 py-1 text-xs hover:bg-gray-100"
-                  >
-                    Edit
-                  </Link>
+                  <div className="flex gap-1">
+                    <Link
+                      href={`/app/admin/users/${p.id}`}
+                      className="rounded border px-2 py-1 text-xs hover:bg-gray-100"
+                    >
+                      Edit
+                    </Link>
+                    <form action="/app/admin/users/archive" method="post" className="inline">
+                      <input type="hidden" name="user_id" value={p.id} />
+                      <button
+                        type="submit"
+                        className="rounded border border-yellow-500 bg-yellow-50 px-2 py-1 text-xs text-yellow-700 hover:bg-yellow-100"
+                        onClick={(e) => {
+                          if (!confirm(`Archive user ${p.full_name || p.email}? This will hide them from all lists but preserve their data.`)) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        Archive
+                      </button>
+                    </form>
+                    <form action="/app/admin/users/delete" method="post" className="inline">
+                      <input type="hidden" name="user_id" value={p.id} />
+                      <button
+                        type="submit"
+                        className="rounded border border-red-500 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
+                        onClick={(e) => {
+                          if (!confirm(`DELETE user ${p.full_name || p.email}? This will permanently remove all their data. This action cannot be undone!`)) {
+                            e.preventDefault();
+                          }
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </div>
                 </td>
               </tr>
             );
