@@ -32,9 +32,9 @@ async function fetchData(search: string | null) {
   let profQuery = supabase
     .from("profiles")
     .select("id, full_name, email, department, job_description, microsoft_id")
-    .is("archived_at", null)
     .order("full_name", { ascending: true })
-    .limit(200);
+    .limit(200)
+    .is("archived_at", null);
 
   if (search && search.trim()) {
     const s = `%${search.trim()}%`;
@@ -96,12 +96,20 @@ export default async function AdminUsersPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Admin: Users & Roles</h1>
-        <Link
-          href="/app/admin/users/new"
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-        >
-          Add New User
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/app/admin/users/archived"
+            className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+          >
+            Archived Users
+          </Link>
+          <Link
+            href="/app/admin/users/new"
+            className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+          >
+            Add New User
+          </Link>
+        </div>
       </div>
 
       {error && (
