@@ -19,7 +19,7 @@ const ROLE_ORDER = [
   "General",
   "Trainers and Assessors",
   "Course creators",
-  "Senior management",
+  "Senior Person",
   "Admin",
 ];
 

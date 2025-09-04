@@ -225,7 +225,7 @@ async function loadUsersAndRoles(q: string | null) {
   });
 
   // Offer curated set if present; otherwise fall back to all roles
-  const preferred = ["Admin", "Trainers and Assessors", "Course Creators", "Senior Management"];
+  const preferred = ["Admin", "Trainers and Assessors", "Course Creators", "Senior Person"];
   const namesInCatalog = new Set(catalog.map(c => c.name));
   const offeredNames = preferred.filter(n => namesInCatalog.has(n));
   const grantablePool = offeredNames.length ? offeredNames : Array.from(namesInCatalog);
@@ -390,20 +390,21 @@ async function UsersSection({ q }: { q: string | null }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-medium">Users & Roles</h3>
-            <Link
-              href="/app/admin/users/new"
-              className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-            >
-              Add New User
-            </Link>
-          </div>
+        <h3 className="text-lg font-medium">Users & Roles</h3>
+        <Link
+          href="/app/admin/users/new"
+          className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+        >
+          Add New User
+        </Link>
+      </div>
+      
       <form method="get" action="/app/admin" className="flex items-center gap-2">
         <input type="hidden" name="tab" value="users" />
         <input
           name="q"
           defaultValue={q ?? ""}
-          placeholder="Search name or email"
+          placeholder="Search name, email, or department"
           className="w-80 rounded-md border px-3 py-2 text-sm"
         />
         <button className="rounded-md border px-3 py-2 text-sm">Search</button>
@@ -412,63 +413,122 @@ async function UsersSection({ q }: { q: string | null }) {
       {profiles.length === 0 ? (
         <p className="text-sm text-gray-600">No users found.</p>
       ) : (
-        <ul className="divide-y rounded-md border">
-          {profiles.map((p) => {
-            const roles = roleMap.get(p.id) ?? [];
-            const grantable = grantablePool.filter(r => !roles.includes(r));
+        <div className="overflow-x-auto rounded-md border">
+          <table className="min-w-full text-sm">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-3 py-2 text-left font-medium cursor-pointer hover:bg-gray-100">
+                  Name
+                </th>
+                <th className="px-3 py-2 text-left font-medium cursor-pointer hover:bg-gray-100">
+                  Email
+                </th>
+                <th className="px-3 py-2 text-left font-medium cursor-pointer hover:bg-gray-100">
+                  Department
+                </th>
+                <th className="px-3 py-2 text-left font-medium">
+                  Current Roles
+                </th>
+                <th className="px-3 py-2 text-left font-medium">
+                  Grant Role
+                </th>
+                <th className="px-3 py-2 text-left font-medium">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y bg-white">
+              {profiles.map((p) => {
+                const roles = roleMap.get(p.id) ?? [];
+                const grantable = grantablePool.filter(r => !roles.includes(r));
 
-            return (
-              <li key={p.id} className="p-3 space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="font-medium">{p.full_name ?? "(no name)"}</div>
-                    <div className="text-xs text-gray-500">
-                      {p.email ?? ""} {p.department ? `• ${p.department}` : ""} {p.job_description ? `• ${p.job_description}` : ""}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Link href={`/app/admin/users/${p.id}`} className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50">
-                      Edit
-                    </Link>
-                  </div>
-                </div>
-
-                {/* Current roles */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  {roles.length === 0 ? (
-                    <span className="text-xs text-gray-500">No roles</span>
-                  ) : (
-                    roles.map((r) => (
-                      <span key={r} className="inline-flex items-center gap-2 rounded-full border px-2 py-0.5 text-xs">
-                        {r}
-                        <form action="/app/admin/users/roles/revoke" method="post">
-                          <input type="hidden" name="user_id" value={p.id} />
-                          <input type="hidden" name="role" value={r} />
-                          <button title="Revoke" className="opacity-70 hover:opacity-100">×</button>
-                        </form>
-                      </span>
-                    ))
-                  )}
-                </div>
-
-                {/* Grant role */}
-                <form action="/app/admin/users/roles/grant" method="post" className="flex items-center gap-2">
-                  <input type="hidden" name="user_id" value={p.id} />
-                  <select name="role" className="rounded-md border px-2 py-1 text-xs">
-                    {grantable.length ? (
-                      grantable.map((r) => <option key={r} value={r}>{r}</option>)
-                    ) : (
-                      <option value="" disabled>No more roles</option>
-                    )}
-                  </select>
-                  <button className="rounded-md border px-2 py-1 text-xs hover:bg-gray-50" disabled={!grantable.length}>
-                    Grant
-                  </button>
-                </form>
-              </li>
-            );
-          })}
-        </ul>
+                return (
+                  <tr key={p.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-medium">
+                      {p.full_name ?? "(no name)"}
+                    </td>
+                    <td className="px-3 py-2 text-gray-600">
+                      {p.email ?? "-"}
+                    </td>
+                    <td className="px-3 py-2 text-gray-600">
+                      {p.department ?? "-"}
+                    </td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-wrap gap-1">
+                        {roles.length === 0 ? (
+                          <span className="text-xs text-gray-400">No roles</span>
+                        ) : (
+                          roles.map((r) => (
+                            <span
+                              key={r}
+                              className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800"
+                            >
+                              {r}
+                              <form
+                                action="/app/admin/users/roles/revoke"
+                                method="post"
+                                className="inline"
+                              >
+                                <input type="hidden" name="user_id" value={p.id} />
+                                <input type="hidden" name="role" value={r} />
+                                <button
+                                  title="Revoke role"
+                                  className="ml-1 text-blue-600 hover:text-blue-800"
+                                >
+                                  ×
+                                </button>
+                              </form>
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2">
+                      <form
+                        action="/app/admin/users/roles/grant"
+                        method="post"
+                        className="flex items-center gap-1"
+                      >
+                        <input type="hidden" name="user_id" value={p.id} />
+                        <select
+                          name="role"
+                          className="rounded border px-2 py-1 text-xs"
+                          disabled={!grantable.length}
+                        >
+                          {grantable.length ? (
+                            grantable.map((r) => (
+                              <option key={r} value={r}>
+                                {r}
+                              </option>
+                            ))
+                          ) : (
+                            <option value="" disabled>
+                              No more roles
+                            </option>
+                          )}
+                        </select>
+                        <button
+                          className="rounded border px-2 py-1 text-xs hover:bg-gray-100 disabled:opacity-50"
+                          disabled={!grantable.length}
+                        >
+                          Grant
+                        </button>
+                      </form>
+                    </td>
+                    <td className="px-3 py-2">
+                      <Link
+                        href={`/app/admin/users/${p.id}`}
+                        className="rounded border px-2 py-1 text-xs hover:bg-gray-100"
+                      >
+                        Edit
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
