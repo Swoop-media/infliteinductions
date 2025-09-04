@@ -5,11 +5,11 @@ import Link from "next/link";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { useRouter } from 'next/navigation';
 
-type Profile = { 
-  id: string; 
-  full_name: string | null; 
-  email: string | null; 
-  department?: string | null; 
+type Profile = {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  department?: string | null;
   job_description?: string | null;
 };
 
@@ -98,28 +98,6 @@ export default function SortableUsersTable({ profiles, roleMap, grantablePool }:
     }
   };
 
-  const deleteUser = async (userId: string) => {
-    if (!confirm("Are you sure you want to DELETE this user? This action cannot be undone and will remove all their data.")) {
-      return;
-    }
-
-    try {
-      const response = await fetch("/app/admin/users/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-
-      if (response.ok) {
-        router.refresh();
-      } else {
-        alert("Failed to delete user");
-      }
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      alert("Error deleting user");
-    }
-  };
 
   return (
     <div className="overflow-x-auto rounded-md border">
@@ -255,12 +233,6 @@ export default function SortableUsersTable({ profiles, roleMap, grantablePool }:
                       className="rounded border border-yellow-500 bg-yellow-50 px-2 py-1 text-xs text-yellow-700 hover:bg-yellow-100"
                     >
                       Archive
-                    </button>
-                    <button
-                      onClick={() => deleteUser(p.id)}
-                      className="rounded border border-red-500 bg-red-50 px-2 py-1 text-xs text-red-700 hover:bg-red-100"
-                    >
-                      Delete
                     </button>
                   </div>
                 </td>
