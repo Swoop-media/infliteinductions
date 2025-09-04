@@ -4,9 +4,9 @@ import { createClient } from "@supabase/supabase-js";
 
 export async function POST(request: NextRequest) {
   try {
-    const { user_id } = await request.json();
+    const { userId } = await request.json();
 
-    if (!user_id) {
+    if (!userId) {
       return NextResponse.json({ error: "User ID is required" }, { status: 400 });
     }
 
@@ -22,20 +22,20 @@ export async function POST(request: NextRequest) {
       }
     );
 
-    console.log("Attempting to archive user:", user_id);
+    console.log("Attempting to archive user:", userId);
 
     // Update the user's archived_at timestamp
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ archived_at: new Date().toISOString() })
-      .eq("id", user_id);
+      .eq("id", userId);
 
     if (updateError) {
       console.error("Archive user error:", updateError);
       return NextResponse.json({ error: "Failed to archive user" }, { status: 500 });
     }
 
-    console.log("Successfully archived user:", user_id);
+    console.log("Successfully archived user:", userId);
     return NextResponse.json({ success: true });
 
   } catch (error) {
