@@ -597,6 +597,7 @@ function CoursesTab({
       <div className="space-y-3">
         <h3 className="text-lg font-semibold">Add courses</h3>
         <form method="get" action={buildUrl(authId, "courses")}>
+          <input type="hidden" name="tab" value="courses" />
           <div className="flex flex-wrap gap-2">
             <input
               name="q"
