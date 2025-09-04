@@ -50,14 +50,14 @@ async function loadMyProfileAndLearning() {
     .maybeSingle();
 
   // Fetch all course assignments for this user
-  const { data: allAssignments } = await supabase
+  const { data: allAssignments, error: assignmentError } = await supabase
     .from("course_assignments")
     .select(`
       id,
       course_id,
       assignment_status,
       completed_at,
-      courses!inner(
+      courses!course_assignments_course_id_fkey(
         id,
         title,
         status
@@ -67,6 +67,9 @@ async function loadMyProfileAndLearning() {
     .eq("role", "trainee")
     .order("created_at", { ascending: false });
 
+  if (assignmentError) {
+    console.error('Assignment fetch error:', assignmentError);
+  }
   console.log('All course assignments:', allAssignments);
 
   // Fetch all authorization assignments for this user
