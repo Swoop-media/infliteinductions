@@ -293,7 +293,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
     .from("quizzes")
     .select("id, pass_mark, max_attempts, shuffle")
     .eq("module_id", moduleId)
-    .single();
+    .maybeSingle();
 
   // If no quiz found by module_id, try by course_id (fallback for legacy quizzes)
   if (quizErr || !quizData) {
@@ -301,14 +301,14 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       .from("course_modules")
       .select("course_id")
       .eq("id", moduleId)
-      .single();
+      .maybeSingle();
 
     if (moduleData) {
       const { data: legacyQuiz, error: legacyErr } = await supabase
         .from("quizzes")
         .select("id, pass_mark, max_attempts, shuffle")
         .eq("course_id", moduleData.course_id)
-        .single();
+        .maybeSingle();
 
       if (!legacyErr && legacyQuiz) {
         quizData = legacyQuiz;
@@ -317,9 +317,22 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
     }
   }
 
-  if (quizErr || !quizData) {
+  if (quizErr) {
     console.error("Quiz fetch error", quizErr);
-    return <p className="text-sm text-red-500">Failed to load quiz.</p>;
+    return <p className="text-sm text-red-500">Failed to load quiz: {quizErr.message}</p>;
+  }
+
+  if (!quizData) {
+    return (
+      <div className="bg-white p-6 rounded-lg border">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
+        <div className="text-center py-8">
+          <div className="text-gray-400 text-4xl mb-2">❓</div>
+          <h3 className="font-medium text-gray-600">No Quiz Available</h3>
+          <p className="text-sm text-gray-500">No quiz has been configured for this module yet.</p>
+        </div>
+      </div>
+    );
   }
 
   // Fetch quiz questions
