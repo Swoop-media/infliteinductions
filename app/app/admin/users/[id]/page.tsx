@@ -231,7 +231,7 @@ export default async function EditUserPage({
         {/* Left Column - Profile Form */}
         <div className="space-y-6">
           <form
-            action="/app/app/admin/users/update"
+            action="/app/admin/users/update"
             method="post"
             className="space-y-4 rounded-lg border bg-white p-4"
           >
