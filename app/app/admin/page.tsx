@@ -10,12 +10,13 @@ import SortableUsersTable from "./_components/SortableUsersTable";
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "due_dates_courses" | "due_dates_authorisations" | "users";
+type TabKey = "due_dates_courses" | "due_dates_authorisations" | "users" | "pending_authorisations";
 
 function tabFromSearch(sp: Record<string, string | string[] | undefined>): TabKey {
   const raw = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab || "";
   if (raw === "users") return "users";
   if (raw === "due_dates_authorisations") return "due_dates_authorisations";
+  if (raw === "pending_authorisations") return "pending_authorisations";
   return "due_dates_courses";
 }
 
@@ -261,6 +262,7 @@ export default async function AdminPage({
     { key: "due_dates_courses", label: "Due Dates - Courses", href: "/app/admin?tab=due_dates_courses" },
     { key: "due_dates_authorisations", label: "Due Dates - Authorisations", href: "/app/admin?tab=due_dates_authorisations" },
     { key: "users", label: "Users & Roles", href: "/app/admin?tab=users" },
+    { key: "pending_authorisations", label: "Pending Authorisations", href: "/app/admin?tab=pending_authorisations" },
   ];
 
   return (
@@ -297,8 +299,10 @@ export default async function AdminPage({
           <DueDatesCourseSection q={q} />
         ) : tab === "due_dates_authorisations" ? (
           <DueDatesAuthorisationSection q={q} />
-        ) : (
+        ) : tab === "users" ? (
           <UsersSection q={q} />
+        ) : (
+          <PendingAuthorisationsSection q={q} />
         )}
       </div>
     </div>
@@ -467,6 +471,201 @@ async function UsersSection({ q }: { q: string | null }) {
           roleMap={roleMap}
           grantablePool={grantablePool}
         />
+      )}
+    </div>
+  );
+}
+
+/* --------------------------
+   PENDING AUTHORISATIONS
+---------------------------*/
+type PendingAuthorisationRow = {
+  assignment_id: string;
+  user_id: string;
+  authorisation_id: string;
+  authorisation_title: string;
+  trainee_name: string;
+  trainee_email: string;
+  completed_at: string;
+  total_courses: number;
+  completed_courses: number;
+};
+
+async function loadPendingAuthorisations(q: string | null) {
+  "use server";
+  noStore();
+  const supabase = await createSupabaseServer();
+  const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors")) || (await hasRole("Senior Management"));
+  if (!allowed) redirect("/app/home?banner=no_access");
+
+  // Get all authorisation assignments that are completed
+  const { data: assignments, error: assignError } = await supabase
+    .from("authorisation_assignments")
+    .select(`
+      id,
+      user_id,
+      authorisation_id,
+      assignment_status,
+      completed_at,
+      authorisations!inner(
+        id,
+        title
+      ),
+      profiles!inner(
+        id,
+        full_name,
+        email
+      )
+    `)
+    .eq("assignment_status", "completed")
+    .not("completed_at", "is", null)
+    .order("completed_at", { ascending: false });
+
+  if (assignError) throw new Error(assignError.message);
+  if (!assignments || assignments.length === 0) return [];
+
+  // For each completed authorisation, verify all courses are actually completed
+  const pendingAuthorisations: PendingAuthorisationRow[] = [];
+
+  for (const assignment of assignments) {
+    // Get all courses for this authorisation
+    const { data: authCourses, error: coursesError } = await supabase
+      .from("authorisation_courses")
+      .select(`
+        course_id,
+        courses!inner(
+          id,
+          title
+        )
+      `)
+      .eq("authorisation_id", assignment.authorisation_id);
+
+    if (coursesError) continue;
+    if (!authCourses || authCourses.length === 0) continue;
+
+    const courseIds = authCourses.map(ac => ac.course_id);
+
+    // Check how many of these courses the user has completed
+    const { data: completedCourses, error: completedError } = await supabase
+      .from("course_assignments")
+      .select("id, course_id")
+      .eq("user_id", assignment.user_id)
+      .eq("assignment_status", "completed")
+      .in("course_id", courseIds);
+
+    if (completedError) continue;
+
+    const completedCount = completedCourses?.length || 0;
+    const totalCount = authCourses.length;
+
+    // Only include if all courses are completed (100%)
+    if (completedCount === totalCount && totalCount > 0) {
+      pendingAuthorisations.push({
+        assignment_id: assignment.id,
+        user_id: assignment.user_id,
+        authorisation_id: assignment.authorisation_id,
+        authorisation_title: (assignment as any).authorisations.title,
+        trainee_name: (assignment as any).profiles.full_name || "",
+        trainee_email: (assignment as any).profiles.email || "",
+        completed_at: assignment.completed_at,
+        total_courses: totalCount,
+        completed_courses: completedCount,
+      });
+    }
+  }
+
+  // Apply search filter if provided
+  if (q && q.trim()) {
+    const searchTerm = q.trim().toLowerCase();
+    return pendingAuthorisations.filter(auth =>
+      auth.trainee_name.toLowerCase().includes(searchTerm) ||
+      auth.trainee_email.toLowerCase().includes(searchTerm) ||
+      auth.authorisation_title.toLowerCase().includes(searchTerm)
+    );
+  }
+
+  return pendingAuthorisations;
+}
+
+async function PendingAuthorisationsSection({ q }: { q: string | null }) {
+  const pendingAuthorisations = await loadPendingAuthorisations(q);
+  const isSeniorManager = await hasRole("Senior Management");
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Pending Authorisations</h2>
+        <form method="get" action="/app/admin" className="flex items-center gap-2">
+          <input type="hidden" name="tab" value="pending_authorisations" />
+          <input
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Search trainee, authorisation, or email"
+            className="w-80 rounded-md border px-3 py-2 text-sm"
+          />
+          <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Search</button>
+        </form>
+      </div>
+
+      {pendingAuthorisations.length === 0 ? (
+        <p className="text-sm text-gray-600">No pending authorisations found.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Authorisation
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Trainee
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date Completed
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Courses
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Action
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {pendingAuthorisations.map((auth) => (
+                <tr key={auth.assignment_id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {auth.authorisation_title}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{auth.trainee_name}</div>
+                    <div className="text-sm text-gray-500">{auth.trainee_email}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {new Date(auth.completed_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {auth.completed_courses}/{auth.total_courses} completed
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    {isSeniorManager ? (
+                      <Link
+                        href={`/app/admin/review/${auth.assignment_id}`}
+                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        Review
+                      </Link>
+                    ) : (
+                      <span className="text-gray-400 text-xs">Senior Manager Only</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
