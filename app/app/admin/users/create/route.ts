@@ -87,7 +87,7 @@ export async function POST(req: Request) {
         course_id: course_id,
         role: "trainee" as const,
         assigned_by: user.id,
-        status: "active" as const
+        assignment_status: "assigned" as const
       }));
 
       const { error: courseError } = await supabaseService
@@ -100,13 +100,13 @@ export async function POST(req: Request) {
       }
     }
 
-    // Assign authorizations if selected (assuming we have authorization assignments table)
+    // Assign authorizations if selected
     if (authorization_ids.length > 0) {
       const authAssignments = authorization_ids.map(auth_id => ({
         user_id: tempUserId,
         authorisation_id: auth_id,
         assigned_by: user.id,
-        status: "active" as const
+        assignment_status: "assigned" as const
       }));
 
       const { error: authError } = await supabaseService
