@@ -56,7 +56,7 @@ async function loadUserCompletedItems(userId: string) {
     .select(`
       id,
       completed_at,
-      courses!inner(title, valid_for_days)
+      courses!course_assignments_course_id_fkey(title, valid_for_days)
     `)
     .eq("user_id", userId)
     .eq("assignment_status", "completed")
@@ -69,7 +69,7 @@ async function loadUserCompletedItems(userId: string) {
     .select(`
       id,
       completed_at,
-      authorisations!inner(title, valid_for_years)
+      authorisations!authorisation_assignments_authorisation_id_fkey(title, valid_for_years)
     `)
     .eq("user_id", userId)
     .eq("assignment_status", "completed")
