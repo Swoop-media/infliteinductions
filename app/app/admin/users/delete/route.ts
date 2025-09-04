@@ -1,6 +1,5 @@
 
 import { NextResponse } from "next/server";
-import { headers } from "next/headers";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
@@ -17,7 +16,7 @@ export async function POST(request: Request) {
     // Check if user has admin role
     const isAdmin = await hasRole(user.id, "Admin");
     if (!isAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json({ error: "Forbidden - Admin role required" }, { status: 403 });
     }
 
     const { userId } = await request.json();
@@ -28,9 +27,21 @@ export async function POST(request: Request) {
 
     // Use admin client to delete the user
     const admin = supabaseAdmin();
-    
-    // Delete from auth.users (this will cascade to profiles due to foreign key)
-    const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
+
+    // First, delete related data
+    await admin.from("user_roles").delete().eq("user_id", userId);
+    await admin.from("course_assignments").delete().eq("user_id", userId);
+    await admin.from("authorisation_assignments").delete().eq("user_id", userId);
+    await admin.from("assignment_progress").delete().eq("user_id", userId);
+    await admin.from("teams_links").delete().eq("user_id", userId);
+    await admin.from("teams_link_codes").delete().eq("user_id", userId);
+    await admin.from("notifications").delete().eq("user_id", userId);
+
+    // Finally, delete the profile
+    const { error: deleteError } = await admin
+      .from("profiles")
+      .delete()
+      .eq("id", userId);
 
     if (deleteError) {
       console.error("Delete error:", deleteError);

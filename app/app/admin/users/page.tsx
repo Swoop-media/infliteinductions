@@ -32,9 +32,9 @@ async function fetchData(search: string | null) {
   let profQuery = supabase
     .from("profiles")
     .select("id, full_name, email, department, job_description, microsoft_id")
+    .is("archived_at", null)
     .order("full_name", { ascending: true })
-    .limit(200)
-    .is("archived_at", null);
+    .limit(200);
 
   if (search && search.trim()) {
     const s = `%${search.trim()}%`;

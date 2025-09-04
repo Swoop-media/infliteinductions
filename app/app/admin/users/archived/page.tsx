@@ -75,7 +75,7 @@ export default async function ArchivedUsersPage() {
           <p className="text-gray-600">Users that have been archived</p>
         </div>
         <Link
-          href="/app/admin?tab=users"
+          href="/app/admin/users"
           className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
         >
           Back to Active Users
