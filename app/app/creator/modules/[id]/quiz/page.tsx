@@ -298,7 +298,7 @@ async function createQuestion(formData: FormData) {
   const supabase = await createSupabaseServer();
 
   const moduleId = String(formData.get("module_id") || "");
-  let quizId = String(formData.get("quiz_id") || "");
+  const quizId = String(formData.get("quiz_id") || "");
   const qType = String(formData.get("question_type") || "multiple_choice");
   const body = String(formData.get("body") || "").trim();
 
@@ -810,7 +810,7 @@ export default async function QuizEditorPage(props: {
         <h2 className="text-lg font-semibold">Add question</h2>
         <form action={createQuestion} className="space-y-3">
           <input type="hidden" name="module_id" value={module.id} />
-          <input type="hidden" name="quiz_id" value={quiz.id} />
+          <input type="hidden" name="quiz_id" value={quiz?.id || ""} />
 
           <label className="grid gap-1">
             <span className="text-sm">Question type</span>

@@ -506,7 +506,7 @@ export default async function LearnerCoursePage(props: {
                     <div className="pt-6 border-t">
                       {currentModule.type === "digital_assessment_quiz" && (
                         <Link
-                          href={`/app/learn/quiz/${courseId}?module=${currentModule.id}`}
+                          href={`/app/learn/quiz/modules/${currentModule.id}${authorizationId ? `?auth=${authorizationId}` : ''}`}
                           className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
                         >
                           Start Quiz →

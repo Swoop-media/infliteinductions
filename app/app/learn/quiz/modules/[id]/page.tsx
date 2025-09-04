@@ -179,28 +179,30 @@ async function loadAll(moduleId: string, preview: boolean) {
     }
   }
 
-  // Questions + options (quiz_id -> module_id -> course_id)
+  // Questions + options (module_id -> quiz_id -> course_id)
   let questions: QuestionRow[] = [];
-  try {
-    const { data: qs } = await supabase
+  
+  // First try by module_id (most specific)
+  const { data: qs1 } = await supabase
+    .from("quiz_questions")
+    .select("*")
+    .eq("module_id", moduleId)
+    .order("order_index", { ascending: true })
+    .order("id", { ascending: true });
+  questions = (qs1 ?? []) as QuestionRow[];
+
+  // Then try by quiz_id if we have a quiz
+  if (!questions.length && quiz) {
+    const { data: qs2 } = await supabase
       .from("quiz_questions")
       .select("*")
       .eq("quiz_id", (quiz as any).id)
       .order("order_index", { ascending: true })
       .order("id", { ascending: true });
-    questions = (qs ?? []) as QuestionRow[];
-  } catch {}
-
-  if (!questions.length) {
-    const { data: qs2 } = await supabase
-      .from("quiz_questions")
-      .select("*")
-      .eq("module_id", moduleId)
-      .order("order_index", { ascending: true })
-      .order("id", { ascending: true });
     questions = (qs2 ?? []) as QuestionRow[];
   }
 
+  // Finally try by course_id (legacy fallback)
   if (!questions.length) {
     const { data: qs3 } = await supabase
       .from("quiz_questions")
@@ -210,6 +212,14 @@ async function loadAll(moduleId: string, preview: boolean) {
       .order("id", { ascending: true });
     questions = (qs3 ?? []) as QuestionRow[];
   }
+
+  console.log("🔍 Quiz questions search:", {
+    moduleId,
+    quizId: quiz?.id,
+    courseId: (mod as ModuleRow).course_id,
+    foundQuestions: questions.length,
+    questions: questions.map(q => ({ id: q.id, stem: q.stem }))
+  });
 
   let optionsByQ = new Map<string, OptionRow[]>();
   if (questions.length) {
