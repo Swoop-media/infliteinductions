@@ -122,7 +122,7 @@ async function saveDetailsAction(form: FormData) {
 
   const title = String(form.get("title") || "").trim();
   const description = String(form.get("description") || "").trim();
-  const validForStr = String(form.get("valid_for_months") || "");
+  const validForStr = String(form.get("valid_for_days") || "");
   const deptSelect = String(form.get("department_select") || "").trim();
   const deptNew = String(form.get("department_new") || "").trim();
   const department = deptNew || deptSelect || null;
@@ -136,7 +136,7 @@ async function saveDetailsAction(form: FormData) {
   if (title) patch.title = title;
   if (validForStr !== "") {
     const n = Number(validForStr);
-    patch.valid_for_months = Number.isFinite(n) ? n : null;
+    patch.valid_for_days = Number.isFinite(n) ? n : null;
   }
 
   const { error } = await supabase.from("authorisations").update(patch).eq("id", id);
@@ -464,19 +464,20 @@ function DetailsTab({ auth }: { auth: any }) {
         </div>
 
         <div className="grid gap-2">
-          <label className="text-sm">Valid for</label>
+          <label className="text-sm">Valid for (days)</label>
           <select
-            name="valid_for_months"
-            defaultValue={auth.valid_for_months == null ? "" : String(auth.valid_for_months)}
+            name="valid_for_days"
+            defaultValue={auth.valid_for_days == null ? "" : String(auth.valid_for_days)}
             className="w-full rounded-md border px-3 py-2"
           >
             <option value="">— Select period —</option>
             <option value="0">No expiry</option>
-            <option value="3">3 months</option>
-            <option value="6">6 months</option>
-            <option value="12">1 year</option>
-            <option value="24">2 years</option>
-            <option value="36">3 years</option>
+            <option value="30">30 days</option>
+            <option value="90">90 days (3 months)</option>
+            <option value="180">180 days (6 months)</option>
+            <option value="365">365 days (1 year)</option>
+            <option value="730">730 days (2 years)</option>
+            <option value="1095">1095 days (3 years)</option>
           </select>
         </div>
 
