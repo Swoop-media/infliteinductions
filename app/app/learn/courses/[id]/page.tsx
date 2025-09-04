@@ -185,28 +185,80 @@ async function submitQuizAnswers(formData: FormData) {
   const supabase = await createSupabaseServer();
   const moduleId = formData.get("moduleId") as string;
   const assignmentId = formData.get("assignmentId") as string;
-  const answers = JSON.parse(formData.get("answers") as string);
+  const quizId = formData.get("quizId") as string;
+  
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
 
-  // TODO: Validate answers and calculate score
-  const score = 0; // Placeholder for actual score calculation
-  const passed = false; // Placeholder for pass/fail logic
+  // Collect answers from form data
+  const answers: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith("question-")) {
+      const questionId = key.replace("question-", "");
+      answers[questionId] = value as string;
+    }
+  }
 
-  // Mark module as complete and save quiz result
-  await supabase.from("assignment_progress").upsert([
-    {
-      assignment_id: assignmentId,
-      module_id: moduleId,
-      completed_at: new Date().toISOString(),
-    },
-  ]);
+  // Get quiz questions and options to calculate score
+  const { data: questions } = await supabase
+    .from("quiz_questions")
+    .select(`
+      id,
+      points,
+      quiz_options (
+        id,
+        is_correct
+      )
+    `)
+    .eq("quiz_id", quizId);
 
-  await supabase.from("quiz_results").insert({
-    assignment_id: assignmentId,
-    module_id: moduleId,
-    user_answers: answers,
-    score: score,
-    passed: passed,
+  if (!questions) return;
+
+  // Calculate score
+  let totalPoints = 0;
+  let earnedPoints = 0;
+
+  questions.forEach((question: any) => {
+    totalPoints += question.points || 1;
+    const selectedOptionId = answers[question.id];
+    const selectedOption = question.quiz_options.find((opt: any) => opt.id === selectedOptionId);
+    if (selectedOption?.is_correct) {
+      earnedPoints += question.points || 1;
+    }
   });
+
+  const scorePercent = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
+  
+  // Get quiz pass mark
+  const { data: quiz } = await supabase
+    .from("quizzes")
+    .select("pass_mark")
+    .eq("id", quizId)
+    .single();
+
+  const passMarkPercent = quiz?.pass_mark || 70;
+  const passed = scorePercent >= passMarkPercent;
+
+  // Save quiz attempt
+  await supabase.from("quiz_attempts").insert({
+    quiz_id: quizId,
+    user_id: user.id,
+    score_pct: scorePercent,
+    passed: passed,
+    answers: answers,
+  });
+
+  // Mark module as complete if passed
+  if (passed) {
+    await supabase.from("assignment_progress").upsert([
+      {
+        assignment_id: assignmentId,
+        module_id: moduleId,
+        completed_at: new Date().toISOString(),
+      },
+    ]);
+  }
 
   // Redirect to the next module or course
   const modules = await supabase.from("course_modules").select("id, course_id, order_index, type").eq("id", moduleId).single();
@@ -236,16 +288,83 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
   "use server";
   const supabase = await createSupabaseServer();
 
-  // Fetch quiz questions for the module
-  const { data: quizData, error: quizErr } = await supabase
+  // First, try to get quiz by module_id
+  let { data: quizData, error: quizErr } = await supabase
     .from("quizzes")
-    .select("id, title, questions")
+    .select("id, pass_mark, max_attempts, shuffle")
     .eq("module_id", moduleId)
     .single();
+
+  // If no quiz found by module_id, try by course_id (fallback for legacy quizzes)
+  if (quizErr || !quizData) {
+    const { data: moduleData } = await supabase
+      .from("course_modules")
+      .select("course_id")
+      .eq("id", moduleId)
+      .single();
+
+    if (moduleData) {
+      const { data: legacyQuiz, error: legacyErr } = await supabase
+        .from("quizzes")
+        .select("id, pass_mark, max_attempts, shuffle")
+        .eq("course_id", moduleData.course_id)
+        .single();
+
+      if (!legacyErr && legacyQuiz) {
+        quizData = legacyQuiz;
+        quizErr = null;
+      }
+    }
+  }
 
   if (quizErr || !quizData) {
     console.error("Quiz fetch error", quizErr);
     return <p className="text-sm text-red-500">Failed to load quiz.</p>;
+  }
+
+  // Fetch quiz questions
+  const { data: questions, error: questionsErr } = await supabase
+    .from("quiz_questions")
+    .select(`
+      id,
+      stem,
+      type,
+      points,
+      order_index,
+      quiz_options (
+        id,
+        label,
+        is_correct
+      )
+    `)
+    .eq("quiz_id", quizData.id)
+    .order("order_index", { ascending: true });
+
+  if (questionsErr || !questions || questions.length === 0) {
+    // Try fallback by module_id
+    const { data: fallbackQuestions, error: fallbackErr } = await supabase
+      .from("quiz_questions")
+      .select(`
+        id,
+        stem,
+        type,
+        points,
+        order_index,
+        quiz_options (
+          id,
+          label,
+          is_correct
+        )
+      `)
+      .eq("module_id", moduleId)
+      .order("order_index", { ascending: true });
+
+    if (fallbackErr || !fallbackQuestions || fallbackQuestions.length === 0) {
+      console.error("Questions fetch error", questionsErr || fallbackErr);
+      return <p className="text-sm text-red-500">No quiz questions found.</p>;
+    }
+    
+    questions = fallbackQuestions;
   }
 
   // Check if quiz is already completed
@@ -254,16 +373,16 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
 
   if (isCompleted) {
     // Fetch quiz result if completed
-    const { data: result } = await supabase.from("quiz_results").select("score, passed").eq("assignment_id", assignmentId).eq("module_id", moduleId).single();
+    const { data: result } = await supabase.from("quiz_attempts").select("score_pct, passed").eq("quiz_id", quizData.id).eq("user_id", (await supabase.auth.getUser()).data.user?.id).order("created_at", { ascending: false }).limit(1).single();
     return (
       <div className="bg-white p-6 rounded-lg border">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">{quizData.title}</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
         <div className="p-4 rounded-md border-2 text-center" style={{ borderColor: result?.passed ? '#10B981' : '#EF4444', backgroundColor: result?.passed ? '#ECFDF5' : '#FEF2F2' }}>
           <h3 className={`text-lg font-bold ${result?.passed ? 'text-green-600' : 'text-red-600'}`}>
             {result?.passed ? 'Congratulations! You Passed!' : 'Try Again'}
           </h3>
           <p className={`text-sm font-medium ${result?.passed ? 'text-green-700' : 'text-red-700'}`}>
-            Your Score: {result?.score ?? 0}%
+            Your Score: {result?.score_pct ?? 0}%
           </p>
         </div>
       </div>
@@ -271,28 +390,26 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
   }
 
   // Render quiz questions if not completed
-  const [firstQuestion] = quizData.questions;
-  const [firstOption] = firstQuestion?.options || [];
-
   return (
     <form action={submitQuizAnswers} className="bg-white p-6 rounded-lg border">
       <input type="hidden" name="moduleId" value={moduleId} />
       <input type="hidden" name="assignmentId" value={assignmentId} />
+      <input type="hidden" name="quizId" value={quizData.id} />
       <input type="hidden" name="answers" value={JSON.stringify([])} /> {/* Placeholder for answers */}
 
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">{quizData.title}</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
       <p className="text-sm text-gray-600 mb-6">Answer all questions to complete the quiz.</p>
 
-      {quizData.questions.map((q: any, index: number) => (
+      {questions.map((q: any, index: number) => (
         <div key={q.id} className="mb-6 pb-6 border-b last:border-b-0 last:pb-0">
           <p className="text-lg font-medium text-gray-900 mb-3">
-            {index + 1}. {q.question}
+            {index + 1}. {q.stem}
           </p>
           <div className="space-y-2">
-            {q.options.map((opt: any) => (
+            {q.quiz_options.map((opt: any) => (
               <label key={opt.id} className="flex items-center space-x-3 text-sm text-gray-700">
                 <input type="radio" name={`question-${q.id}`} value={opt.id} className="form-radio text-blue-600" />
-                <span>{opt.text}</span>
+                <span>{opt.label}</span>
               </label>
             ))}
           </div>
