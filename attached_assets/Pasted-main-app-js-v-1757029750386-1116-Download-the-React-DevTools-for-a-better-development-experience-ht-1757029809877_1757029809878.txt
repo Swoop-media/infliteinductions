@@ -1,0 +1,48 @@
+main-app.js?v=1757029750386:1116 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+page.tsx:320  Server  No quiz found by module_id, trying course_id fallback...
+page.tsx:337  Server  No quiz found, attempting to create one...
+page.tsx:347  Server  RPC error: {code: '42702', details: 'It could refer to either a PL/pgSQL variable or a table column.', hint: null, message: 'column reference "id" is ambiguous'}
+error @ intercept-console-error.js:57
+QuizRenderer @ page.tsx:347
+react_stack_bottom_frame @ react-server-dom-webpack-client.browser.development.js:3173
+resolveConsoleEntry @ react-server-dom-webpack-client.browser.development.js:2507
+processFullStringRow @ react-server-dom-webpack-client.browser.development.js:2644
+processFullBinaryRow @ react-server-dom-webpack-client.browser.development.js:2606
+processBinaryChunk @ react-server-dom-webpack-client.browser.development.js:2733
+progress @ react-server-dom-webpack-client.browser.development.js:2997
+<QuizRenderer>
+LearnerCoursePage @ page.tsx:790
+initializeFakeTask @ react-server-dom-webpack-client.browser.development.js:2410
+resolveDebugInfo @ react-server-dom-webpack-client.browser.development.js:2433
+processFullStringRow @ react-server-dom-webpack-client.browser.development.js:2634
+processFullBinaryRow @ react-server-dom-webpack-client.browser.development.js:2606
+processBinaryChunk @ react-server-dom-webpack-client.browser.development.js:2733
+progress @ react-server-dom-webpack-client.browser.development.js:2997
+<LearnerCoursePage>
+initializeFakeTask @ react-server-dom-webpack-client.browser.development.js:2408
+resolveDebugInfo @ react-server-dom-webpack-client.browser.development.js:2433
+processFullStringRow @ react-server-dom-webpack-client.browser.development.js:2634
+processFullBinaryRow @ react-server-dom-webpack-client.browser.development.js:2606
+processBinaryChunk @ react-server-dom-webpack-client.browser.development.js:2733
+progress @ react-server-dom-webpack-client.browser.development.js:2997
+"use server"
+ResponseInstance @ react-server-dom-webpack-client.browser.development.js:1870
+createResponseFromOptions @ react-server-dom-webpack-client.browser.development.js:2858
+exports.createFromReadableStream @ react-server-dom-webpack-client.browser.development.js:3228
+eval @ app-index.js:131
+(app-pages-browser)/./node_modules/next/dist/client/app-index.js @ main-app.js?v=1757029750386:149
+options.factory @ webpack.js:1
+__webpack_require__ @ webpack.js:1
+fn @ webpack.js:1
+eval @ app-next-dev.js:14
+eval @ app-bootstrap.js:62
+loadScriptsInSequence @ app-bootstrap.js:23
+appBootstrap @ app-bootstrap.js:56
+eval @ app-next-dev.js:13
+(app-pages-browser)/./node_modules/next/dist/client/app-next-dev.js @ main-app.js?v=1757029750386:171
+options.factory @ webpack.js:1
+__webpack_require__ @ webpack.js:1
+__webpack_exec__ @ main-app.js?v=1757029750386:1790
+(anonymous) @ main-app.js?v=1757029750386:1791
+webpackJsonpCallback @ webpack.js:1
+(anonymous) @ main-app.js?v=1757029750386:9

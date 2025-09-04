@@ -1,4 +1,7 @@
 
+-- Drop existing function if it exists to avoid return type conflicts
+DROP FUNCTION IF EXISTS ensure_quiz_for_module(UUID);
+
 -- Function to ensure a quiz exists for a module
 CREATE OR REPLACE FUNCTION ensure_quiz_for_module(p_module_id UUID)
 RETURNS TABLE(id UUID, pass_mark INTEGER, max_attempts INTEGER, shuffle BOOLEAN)
