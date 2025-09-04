@@ -5,6 +5,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import SortableDueDatesTable from "./_components/SortableDueDatesTable";
+import SortableUsersTable from "./_components/SortableUsersTable";
 
 
 export const dynamic = "force-dynamic";
@@ -225,7 +226,7 @@ async function loadUsersAndRoles(q: string | null) {
   });
 
   // Offer curated set if present; otherwise fall back to all roles
-  const preferred = ["Admin", "Trainers and Assessors", "Course Creators", "Senior Person"];
+  const preferred = ["Admin", "Trainers and Assessors", "Course Creators", "Senior Management"];
   const namesInCatalog = new Set(catalog.map(c => c.name));
   const offeredNames = preferred.filter(n => namesInCatalog.has(n));
   const grantablePool = offeredNames.length ? offeredNames : Array.from(namesInCatalog);
@@ -413,122 +414,11 @@ async function UsersSection({ q }: { q: string | null }) {
       {profiles.length === 0 ? (
         <p className="text-sm text-gray-600">No users found.</p>
       ) : (
-        <div className="overflow-x-auto rounded-md border">
-          <table className="min-w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-2 text-left font-medium cursor-pointer hover:bg-gray-100">
-                  Name
-                </th>
-                <th className="px-3 py-2 text-left font-medium cursor-pointer hover:bg-gray-100">
-                  Email
-                </th>
-                <th className="px-3 py-2 text-left font-medium cursor-pointer hover:bg-gray-100">
-                  Department
-                </th>
-                <th className="px-3 py-2 text-left font-medium">
-                  Current Roles
-                </th>
-                <th className="px-3 py-2 text-left font-medium">
-                  Grant Role
-                </th>
-                <th className="px-3 py-2 text-left font-medium">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y bg-white">
-              {profiles.map((p) => {
-                const roles = roleMap.get(p.id) ?? [];
-                const grantable = grantablePool.filter(r => !roles.includes(r));
-
-                return (
-                  <tr key={p.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2 font-medium">
-                      {p.full_name ?? "(no name)"}
-                    </td>
-                    <td className="px-3 py-2 text-gray-600">
-                      {p.email ?? "-"}
-                    </td>
-                    <td className="px-3 py-2 text-gray-600">
-                      {p.department ?? "-"}
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="flex flex-wrap gap-1">
-                        {roles.length === 0 ? (
-                          <span className="text-xs text-gray-400">No roles</span>
-                        ) : (
-                          roles.map((r) => (
-                            <span
-                              key={r}
-                              className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-800"
-                            >
-                              {r}
-                              <form
-                                action="/app/admin/users/roles/revoke"
-                                method="post"
-                                className="inline"
-                              >
-                                <input type="hidden" name="user_id" value={p.id} />
-                                <input type="hidden" name="role" value={r} />
-                                <button
-                                  title="Revoke role"
-                                  className="ml-1 text-blue-600 hover:text-blue-800"
-                                >
-                                  ×
-                                </button>
-                              </form>
-                            </span>
-                          ))
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <form
-                        action="/app/admin/users/roles/grant"
-                        method="post"
-                        className="flex items-center gap-1"
-                      >
-                        <input type="hidden" name="user_id" value={p.id} />
-                        <select
-                          name="role"
-                          className="rounded border px-2 py-1 text-xs"
-                          disabled={!grantable.length}
-                        >
-                          {grantable.length ? (
-                            grantable.map((r) => (
-                              <option key={r} value={r}>
-                                {r}
-                              </option>
-                            ))
-                          ) : (
-                            <option value="" disabled>
-                              No more roles
-                            </option>
-                          )}
-                        </select>
-                        <button
-                          className="rounded border px-2 py-1 text-xs hover:bg-gray-100 disabled:opacity-50"
-                          disabled={!grantable.length}
-                        >
-                          Grant
-                        </button>
-                      </form>
-                    </td>
-                    <td className="px-3 py-2">
-                      <Link
-                        href={`/app/admin/users/${p.id}`}
-                        className="rounded border px-2 py-1 text-xs hover:bg-gray-100"
-                      >
-                        Edit
-                      </Link>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <SortableUsersTable 
+          profiles={profiles} 
+          roleMap={roleMap} 
+          grantablePool={grantablePool} 
+        />
       )}
     </div>
   );
