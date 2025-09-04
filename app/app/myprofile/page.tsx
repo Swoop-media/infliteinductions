@@ -84,6 +84,9 @@ async function loadMyProfileAndLearning() {
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
+  // Debug: Log authorization assignments to see the structure
+  console.log('Authorization assignments:', allAuthAssignments);
+
   // For each authorization, fetch its courses and the user's progress
   const authWithCourses = await Promise.all(
     (allAuthAssignments ?? []).map(async (authAssignment) => {
@@ -124,6 +127,9 @@ async function loadMyProfileAndLearning() {
       };
     })
   );
+
+  // Debug: Log authWithCourses to see the structure
+  console.log('Authorization with courses:', authWithCourses);
 
   // Split assignments into in progress and completed
   const inProgressCourses = (allAssignments ?? []).filter(a => 
