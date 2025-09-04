@@ -9,6 +9,7 @@ interface CompleteModuleButtonProps {
   moduleId: string;
   courseId: string;
   nextModuleId?: string;
+  authorizationId?: string;
 }
 
 export default function CompleteModuleButton({
@@ -16,6 +17,7 @@ export default function CompleteModuleButton({
   moduleId,
   courseId,
   nextModuleId,
+  authorizationId,
 }: CompleteModuleButtonProps) {
   const router = useRouter();
   const [isCompleting, setIsCompleting] = useState(false);
@@ -37,15 +39,17 @@ export default function CompleteModuleButton({
 
       if (response.ok) {
         // Redirect to next module or back to course
+        const authParam = authorizationId ? `&auth=${authorizationId}` : '';
         if (nextModuleId) {
-          router.push(`/app/learn/courses/${courseId}?module=${nextModuleId}`);
+          router.push(`/app/learn/courses/${courseId}?module=${nextModuleId}${authParam}`);
         } else {
-          router.push(`/app/learn/courses/${courseId}`);
+          router.push(`/app/learn/courses/${courseId}${authParam ? `?auth=${authorizationId}` : ''}`);
         }
         router.refresh(); // Refresh to update progress
       } else {
         console.error('Failed to mark module as complete');
-        router.push(`/app/learn/courses/${courseId}?error=completion_failed`);
+        const authParam = authorizationId ? `&auth=${authorizationId}` : '';
+        router.push(`/app/learn/courses/${courseId}?error=completion_failed${authParam}`);
       }
     } catch (error) {
       console.error('Error completing module:', error);

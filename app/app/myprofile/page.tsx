@@ -315,14 +315,12 @@ export default async function MyProfilePage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        {firstCourse && (
-                          <Link
-                            href={`/app/learn/courses/${firstCourse.course_id}`}
-                            className="rounded-md bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-700"
-                          >
-                            Continue
-                          </Link>
-                        )}
+                        <Link
+                          href={`/app/learn/authorisations/${assignment.authorisation_id}`}
+                          className="rounded-md bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-700"
+                        >
+                          Continue
+                        </Link>
                       </div>
                     </div>
                   );

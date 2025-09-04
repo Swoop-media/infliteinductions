@@ -181,11 +181,12 @@ async function BlockView({ block }: { block: any }) {
 
 export default async function LearnerCoursePage(props: {
   params: Promise<RouteParams>;
-  searchParams?: Promise<{ module?: string }>;
+  searchParams?: Promise<{ module?: string; auth?: string }>;
 }) {
   const { id: courseId } = await props.params;
   const searchParams = await props.searchParams;
   const selectedModuleId = searchParams?.module;
+  const authorizationId = searchParams?.auth;
 
   const supabase = await createSupabaseServer();
 
@@ -219,6 +220,46 @@ export default async function LearnerCoursePage(props: {
   if (courseErr || !course) {
     console.error("Course load error", courseErr);
     notFound();
+  }
+
+  // Check if this course is part of an authorization
+  let authorizationContext = null;
+  let nextCourseInAuth = null;
+  
+  if (authorizationId) {
+    // Load authorization details
+    const { data: auth } = await supabase
+      .from("authorisations")
+      .select("id, title")
+      .eq("id", authorizationId)
+      .single();
+    
+    if (auth) {
+      // Load all courses in this authorization
+      const { data: authCourses } = await supabase
+        .from("authorisation_courses")
+        .select(`
+          course_id,
+          order_index,
+          courses!inner(id, title)
+        `)
+        .eq("authorisation_id", authorizationId)
+        .order("order_index", { ascending: true });
+
+      if (authCourses) {
+        const currentIndex = authCourses.findIndex(ac => ac.course_id === courseId);
+        if (currentIndex !== -1 && currentIndex + 1 < authCourses.length) {
+          nextCourseInAuth = authCourses[currentIndex + 1];
+        }
+        
+        authorizationContext = {
+          ...auth,
+          courses: authCourses,
+          currentIndex: currentIndex + 1,
+          totalCourses: authCourses.length
+        };
+      }
+    }
   }
 
   // Load modules
@@ -298,9 +339,21 @@ export default async function LearnerCoursePage(props: {
       <div className="w-80 border-r bg-gray-50 flex flex-col">
         {/* Course Header */}
         <div className="p-4 border-b bg-white">
-          <Link href="/app/learn" className="text-sm text-blue-600 hover:underline mb-2 block">
-            ← Back to courses
-          </Link>
+          {authorizationContext ? (
+            <div className="space-y-2">
+              <Link href={`/app/learn/authorisations/${authorizationId}`} className="text-sm text-blue-600 hover:underline block">
+                ← Back to {authorizationContext.title}
+              </Link>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <span>Authorization Progress:</span>
+                <span>Course {authorizationContext.currentIndex} of {authorizationContext.totalCourses}</span>
+              </div>
+            </div>
+          ) : (
+            <Link href="/app/learn" className="text-sm text-blue-600 hover:underline mb-2 block">
+              ← Back to courses
+            </Link>
+          )}
           <h1 className="text-lg font-semibold text-gray-900 mb-1">
             {course.title}
           </h1>
@@ -466,6 +519,7 @@ export default async function LearnerCoursePage(props: {
                           moduleId={currentModule.id}
                           courseId={courseId}
                           nextModuleId={currentModuleIndex + 1 < sortedModules.length ? sortedModules[currentModuleIndex + 1].id : undefined}
+                          authorizationId={authorizationId}
                         />
                       )}
 
@@ -474,6 +528,44 @@ export default async function LearnerCoursePage(props: {
                           <p className="text-sm text-blue-800">
                             <strong>Note:</strong> This step will be completed by your {currentModule.type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.
                           </p>
+                        </div>
+                      )}
+
+                      {/* Next Course in Authorization */}
+                      {progressPercent === 100 && nextCourseInAuth && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <h3 className="font-medium text-green-800 mb-2">Course Complete! 🎉</h3>
+                          <p className="text-sm text-green-700 mb-3">
+                            Ready to continue with the next course in your authorization?
+                          </p>
+                          <Link
+                            href={`/app/learn/courses/${nextCourseInAuth.course_id}?auth=${authorizationId}`}
+                            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                          >
+                            Next: {nextCourseInAuth.courses.title} →
+                          </Link>
+                        </div>
+                      )}
+
+                      {/* Digital Training Complete - Show Next Steps */}
+                      {authorizationContext && completedModules.size === sortedModules.filter(m => 
+                        m.type === "digital_training" || m.type === "digital_assessment_quiz"
+                      ).length && sortedModules.some(m => 
+                        m.type === "onsite_training" || m.type === "onsite_assessment"
+                      ) && progressPercent < 100 && (
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <h3 className="font-medium text-yellow-800 mb-2">Digital Training Complete!</h3>
+                          <p className="text-sm text-yellow-700 mb-3">
+                            You can now continue with digital training for other courses in your authorization while waiting for onsite sessions to be scheduled.
+                          </p>
+                          {nextCourseInAuth && (
+                            <Link
+                              href={`/app/learn/courses/${nextCourseInAuth.course_id}?auth=${authorizationId}`}
+                              className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-medium"
+                            >
+                              Continue with: {nextCourseInAuth.courses.title} →
+                            </Link>
+                          )}
                         </div>
                       )}
                     </div>
