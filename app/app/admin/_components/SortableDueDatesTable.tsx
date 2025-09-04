@@ -49,6 +49,19 @@ function getSortIcon(column: SortField, sortField: SortField | null, sortDirecti
     : <ChevronDown className="h-4 w-4 text-blue-600" />;
 }
 
+// Function to display days remaining or overdue status
+const getStatusDisplay = (daysUntilExpiry: number) => {
+    if (daysUntilExpiry < 0) {
+      return <span className="text-red-600 font-medium">{Math.abs(daysUntilExpiry)} days overdue</span>;
+    } else if (daysUntilExpiry === 0) {
+      return <span className="text-red-600 font-medium">Due today</span>;
+    } else if (daysUntilExpiry <= 30) {
+      return <span className="text-yellow-600 font-medium">{daysUntilExpiry} days remaining</span>;
+    } else {
+      return <span className="text-green-600 font-medium">{daysUntilExpiry} days remaining</span>;
+    }
+  };
+
 export default function SortableDueDatesTable({ completedCourses }: Props) {
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -87,8 +100,9 @@ export default function SortableDueDatesTable({ completedCourses }: Props) {
           bValue = new Date(b.new_due_date).getTime();
           break;
         case 'status':
-          aValue = a.notification_status;
-          bValue = b.notification_status;
+          // Sorting by days_until_expiry for a more meaningful status sort
+          aValue = parseInt(a.days_until_expiry, 10);
+          bValue = parseInt(b.days_until_expiry, 10);
           break;
         default:
           return 0;
@@ -184,18 +198,8 @@ export default function SortableDueDatesTable({ completedCourses }: Props) {
               <td className="border-b px-4 py-3 text-sm">
                 {formatDate(course.new_due_date)}
               </td>
-              <td className="border-b px-4 py-3 text-sm">
-                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                  course.notification_status === 'SHOULD TRIGGER REMINDER'
-                    ? 'bg-red-100 text-red-800'
-                    : course.notification_status === 'REMINDER SENT'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {course.notification_status === 'SHOULD TRIGGER REMINDER' && `Expires in ${course.days_until_expiry} days`}
-                  {course.notification_status === 'REMINDER SENT' && 'Reminder sent'}
-                  {course.notification_status === 'NO NOTIFICATION' && 'Current'}
-                </span>
+              <td className="px-4 py-3 text-sm">
+                {getStatusDisplay(parseInt(course.days_until_expiry))}
               </td>
             </tr>
           ))}

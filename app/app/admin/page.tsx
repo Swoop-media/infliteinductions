@@ -333,7 +333,7 @@ async function DueDatesCourseSection({ q }: { q: string | null }) {
 
 async function DueDatesAuthorisationSection({ q }: { q: string | null }) {
   // TODO: Implement authorization due dates loading logic
-  const completedAuthorisations: any[] = [];
+  const completedAuthorisations: any[] = []; // Placeholder, replace with actual data loading
 
   return (
     <div className="space-y-4">
@@ -376,7 +376,45 @@ async function DueDatesAuthorisationSection({ q }: { q: string | null }) {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {/* TODO: Map through completed authorisations */}
+              {completedAuthorisations.map((auth: any, index: number) => {
+                // Assuming 'auth' has properties like 'traineeName', 'authorisationName', 'completedAt', 'dueDate'
+                // And 'dueDate' is a string or Date object.
+                const today = new Date();
+                const authDueDate = new Date(auth.dueDate);
+                const timeDiff = authDueDate.getTime() - today.getTime();
+                const daysUntilDue = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+                let statusColor = "text-green-600";
+                let statusText = "No expiry";
+
+                if (daysUntilDue !== null) {
+                  if (daysUntilDue < 0) {
+                    statusColor = "text-red-600";
+                    statusText = `${Math.abs(daysUntilDue)} days overdue`;
+                  } else if (daysUntilDue === 0) {
+                    statusColor = "text-red-600";
+                    statusText = "Due today";
+                  } else if (daysUntilDue <= 30) {
+                    statusColor = "text-yellow-600";
+                    statusText = `${daysUntilDue} days remaining`;
+                  } else {
+                    statusColor = "text-green-600";
+                    statusText = `${daysUntilDue} days remaining`;
+                  }
+                }
+
+                return (
+                  <tr key={index}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{auth.traineeName || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{auth.authorisationName || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(auth.completedAt).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(auth.dueDate).toLocaleDateString()}</td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${statusColor}`}>
+                      {statusText}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -414,10 +452,10 @@ async function UsersSection({ q }: { q: string | null }) {
       {profiles.length === 0 ? (
         <p className="text-sm text-gray-600">No users found.</p>
       ) : (
-        <SortableUsersTable 
-          profiles={profiles} 
-          roleMap={roleMap} 
-          grantablePool={grantablePool} 
+        <SortableUsersTable
+          profiles={profiles}
+          roleMap={roleMap}
+          grantablePool={grantablePool}
         />
       )}
     </div>
