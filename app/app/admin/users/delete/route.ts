@@ -10,12 +10,16 @@ export async function POST(request: Request) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.error("Auth error in delete route:", authError);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Check if user has admin role
     const isAdmin = await hasRole(user.id, "Admin");
+    console.log("Delete user request - User ID:", user.id, "Is Admin:", isAdmin);
+    
     if (!isAdmin) {
+      console.error("User attempted delete without admin role:", user.id);
       return NextResponse.json({ error: "Forbidden - Admin role required" }, { status: 403 });
     }
 
@@ -48,6 +52,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to delete user" }, { status: 500 });
     }
 
+    console.log("Successfully deleted user:", userId);
     return NextResponse.json({ success: true });
 
   } catch (error) {
