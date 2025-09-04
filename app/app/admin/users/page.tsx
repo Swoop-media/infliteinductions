@@ -200,7 +200,22 @@ export default async function AdminUsersPage({
                     </Link>
                   </td>
                   <td className="px-3 py-2">
-                    <form action="/app/admin/users/archive" method="post">
+                    <form action={async (formData: FormData) => {
+                      "use server";
+                      const userId = formData.get("user_id") as string;
+                      const supabase = await createSupabaseServer();
+                      
+                      const { error } = await supabase
+                        .from("profiles")
+                        .update({ archived_at: new Date().toISOString() })
+                        .eq("id", userId);
+                      
+                      if (error) {
+                        console.error("Archive error:", error);
+                      }
+                      
+                      redirect("/app/admin/users");
+                    }}>
                       <input type="hidden" name="user_id" value={p.id} />
                       <button
                         className="rounded-md border px-2 py-1 text-xs"
