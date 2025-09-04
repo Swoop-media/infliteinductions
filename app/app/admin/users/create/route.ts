@@ -4,8 +4,8 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 
-function makeURL(path: string): URL {
-  const h = headers();
+async function makeURL(path: string): Promise<URL> {
+  const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   return new URL(path, `${proto}://${host}`);
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   const course_ids = form.getAll("course_ids").map(id => String(id));
   const authorization_ids = form.getAll("authorization_ids").map(id => String(id));
 
-  const back = makeURL("/app/admin/users/new");
+  const back = await makeURL("/app/admin/users/new");
 
   if (!email || !full_name) {
     back.searchParams.set("error", "Email and full name are required");
@@ -48,20 +48,34 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Create a placeholder user entry in auth.users using admin client
-    // We'll use a temporary UUID that will be replaced when they actually sign in
-    const tempUserId = crypto.randomUUID();
+    // Create user in auth.users first using admin client
+    const { data: authUser, error: authError } = await supabaseService.auth.admin.createUser({
+      email: email,
+      email_confirm: true, // Skip email verification
+      user_metadata: {
+        full_name: full_name,
+        created_via_admin: true
+      }
+    });
 
-    // Create profile record with the email for future linking
+    if (authError) {
+      console.error("Auth user creation error:", authError);
+      back.searchParams.set("error", "Failed to create user account");
+      return NextResponse.redirect(back);
+    }
+
+    const userId = authUser.user.id;
+
+    // Create profile record
     const { data: profile, error: profileError } = await supabaseService
       .from("profiles")
       .insert({
-        id: tempUserId,
+        id: userId,
         email: email,
         full_name: full_name,
         department: department || null,
         job_description: job_description || null,
-        created_via_admin: true, // Flag to track admin-created users
+        created_via_admin: true,
         awaiting_first_login: true
       })
       .select()
@@ -69,6 +83,8 @@ export async function POST(req: Request) {
 
     if (profileError) {
       console.error("Profile creation error:", profileError);
+      // If profile creation fails, clean up the auth user
+      await supabaseService.auth.admin.deleteUser(userId);
       back.searchParams.set("error", "Failed to create user profile");
       return NextResponse.redirect(back);
     }
@@ -83,7 +99,7 @@ export async function POST(req: Request) {
     // Assign courses if selected
     if (course_ids.length > 0) {
       const courseAssignments = course_ids.map(course_id => ({
-        user_id: tempUserId,
+        user_id: userId,
         course_id: course_id,
         role: "trainee" as const,
         assigned_by: user.id,
@@ -103,7 +119,7 @@ export async function POST(req: Request) {
     // Assign authorizations if selected
     if (authorization_ids.length > 0) {
       const authAssignments = authorization_ids.map(auth_id => ({
-        user_id: tempUserId,
+        user_id: userId,
         authorisation_id: auth_id,
         assigned_by: user.id,
         assignment_status: "assigned" as const
@@ -119,13 +135,14 @@ export async function POST(req: Request) {
       }
     }
 
-    const success = makeURL("/app/admin/users/new");
+    const success = await makeURL("/app/admin/users/new");
     success.searchParams.set("ok", "user_created");
     return NextResponse.redirect(success);
 
   } catch (error) {
     console.error("User creation error:", error);
-    back.searchParams.set("error", "Failed to create user");
-    return NextResponse.redirect(back);
+    const errorBack = await makeURL("/app/admin/users/new");
+    errorBack.searchParams.set("error", "Failed to create user");
+    return NextResponse.redirect(errorBack);
   }
 }
