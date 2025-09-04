@@ -2,6 +2,10 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import VideoPlayer from '@/components/VideoPlayer';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import QuizQuestionsBlock from './QuizQuestionsBlock';
 
 export const dynamic = "force-dynamic";
 
@@ -155,7 +159,48 @@ async function loadBlocks(moduleId: string) {
     .select("id, module_id, kind, data, order_index, created_at")
     .eq("module_id", moduleId)
     .order("order_index", { ascending: true })
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    // Temporarily include quiz data from the separate quiz table if module type is quiz
+    .then(async (res) => {
+      if (res.error) return res;
+      if (res.data && res.data.length === 0) {
+        // Check if this is a quiz module and load quiz data if it exists
+        const { data: mod } = await supabase
+          .from("course_modules")
+          .select("type")
+          .eq("id", moduleId)
+          .maybeSingle();
+
+        if (mod?.type === "digital_assessment_quiz") {
+          const { data: quizData } = await supabase
+            .from("quizzes")
+            .select("id, title, questions") // Assuming 'questions' is a JSONB field
+            .eq("module_id", moduleId)
+            .maybeSingle();
+
+          if (quizData && quizData.questions) {
+            // Convert quiz data into a single content block
+            const quizBlock = {
+              id: `quiz-${quizData.id}`,
+              module_id: moduleId,
+              kind: "quiz_questions", // Use a new kind for quizzes
+              data: {
+                title: quizData.title,
+                questions: quizData.questions,
+                pass_mark: quizData.pass_mark,
+                max_attempts: quizData.max_attempts,
+                shuffle: quizData.shuffle,
+                show_feedback: quizData.show_feedback,
+              },
+              order_index: 0, // Place it at the beginning
+              created_at: quizData.created_at,
+            };
+            return { data: [quizBlock], error: null };
+          }
+        }
+      }
+      return res;
+    });
   return resp.data ?? [];
 }
 
@@ -257,11 +302,94 @@ export default async function LearnerModulePage(props: {
         {blocks.length === 0 ? (
           <p className="text-sm text-gray-600">No content yet.</p>
         ) : (
-          blocks.map((b: any) => <BlockView key={b.id} block={b} />)
+          blocks.map((block: any) => { // Added 'any' to block type for compatibility
+            // Mock handleVideoProgress and DocumentRequestBlock for server component context
+            const handleVideoProgress = (progress: number) => {
+              console.log(`Video progress: ${progress}`);
+            };
+            const DocumentRequestBlock = ({ moduleId, blockId, label, requireExpiry, currentUserId }: any) => (
+              <div className="text-sm text-gray-700">
+                <p>{label}</p>
+                <p className="text-xs text-gray-500">
+                  Document upload is handled in the course view.
+                </p>
+              </div>
+            );
+
+            return (
+              <div key={block.id} className="rounded-lg border p-4">
+                {block.kind === "rich_text" && (
+                  <div className="prose max-w-none">
+                    <div className="whitespace-pre-wrap">{block.data?.text || ""}</div>
+                  </div>
+                )}
+
+                {block.kind === "link" && (
+                  <div>
+                    <a
+                      href={block.data?.url || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-blue-600 underline"
+                    >
+                      {block.data?.label || block.data?.url || "Link"} ↗
+                    </a>
+                  </div>
+                )}
+
+                {block.kind === "file" && (
+                  <div>
+                    {block.data?.storage_path ? (
+                      <a
+                        href={`/app/files/${encodeURIComponent(block.data.storage_path)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 text-blue-600 underline"
+                      >
+                        📎 {block.data?.display || "Download file"}
+                      </a>
+                    ) : (
+                      <p className="text-gray-500">No file attached</p>
+                    )}
+                  </div>
+                )}
+
+                {block.kind === "video_embed" && block.data?.url && (
+                  <VideoPlayer url={block.data.url} onProgress={handleVideoProgress} />
+                )}
+
+                {block.kind === "quiz_questions" && (
+                  <QuizQuestionsBlock
+                    moduleId={moduleId}
+                    blockId={block.id}
+                    questions={block.data?.questions || []}
+                    settings={{
+                      pass_mark: block.data?.pass_mark || 80,
+                      max_attempts: block.data?.max_attempts || 3,
+                      shuffle: block.data?.shuffle ?? true,
+                      show_feedback: block.data?.show_feedback ?? true
+                    }}
+                    currentUserId={user.id}
+                    preview={preview}
+                  />
+                )}
+
+                {block.kind === "request_document" && (
+                  <DocumentRequestBlock
+                    moduleId={moduleId}
+                    blockId={block.id}
+                    label={block.data?.label || "Please upload the requested document."}
+                    requireExpiry={!!block.data?.require_expiry}
+                    currentUserId={user.id}
+                  />
+                )}
+              </div>
+            );
+          })
         )}
 
         {/* For quiz modules, provide a launcher into the quiz player. */}
-        {mod.type === "digital_assessment_quiz" && (
+        {mod.type === "digital_assessment_quiz" && !blocks.some((b: any) => b.kind === "quiz_questions") && (
           <div className="pt-2">
             <Link
               href={`/app/learn/quiz/${course.id}?module=${mod.id}${preview ? "&preview=1" : ""}`}

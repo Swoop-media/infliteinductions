@@ -15,7 +15,7 @@ type ModuleType =
   | "onsite_assessment"
   | "request_document";
 
-type BlockKind = "rich_text" | "link" | "video_embed" | "file" | "request_document";
+type BlockKind = "rich_text" | "link" | "video_embed" | "file" | "request_document" | "quiz_questions";
 
 type ModuleRow = {
   id: string;
@@ -47,6 +47,7 @@ function iconFor(kind: BlockKind) {
     case "link": return "🔗";
     case "video_embed": return "🎬";
     case "request_document": return "📄";
+    case "quiz_questions": return "❓";
     default: return "•";
   }
 }
@@ -119,6 +120,7 @@ async function createBlock(formData: FormData) {
     kind === "video_embed" ? { url: "", gate_seconds: null } :
     kind === "file" ? { storage_path: null, display: "" } :
     kind === "request_document" ? { label: "Please upload the requested document.", require_expiry: false } :
+    kind === "quiz_questions" ? { questions: [] } : // Default for quiz questions
     {};
 
   const { error } = await supabase
@@ -432,19 +434,25 @@ export default async function ModuleEditorPage(props: {
         </div>
       </div>
 
-      {/* Create block (for digital training) or ensure single config block (request_document) */}
-      {mod.type === "digital_training" && (
+      {/* Create block (for digital training and quiz) or ensure single config block (request_document) */}
+      {(mod.type === "digital_training" || mod.type === "digital_assessment_quiz") && (
         <div className="rounded-xl border bg-white p-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">Content blocks</h2>
               <p className="text-sm text-gray-500">
-                Add text, files, videos, and links. Learner “Next” unlock can be gated by video time.
+                {mod.type === "digital_assessment_quiz" 
+                  ? "Add quiz questions, text, files, videos, and links."
+                  : "Add text, files, videos, and links. Learner \"Next\" unlock can be gated by video time."
+                }
               </p>
             </div>
             <form action={createBlock} className="flex items-center gap-2">
               <input type="hidden" name="module_id" value={mod.id} />
               <select name="kind" className="rounded-md border px-3 py-2 text-sm">
+                {mod.type === "digital_assessment_quiz" && (
+                  <option value="quiz_questions">❓ Quiz Questions</option>
+                )}
                 <option value="rich_text">✍️ Rich text</option>
                 <option value="file">📎 File</option>
                 <option value="video_embed">🎬 Video</option>
@@ -670,6 +678,14 @@ export default async function ModuleEditorPage(props: {
                           <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Save</button>
                         </div>
                       </form>
+                    )}
+
+                    {b.kind === "quiz_questions" && (
+                      <div>
+                        <h3 className="text-md font-semibold mb-2">Quiz Questions</h3>
+                        {/* Placeholder for quiz question editor */}
+                        <p className="text-sm text-gray-500">Quiz editor will go here.</p>
+                      </div>
                     )}
                   </li>
                 );

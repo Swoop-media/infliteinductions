@@ -187,6 +187,7 @@ export default async function LearnerCoursePage(props: {
   const searchParams = await props.searchParams;
   const selectedModuleId = searchParams?.module;
   const authorizationId = searchParams?.auth;
+  const preview = searchParams?.preview === '1'; // Extract preview flag
 
   const supabase = await createSupabaseServer();
 
@@ -225,7 +226,7 @@ export default async function LearnerCoursePage(props: {
   // Check if this course is part of an authorization
   let authorizationContext = null;
   let nextCourseInAuth = null;
-  
+
   if (authorizationId) {
     // Load authorization details
     const { data: auth } = await supabase
@@ -233,7 +234,7 @@ export default async function LearnerCoursePage(props: {
       .select("id, title")
       .eq("id", authorizationId)
       .single();
-    
+
     if (auth) {
       // Load all courses in this authorization
       const { data: authCourses } = await supabase
@@ -251,7 +252,7 @@ export default async function LearnerCoursePage(props: {
         if (currentIndex !== -1 && currentIndex + 1 < authCourses.length) {
           nextCourseInAuth = authCourses[currentIndex + 1];
         }
-        
+
         authorizationContext = {
           ...auth,
           courses: authCourses,
@@ -272,6 +273,12 @@ export default async function LearnerCoursePage(props: {
     console.error("Modules load error", modErr);
     notFound();
   }
+
+  // Split modules by type
+  const digitalTrainingModules = (modules ?? []).filter(mod => mod.type === "digital_training");
+  const digitalQuizModules = (modules ?? []).filter(mod => mod.type === "digital_assessment_quiz");
+  const onsiteTrainingModules = (modules ?? []).filter(mod => mod.type === "onsite_training");
+  const onsiteAssessmentModules = (modules ?? []).filter(mod => mod.type === "onsite_assessment");
 
   // Sort modules by type order then by order_index
   const sortedModules = (modules ?? []).sort((a, b) => {
@@ -315,17 +322,17 @@ export default async function LearnerCoursePage(props: {
   // Load blocks for current module
   let blocks: any[] = [];
   let blockErr = null;
-  
+
   if (currentModule) {
     const { data: blocksData, error: blocksError } = await supabase
       .from("module_content_blocks")
       .select("id, module_id, kind, data, order_index")
       .eq("module_id", currentModule.id)
       .order("order_index", { ascending: true });
-    
+
     blocks = blocksData || [];
     blockErr = blocksError;
-    
+
     if (blockErr) {
       console.error("Blocks load error for module", currentModule.id, blockErr);
     }
@@ -337,6 +344,9 @@ export default async function LearnerCoursePage(props: {
     currentModuleIndex === 0 ||
     sortedModules.slice(0, currentModuleIndex).every(m => completedModules.has(m.id))
   ) : false;
+
+  // Helper to check if a module is completed
+  const moduleCompleted = (moduleId: string) => completedModules.has(moduleId);
 
   return (
     <div className="flex h-screen">
@@ -456,7 +466,7 @@ export default async function LearnerCoursePage(props: {
           {currentModule ? (
             <div className="max-w-4xl mx-auto p-6">
               <div className="bg-white rounded-xl border shadow-sm p-8 space-y-6">
-                
+
 
                 {/* Module Content */}
                 {isCurrentModuleUnlocked ? (
@@ -468,8 +478,8 @@ export default async function LearnerCoursePage(props: {
                         {blockErr && <div className="text-red-500">Block error: {blockErr.message}</div>}
                       </div>
                     )}
-                    
-                    {blocks?.length === 0 ? (
+
+                    {blocks?.length === 0 && currentModule.type !== 'digital_assessment_quiz' ? (
                       <div className="text-center py-8">
                         <div className="text-gray-500 mb-4">
                           <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -528,14 +538,30 @@ export default async function LearnerCoursePage(props: {
 
                     {/* Module Actions */}
                     <div className="pt-6 border-t">
-                      {currentModule.type === "digital_assessment_quiz" && (
-                        <Link
-                          href={`/app/learn/quiz/modules/${currentModule.id}${authorizationId ? `?auth=${authorizationId}` : ''}`}
-                          className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                        >
-                          Start Quiz →
-                        </Link>
-                      )}
+                      {/* Digital Quiz Modules */}
+                      {digitalQuizModules.map((mod) => (
+                        <div key={mod.id} className="rounded-lg border p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h3 className="font-medium">{mod.title || "Digital Quiz"}</h3>
+                              <p className="text-sm text-gray-600">Digital Quiz</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {moduleCompleted(mod.id) ? (
+                                <span className="text-sm text-green-600">✓ Complete</span>
+                              ) : (
+                                <Link
+                                  href={`/app/learn/quiz/modules/${mod.id}${preview ? "?preview=1" : ""}${authorizationId ? `&auth=${authorizationId}` : ""}`}
+                                  className="rounded-md bg-black px-3 py-1 text-sm text-white"
+                                >
+                                  Start Quiz →
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+
 
                       {currentModule.type === "digital_training" && !isCurrentModuleCompleted && (
                         <CompleteModuleButton
@@ -572,9 +598,9 @@ export default async function LearnerCoursePage(props: {
                       )}
 
                       {/* Digital Training Complete - Show Next Steps */}
-                      {authorizationContext && completedModules.size === sortedModules.filter(m => 
+                      {authorizationContext && completedModules.size === sortedModules.filter(m =>
                         m.type === "digital_training" || m.type === "digital_assessment_quiz"
-                      ).length && sortedModules.some(m => 
+                      ).length && sortedModules.some(m =>
                         m.type === "onsite_training" || m.type === "onsite_assessment"
                       ) && progressPercent < 100 && (
                         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
