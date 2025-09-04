@@ -398,7 +398,7 @@ async function UsersSection({ q }: { q: string | null }) {
           Add New User
         </Link>
       </div>
-      
+
       <form method="get" action="/app/admin" className="flex items-center gap-2">
         <input type="hidden" name="tab" value="users" />
         <input
