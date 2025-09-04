@@ -179,15 +179,145 @@ async function BlockView({ block }: { block: any }) {
   return null;
 }
 
+// Server action to submit quiz answers
+async function submitQuizAnswers(formData: FormData) {
+  "use server";
+  const supabase = await createSupabaseServer();
+  const moduleId = formData.get("moduleId") as string;
+  const assignmentId = formData.get("assignmentId") as string;
+  const answers = JSON.parse(formData.get("answers") as string);
+
+  // TODO: Validate answers and calculate score
+  const score = 0; // Placeholder for actual score calculation
+  const passed = false; // Placeholder for pass/fail logic
+
+  // Mark module as complete and save quiz result
+  await supabase.from("assignment_progress").upsert([
+    {
+      assignment_id: assignmentId,
+      module_id: moduleId,
+      completed_at: new Date().toISOString(),
+    },
+  ]);
+
+  await supabase.from("quiz_results").insert({
+    assignment_id: assignmentId,
+    module_id: moduleId,
+    user_answers: answers,
+    score: score,
+    passed: passed,
+  });
+
+  // Redirect to the next module or course
+  const modules = await supabase.from("course_modules").select("id, course_id, order_index, type").eq("id", moduleId).single();
+  const sortedModules = await supabase.from("course_modules").select("id, course_id, order_index, type").eq("course_id", modules.data.course_id).order("order_index", { ascending: true });
+  const currentModuleIndex = sortedModules.data.findIndex((m: any) => m.id === moduleId);
+  const nextModule = sortedModules.data[currentModuleIndex + 1];
+
+  if (nextModule) {
+    redirect(`/app/learn/courses/${modules.data.course_id}?module=${nextModule.id}`);
+  } else {
+    // If no next module, redirect to course completion or next authorization course
+    const assignment = await supabase.from("course_assignments").select("course_id, id").eq("id", assignmentId).single();
+    const authorizationCourses = await supabase.from("authorisation_courses").select("order_index, course_id").eq("course_id", assignment.data.course_id).order("order_index", { ascending: true });
+    const currentAuthCourseIndex = authorizationCourses.data.findIndex((ac: any) => ac.course_id === assignment.data.course_id);
+    const nextAuthCourse = authorizationCourses.data[currentAuthCourseIndex + 1];
+
+    if (nextAuthCourse) {
+      redirect(`/app/learn/courses/${nextAuthCourse.course_id}?auth=${authorizationCourses.data.find((ac: any) => ac.course_id === nextAuthCourse.course_id)?.authorisation_id}`);
+    } else {
+      redirect(`/app/learn/courses/${modules.data.course_id}?completed=true`);
+    }
+  }
+}
+
+// Component to render quiz questions
+async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }: { moduleId: string; assignmentId: string; preview?: boolean; authorizationId?: string }) {
+  "use server";
+  const supabase = await createSupabaseServer();
+
+  // Fetch quiz questions for the module
+  const { data: quizData, error: quizErr } = await supabase
+    .from("quizzes")
+    .select("id, title, questions")
+    .eq("module_id", moduleId)
+    .single();
+
+  if (quizErr || !quizData) {
+    console.error("Quiz fetch error", quizErr);
+    return <p className="text-sm text-red-500">Failed to load quiz.</p>;
+  }
+
+  // Check if quiz is already completed
+  const { data: progress } = await supabase.from("assignment_progress").select("module_id").eq("assignment_id", assignmentId).eq("module_id", moduleId).single();
+  const isCompleted = !!progress;
+
+  if (isCompleted) {
+    // Fetch quiz result if completed
+    const { data: result } = await supabase.from("quiz_results").select("score, passed").eq("assignment_id", assignmentId).eq("module_id", moduleId).single();
+    return (
+      <div className="bg-white p-6 rounded-lg border">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">{quizData.title}</h2>
+        <div className="p-4 rounded-md border-2 text-center" style={{ borderColor: result?.passed ? '#10B981' : '#EF4444', backgroundColor: result?.passed ? '#ECFDF5' : '#FEF2F2' }}>
+          <h3 className={`text-lg font-bold ${result?.passed ? 'text-green-600' : 'text-red-600'}`}>
+            {result?.passed ? 'Congratulations! You Passed!' : 'Try Again'}
+          </h3>
+          <p className={`text-sm font-medium ${result?.passed ? 'text-green-700' : 'text-red-700'}`}>
+            Your Score: {result?.score ?? 0}%
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render quiz questions if not completed
+  const [firstQuestion] = quizData.questions;
+  const [firstOption] = firstQuestion?.options || [];
+
+  return (
+    <form action={submitQuizAnswers} className="bg-white p-6 rounded-lg border">
+      <input type="hidden" name="moduleId" value={moduleId} />
+      <input type="hidden" name="assignmentId" value={assignmentId} />
+      <input type="hidden" name="answers" value={JSON.stringify([])} /> {/* Placeholder for answers */}
+
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">{quizData.title}</h2>
+      <p className="text-sm text-gray-600 mb-6">Answer all questions to complete the quiz.</p>
+
+      {quizData.questions.map((q: any, index: number) => (
+        <div key={q.id} className="mb-6 pb-6 border-b last:border-b-0 last:pb-0">
+          <p className="text-lg font-medium text-gray-900 mb-3">
+            {index + 1}. {q.question}
+          </p>
+          <div className="space-y-2">
+            {q.options.map((opt: any) => (
+              <label key={opt.id} className="flex items-center space-x-3 text-sm text-gray-700">
+                <input type="radio" name={`question-${q.id}`} value={opt.id} className="form-radio text-blue-600" />
+                <span>{opt.text}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <div className="flex justify-end pt-6 border-t">
+        <button type="submit" className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+          Submit Quiz
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export default async function LearnerCoursePage(props: {
   params: Promise<RouteParams>;
-  searchParams?: Promise<{ module?: string; auth?: string }>;
+  searchParams?: Promise<{ module?: string; auth?: string; quiz?: string }>;
 }) {
   const { id: courseId } = await props.params;
   const searchParams = await props.searchParams;
   const selectedModuleId = searchParams?.module;
   const authorizationId = searchParams?.auth;
   const preview = searchParams?.preview === '1'; // Extract preview flag
+  const showQuiz = searchParams?.quiz === 'start'; // Check if quiz should be displayed
 
   const supabase = await createSupabaseServer();
 
@@ -323,7 +453,7 @@ export default async function LearnerCoursePage(props: {
   let blocks: any[] = [];
   let blockErr = null;
 
-  if (currentModule) {
+  if (currentModule && currentModule.type !== 'digital_assessment_quiz') {
     const { data: blocksData, error: blocksError } = await supabase
       .from("module_content_blocks")
       .select("id, module_id, kind, data, order_index")
@@ -467,19 +597,20 @@ export default async function LearnerCoursePage(props: {
             <div className="max-w-4xl mx-auto p-6">
               <div className="bg-white rounded-xl border shadow-sm p-8 space-y-6">
 
-
                 {/* Module Content */}
                 {isCurrentModuleUnlocked ? (
                   <div className="space-y-6">
-                    {/* Debug info - remove in production */}
-                    {process.env.NODE_ENV === 'development' && (
-                      <div className="text-xs text-gray-400 p-2 bg-gray-50 rounded">
-                        Debug: Module ID: {currentModule?.id}, Blocks count: {blocks?.length || 0}
-                        {blockErr && <div className="text-red-500">Block error: {blockErr.message}</div>}
-                      </div>
+                    {/* Render Quiz if showQuiz is true */}
+                    {showQuiz && currentModule.type === 'digital_assessment_quiz' && (
+                      <QuizRenderer
+                        moduleId={currentModule.id}
+                        assignmentId={assignment.id}
+                        preview={preview}
+                        authorizationId={authorizationId}
+                      />
                     )}
 
-                    {blocks?.length === 0 && currentModule.type !== 'digital_assessment_quiz' ? (
+                    {!showQuiz && blocks?.length === 0 && currentModule.type !== 'digital_assessment_quiz' ? (
                       <div className="text-center py-8">
                         <div className="text-gray-500 mb-4">
                           <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -493,7 +624,7 @@ export default async function LearnerCoursePage(props: {
                         )}
                       </div>
                     ) : (
-                      blocks?.map((block) => (
+                      !showQuiz && blocks?.map((block) => (
                         <div key={block.id} className="space-y-4">
                           <BlockView block={block} />
                         </div>
@@ -501,7 +632,7 @@ export default async function LearnerCoursePage(props: {
                     )}
 
                     {/* Digital Training Module Content */}
-                    {currentModule.type === 'digital_training' && (
+                    {currentModule.type === 'digital_training' && !isCurrentModuleCompleted && !showQuiz && (
                       <div className="bg-white p-6 rounded-lg border">
                         <div className="flex items-start gap-4">
                           <div className="flex-shrink-0">
@@ -551,7 +682,7 @@ export default async function LearnerCoursePage(props: {
                                 <span className="text-sm text-green-600">✓ Complete</span>
                               ) : (
                                 <Link
-                                  href={`/app/learn/quiz/modules/${mod.id}${preview ? "?preview=1" : ""}${authorizationId ? `&auth=${authorizationId}` : ""}`}
+                                  href={`/app/learn/courses/${courseId}?module=${mod.id}&quiz=start${preview ? "&preview=1" : ""}${authorizationId ? `&auth=${authorizationId}` : ""}`}
                                   className="rounded-md bg-black px-3 py-1 text-sm text-white"
                                 >
                                   Start Quiz →
@@ -563,7 +694,7 @@ export default async function LearnerCoursePage(props: {
                       ))}
 
 
-                      {currentModule.type === "digital_training" && !isCurrentModuleCompleted && (
+                      {currentModule.type === "digital_training" && !isCurrentModuleCompleted && !showQuiz && (
                         <CompleteModuleButton
                           assignmentId={assignment.id}
                           moduleId={currentModule.id}
@@ -592,7 +723,7 @@ export default async function LearnerCoursePage(props: {
                             href={`/app/learn/courses/${nextCourseInAuth.course_id}?auth=${authorizationId}`}
                             className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
                           >
-                            Next: {nextCourseInAuth.courses.title} →
+                            Next: {nextAuthCourse.courses.title} →
                           </Link>
                         </div>
                       )}
@@ -613,7 +744,7 @@ export default async function LearnerCoursePage(props: {
                               href={`/app/learn/courses/${nextCourseInAuth.course_id}?auth=${authorizationId}`}
                               className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-medium"
                             >
-                              Continue with: {nextCourseInAuth.courses.title} →
+                              Continue with: {nextAuthCourse.courses.title} →
                             </Link>
                           )}
                         </div>
