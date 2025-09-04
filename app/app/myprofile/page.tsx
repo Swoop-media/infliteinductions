@@ -257,43 +257,20 @@ export default async function MyProfilePage() {
 
       {/* My learning */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* In progress */}
-        <section className="space-y-3 rounded-xl border bg-white p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">In progress</h2>
-            <Pill tone="blue">{inProgressCourses.length + inProgressAuth.length}</Pill>
-          </div>
+        {/* Left Column: In Progress */}
+        <div className="space-y-6">
+          {/* In Progress Authorizations */}
+          <section className="space-y-3 rounded-xl border bg-white p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">In Progress Authorizations</h2>
+              <Pill tone="blue">{inProgressAuth.length}</Pill>
+            </div>
 
-          <div className="space-y-4">
-            {(inProgressCourses.length === 0 && inProgressAuth.length === 0) ? (
-              <p className="text-sm text-gray-500">
-                You don't have any assigned courses yet. Visit <Link href="/app/courses" className="underline">Courses</Link> to enrol.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {/* Course assignments */}
-                {(inProgressCourses ?? []).map((assignment: any) => {
-                  const course = assignment.courses;
-                  return (
-                    <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
-                      <div>
-                        <h3 className="font-medium">{course.title}</h3>
-                        <p className="text-sm text-gray-600 capitalize">
-                          Course • {assignment.assignment_status.replace('_', ' ')}
-                        </p>
-                      </div>
-                      <Link
-                        href={`/app/learn/courses/${course.id}`}
-                        className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-                      >
-                        Continue
-                      </Link>
-                    </div>
-                  );
-                })}
-
-                {/* Authorization assignments */}
-                {(inProgressAuth ?? []).map((assignment: any) => {
+            <div className="space-y-3">
+              {inProgressAuth.length === 0 ? (
+                <p className="text-sm text-gray-500">No authorizations in progress.</p>
+              ) : (
+                inProgressAuth.map((assignment: any) => {
                   const auth = assignment.authorisations;
                   const completedCoursesCount = assignment.courses.filter((c: any) => 
                     c.assignment?.assignment_status === "completed"
@@ -306,7 +283,7 @@ export default async function MyProfilePage() {
                       <div className="flex-1">
                         <h3 className="font-medium">{auth.title}</h3>
                         <p className="text-sm text-gray-600 capitalize">
-                          Authorization • {assignment.assignment_status.replace('_', ' ')}
+                          {assignment.assignment_status.replace('_', ' ')}
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           {completedCoursesCount} of {totalCourses} courses completed
@@ -331,101 +308,149 @@ export default async function MyProfilePage() {
                             href={`/app/learn/courses/${firstCourse.course_id}`}
                             className="rounded-md bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-700"
                           >
-                            Continue Authorization
+                            Continue
                           </Link>
                         )}
                       </div>
                     </div>
                   );
-                })}
-              </div>
-            )}
-          </div>
-        </section>
+                })
+              )}
+            </div>
+          </section>
 
-        {/* Completed */}
-        <section className="space-y-3 rounded-xl border bg-white p-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Completed</h2>
-            <Pill tone="green">{completedCourses.length + completedAuth.length}</Pill>
-          </div>
+          {/* In Progress Courses */}
+          <section className="space-y-3 rounded-xl border bg-white p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">In Progress Courses</h2>
+              <Pill tone="blue">{inProgressCourses.length}</Pill>
+            </div>
 
-          {(completedCourses.length === 0 && completedAuth.length === 0) ? (
-            <p className="text-sm text-gray-500">No completions yet.</p>
-          ) : (
             <div className="space-y-3">
-              {/* Completed Courses */}
-              {completedCourses.map((assignment) => {
-                const course = assignment.courses;
-                return (
-                  <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
-                    <div>
-                      <h3 className="font-medium">{course.title ?? "Untitled"}</h3>
-                      <p className="text-sm text-gray-600">
-                        Course • Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Pill tone="green">Completed</Pill>
+              {inProgressCourses.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  No individual courses in progress. Visit <Link href="/app/courses" className="underline">Courses</Link> to enrol.
+                </p>
+              ) : (
+                inProgressCourses.map((assignment: any) => {
+                  const course = assignment.courses;
+                  return (
+                    <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
+                      <div>
+                        <h3 className="font-medium">{course.title}</h3>
+                        <p className="text-sm text-gray-600 capitalize">
+                          {assignment.assignment_status.replace('_', ' ')}
+                        </p>
+                      </div>
                       <Link
                         href={`/app/learn/courses/${course.id}`}
-                        className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
+                        className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
                       >
-                        View
+                        Continue
                       </Link>
                     </div>
-                  </div>
-                );
-              })}
-
-              {/* Completed Authorizations */}
-              {(completedAuth ?? []).map((assignment) => {
-                const auth = assignment.authorisations;
-                const completedCoursesCount = assignment.courses.filter((c: any) => 
-                  c.assignment?.assignment_status === "completed"
-                ).length;
-                const totalCourses = assignment.courses.length;
-
-                return (
-                  <div key={assignment.id} className="rounded-lg border p-4 bg-green-50">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="font-medium">{auth.title}</h3>
-                        <p className="text-sm text-gray-600">
-                          Authorization • Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          All {totalCourses} courses completed
-                        </p>
-
-                        {/* Show completed courses */}
-                        {assignment.courses.length > 0 && (
-                          <div className="mt-2">
-                            <p className="text-xs text-gray-600 font-medium">Courses completed:</p>
-                            <div className="ml-2 space-y-1">
-                              {assignment.courses.map((c: any) => (
-                                <div key={c.course_id} className="flex items-center gap-1">
-                                  <span className="text-green-600 text-xs">✓</span>
-                                  <Link
-                                    href={`/app/learn/courses/${c.course_id}`}
-                                    className="text-xs text-blue-600 hover:underline"
-                                  >
-                                    {c.courses.title}
-                                  </Link>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <Pill tone="green">Completed</Pill>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
-          )}
-        </section>
+          </section>
+        </div>
+
+        {/* Right Column: Completed */}
+        <div className="space-y-6">
+          {/* Completed Authorizations */}
+          <section className="space-y-3 rounded-xl border bg-white p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Completed Authorizations</h2>
+              <Pill tone="green">{completedAuth.length}</Pill>
+            </div>
+
+            <div className="space-y-3">
+              {completedAuth.length === 0 ? (
+                <p className="text-sm text-gray-500">No completed authorizations yet.</p>
+              ) : (
+                completedAuth.map((assignment) => {
+                  const auth = assignment.authorisations;
+                  const totalCourses = assignment.courses.length;
+
+                  return (
+                    <div key={assignment.id} className="rounded-lg border p-4 bg-green-50">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h3 className="font-medium">{auth.title}</h3>
+                          <p className="text-sm text-gray-600">
+                            Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            All {totalCourses} courses completed
+                          </p>
+
+                          {/* Show completed courses */}
+                          {assignment.courses.length > 0 && (
+                            <div className="mt-2">
+                              <p className="text-xs text-gray-600 font-medium">Courses completed:</p>
+                              <div className="ml-2 space-y-1">
+                                {assignment.courses.map((c: any) => (
+                                  <div key={c.course_id} className="flex items-center gap-1">
+                                    <span className="text-green-600 text-xs">✓</span>
+                                    <Link
+                                      href={`/app/learn/courses/${c.course_id}`}
+                                      className="text-xs text-blue-600 hover:underline"
+                                    >
+                                      {c.courses.title}
+                                    </Link>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <Pill tone="green">Completed</Pill>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </section>
+
+          {/* Completed Courses */}
+          <section className="space-y-3 rounded-xl border bg-white p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Completed Courses</h2>
+              <Pill tone="green">{completedCourses.length}</Pill>
+            </div>
+
+            <div className="space-y-3">
+              {completedCourses.length === 0 ? (
+                <p className="text-sm text-gray-500">No completed individual courses yet.</p>
+              ) : (
+                completedCourses.map((assignment) => {
+                  const course = assignment.courses;
+                  return (
+                    <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
+                      <div>
+                        <h3 className="font-medium">{course.title ?? "Untitled"}</h3>
+                        <p className="text-sm text-gray-600">
+                          Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Pill tone="green">Completed</Pill>
+                        <Link
+                          href={`/app/learn/courses/${course.id}`}
+                          className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
+                        >
+                          View
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </section>
+        </div>
       </div>
 
       {/* Teams Integration Section */}
