@@ -60,11 +60,21 @@ export async function POST(req: Request) {
 
     if (authError) {
       console.error("Auth user creation error:", authError);
-      back.searchParams.set("error", "Failed to create user account");
+      back.searchParams.set("error", `Failed to create user account: ${authError.message}`);
+      return NextResponse.redirect(back);
+    }
+
+    if (!authUser?.user?.id) {
+      console.error("Auth user creation succeeded but no user ID returned");
+      back.searchParams.set("error", "Failed to create user account - no ID returned");
       return NextResponse.redirect(back);
     }
 
     const userId = authUser.user.id;
+    console.log("Created auth user with ID:", userId);
+
+    // Small delay to ensure auth user is fully committed to database
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Create profile record
     const { data: profile, error: profileError } = await supabaseService
@@ -84,10 +94,17 @@ export async function POST(req: Request) {
     if (profileError) {
       console.error("Profile creation error:", profileError);
       // If profile creation fails, clean up the auth user
-      await supabaseService.auth.admin.deleteUser(userId);
-      back.searchParams.set("error", "Failed to create user profile");
+      try {
+        await supabaseService.auth.admin.deleteUser(userId);
+        console.log("Cleaned up auth user after profile creation failure");
+      } catch (cleanupError) {
+        console.error("Failed to cleanup auth user:", cleanupError);
+      }
+      back.searchParams.set("error", `Failed to create user profile: ${profileError.message}`);
       return NextResponse.redirect(back);
     }
+
+    console.log("Created profile for user:", userId);
 
     // Get current admin user for assignment tracking
     const { data: { user } } = await supabase.auth.getUser();
