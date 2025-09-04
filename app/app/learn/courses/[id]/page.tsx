@@ -730,14 +730,39 @@ export default async function LearnerCoursePage(props: {
                 {/* Module Content */}
                 {isCurrentModuleUnlocked ? (
                   <div className="space-y-6">
-                    {/* Render Quiz if showQuiz is true */}
-                    {showQuiz && currentModule.type === 'digital_assessment_quiz' && (
+                    {/* Render Quiz if current module is quiz type and quiz parameter is present */}
+                    {currentModule.type === 'digital_assessment_quiz' && showQuiz && (
                       <QuizRenderer
                         moduleId={currentModule.id}
                         assignmentId={assignment.id}
                         preview={preview}
                         authorizationId={authorizationId}
                       />
+                    )}
+
+                    {/* Show Start Quiz button only if current module is quiz type and quiz not started */}
+                    {currentModule.type === 'digital_assessment_quiz' && !showQuiz && (
+                      <div className="bg-white p-6 rounded-lg border">
+                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Digital Assessment Quiz</h2>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-medium">{currentModule.title || "Digital Quiz"}</h3>
+                            <p className="text-sm text-gray-600">Complete this quiz to proceed</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {isCurrentModuleCompleted ? (
+                              <span className="text-sm text-green-600">✓ Complete</span>
+                            ) : (
+                              <Link
+                                href={`/app/learn/courses/${courseId}?module=${currentModule.id}&quiz=start${preview ? "&preview=1" : ""}${authorizationId ? `&auth=${authorizationId}` : ""}`}
+                                className="rounded-md bg-black px-3 py-1 text-sm text-white"
+                              >
+                                Start Quiz →
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     )}
 
                     {!showQuiz && blocks?.length === 0 && currentModule.type !== 'digital_assessment_quiz' ? (
@@ -799,31 +824,6 @@ export default async function LearnerCoursePage(props: {
 
                     {/* Module Actions */}
                     <div className="pt-6 border-t">
-                      {/* Digital Quiz Modules */}
-                      {digitalQuizModules.map((mod) => (
-                        <div key={mod.id} className="rounded-lg border p-4">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="font-medium">{mod.title || "Digital Quiz"}</h3>
-                              <p className="text-sm text-gray-600">Digital Quiz</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {moduleCompleted(mod.id) ? (
-                                <span className="text-sm text-green-600">✓ Complete</span>
-                              ) : (
-                                <Link
-                                  href={`/app/learn/courses/${courseId}?module=${mod.id}&quiz=start${preview ? "&preview=1" : ""}${authorizationId ? `&auth=${authorizationId}` : ""}`}
-                                  className="rounded-md bg-black px-3 py-1 text-sm text-white"
-                                >
-                                  Start Quiz →
-                                </Link>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-
-
                       {currentModule.type === "digital_training" && !isCurrentModuleCompleted && !showQuiz && (
                         <CompleteModuleButton
                           assignmentId={assignment.id}
