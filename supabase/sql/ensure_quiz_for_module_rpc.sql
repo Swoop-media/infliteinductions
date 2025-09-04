@@ -15,7 +15,7 @@ BEGIN
   -- Get module information
   SELECT course_id, type INTO v_module_record 
   FROM course_modules 
-  WHERE id = p_module_id;
+  WHERE course_modules.id = p_module_id;
   
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Module not found: %', p_module_id;
@@ -46,17 +46,16 @@ BEGIN
     -- Update legacy quiz to be associated with this module
     UPDATE quizzes 
     SET module_id = p_module_id 
-    WHERE id = v_quiz_record.id;
+    WHERE quizzes.id = v_quiz_record.id;
     
     RETURN QUERY SELECT v_quiz_record.id, v_quiz_record.pass_mark, v_quiz_record.max_attempts, v_quiz_record.shuffle;
     RETURN;
   END IF;
   
-  -- Create new quiz for this module
+  -- Create new quiz for this module and return it directly
+  RETURN QUERY 
   INSERT INTO quizzes (module_id, course_id, pass_mark, max_attempts, shuffle)
   VALUES (p_module_id, v_module_record.course_id, 70, 3, false)
-  RETURNING quizzes.id, quizzes.pass_mark, quizzes.max_attempts, quizzes.shuffle INTO v_quiz_record;
-  
-  RETURN QUERY SELECT v_quiz_record.id, v_quiz_record.pass_mark, v_quiz_record.max_attempts, v_quiz_record.shuffle;
+  RETURNING quizzes.id, quizzes.pass_mark, quizzes.max_attempts, quizzes.shuffle;
 END;
 $$;
