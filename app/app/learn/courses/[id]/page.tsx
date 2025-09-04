@@ -313,17 +313,22 @@ export default async function LearnerCoursePage(props: {
   }
 
   // Load blocks for current module
-  const { data: blocks, error: blockErr } = currentModule
-    ? await supabase
-        .from("module_content_blocks")
-        .select("id, module_id, kind, data, order_index")
-        .eq("module_id", currentModule.id)
-        .order("order_index", { ascending: true })
-    : { data: [], error: null as any };
-
-  if (blockErr) {
-    console.error("Blocks load error", blockErr);
-    notFound();
+  let blocks: any[] = [];
+  let blockErr = null;
+  
+  if (currentModule) {
+    const { data: blocksData, error: blocksError } = await supabase
+      .from("module_content_blocks")
+      .select("id, module_id, kind, data, order_index")
+      .eq("module_id", currentModule.id)
+      .order("order_index", { ascending: true });
+    
+    blocks = blocksData || [];
+    blockErr = blocksError;
+    
+    if (blockErr) {
+      console.error("Blocks load error for module", currentModule.id, blockErr);
+    }
   }
 
   const currentModuleIndex = currentModule ? sortedModules.findIndex(m => m.id === currentModule!.id) : -1;
@@ -456,8 +461,27 @@ export default async function LearnerCoursePage(props: {
                 {/* Module Content */}
                 {isCurrentModuleUnlocked ? (
                   <div className="space-y-6">
+                    {/* Debug info - remove in production */}
+                    {process.env.NODE_ENV === 'development' && (
+                      <div className="text-xs text-gray-400 p-2 bg-gray-50 rounded">
+                        Debug: Module ID: {currentModule?.id}, Blocks count: {blocks?.length || 0}
+                        {blockErr && <div className="text-red-500">Block error: {blockErr.message}</div>}
+                      </div>
+                    )}
+                    
                     {blocks?.length === 0 ? (
-                      <p className="text-gray-600">No content available for this module.</p>
+                      <div className="text-center py-8">
+                        <div className="text-gray-500 mb-4">
+                          <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Content Available</h3>
+                        <p className="text-gray-600 mb-4">This module doesn't have any content blocks yet.</p>
+                        {currentModule?.type === 'digital_training' && (
+                          <p className="text-sm text-gray-500">Contact your course creator to add content to this training module.</p>
+                        )}
+                      </div>
                     ) : (
                       blocks?.map((block) => (
                         <div key={block.id} className="space-y-4">
