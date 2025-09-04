@@ -4,17 +4,18 @@ import { redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
-import SendExpiryRemindersButton from "./_components/SendExpiryRemindersButton";
 import SortableDueDatesTable from "./_components/SortableDueDatesTable";
 
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "due_dates" | "users";
+type TabKey = "due_dates_courses" | "due_dates_authorisations" | "users";
 
 function tabFromSearch(sp: Record<string, string | string[] | undefined>): TabKey {
   const raw = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab || "";
-  return raw === "users" ? "users" : "due_dates";
+  if (raw === "users") return "users";
+  if (raw === "due_dates_authorisations") return "due_dates_authorisations";
+  return "due_dates_courses";
 }
 
 function banner(ok?: string | null, error?: string | null) {
@@ -254,7 +255,8 @@ export default async function AdminPage({
     (Array.isArray(resolvedSearchParams?.q) ? resolvedSearchParams?.q[0] : resolvedSearchParams?.q) ?? null;
 
   const tabs: { key: TabKey; label: string; href: string }[] = [
-    { key: "due_dates", label: "Due Dates", href: "/app/admin?tab=due_dates" },
+    { key: "due_dates_courses", label: "Due Dates - Courses", href: "/app/admin?tab=due_dates_courses" },
+    { key: "due_dates_authorisations", label: "Due Dates - Authorisations", href: "/app/admin?tab=due_dates_authorisations" },
     { key: "users", label: "Users & Roles", href: "/app/admin?tab=users" },
   ];
 
@@ -263,9 +265,7 @@ export default async function AdminPage({
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin</h1>
         <div className="flex gap-2">
-          <Link href="/app/courses" className="rounded-md border px-3 py-1 text-sm">Courses</Link>
-          <Link href="/app/admin/authorisations" className="rounded-md border px-3 py-1 text-sm">Authorisation Due Dates</Link>
-          <SendExpiryRemindersButton />
+          {/* Removed unnecessary buttons */}
         </div>
       </div>
 
@@ -290,8 +290,10 @@ export default async function AdminPage({
       </div>
 
       <div className="rounded-xl border bg-white p-4">
-        {tab === "due_dates" ? (
-          <DueDatesSection q={q} />
+        {tab === "due_dates_courses" ? (
+          <DueDatesCourseSection q={q} />
+        ) : tab === "due_dates_authorisations" ? (
+          <DueDatesAuthorisationSection q={q} />
         ) : (
           <UsersSection q={q} />
         )}
@@ -304,7 +306,7 @@ export default async function AdminPage({
    SUBSECTIONS
 ---------------------------*/
 
-async function DueDatesSection({ q }: { q: string | null }) {
+async function DueDatesCourseSection({ q }: { q: string | null }) {
   const completedCourses = await loadCompletedCoursesWithDueDates(q);
 
   return (
@@ -312,7 +314,7 @@ async function DueDatesSection({ q }: { q: string | null }) {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Course Due Dates</h2>
         <form method="get" action="/app/admin" className="flex items-center gap-2">
-          <input type="hidden" name="tab" value="due_dates" />
+          <input type="hidden" name="tab" value="due_dates_courses" />
           <input
             name="q"
             defaultValue={q ?? ""}
@@ -324,6 +326,60 @@ async function DueDatesSection({ q }: { q: string | null }) {
       </div>
 
       <SortableDueDatesTable completedCourses={completedCourses} />
+    </div>
+  );
+}
+
+async function DueDatesAuthorisationSection({ q }: { q: string | null }) {
+  // TODO: Implement authorization due dates loading logic
+  const completedAuthorisations: any[] = [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Authorisation Due Dates</h2>
+        <form method="get" action="/app/admin" className="flex items-center gap-2">
+          <input type="hidden" name="tab" value="due_dates_authorisations" />
+          <input
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Search trainee, authorisation, or email"
+            className="w-80 rounded-md border px-3 py-2 text-sm"
+          />
+          <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Search</button>
+        </form>
+      </div>
+
+      {completedAuthorisations.length === 0 ? (
+        <p className="text-sm text-gray-600">No completed authorisations found.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Trainee
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Authorisation
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Completed
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Due Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {/* TODO: Map through completed authorisations */}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
