@@ -342,11 +342,15 @@ async function createQuestion(formData: FormData) {
 
   // Get next order index
   const nextOrder = await nextQuestionOrder({ id: quizId } as any, { id: moduleId, course_id: mod.course_id } as any);
-  
+
   // Create question with proper schema structure - try multiple column names
+  // Ensure type is valid according to database constraint
+  const validTypes = ['mcq', 'multi', 'true_false', 'short_text'];
+  const validType = validTypes.includes(qType) ? qType : 'mcq'; // default to mcq if invalid
+
   const basePayload = {
     module_id: moduleId,
-    type: qType,
+    type: validType,
     points: 1,
     order_index: nextOrder,
   };
@@ -373,7 +377,7 @@ async function createQuestion(formData: FormData) {
     const answers = ansCsv
       ? Array.from(new Set(ansCsv.split(",").map((s) => s.trim()).filter(Boolean)))
       : [];
-    
+
     if (answers.length > 0) {
       // Store answers in a format that can be retrieved later
       const answersValue = answers.join(",");
@@ -384,7 +388,7 @@ async function createQuestion(formData: FormData) {
           .eq("id", qIns.id);
       } catch {}
     }
-    
+
     revalidatePath(`/app/creator/modules/${moduleId}/quiz`);
     redirect(`/app/creator/modules/${moduleId}/quiz?notice=question_created`);
     return;
