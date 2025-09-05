@@ -351,10 +351,11 @@ async function createQuestion(formData: FormData) {
     order_index: nextOrder,
   };
 
-  // Use the correct column name from schema
+  // Use the correct column names - set both stem and prompt to avoid null constraint errors
   const questionPayload = {
     ...basePayload,
     stem: body,
+    prompt: body, // Also set prompt to avoid null constraint error
   };
 
   const { data: qIns, error: qError } = await supabase
