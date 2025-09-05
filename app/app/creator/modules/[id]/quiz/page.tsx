@@ -351,12 +351,11 @@ async function createQuestion(formData: FormData) {
     order_index: nextOrder,
   };
 
-  // Try different column names for the question text
+  // Try different column names for the question text (stem is the correct one from schema)
   const textColumnTries = [
-    { ...basePayload, prompt: body },
     { ...basePayload, stem: body },
+    { ...basePayload, prompt: body },
     { ...basePayload, question: body },
-    { ...basePayload, text: body },
   ];
 
   let qIns: any = null;
@@ -627,7 +626,7 @@ async function updateQuestionText(formData: FormData) {
   if (!moduleId || !questionId) throw new Error("Missing fields");
 
   // Try stem first (correct field), then fallback to other columns
-  const textCols = ["stem", "body_md", "body", "text", "question", "title", "prompt"];
+  const textCols = ["stem", "body_md", "body", "question", "title", "prompt"];
   let updated = false;
   for (const col of textCols) {
     const r = await supabase.from("quiz_questions").update({ [col]: body } as any).eq("id", questionId);
