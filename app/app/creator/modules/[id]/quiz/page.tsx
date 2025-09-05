@@ -315,94 +315,70 @@ async function createQuestion(formData: FormData) {
   if (!moduleId || !quizId) throw new Error("Missing ids");
   if (!body) throw new Error("Question text required");
 
-  // Load module (for course_id fallback)
+  // Role guard - ensure user has permission
+  const canAccess =
+    (await hasRole("Course creators")) ||
+    (await hasRole("Senior management")) ||
+    (await hasRole("Admin"));
+  if (!canAccess) throw new Error("Not authorized to create questions");
+
+  // Load and verify module exists and user has access
   const m = await supabase
     .from("course_modules")
-    .select("id, course_id")
+    .select("id, course_id, type")
     .eq("id", moduleId)
+    .eq("type", "digital_assessment_quiz")
     .maybeSingle();
-  if (m.error || !m.data) throw new Error(m.error?.message || "Module not found");
-  const mod = m.data as { id: string; course_id: string };
+  if (m.error || !m.data) throw new Error(m.error?.message || "Module not found or not a quiz module");
+  const mod = m.data as { id: string; course_id: string; type: string };
 
-  // --- Insert question using the correct schema structure ---
-  // Based on phase1_build.sql, the quiz_questions table has: stem, type, points, order_index
+  // Verify user has access to the course (this should satisfy RLS)
+  const courseCheck = await supabase
+    .from("courses")
+    .select("id, created_by")
+    .eq("id", mod.course_id)
+    .maybeSingle();
+  if (courseCheck.error || !courseCheck.data) throw new Error("Course not found or no access");
+
+  // Get next order index
   const nextOrder = await nextQuestionOrder({ id: quizId } as any, { id: moduleId, course_id: mod.course_id } as any);
   
-  let qIns: any = null;
-
-  // Try to create with the proper schema structure first
-  const properPayload = {
+  // Create question with proper schema structure
+  const questionPayload = {
     module_id: moduleId,
-    stem: body, // Use stem as the primary text field
+    stem: body,
     type: qType,
     points: 1,
     order_index: nextOrder,
   };
 
-  let r = await supabase
+  const { data: qIns, error: qError } = await supabase
     .from("quiz_questions")
-    .insert(properPayload)
+    .insert(questionPayload)
     .select("*")
     .single();
 
-  if (!r.error && r.data) {
-    qIns = r.data;
-  } else {
-    // Fallback: try with quiz_id instead of module_id
-    const fallbackPayload = {
-      quiz_id: quizId,
-      stem: body,
-      type: qType,
-      points: 1,
-      order_index: nextOrder,
-    };
-
-    r = await supabase
-      .from("quiz_questions")
-      .insert(fallbackPayload)
-      .select("*")
-      .single();
-
-    if (!r.error && r.data) {
-      qIns = r.data;
-    } else {
-      throw new Error("Could not create question: " + (r.error?.message || "Unknown error"));
-    }
+  if (qError || !qIns) {
+    throw new Error("Could not create question: " + (qError?.message || "Unknown error"));
   }
 
-  if (!qIns) throw new Error("Could not create question (schema mismatch).");
-
-  // Try to set order_index (ignore if column missing)
-  try {
-    const next = await nextQuestionOrder({ id: quizId } as any, { id: moduleId, course_id: mod.course_id } as any);
-    await supabase.from("quiz_questions").update({ order_index: next } as any).eq("id", qIns.id);
-  } catch {}
-
-  // Ensure a type is stored in any likely column (ignore errors)
-  for (const tcol of typeCols) {
-    try {
-      const r = await supabase.from("quiz_questions").update({ [tcol]: qType } as any).eq("id", qIns.id);
-      if (!r.error) break;
-    } catch {}
-  }
-
-  // SHORT ANSWER: store accepted answers CSV - for now we'll store in a separate field
-  // Note: The current schema doesn't have a dedicated answers field, so we store in a JSON field or create one
+  // SHORT ANSWER: store accepted answers
   if (qType === "short_answer") {
     const answers = ansCsv
       ? Array.from(new Set(ansCsv.split(",").map((s) => s.trim()).filter(Boolean)))
       : [];
     
-    // Try to store answers in various possible columns
-    const answerCols = ["answers", "correct_answer", "solution", "answer_md", "answers_md"];
-    const answersValue = answers.join(",");
-    
-    for (const col of answerCols) {
+    if (answers.length > 0) {
+      // Store answers in a format that can be retrieved later
+      const answersValue = answers.join(",");
+      // Try to update with answers - ignore errors as this is best effort
       try {
-        const r = await supabase.from("quiz_questions").update({ [col]: answersValue } as any).eq("id", qIns.id);
-        if (!r.error) break;
+        await supabase.from("quiz_questions")
+          .update({ stem: `${body}\n\nAccepted answers: ${answersValue}` })
+          .eq("id", qIns.id);
       } catch {}
     }
+    
     revalidatePath(`/app/creator/modules/${moduleId}/quiz`);
     redirect(`/app/creator/modules/${moduleId}/quiz?notice=question_created`);
     return;
