@@ -351,32 +351,20 @@ async function createQuestion(formData: FormData) {
     order_index: nextOrder,
   };
 
-  // Try different column names for the question text (stem is the correct one from schema)
-  const textColumnTries = [
-    { ...basePayload, stem: body },
-    { ...basePayload, prompt: body },
-    { ...basePayload, question: body },
-  ];
+  // Use the correct column name from schema
+  const questionPayload = {
+    ...basePayload,
+    stem: body,
+  };
 
-  let qIns: any = null;
-  let lastError: any = null;
+  const { data: qIns, error: qError } = await supabase
+    .from("quiz_questions")
+    .insert(questionPayload)
+    .select("*")
+    .single();
 
-  for (const payload of textColumnTries) {
-    const { data, error } = await supabase
-      .from("quiz_questions")
-      .insert(payload)
-      .select("*")
-      .single();
-    
-    if (!error && data) {
-      qIns = data;
-      break;
-    }
-    lastError = error;
-  }
-
-  if (!qIns) {
-    throw new Error("Could not create question: " + (lastError?.message || "Unknown error"));
+  if (qError || !qIns) {
+    throw new Error("Could not create question: " + (qError?.message || "Unknown error"));
   }
 
   // SHORT ANSWER: store accepted answers
