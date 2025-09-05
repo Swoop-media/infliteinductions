@@ -723,17 +723,17 @@ export default async function LearnerCoursePage(props: {
         <div className="p-4 border-b bg-white">
           {authorizationContext ? (
             <div className="space-y-2">
-              <Link href={`/app/learn/authorisations/${authorizationId}`} className="text-sm text-blue-600 hover:underline block">
-                ← Back to {authorizationContext.title}
+              <Link href="/app/myprofile" className="text-sm text-blue-600 hover:underline block">
+                ← Back to my courses
               </Link>
               <div className="flex items-center gap-2 text-xs text-gray-500">
-                <span>Authorization Progress:</span>
+                <span>Authorization: {authorizationContext.title}</span>
                 <span>Course {authorizationContext.currentIndex} of {authorizationContext.totalCourses}</span>
               </div>
             </div>
           ) : (
-            <Link href="/app/learn" className="text-sm text-blue-600 hover:underline mb-2 block">
-              ← Back to courses
+            <Link href="/app/myprofile" className="text-sm text-blue-600 hover:underline mb-2 block">
+              ← Back to my courses
             </Link>
           )}
           <h1 className="text-lg font-semibold text-gray-900 mb-1">
@@ -1006,43 +1006,41 @@ export default async function LearnerCoursePage(props: {
                         </div>
                       )}
 
-                      {/* Next Course in Authorization */}
-                      {progressPercent === 100 && nextCourseInAuth && (
+                      {/* Next Course in Authorization - Show for both full completion and digital completion */}
+                      {nextCourseInAuth && (progressPercent === 100 || 
+                        (authorizationContext && completedModules.size === sortedModules.filter(m =>
+                          m.type === "digital_training" || m.type === "digital_assessment_quiz"
+                        ).length && sortedModules.filter(m =>
+                          m.type === "digital_training" || m.type === "digital_assessment_quiz"
+                        ).length > 0)) && (
                         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                          <h3 className="font-medium text-green-800 mb-2">Course Complete! 🎉</h3>
+                          <h3 className="font-medium text-green-800 mb-2">
+                            {progressPercent === 100 ? 'Course Complete! 🎉' : 'Digital Training Complete! 📚'}
+                          </h3>
                           <p className="text-sm text-green-700 mb-3">
-                            Ready to continue with the next course in your authorization?
+                            {progressPercent === 100 
+                              ? 'Ready to continue with the next course in your authorization?'
+                              : 'Continue with digital training for the next course while waiting for onsite sessions.'
+                            }
                           </p>
-                          <Link
-                            href={`/app/learn/courses/${nextCourseInAuth.course_id}?auth=${authorizationId}`}
-                            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
-                          >
-                            Next: {nextAuthCourse.courses.title} →
-                          </Link>
+                          <div className="flex gap-3">
+                            <Link
+                              href={`/app/learn/courses/${nextCourseInAuth.course_id}?auth=${authorizationId}`}
+                              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                            >
+                              Next: {nextCourseInAuth.courses.title} →
+                            </Link>
+                            <Link
+                              href="/app/myprofile"
+                              className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
+                            >
+                              Back to My Courses
+                            </Link>
+                          </div>
                         </div>
                       )}
 
-                      {/* Digital Training Complete - Show Next Steps */}
-                      {authorizationContext && completedModules.size === sortedModules.filter(m =>
-                        m.type === "digital_training" || m.type === "digital_assessment_quiz"
-                      ).length && sortedModules.some(m =>
-                        m.type === "onsite_training" || m.type === "onsite_assessment"
-                      ) && progressPercent < 100 && (
-                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                          <h3 className="font-medium text-yellow-800 mb-2">Digital Training Complete!</h3>
-                          <p className="text-sm text-yellow-700 mb-3">
-                            You can now continue with digital training for other courses in your authorization while waiting for onsite sessions to be scheduled.
-                          </p>
-                          {nextCourseInAuth && (
-                            <Link
-                              href={`/app/learn/courses/${nextCourseInAuth.course_id}?auth=${authorizationId}`}
-                              className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 font-medium"
-                            >
-                              Continue with: {nextAuthCourse.courses.title} →
-                            </Link>
-                          )}
-                        </div>
-                      )}
+                      
                     </div>
                   </div>
                 ) : (
