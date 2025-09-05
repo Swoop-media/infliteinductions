@@ -324,43 +324,49 @@ async function createQuestion(formData: FormData) {
   if (m.error || !m.data) throw new Error(m.error?.message || "Module not found");
   const mod = m.data as { id: string; course_id: string };
 
-  // --- Insert question with a defensive strategy ---
-  const linkCombos: Record<string, string>[] = [
-    { quiz_id: quizId },
-    { module_id: moduleId },
-    { course_id: mod.course_id },
-    { quiz_id: quizId, module_id: moduleId },
-    { quiz_id: quizId, course_id: mod.course_id },
-  ];
-  const textCols = ["body_md", "body", "text", "question", "title", "prompt"];
-  const typeCols = ["type", "question_type", "format", "kind"]; // set AFTER creation if needed
-
+  // --- Insert question using the correct schema structure ---
+  // Based on phase1_build.sql, the quiz_questions table has: stem, type, points, order_index
+  const nextOrder = await nextQuestionOrder({ id: quizId } as any, { id: moduleId, course_id: mod.course_id } as any);
+  
   let qIns: any = null;
 
-  outer: for (const link of linkCombos) {
-    for (const col of textCols) {
-      // 1) try with only link + body col (no risky fields)
-      let r = await supabase
-        .from("quiz_questions")
-        .insert({ ...link, [col]: body } as any)
-        .select("*")
-        .single();
-      if (!r.error && r.data) {
-        qIns = r.data;
-        break outer;
-      }
-      // 2) retry same payload with a possible type column name
-      for (const tcol of typeCols) {
-        r = await supabase
-          .from("quiz_questions")
-          .insert({ ...link, [col]: body, [tcol]: qType } as any)
-          .select("*")
-          .single();
-        if (!r.error && r.data) {
-          qIns = r.data;
-          break outer;
-        }
-      }
+  // Try to create with the proper schema structure first
+  const properPayload = {
+    module_id: moduleId,
+    stem: body, // Use stem as the primary text field
+    type: qType,
+    points: 1,
+    order_index: nextOrder,
+  };
+
+  let r = await supabase
+    .from("quiz_questions")
+    .insert(properPayload)
+    .select("*")
+    .single();
+
+  if (!r.error && r.data) {
+    qIns = r.data;
+  } else {
+    // Fallback: try with quiz_id instead of module_id
+    const fallbackPayload = {
+      quiz_id: quizId,
+      stem: body,
+      type: qType,
+      points: 1,
+      order_index: nextOrder,
+    };
+
+    r = await supabase
+      .from("quiz_questions")
+      .insert(fallbackPayload)
+      .select("*")
+      .single();
+
+    if (!r.error && r.data) {
+      qIns = r.data;
+    } else {
+      throw new Error("Could not create question: " + (r.error?.message || "Unknown error"));
     }
   }
 
@@ -380,13 +386,17 @@ async function createQuestion(formData: FormData) {
     } catch {}
   }
 
-  // SHORT ANSWER: store accepted answers CSV in any likely column and finish
+  // SHORT ANSWER: store accepted answers CSV - for now we'll store in a separate field
+  // Note: The current schema doesn't have a dedicated answers field, so we store in a JSON field or create one
   if (qType === "short_answer") {
     const answers = ansCsv
       ? Array.from(new Set(ansCsv.split(",").map((s) => s.trim()).filter(Boolean)))
       : [];
+    
+    // Try to store answers in various possible columns
+    const answerCols = ["answers", "correct_answer", "solution", "answer_md", "answers_md"];
     const answersValue = answers.join(",");
-    const answerCols = ["answer_md", "answers_md", "answer", "answers", "correct_answer", "solution"];
+    
     for (const col of answerCols) {
       try {
         const r = await supabase.from("quiz_questions").update({ [col]: answersValue } as any).eq("id", qIns.id);
@@ -622,8 +632,8 @@ async function updateQuestionText(formData: FormData) {
   const body = String(formData.get("body_md") || "").trim();
   if (!moduleId || !questionId) throw new Error("Missing fields");
 
-  // Try a bunch of plausible text columns until one succeeds
-  const textCols = ["body_md", "body", "text", "question", "title", "prompt"];
+  // Try stem first (correct field), then fallback to other columns
+  const textCols = ["stem", "body_md", "body", "text", "question", "title", "prompt"];
   let updated = false;
   for (const col of textCols) {
     const r = await supabase.from("quiz_questions").update({ [col]: body } as any).eq("id", questionId);
@@ -883,7 +893,7 @@ export default async function QuizEditorPage(props: {
           <ul className="divide-y rounded-md border">
             {await Promise.all(
               qAndO.map(async ({ question, options }) => {
-                const body = pick<string>(question, ["body_md", "body", "text", "question", "title", "prompt"], "") ?? "";
+                const body = pick<string>(question, ["stem", "body_md", "body", "text", "question", "title", "prompt"], "") ?? "";
                 const qType = pick<string>(question, ["type", "question_type", "format"], "multiple_choice") ?? "multiple_choice";
                 const imgPath = pick<string>(question, ["image_path", "image", "img", "media_path"], null);
                 const imgUrl = await signedUrl(imgPath);
