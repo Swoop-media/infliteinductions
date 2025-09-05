@@ -374,7 +374,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
   console.log("Quiz found, fetching questions for quiz ID:", quizData.id);
 
   // Fetch quiz questions
-  const { data: questions, error: questionsErr } = await supabase
+  let { data: questions, error: questionsErr } = await supabase
     .from("quiz_questions")
     .select(`
       id,
