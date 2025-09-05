@@ -1,4 +1,8 @@
 
+-- Add quiz_id column to quiz_questions if it doesn't exist
+ALTER TABLE public.quiz_questions 
+ADD COLUMN IF NOT EXISTS quiz_id UUID REFERENCES public.quizzes(id) ON DELETE CASCADE;
+
 -- Drop existing function if it exists to avoid return type conflicts
 DROP FUNCTION IF EXISTS ensure_quiz_for_module(UUID);
 

@@ -335,7 +335,8 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
         .rpc("ensure_quiz_for_module", { p_module_id: moduleId });
 
       if (!rpcErr && newQuiz) {
-        quizData = newQuiz;
+        // RPC returns an array, get the first item
+        quizData = Array.isArray(newQuiz) ? newQuiz[0] : newQuiz;
         console.log("Created new quiz:", newQuiz);
       } else {
         console.error("RPC error:", rpcErr);
@@ -372,7 +373,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
     .from("quiz_questions")
     .select(`
       id,
-      prompt,
+      stem,
       type,
       points,
       order_index,
@@ -395,7 +396,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       .from("quiz_questions")
       .select(`
         id,
-        prompt,
+        stem,
         type,
         points,
         order_index,
@@ -470,8 +471,8 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       <p className="text-sm text-gray-600 mb-6">Answer all questions to complete the quiz.</p>
 
       {questions.map((q: any, index: number) => {
-        // Get question text from prompt field
-        const questionText = q.prompt || 'Question text missing';
+        // Get question text from stem field
+        const questionText = q.stem || 'Question text missing';
         
         return (
           <div key={q.id} className="mb-6 pb-6 border-b last:border-b-0 last:pb-0">
