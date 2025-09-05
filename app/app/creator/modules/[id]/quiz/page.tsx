@@ -343,23 +343,41 @@ async function createQuestion(formData: FormData) {
   // Get next order index
   const nextOrder = await nextQuestionOrder({ id: quizId } as any, { id: moduleId, course_id: mod.course_id } as any);
   
-  // Create question with proper schema structure
-  const questionPayload = {
+  // Create question with proper schema structure - try multiple column names
+  const basePayload = {
     module_id: moduleId,
-    stem: body,
     type: qType,
     points: 1,
     order_index: nextOrder,
   };
 
-  const { data: qIns, error: qError } = await supabase
-    .from("quiz_questions")
-    .insert(questionPayload)
-    .select("*")
-    .single();
+  // Try different column names for the question text
+  const textColumnTries = [
+    { ...basePayload, prompt: body },
+    { ...basePayload, stem: body },
+    { ...basePayload, question: body },
+    { ...basePayload, text: body },
+  ];
 
-  if (qError || !qIns) {
-    throw new Error("Could not create question: " + (qError?.message || "Unknown error"));
+  let qIns: any = null;
+  let lastError: any = null;
+
+  for (const payload of textColumnTries) {
+    const { data, error } = await supabase
+      .from("quiz_questions")
+      .insert(payload)
+      .select("*")
+      .single();
+    
+    if (!error && data) {
+      qIns = data;
+      break;
+    }
+    lastError = error;
+  }
+
+  if (!qIns) {
+    throw new Error("Could not create question: " + (lastError?.message || "Unknown error"));
   }
 
   // SHORT ANSWER: store accepted answers
