@@ -188,7 +188,7 @@ async function submitQuizAnswers(formData: FormData) {
   const quizId = formData.get("quizId") as string;
   const courseId = formData.get("courseId") as string;
   const authorizationId = formData.get("authorizationId") as string;
-  
+
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -231,10 +231,10 @@ async function submitQuizAnswers(formData: FormData) {
         )
       `)
       .eq("module_id", moduleId);
-    
+
     if (fallbackQuestions && fallbackQuestions.length > 0) {
       questions = fallbackQuestions;
-      
+
       // Link questions to quiz for future submissions
       await supabase
         .from("quiz_questions")
@@ -263,7 +263,7 @@ async function submitQuizAnswers(formData: FormData) {
   });
 
   const scorePercent = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
-  
+
   // Get quiz pass mark
   const { data: quiz } = await supabase
     .from("quizzes")
@@ -338,7 +338,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
   // If no quiz found by module_id, try by course_id (fallback for legacy quizzes)
   if (quizErr || !quizData) {
     console.log("No quiz found by module_id, trying course_id fallback...");
-    
+
     const { data: legacyQuiz, error: legacyErr } = await supabase
       .from("quizzes")
       .select("id, pass_mark, max_attempts, shuffle")
@@ -355,7 +355,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
   // If still no quiz found, try to create one using RPC function
   if (!quizData) {
     console.log("No quiz found, attempting to create one...");
-    
+
     try {
       const { data: newQuiz, error: rpcErr } = await supabase
         .rpc("ensure_quiz_for_module", { p_module_id: moduleId });
@@ -416,7 +416,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
 
   if (questionsErr || !questions || questions.length === 0) {
     console.log("No questions found by quiz_id, trying module_id fallback...");
-    
+
     // Try fallback by module_id and link them to the quiz
     const { data: fallbackQuestions, error: fallbackErr } = await supabase
       .from("quiz_questions")
@@ -445,7 +445,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
         .update({ quiz_id: quizData.id })
         .eq("module_id", moduleId)
         .is("quiz_id", null);
-      
+
       if (!linkErr) {
         console.log("Successfully linked questions to quiz");
         questions = fallbackQuestions;
@@ -467,13 +467,13 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
         </div>
       );
     }
-    
+
     questions = fallbackQuestions;
   }
 
   // Get user for quiz attempts lookup
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   // Check if quiz is already completed
   const { data: progress } = await supabase.from("assignment_progress").select("module_id").eq("assignment_id", assignmentId).eq("module_id", moduleId).single();
   const isCompleted = !!progress;
@@ -514,7 +514,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       {questions.map((q: any, index: number) => {
         // Get question text from stem field
         const questionText = q.stem || 'Question text missing';
-        
+
         return (
           <div key={q.id} className="mb-6 pb-6 border-b last:border-b-0 last:pb-0">
             <p className="text-lg font-medium text-gray-900 mb-3">
@@ -1026,13 +1026,13 @@ export default async function LearnerCoursePage(props: {
                           <div className="flex gap-3">
                             <Link
                               href={`/app/learn/courses/${nextCourseInAuth.course_id}?auth=${authorizationId}`}
-                              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium"
+                              className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                             >
-                              Next: {nextCourseInAuth.courses.title} →
+                              Continue to Next Course →
                             </Link>
                             <Link
                               href="/app/myprofile"
-                              className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
+                              className="inline-flex items-center px-4 py-2 border border-green-300 text-green-700 text-sm font-medium rounded-md bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                             >
                               Back to My Courses
                             </Link>
@@ -1040,7 +1040,7 @@ export default async function LearnerCoursePage(props: {
                         </div>
                       )}
 
-                      
+
                     </div>
                   </div>
                 ) : (
