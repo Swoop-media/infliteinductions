@@ -186,10 +186,15 @@ async function submitQuizAnswers(formData: FormData) {
   const moduleId = formData.get("moduleId") as string;
   const assignmentId = formData.get("assignmentId") as string;
   const quizId = formData.get("quizId") as string;
+  const courseId = formData.get("courseId") as string;
+  const authorizationId = formData.get("authorizationId") as string;
   
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) {
+    redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=auth_required`);
+    return;
+  }
 
   // Collect answers from form data
   const answers: Record<string, string> = {};
@@ -213,7 +218,10 @@ async function submitQuizAnswers(formData: FormData) {
     `)
     .eq("quiz_id", quizId);
 
-  if (!questions) return;
+  if (!questions || questions.length === 0) {
+    redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=no_questions`);
+    return;
+  }
 
   // Calculate score
   let totalPoints = 0;
@@ -241,13 +249,17 @@ async function submitQuizAnswers(formData: FormData) {
   const passed = scorePercent >= passMarkPercent;
 
   // Save quiz attempt
-  await supabase.from("quiz_attempts").insert({
+  const { error: attemptError } = await supabase.from("quiz_attempts").insert({
     quiz_id: quizId,
     user_id: user.id,
     score_pct: scorePercent,
     passed: passed,
     answers: answers,
   });
+
+  if (attemptError) {
+    console.error("Failed to save quiz attempt:", attemptError);
+  }
 
   // Mark module as complete if passed
   if (passed) {
@@ -260,27 +272,9 @@ async function submitQuizAnswers(formData: FormData) {
     ]);
   }
 
-  // Redirect to the next module or course
-  const modules = await supabase.from("course_modules").select("id, course_id, order_index, type").eq("id", moduleId).single();
-  const sortedModules = await supabase.from("course_modules").select("id, course_id, order_index, type").eq("course_id", modules.data.course_id).order("order_index", { ascending: true });
-  const currentModuleIndex = sortedModules.data.findIndex((m: any) => m.id === moduleId);
-  const nextModule = sortedModules.data[currentModuleIndex + 1];
-
-  if (nextModule) {
-    redirect(`/app/learn/courses/${modules.data.course_id}?module=${nextModule.id}`);
-  } else {
-    // If no next module, redirect to course completion or next authorization course
-    const assignment = await supabase.from("course_assignments").select("course_id, id").eq("id", assignmentId).single();
-    const authorizationCourses = await supabase.from("authorisation_courses").select("order_index, course_id").eq("course_id", assignment.data.course_id).order("order_index", { ascending: true });
-    const currentAuthCourseIndex = authorizationCourses.data.findIndex((ac: any) => ac.course_id === assignment.data.course_id);
-    const nextAuthCourse = authorizationCourses.data[currentAuthCourseIndex + 1];
-
-    if (nextAuthCourse) {
-      redirect(`/app/learn/courses/${nextAuthCourse.course_id}?auth=${authorizationCourses.data.find((ac: any) => ac.course_id === nextAuthCourse.course_id)?.authorisation_id}`);
-    } else {
-      redirect(`/app/learn/courses/${modules.data.course_id}?completed=true`);
-    }
-  }
+  // Redirect with results
+  const redirectUrl = `/app/learn/courses/${courseId}?module=${moduleId}&quiz=result&score=${scorePercent}&passed=${passed ? '1' : '0'}${authorizationId ? `&auth=${authorizationId}` : ''}`;
+  redirect(redirectUrl);
 }
 
 // Component to render quiz questions
@@ -435,22 +429,28 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
     questions = fallbackQuestions;
   }
 
+  // Get user for quiz attempts lookup
+  const { data: { user } } = await supabase.auth.getUser();
+  
   // Check if quiz is already completed
   const { data: progress } = await supabase.from("assignment_progress").select("module_id").eq("assignment_id", assignmentId).eq("module_id", moduleId).single();
   const isCompleted = !!progress;
 
   if (isCompleted) {
     // Fetch quiz result if completed
-    const { data: result } = await supabase.from("quiz_attempts").select("score_pct, passed").eq("quiz_id", quizData.id).eq("user_id", (await supabase.auth.getUser()).data.user?.id).order("created_at", { ascending: false }).limit(1).single();
+    const { data: result } = await supabase.from("quiz_attempts").select("score_pct, passed").eq("quiz_id", quizData.id).eq("user_id", user?.id).order("created_at", { ascending: false }).limit(1).single();
     return (
       <div className="bg-white p-6 rounded-lg border">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz Complete</h2>
         <div className="p-4 rounded-md border-2 text-center" style={{ borderColor: result?.passed ? '#10B981' : '#EF4444', backgroundColor: result?.passed ? '#ECFDF5' : '#FEF2F2' }}>
           <h3 className={`text-lg font-bold ${result?.passed ? 'text-green-600' : 'text-red-600'}`}>
-            {result?.passed ? 'Congratulations! You Passed!' : 'Try Again'}
+            {result?.passed ? 'Congratulations! You Passed!' : 'Quiz Complete'}
           </h3>
           <p className={`text-sm font-medium ${result?.passed ? 'text-green-700' : 'text-red-700'}`}>
             Your Score: {result?.score_pct ?? 0}%
+          </p>
+          <p className="text-xs text-gray-600 mt-2">
+            Pass Mark: {quizData.pass_mark || 70}%
           </p>
         </div>
       </div>
@@ -463,7 +463,8 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       <input type="hidden" name="moduleId" value={moduleId} />
       <input type="hidden" name="assignmentId" value={assignmentId} />
       <input type="hidden" name="quizId" value={quizData.id} />
-      <input type="hidden" name="answers" value={JSON.stringify([])} /> {/* Placeholder for answers */}
+      <input type="hidden" name="courseId" value={moduleData.course_id} />
+      <input type="hidden" name="authorizationId" value={authorizationId || ""} />
 
       <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
       <p className="text-sm text-gray-600 mb-6">Answer all questions to complete the quiz.</p>
@@ -500,7 +501,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
 
 export default async function LearnerCoursePage(props: {
   params: Promise<RouteParams>;
-  searchParams?: Promise<{ module?: string; auth?: string; quiz?: string }>;
+  searchParams?: Promise<{ module?: string; auth?: string; quiz?: string; score?: string; passed?: string; error?: string }>;
 }) {
   const { id: courseId } = await props.params;
   const searchParams = await props.searchParams;
@@ -508,6 +509,10 @@ export default async function LearnerCoursePage(props: {
   const authorizationId = searchParams?.auth;
   const preview = searchParams?.preview === '1'; // Extract preview flag
   const showQuiz = searchParams?.quiz === 'start'; // Check if quiz should be displayed
+  const quizResult = searchParams?.quiz === 'result'; // Check if showing quiz results
+  const quizScore = searchParams?.score ? parseInt(searchParams.score) : null;
+  const quizPassed = searchParams?.passed === '1';
+  const quizError = searchParams?.error;
 
   const supabase = await createSupabaseServer();
 
@@ -783,6 +788,17 @@ export default async function LearnerCoursePage(props: {
               </div>
             </div>
           )}
+          {quizError && (
+            <div className="mx-auto max-w-4xl p-6">
+              <div className="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
+                <div className="text-sm text-red-800">
+                  ⚠️ Quiz Error: {quizError === 'auth_required' ? 'Authentication required' : 
+                                 quizError === 'no_questions' ? 'No questions found for this quiz' : 
+                                 'An error occurred during quiz submission'}
+                </div>
+              </div>
+            </div>
+          )}
           {currentModule ? (
             <div className="max-w-4xl mx-auto p-6">
               <div className="bg-white rounded-xl border shadow-sm p-8 space-y-6">
@@ -798,6 +814,52 @@ export default async function LearnerCoursePage(props: {
                         preview={preview}
                         authorizationId={authorizationId}
                       />
+                    )}
+
+                    {/* Show Quiz Results */}
+                    {currentModule.type === 'digital_assessment_quiz' && quizResult && quizScore !== null && (
+                      <div className="bg-white p-6 rounded-lg border">
+                        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz Results</h2>
+                        <div className="p-6 rounded-md border-2 text-center" style={{ 
+                          borderColor: quizPassed ? '#10B981' : '#EF4444', 
+                          backgroundColor: quizPassed ? '#ECFDF5' : '#FEF2F2' 
+                        }}>
+                          <div className={`text-4xl mb-4 ${quizPassed ? 'text-green-600' : 'text-red-600'}`}>
+                            {quizPassed ? '🎉' : '📚'}
+                          </div>
+                          <h3 className={`text-xl font-bold mb-2 ${quizPassed ? 'text-green-600' : 'text-red-600'}`}>
+                            {quizPassed ? 'Congratulations! You Passed!' : 'Keep Learning!'}
+                          </h3>
+                          <p className={`text-lg font-medium mb-4 ${quizPassed ? 'text-green-700' : 'text-red-700'}`}>
+                            Your Score: {quizScore}%
+                          </p>
+                          <div className="space-y-3">
+                            {quizPassed ? (
+                              <p className="text-sm text-green-700">
+                                Great job! You can now proceed to the next module.
+                              </p>
+                            ) : (
+                              <div className="space-y-2">
+                                <p className="text-sm text-red-700">
+                                  You need 70% or higher to pass. Review the material and try again.
+                                </p>
+                                <Link
+                                  href={`/app/learn/courses/${courseId}?module=${currentModule.id}&quiz=start${authorizationId ? `&auth=${authorizationId}` : ''}`}
+                                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+                                >
+                                  Try Again
+                                </Link>
+                              </div>
+                            )}
+                            <Link
+                              href={`/app/learn/courses/${courseId}?module=${currentModule.id}${authorizationId ? `&auth=${authorizationId}` : ''}`}
+                              className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium ml-2"
+                            >
+                              Back to Module
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
                     )}
 
                     {/* Show Start Quiz button only if current module is quiz type and quiz not started */}
