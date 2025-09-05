@@ -379,6 +379,9 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
     .select(`
       id,
       stem,
+      question,
+      text,
+      body,
       type,
       points,
       order_index,
@@ -402,6 +405,9 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       .select(`
         id,
         stem,
+        question,
+        text,
+        body,
         type,
         points,
         order_index,
@@ -468,11 +474,15 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
       <p className="text-sm text-gray-600 mb-6">Answer all questions to complete the quiz.</p>
 
-      {questions.map((q: any, index: number) => (
-        <div key={q.id} className="mb-6 pb-6 border-b last:border-b-0 last:pb-0">
-          <p className="text-lg font-medium text-gray-900 mb-3">
-            {index + 1}. {q.stem}
-          </p>
+      {questions.map((q: any, index: number) => {
+        // Get question text from available fields
+        const questionText = q.stem || q.question || q.text || q.body || 'Question text missing';
+        
+        return (
+          <div key={q.id} className="mb-6 pb-6 border-b last:border-b-0 last:pb-0">
+            <p className="text-lg font-medium text-gray-900 mb-3">
+              {index + 1}. {questionText}
+            </p>
           <div className="space-y-2">
             {q.quiz_options.map((opt: any) => (
               <label key={opt.id} className="flex items-center space-x-3 text-sm text-gray-700">
@@ -481,8 +491,9 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
               </label>
             ))}
           </div>
-        </div>
-      ))}
+          </div>
+        );
+      })}
 
       <div className="flex justify-end pt-6 border-t">
         <button type="submit" className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
