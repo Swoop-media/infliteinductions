@@ -205,8 +205,8 @@ async function submitQuizAnswers(formData: FormData) {
     }
   }
 
-  // Get quiz questions and options to calculate score
-  const { data: questions } = await supabase
+  // Get quiz questions and options to calculate score - use same fallback pattern as quiz display
+  let { data: questions } = await supabase
     .from("quiz_questions")
     .select(`
       id,
@@ -217,6 +217,32 @@ async function submitQuizAnswers(formData: FormData) {
       )
     `)
     .eq("quiz_id", quizId);
+
+  // If no questions found by quiz_id, try fallback by module_id
+  if (!questions || questions.length === 0) {
+    const { data: fallbackQuestions } = await supabase
+      .from("quiz_questions")
+      .select(`
+        id,
+        points,
+        quiz_options (
+          id,
+          is_correct
+        )
+      `)
+      .eq("module_id", moduleId);
+    
+    if (fallbackQuestions && fallbackQuestions.length > 0) {
+      questions = fallbackQuestions;
+      
+      // Link questions to quiz for future submissions
+      await supabase
+        .from("quiz_questions")
+        .update({ quiz_id: quizId })
+        .eq("module_id", moduleId)
+        .is("quiz_id", null);
+    }
+  }
 
   if (!questions || questions.length === 0) {
     redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=no_questions`);
