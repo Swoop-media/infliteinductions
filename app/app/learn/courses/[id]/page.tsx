@@ -378,7 +378,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
     .from("quiz_questions")
     .select(`
       id,
-      stem,
+      prompt,
       type,
       points,
       order_index,
@@ -401,7 +401,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       .from("quiz_questions")
       .select(`
         id,
-        stem,
+        prompt,
         type,
         points,
         order_index,
@@ -469,8 +469,8 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       <p className="text-sm text-gray-600 mb-6">Answer all questions to complete the quiz.</p>
 
       {questions.map((q: any, index: number) => {
-        // Get question text from stem field
-        const questionText = q.stem || 'Question text missing';
+        // Get question text from prompt field
+        const questionText = q.prompt || 'Question text missing';
         
         return (
           <div key={q.id} className="mb-6 pb-6 border-b last:border-b-0 last:pb-0">
