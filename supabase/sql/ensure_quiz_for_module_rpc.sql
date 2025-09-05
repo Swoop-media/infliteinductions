@@ -57,9 +57,18 @@ BEGIN
   END IF;
   
   -- Create new quiz for this module and return it directly
-  RETURN QUERY 
   INSERT INTO quizzes (module_id, course_id, pass_mark, max_attempts, shuffle)
   VALUES (p_module_id, v_module_record.course_id, 70, 3, false)
-  RETURNING quizzes.id, quizzes.pass_mark, quizzes.max_attempts, quizzes.shuffle;
+  RETURNING quizzes.id, quizzes.pass_mark, quizzes.max_attempts, quizzes.shuffle
+  INTO v_quiz_record;
+  
+  -- Link any existing questions for this module to the new quiz
+  UPDATE quiz_questions 
+  SET quiz_id = v_quiz_record.id 
+  WHERE module_id = p_module_id 
+  AND quiz_id IS NULL;
+  
+  -- Return the quiz record
+  RETURN QUERY SELECT v_quiz_record.id, v_quiz_record.pass_mark, v_quiz_record.max_attempts, v_quiz_record.shuffle;
 END;
 $$;

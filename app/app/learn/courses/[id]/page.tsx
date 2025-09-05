@@ -391,7 +391,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
   if (questionsErr || !questions || questions.length === 0) {
     console.log("No questions found by quiz_id, trying module_id fallback...");
     
-    // Try fallback by module_id
+    // Try fallback by module_id and link them to the quiz
     const { data: fallbackQuestions, error: fallbackErr } = await supabase
       .from("quiz_questions")
       .select(`
@@ -410,6 +410,21 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       .order("order_index", { ascending: true });
 
     console.log("Fallback questions fetch result:", { fallbackQuestions, fallbackErr });
+
+    // If we found questions by module_id, link them to the quiz
+    if (!fallbackErr && fallbackQuestions && fallbackQuestions.length > 0) {
+      // Update questions to link them to the quiz
+      const { error: linkErr } = await supabase
+        .from("quiz_questions")
+        .update({ quiz_id: quizData.id })
+        .eq("module_id", moduleId)
+        .is("quiz_id", null);
+      
+      if (!linkErr) {
+        console.log("Successfully linked questions to quiz");
+        questions = fallbackQuestions;
+      }
+    }
 
     if (fallbackErr || !fallbackQuestions || fallbackQuestions.length === 0) {
       console.error("No questions found anywhere", { questionsErr, fallbackErr, quizId: quizData.id, moduleId });
