@@ -4,6 +4,9 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { PDFExportButton } from "./PDFExportButton";
+
+
 
 const DEPARTMENTS = [
   "Skydive Franz",
@@ -63,16 +66,17 @@ async function loadUserCompletedItems(userId: string) {
     .not("completed_at", "is", null)
     .order("completed_at", { ascending: false });
 
-  // Get completed authorizations with due dates
+  // Get completed authorizations with due dates (including approved ones)
   const { data: completedAuthorizations } = await supabase
     .from("authorisation_assignments")
     .select(`
       id,
       completed_at,
+      assignment_status,
       authorisations!authorisation_assignments_authorisation_id_fkey(title, valid_for_years)
     `)
     .eq("user_id", userId)
-    .eq("assignment_status", "completed")
+    .in("assignment_status", ["completed", "approved"])
     .not("completed_at", "is", null)
     .order("completed_at", { ascending: false });
 
@@ -211,9 +215,12 @@ export default async function EditUserPage({
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Edit User</h1>
-        <Link className="text-sm underline" href="/app/admin?tab=users">
-          ← Back to Users
-        </Link>
+        <div className="flex items-center gap-3">
+          <PDFExportButton userId={resolvedParams.id} userName={profile.full_name || profile.email || "Unknown"} />
+          <Link className="text-sm underline" href="/app/admin?tab=users">
+            ← Back to Users
+          </Link>
+        </div>
       </div>
 
       {ok && (
