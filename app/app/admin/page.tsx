@@ -6,6 +6,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import SortableDueDatesTable from "./_components/SortableDueDatesTable";
 import SortableUsersTable from "./_components/SortableUsersTable";
+import SortableAuthorisationsTable from "./_components/SortableAuthorisationsTable";
 
 
 export const dynamic = "force-dynamic";
@@ -356,77 +357,7 @@ async function DueDatesAuthorisationSection({ q }: { q: string | null }) {
         </form>
       </div>
 
-      {completedAuthorisations.length === 0 ? (
-        <p className="text-sm text-gray-600">No completed authorisations found.</p>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trainee
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Authorisation
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Approved
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Due Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {completedAuthorisations.map((auth) => {
-                  const approvedDate = new Date(auth.approved_at).toLocaleDateString();
-
-                  // Calculate due date based on approval date and valid days
-                  const dueDate = auth.valid_for_days 
-                    ? new Date(new Date(auth.approved_at).getTime() + (auth.valid_for_days * 24 * 60 * 60 * 1000)).toLocaleDateString()
-                    : "No expiry";
-
-                  // Determine status based on current date vs due date
-                  const now = new Date();
-                  let statusText = "Current";
-                  let statusColor = "text-green-600";
-
-                  if (auth.valid_for_days) {
-                    const dueDateObj = new Date(new Date(auth.approved_at).getTime() + (auth.valid_for_days * 24 * 60 * 60 * 1000));
-                    const daysDiff = Math.ceil((dueDateObj.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-                    if (daysDiff < 0) {
-                      statusText = "Expired";
-                      statusColor = "text-red-600";
-                    } else if (daysDiff <= 30) {
-                      statusText = "Expiring Soon";
-                      statusColor = "text-yellow-600";
-                    }
-                  }
-                return (
-                  <tr key={auth.assignment_id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{auth.full_name || 'N/A'}</td>
-                    <td className="border-b px-4 py-3">
-                        <div className="font-medium">{auth.authorisation_title}</div>
-                        <div className="text-xs text-gray-500">
-                          Valid for: {auth.valid_for_days ? `${auth.valid_for_days} days` : 'No expiry'}
-                        </div>
-                      </td>
-                      <td className="border-b px-4 py-3 text-sm">{approvedDate}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{dueDate}</td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${statusColor}`}>
-                      {statusText}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <SortableAuthorisationsTable completedAuthorisations={completedAuthorisations} />
     </div>
   );
 }
