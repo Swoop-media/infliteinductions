@@ -163,11 +163,13 @@ function PageView({ page }: { page: Page }) {
 }
 
 // Static component for onsite module preview (doesn't use server actions)
-function OnsiteModulePreviewStatic({ moduleId, moduleTitle, moduleType, courseId }: {
+function OnsiteModulePreviewStatic({ moduleId, moduleTitle, moduleType, courseId, moduleData, requirements }: {
   moduleId: string;
   moduleTitle: string;
   moduleType: "onsite_training" | "onsite_assessment";
   courseId: string;
+  moduleData?: { description?: string };
+  requirements?: Array<{ id: string; title: string; description?: string; is_required: boolean }>;
 }) {
   const roleLabel = moduleType === 'onsite_training' ? 'Trainer' : 'Assessor';
   const actionLabel = moduleType === 'onsite_training' ? 'training' : 'assessment';
@@ -199,28 +201,63 @@ function OnsiteModulePreviewStatic({ moduleId, moduleTitle, moduleType, courseId
             </p>
           </div>
 
+          {/* Module Description */}
+          {moduleData?.description && (
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-900 mb-2">Description:</h4>
+              <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                {moduleData.description}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-3">
             <h4 className="font-medium text-gray-900">
               {roleLabel} Requirements Checklist:
             </h4>
 
             <div className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
-                <span className="text-sm text-gray-700">Sample requirement checklist item</span>
-              </div>
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
-                <span className="text-sm text-gray-700">Practical demonstration completed</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
-                <span className="text-sm text-gray-700">Safety procedures verified</span>
-              </div>
+              {requirements && requirements.length > 0 ? (
+                <div className="space-y-3">
+                  {requirements.map((req) => (
+                    <div key={req.id} className="flex items-start gap-3">
+                      <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white mt-0.5 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-700">{req.title}</span>
+                          {req.is_required && (
+                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">Required</span>
+                          )}
+                        </div>
+                        {req.description && (
+                          <p className="text-xs text-gray-600 mt-1">{req.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
+                    <span className="text-sm text-gray-700">Sample requirement checklist item</span>
+                  </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
+                    <span className="text-sm text-gray-700">Practical demonstration completed</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
+                    <span className="text-sm text-gray-700">Safety procedures verified</span>
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="text-xs text-gray-500 italic">
-              * Actual requirements are configured by the course creator in the module builder
+              {requirements && requirements.length > 0 
+                ? "* Requirements configured by the course creator"
+                : "* No requirements configured yet. Use the module builder to add specific requirements."}
             </div>
           </div>
 
@@ -268,6 +305,8 @@ export default function CoursePreview({
   mode = "preview",
   assignmentId,
   assignmentProgress = [],
+  onsiteRequirements = [],
+  moduleDescriptions = {},
 }: {
   courseId: string;
   courseTitle: string;
@@ -290,6 +329,8 @@ export default function CoursePreview({
   mode?: "preview" | "learner";
   assignmentId?: string;
   assignmentProgress?: Array<{ module_id: string; completed_at: string }>;
+  onsiteRequirements?: Array<{ id: string; module_id: string; title: string; description?: string; is_required: boolean }>;
+  moduleDescriptions?: Record<string, { description?: string }>;
 }) {
   const pages: Page[] = useMemo(() => {
     const mods = [...modules].sort((a, b) => {
@@ -673,6 +714,8 @@ export default function CoursePreview({
                   moduleTitle={page.module.title}
                   moduleType="onsite_training"
                   courseId={courseId}
+                  moduleData={moduleDescriptions[page.module.id]}
+                  requirements={onsiteRequirements.filter(req => req.module_id === page.module.id)}
                 />
               )}
 
@@ -683,6 +726,8 @@ export default function CoursePreview({
                   moduleTitle={page.module.title}
                   moduleType="onsite_assessment"
                   courseId={courseId}
+                  moduleData={moduleDescriptions[page.module.id]}
+                  requirements={onsiteRequirements.filter(req => req.module_id === page.module.id)}
                 />
               )}
 

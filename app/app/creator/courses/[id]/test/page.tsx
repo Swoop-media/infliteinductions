@@ -38,18 +38,36 @@ export default async function TestCoursePage(props: { params: Promise<RouteParam
   }
 
   const moduleIds = (modules ?? []).map((m) => m.id);
-  const { data: blocks, error: blockErr } = moduleIds.length
+  const { data: blocks, error: blocksErr } = moduleIds.length
     ? await supabase
         .from("module_content_blocks")
         .select("id, module_id, kind, data, order_index")
         .in("module_id", moduleIds)
         .order("order_index", { ascending: true })
     : { data: [], error: null as any };
-  if (blockErr) {
+  if (blocksErr) {
     // eslint-disable-next-line no-console
-    console.error("Blocks load error", blockErr);
+    console.error("Blocks load error", blocksErr);
     notFound();
   }
+
+  // Load onsite requirements for preview
+  const { data: onsiteRequirements } = await supabase
+    .from("onsite_requirements")
+    .select("id, module_id, title, description, is_required, order_index")
+    .in("module_id", (modules ?? []).map(m => m.id))
+    .order("order_index", { ascending: true });
+
+  // Load module descriptions
+  const { data: moduleDescData } = await supabase
+    .from("course_modules")
+    .select("id, description")
+    .in("id", (modules ?? []).map(m => m.id));
+
+  const moduleDescriptions = (moduleDescData ?? []).reduce((acc, module) => {
+    acc[module.id] = { description: module.description };
+    return acc;
+  }, {} as Record<string, { description?: string }>);
 
   return (
     <div className="mx-auto w-full max-w-5xl p-6">
@@ -60,7 +78,8 @@ export default async function TestCoursePage(props: { params: Promise<RouteParam
         modules={modules ?? []}
         blocks={blocks ?? []}
         mode="preview"  // no persistence in preview
-        videoPlayerComponent={SimpleVideoPlayer} // Pass SimpleVideoPlayer here
+        onsiteRequirements={onsiteRequirements ?? []}
+        moduleDescriptions={moduleDescriptions}
       />
     </div>
   );

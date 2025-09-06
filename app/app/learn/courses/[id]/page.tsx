@@ -5,33 +5,157 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import CompleteModuleButton from "./CompleteModuleButton";
 import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
 
-// Placeholder for the new OnsiteModulePreview component
-// In a real scenario, this component would be imported from its file.
-// For this example, we'll define it inline for completeness.
+// Server component for onsite module preview with actual content
 async function OnsiteModulePreview({ moduleId, moduleType, courseId, preview }: { moduleId: string; moduleType: string; courseId: string; preview: boolean }) {
   "use server";
+  const supabase = await createSupabaseServer();
+
+  // Load module details
+  const { data: module } = await supabase
+    .from("course_modules")
+    .select("id, title, description")
+    .eq("id", moduleId)
+    .single();
+
+  // Load content blocks for this module
+  const { data: blocks } = await supabase
+    .from("module_content_blocks")
+    .select("id, kind, data, order_index")
+    .eq("module_id", moduleId)
+    .order("order_index", { ascending: true });
+
+  // Load requirements for onsite modules
+  const { data: requirements } = await supabase
+    .from("onsite_requirements")
+    .select("id, title, description, is_required, order_index")
+    .eq("module_id", moduleId)
+    .order("order_index", { ascending: true });
+
+  const roleLabel = moduleType === "onsite_training" ? "Trainer" : "Assessor";
+  const actionLabel = moduleType === "onsite_training" ? "training" : "assessment";
+
   return (
-    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-      <h3 className="text-lg font-semibold text-blue-900 mb-2">
-        {moduleType === "onsite_training" ? "Onsite Training Module" : "Onsite Assessment Module"}
-      </h3>
-      <p className="text-sm text-blue-800">
-        {preview ? "Preview Mode:" : ""} This is an {moduleType === "onsite_training" ? "onsite training" : "onsite assessment"} module.
-        {preview
-          ? " In a real course, this would be completed by a trainer/assessor during an in-person session. Since this is a preview, we're just displaying a placeholder."
-          : ` In a real course, this would be completed by your trainer/assessor during an in-person session.`
-        }
-      </p>
-      {!preview && (
-        <div className="mt-4 flex justify-center">
-          <Link
-            href={`/app/train-assess/course/${courseId}?module=${moduleId}&role=trainee`}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-          >
-            View Onsite Module Details (Simulated)
-          </Link>
+    <div className="bg-white p-6 rounded-lg border">
+      <div className="flex items-start gap-4">
+        <div className="flex-shrink-0">
+          <div className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center">
+            {moduleType === 'onsite_training' ? (
+              <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            ) : (
+              <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2m0-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2m0-10V3a2 2 0 00-2-2H9a2 2 0 00-2 2v2m0 10V3a2 2 0 012-2h2a2 2 0 012 2v2m0 10v2a2 2 0 01-2 2H9a2 2 0 01-2-2v-2" />
+              </svg>
+            )}
+          </div>
         </div>
-      )}
+
+        <div className="flex-1">
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">{module?.title || `${roleLabel} Module`}</h3>
+          <div className="text-sm text-gray-600 mb-4">Onsite {roleLabel} Module</div>
+
+          {preview && (
+            <div className="bg-blue-50 p-4 rounded-lg mb-4">
+              <p className="text-sm text-blue-800">
+                <strong>Preview Mode:</strong> This is an onsite {actionLabel} module. In a real course, this would be completed by a {roleLabel.toLowerCase()} during an in-person session with the trainee.
+              </p>
+            </div>
+          )}
+
+          {/* Module Description */}
+          {module?.description && (
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-900 mb-2">Description:</h4>
+              <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
+                {module.description}
+              </div>
+            </div>
+          )}
+
+          {/* Content Blocks */}
+          {blocks && blocks.length > 0 && (
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-900 mb-3">Module Content:</h4>
+              <div className="space-y-4">
+                {blocks.map((block) => (
+                  <div key={block.id}>
+                    <BlockView block={block} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Requirements Section */}
+          {requirements && requirements.length > 0 && (
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-900 mb-3">
+                {roleLabel} Requirements Checklist:
+              </h4>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="space-y-3">
+                  {requirements.map((req) => (
+                    <div key={req.id} className="flex items-start gap-3">
+                      <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white mt-0.5 flex-shrink-0"></div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-gray-700">{req.title}</span>
+                          {req.is_required && (
+                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">Required</span>
+                          )}
+                        </div>
+                        {req.description && (
+                          <p className="text-xs text-gray-600 mt-1">{req.description}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {(!requirements || requirements.length === 0) && (
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
+                    <span className="text-sm text-gray-700">Sample requirement checklist item</span>
+                  </div>
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
+                    <span className="text-sm text-gray-700">Practical demonstration completed</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
+                    <span className="text-sm text-gray-700">Safety procedures verified</span>
+                  </div>
+                  <div className="text-xs text-gray-500 italic mt-3">
+                    * No requirements configured yet. Use the module builder to add specific requirements.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Instructions for actual use */}
+          <div className="mt-6 p-3 bg-orange-50 rounded-lg">
+            <p className="text-sm text-orange-800">
+              <strong>In actual {actionLabel}:</strong> The {roleLabel.toLowerCase()} would complete the requirements checklist while working with the trainee, then mark the module as complete to advance the trainee's progress.
+            </p>
+          </div>
+
+          {!preview && (
+            <div className="mt-4 flex justify-center">
+              <Link
+                href={`/app/train-assess/course/${courseId}?module=${moduleId}&role=trainee`}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+              >
+                View Onsite Module Details (Simulated)
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
