@@ -438,6 +438,7 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
   const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
   if (!allowed) redirect("/app/home?banner=no_access");
 
+  // Get the authorisation assignments first
   let query = supabase
     .from("authorisation_assignments")
     .select(`
@@ -445,22 +446,62 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
       user_id,
       authorisation_id,
       approved_at,
-      profiles!inner(full_name, email),
       authorisations!inner(title, valid_for_days)
     `)
     .eq("assignment_status", "completed")
     .not("approved_at", "is", null)
     .order("approved_at", { ascending: false });
 
+  const { data: assignments, error: assignError } = await query.limit(100);
+  if (assignError) throw new Error(assignError.message);
+  if (!assignments || assignments.length === 0) return [];
+
+  // Get user profiles separately to avoid relationship ambiguity
+  const userIds = [...new Set(assignments.map(a => a.user_id))];
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", userIds);
+
+  if (profilesError) throw new Error(profilesError.message);
+
+  // Create a lookup map for profiles
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+
+  // Combine the data
+  const rows = assignments.map(assignment => ({
+    ...assignment,
+    profiles: profileMap.get(assignment.user_id)
+  }));
+
+  // Apply search filter if provided
   if (q && q.trim()) {
-    const like = `%${q.trim()}%`;
-    query = query.or(`profiles.full_name.ilike.${like},profiles.email.ilike.${like},authorisations.title.ilike.${like}`);
+    const searchTerm = q.trim().toLowerCase();
+    const filteredRows = rows.filter(row => {
+      const profile = row.profiles;
+      return (
+        (profile?.full_name?.toLowerCase().includes(searchTerm) ?? false) ||
+        (profile?.email?.toLowerCase().includes(searchTerm) ?? false) ||
+        ((row as any).authorisations?.title?.toLowerCase().includes(searchTerm) ?? false)
+      );
+    });
+    
+    const { data: filteredData, error } = { data: filteredRows, error: null };
+
+  return filteredData.map((row: any) => ({
+      assignment_id: row.id,
+      user_id: row.user_id,
+      authorisation_id: row.authorisation_id,
+      approved_at: row.approved_at,
+      full_name: row.profiles?.full_name ?? null,
+      email: row.profiles?.email ?? null,
+      authorisation_title: row.authorisations?.title ?? null,
+      valid_for_days: row.authorisations?.valid_for_days ?? null,
+    }));
   }
 
-  const { data: rows, error } = await query.limit(100);
-  if (error) throw new Error(error.message);
-
-  const completedAuthorisations: AuthorisationCompletionRow[] = (rows ?? []).map((row: any) => ({
+  // Map to the expected format
+  const completedAuthorisations: AuthorisationCompletionRow[] = rows.map((row: any) => ({
     assignment_id: row.id,
     user_id: row.user_id,
     authorisation_id: row.authorisation_id,
@@ -470,16 +511,6 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
     authorisation_title: row.authorisations?.title ?? null,
     valid_for_days: row.authorisations?.valid_for_days ?? null,
   }));
-
-  // Filter by search term if provided (applied server-side in the query, but can be refined here if needed)
-  if (q && q.trim()) {
-    const searchTerm = q.trim().toLowerCase();
-    return completedAuthorisations.filter(auth =>
-      (auth.full_name?.toLowerCase().includes(searchTerm) ?? false) ||
-      (auth.email?.toLowerCase().includes(searchTerm) ?? false) ||
-      (auth.authorisation_title?.toLowerCase().includes(searchTerm) ?? false)
-    );
-  }
 
   return completedAuthorisations;
 }
