@@ -1,4 +1,3 @@
-
 // app/app/admin/users/[id]/page.tsx
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
@@ -66,9 +65,8 @@ async function loadUserCompletedItems(userId: string) {
     .not("completed_at", "is", null)
     .order("completed_at", { ascending: false });
 
-  // Use the same approach as MyProfile page for authorizations
-  // Fetch all authorization assignments for this user
-  const { data: allAuthAssignments } = await supabase
+  // Fetch authorization assignments - using exact same pattern as MyProfile
+  const { data: allAuthAssignments, error: authError } = await supabase
     .from("authorisation_assignments")
     .select(`
       id,
@@ -85,6 +83,12 @@ async function loadUserCompletedItems(userId: string) {
     `)
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
+
+  console.log('Debug - All auth assignments:', allAuthAssignments);
+
+  if (authError) {
+    console.error('Authorization assignments error:', authError);
+  }
 
   // For each authorization, fetch its courses and the user's progress (like MyProfile does)
   const authWithCourses = await Promise.all(
@@ -128,14 +132,13 @@ async function loadUserCompletedItems(userId: string) {
   );
 
   // Debug logging
-  console.log("Debug - All auth assignments:", allAuthAssignments);
   console.log("Debug - Auth with courses:", authWithCourses);
-  
-  // Filter for completed authorizations (same as MyProfile page)
-  const completedAuthWithCourses = (authWithCourses ?? []).filter(a => 
-    a.assignment_status === "completed"
-  );
-  
+
+  // Filter completed authorizations - ensure we're checking the right status
+  const completedAuthWithCourses = authWithCourses?.filter(auth => 
+    auth.assignment_status === "completed" && auth.completed_at
+  ) || [];
+
   console.log("Debug - Completed auth with courses:", completedAuthWithCourses);
 
   // Process courses
@@ -144,10 +147,10 @@ async function loadUserCompletedItems(userId: string) {
     const validForDays = course.courses.valid_for_days || 365; // Default to 1 year
     const dueDate = new Date(completedDate);
     dueDate.setDate(dueDate.getDate() + validForDays);
-    
+
     const today = new Date();
     const daysUntilExpiry = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     let status: 'current' | 'expiring_soon' | 'expired' = 'current';
     if (daysUntilExpiry < 0) status = 'expired';
     else if (daysUntilExpiry <= 30) status = 'expiring_soon';
@@ -168,7 +171,7 @@ async function loadUserCompletedItems(userId: string) {
     const completedDate = new Date(auth.completed_at);
     const validForDays = auth.authorisations.valid_for_days;
     const validForYears = auth.authorisations.valid_for_years;
-    
+
     // Use valid_for_days if available, otherwise fall back to valid_for_years
     if (!validForDays && !validForYears) {
       return {
@@ -188,10 +191,10 @@ async function loadUserCompletedItems(userId: string) {
     } else if (validForYears) {
       dueDate.setFullYear(dueDate.getFullYear() + validForYears);
     }
-    
+
     const today = new Date();
     const daysUntilExpiry = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     let status: 'current' | 'expiring_soon' | 'expired' = 'current';
     if (daysUntilExpiry < 0) status = 'expired';
     else if (daysUntilExpiry <= 90) status = 'expiring_soon'; // 3 months for authorizations
@@ -247,7 +250,7 @@ export default async function EditUserPage({
 
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
-  
+
   const supabase = await createSupabaseServer();
   const { data: profile } = await supabase
     .from("profiles")
