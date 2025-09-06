@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
@@ -65,7 +64,7 @@ export default async function LearnAuthorisationPage(props: {
 
   // Get user's course assignments and progress for these courses
   const courseIds = (authCourses ?? []).map(ac => ac.course_id);
-  
+
   const { data: courseAssignments } = courseIds.length > 0 ? await supabase
     .from("course_assignments")
     .select("id, course_id, assignment_status, completed_at")
@@ -83,13 +82,13 @@ export default async function LearnAuthorisationPage(props: {
     (authCourses ?? []).map(async (authCourse) => {
       const courseId = authCourse.course_id;
       const courseAssignment = assignmentMap.get(courseId);
-      
+
       // Get all modules for this course
       const { data: allModules } = await supabase
         .from("course_modules")
         .select("id, type")
         .eq("course_id", courseId);
-      
+
       const digitalModules = (allModules ?? []).filter(m => 
         m.type === "digital_training" || m.type === "digital_assessment_quiz"
       );
@@ -121,7 +120,10 @@ export default async function LearnAuthorisationPage(props: {
         onsiteModules: onsiteModules.length,
         digitalComplete,
         onsiteComplete,
-        allComplete
+        allComplete,
+        // Add counts for onsite modules for the display logic
+        onsite_training_count: onsiteModules.filter(m => m.type === "onsite_training").length,
+        onsite_assessment_count: onsiteModules.filter(m => m.type === "onsite_assessment").length,
       };
     })
   );
@@ -143,7 +145,7 @@ export default async function LearnAuthorisationPage(props: {
         <Link href="/app/myprofile" className="text-sm text-blue-600 hover:underline">
           ← Back to My Profile
         </Link>
-        
+
         <div className="border-b pb-6">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             {authorization.title}
@@ -151,7 +153,7 @@ export default async function LearnAuthorisationPage(props: {
           {authorization.description && (
             <p className="text-gray-600 mb-4">{authorization.description}</p>
           )}
-          
+
           {/* Overall Progress */}
           <div className="bg-white rounded-lg border p-4">
             <div className="flex items-center justify-between mb-2">
@@ -175,7 +177,7 @@ export default async function LearnAuthorisationPage(props: {
       {assignment.assignment_status !== "completed" && (
         <div className="bg-blue-50 rounded-lg border border-blue-200 p-4">
           <h2 className="font-semibold text-blue-800 mb-3">What's Next?</h2>
-          
+
           {nextDigitalCourse ? (
             <div className="space-y-3">
               <p className="text-sm text-blue-700">
@@ -209,12 +211,17 @@ export default async function LearnAuthorisationPage(props: {
       {/* Course List */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold text-gray-900">Courses in this Authorization</h2>
-        
+
         <div className="space-y-3">
           {coursesWithProgress.map((courseProgress, index) => {
             const course = courseProgress.courses;
             const isNextDigital = nextDigitalCourse?.course_id === course.id;
-            
+
+            // Calculate digital progress percentage
+            const digitalProgress = courseProgress.digitalModules > 0 
+              ? Math.round((courseProgress.completedModules / courseProgress.digitalModules) * 100)
+              : 100; // Assume 100% if no digital modules
+
             return (
               <div 
                 key={course.id} 
@@ -235,7 +242,7 @@ export default async function LearnAuthorisationPage(props: {
                           ✓ Complete
                         </span>
                       )}
-                      {courseProgress.digitalComplete && !courseProgress.allComplete && (
+                      {!courseProgress.allComplete && courseProgress.digitalComplete && (course.onsite_training_count > 0 || course.onsite_assessment_count > 0) && (
                         <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-yellow-100 text-yellow-800">
                           ⏳ Awaiting Onsite
                         </span>
@@ -246,12 +253,12 @@ export default async function LearnAuthorisationPage(props: {
                         </span>
                       )}
                     </div>
-                    
+
                     <h3 className="font-semibold text-gray-900 mb-1">{course.title}</h3>
                     {course.description && (
                       <p className="text-sm text-gray-600 mb-3">{course.description}</p>
                     )}
-                    
+
                     {/* Progress Details */}
                     <div className="text-xs text-gray-500 space-y-1">
                       <div>
@@ -267,7 +274,7 @@ export default async function LearnAuthorisationPage(props: {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-col gap-2">
                     {courseProgress.assignment && (
                       <Link

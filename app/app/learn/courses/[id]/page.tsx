@@ -1006,13 +1006,14 @@ export default async function LearnerCoursePage(props: {
                         </div>
                       )}
 
-                      {/* Next Course in Authorization - Show for both full completion and digital completion */}
+                      {/* Next Course in Authorization - Show for full completion or digital-only completion */}
                       {nextCourseInAuth && (progressPercent === 100 || 
-                        (authorizationContext && completedModules.size === sortedModules.filter(m =>
-                          m.type === "digital_training" || m.type === "digital_assessment_quiz"
-                        ).length && sortedModules.filter(m =>
-                          m.type === "digital_training" || m.type === "digital_assessment_quiz"
-                        ).length > 0)) && (
+                        (authorizationContext && 
+                         // Check if all digital modules are complete and there are no onsite modules
+                         digitalTrainingModules.concat(digitalQuizModules).every(m => completedModules.has(m.id)) &&
+                         digitalTrainingModules.concat(digitalQuizModules).length > 0 &&
+                         onsiteTrainingModules.length === 0 && onsiteAssessmentModules.length === 0
+                        )) && (
                         <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                           <h3 className="font-medium text-green-800 mb-2">
                             {progressPercent === 100 ? 'Course Complete! 🎉' : 'Digital Training Complete! 📚'}

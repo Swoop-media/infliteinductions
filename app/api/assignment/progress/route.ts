@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Check if user has permission to update this assignment
     let hasPermission = false;
-    
+
     // Case 1: User owns the assignment (learner completing their own modules)
     if (assignment.user_id === user.id) {
       hasPermission = true;
@@ -59,14 +59,14 @@ export async function POST(request: NextRequest) {
         .eq("user_id", user.id)
         .eq("course_id", assignment.course_id)
         .in("role", ["onsite_trainer", "onsite_assessor"]);
-      
+
       console.log("🔍 Trainer permission check:", {
         userId: user.id,
         courseId: assignment.course_id,
         trainerAssignments,
         trainerError: trainerError?.message
       });
-      
+
       if (trainerAssignments && trainerAssignments.length > 0) {
         hasPermission = true;
         console.log("✅ User is trainer/assessor for this course:", trainerAssignments);
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
       .from("assignment_progress")
       .select("*")
       .limit(1);
-    
+
     console.log("📋 Table structure check:", { tableInfo, tableError });
 
     const { error: insertErr, data: insertData } = await supabase
@@ -121,10 +121,10 @@ export async function POST(request: NextRequest) {
         user: user.id,
         assignment: assignment
       });
-      return NextResponse.json({ 
-        error: "Failed to track progress", 
+      return NextResponse.json({
+        error: "Failed to track progress",
         details: insertErr?.message,
-        code: insertErr?.code 
+        code: insertErr?.code
       }, { status: 500 });
     }
 
@@ -210,10 +210,10 @@ async function checkAndTriggerNotifications(supabase: any, assignment: any, comp
     const justCompletedOnsiteTraining = onsiteTrainingModules.some(m => m.id === completedModuleId);
     if (justCompletedOnsiteTraining) {
       console.log("🏢 Onsite training module completed! Checking for next steps...");
-      
+
       // Check if there are more onsite training modules to complete
       const remainingOnsiteTraining = onsiteTrainingModules.filter(m => !completedModuleIds.has(m.id));
-      
+
       if (remainingOnsiteTraining.length === 0) {
         // All onsite training complete - check if onsite assessment exists
         if (onsiteAssessmentModules.length > 0) {
@@ -232,19 +232,18 @@ async function checkAndTriggerNotifications(supabase: any, assignment: any, comp
     // Check if all modules are complete (full course completion)
     const allModulesComplete = allModules.every(m => completedModuleIds.has(m.id));
     if (allModulesComplete) {
-      console.log("🏆 Full course completed! Updating assignment status and notifying trainee...");
+      console.log("🏆 Full course completed! Updating assignment status...");
+      await completeCourseAssignment(supabase, createNotification, assignmentId, courseTitle, userId);
+    } else {
+      // Check if all digital modules are complete for courses with no onsite components
+      const hasOnsiteModules = onsiteTrainingModules.length > 0 || onsiteAssessmentModules.length > 0;
+      const allDigitalComplete = digitalModules.length > 0 &&
+        digitalModules.every(m => completedModuleIds.has(m.id));
 
-      // Update assignment status to completed
-      await supabase
-        .from("course_assignments")
-        .update({
-          assignment_status: "completed",
-          completed_at: new Date().toISOString()
-        })
-        .eq("id", assignmentId);
-
-      // Notify trainee of completion
-      await notifyTraineeCompletion(supabase, createNotification, courseTitle, userId);
+      if (!hasOnsiteModules && allDigitalComplete) {
+        console.log("🎓 All digital modules completed in digital-only course! Marking course as complete...");
+        await completeCourseAssignment(supabase, createNotification, assignmentId, courseTitle, userId);
+      }
     }
 
   } catch (error) {
@@ -256,14 +255,14 @@ async function notifyOnsiteTrainers(supabase: any, createNotification: any, cour
   try {
     // Get onsite trainers for this course - use service role to see all assignments
     console.log("🔍 Looking for onsite trainers for course:", courseId);
-    
+
     // Create a service role client to ensure we can see all course assignments
     const serviceSupabase = createClient(
       process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "",
       process.env.SUPABASE_SERVICE_ROLE_KEY || "",
       { auth: { persistSession: false } }
     );
-    
+
     const { data: trainers, error: trainersError } = await serviceSupabase
       .from("course_assignments")
       .select("user_id, role")
@@ -275,13 +274,13 @@ async function notifyOnsiteTrainers(supabase: any, createNotification: any, cour
     // Get trainee name - try profiles first, then auth.users
     let traineeName = "A trainee";
     let traineeEmail = "";
-    
+
     const { data: traineeProfile } = await supabase
       .from("profiles")
       .select("full_name, email")
       .eq("id", traineeUserId)
       .single();
-    
+
     if (traineeProfile?.full_name || traineeProfile?.email) {
       traineeName = traineeProfile.full_name || traineeProfile.email;
       traineeEmail = traineeProfile.email || "";
@@ -339,14 +338,14 @@ async function notifyOnsiteAssessors(supabase: any, createNotification: any, cou
   try {
     // Get onsite assessors for this course - use service role to see all assignments
     console.log("🔍 Looking for onsite assessors for course:", courseId);
-    
+
     // Create a service role client to ensure we can see all course assignments
     const serviceSupabase = createClient(
       process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "",
       process.env.SUPABASE_SERVICE_ROLE_KEY || "",
       { auth: { persistSession: false } }
     );
-    
+
     const { data: assessors, error: assessorsError } = await serviceSupabase
       .from("course_assignments")
       .select("user_id, role")
@@ -412,7 +411,7 @@ async function completeCourseAssignment(supabase: any, createNotification: any, 
 
     // Notify trainee of completion
     await notifyTraineeCompletion(supabase, createNotification, courseTitle, traineeUserId);
-    
+
     console.log("✅ Course assignment completed and trainee notified");
   } catch (error) {
     console.error("❌ Error completing course assignment:", error);
