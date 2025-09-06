@@ -40,19 +40,73 @@ async function loadUserCompletedItems(userId: string) {
     .not("completed_at", "is", null)
     .order("completed_at", { ascending: false });
 
-  // Get completed authorizations with due dates (including approved ones)
-  const { data: completedAuthorizations } = await supabase
+  // Fetch authorization assignments - using exact same pattern as MyProfile
+  const { data: allAuthAssignments, error: authError } = await supabase
     .from("authorisation_assignments")
     .select(`
       id,
-      completed_at,
+      authorisation_id,
       assignment_status,
-      authorisations!authorisation_assignments_authorisation_id_fkey(title, valid_for_years)
+      completed_at,
+      authorisations!inner(
+        id,
+        title,
+        status,
+        valid_for_days
+      )
     `)
     .eq("user_id", userId)
-    .in("assignment_status", ["completed", "approved"])
-    .not("completed_at", "is", null)
-    .order("completed_at", { ascending: false });
+    .order("created_at", { ascending: false });
+
+  if (authError) {
+    console.error('Authorization assignments error:', authError);
+  }
+
+  // For each authorization, fetch its courses and the user's progress (like MyProfile does)
+  const authWithCourses = await Promise.all(
+    (allAuthAssignments ?? []).map(async (authAssignment) => {
+      // Get courses for this authorization
+      const { data: authCourses } = await supabase
+        .from("authorisation_courses")
+        .select(`
+          course_id,
+          order_index,
+          courses!inner(
+            id,
+            title,
+            status
+          )
+        `)
+        .eq("authorisation_id", authAssignment.authorisation_id)
+        .order("order_index", { ascending: true });
+
+      // Get user's course assignments for these courses
+      const courseIds = (authCourses ?? []).map(ac => ac.course_id);
+      const { data: userCourseAssignments } = courseIds.length > 0 ? await supabase
+        .from("course_assignments")
+        .select("course_id, assignment_status, completed_at")
+        .eq("user_id", userId)
+        .eq("role", "trainee")
+        .in("course_id", courseIds) : { data: [] };
+
+      const courseAssignmentMap = new Map(
+        (userCourseAssignments ?? []).map(ca => [ca.course_id, ca])
+      );
+
+      return {
+        ...authAssignment,
+        courses: (authCourses ?? []).map(ac => ({
+          ...ac,
+          assignment: courseAssignmentMap.get(ac.course_id)
+        }))
+      };
+    })
+  );
+
+  // Filter completed authorizations - ensure we're checking the right status
+  const completedAuthWithCourses = authWithCourses?.filter(auth => 
+    auth.assignment_status === "completed" && auth.completed_at
+  ) || [];
 
   // Process courses
   const processedCourses: CompletedCourse[] = (completedCourses || []).map(course => {
@@ -79,12 +133,13 @@ async function loadUserCompletedItems(userId: string) {
     };
   });
 
-  // Process authorizations
-  const processedAuthorizations: CompletedAuthorization[] = (completedAuthorizations || []).map(auth => {
+  // Process authorizations using the MyProfile pattern
+  const processedAuthorizations: CompletedAuthorization[] = (completedAuthWithCourses || []).map(auth => {
     const completedDate = new Date(auth.completed_at);
-    const validForYears = auth.authorisations.valid_for_years;
-    
-    if (!validForYears) {
+    const validForDays = auth.authorisations.valid_for_days;
+
+    // If no valid_for_days, treat as no expiry
+    if (!validForDays) {
       return {
         assignment_id: auth.id,
         authorization_title: auth.authorisations.title,
@@ -97,20 +152,20 @@ async function loadUserCompletedItems(userId: string) {
     }
 
     const dueDate = new Date(completedDate);
-    dueDate.setFullYear(dueDate.getFullYear() + validForYears);
-    
+    dueDate.setDate(dueDate.getDate() + validForDays);
+
     const today = new Date();
     const daysUntilExpiry = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     let status: 'current' | 'expiring_soon' | 'expired' = 'current';
     if (daysUntilExpiry < 0) status = 'expired';
-    else if (daysUntilExpiry <= 90) status = 'expiring_soon';
+    else if (daysUntilExpiry <= 90) status = 'expiring_soon'; // 3 months for authorizations
 
     return {
       assignment_id: auth.id,
       authorization_title: auth.authorisations.title,
       completed_at: auth.completed_at,
-      valid_for_years: validForYears,
+      valid_for_years: Math.round(validForDays / 365 * 100) / 100, // Convert days to years for display
       due_date: dueDate.toISOString(),
       days_until_expiry: daysUntilExpiry,
       status
