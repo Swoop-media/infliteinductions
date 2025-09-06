@@ -734,6 +734,17 @@ export default async function LearnerCoursePage(props: {
     }
   }
 
+  // Fetch onsite requirements for onsite modules
+  let onsiteRequirements = null;
+  if (currentModule?.type === 'onsite_training' || currentModule?.type === 'onsite_assessment') {
+    const { data: requirements } = await supabase
+      .from("onsite_requirements")
+      .select("*")
+      .eq("module_id", currentModule.id)
+      .order("order_index", { ascending: true });
+    onsiteRequirements = requirements;
+  }
+
   const currentModuleIndex = currentModule ? sortedModules.findIndex(m => m.id === currentModule!.id) : -1;
   const isCurrentModuleCompleted = currentModule ? completedModules.has(currentModule.id) : false;
   const isCurrentModuleUnlocked = preview ? true : (currentModule ? (
@@ -1025,74 +1036,107 @@ export default async function LearnerCoursePage(props: {
                       </div>
                     )}
 
-                    {/* Module Actions */}
-                    <div className="pt-6 border-t">
-                      {currentModule.type === "digital_training" && !isCurrentModuleCompleted && !showQuiz && !preview && (
-                        <CompleteModuleButton
-                          assignmentId={assignment.id}
-                          moduleId={currentModule.id}
-                          courseId={courseId}
-                          nextModuleId={currentModuleIndex + 1 < sortedModules.length ? sortedModules[currentModuleIndex + 1].id : undefined}
-                          authorizationId={authorizationId}
-                        />
-                      )}
-
-                      {preview && currentModule.type === "digital_training" && (
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                          <p className="text-sm text-blue-800">
-                            <strong>Preview Mode:</strong> In a real course, learners would click "Mark as Complete" here to proceed to the next module.
-                          </p>
-                        </div>
-                      )}
-
-                      {(currentModule.type === "onsite_training" || currentModule.type === "onsite_assessment") && (
-                        <div className="bg-blue-50 p-4 rounded-lg">
-                          <p className="text-sm text-blue-800">
-                            <strong>{preview ? "Preview Mode:" : "Note:"}</strong> {preview 
-                              ? `This is an ${currentModule.type === "onsite_training" ? "onsite training" : "onsite assessment"} module. In a real course, this would be completed by a ${currentModule.type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.`
-                              : `This step will be completed by your ${currentModule.type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.`
-                            }
-                          </p>
-                        </div>
-                      )}
-
-                      {/* Next Course in Authorization - Show for full completion or digital-only completion */}
-                      {nextCourseInAuth && (progressPercent === 100 || 
-                        (authorizationContext && 
-                         // Check if all digital modules are complete and there are no onsite modules
-                         digitalTrainingModules.concat(digitalQuizModules).every(m => completedModules.has(m.id)) &&
-                         digitalTrainingModules.concat(digitalQuizModules).length > 0 &&
-                         onsiteTrainingModules.length === 0 && onsiteAssessmentModules.length === 0
-                        )) && (
-                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                          <h3 className="font-medium text-green-800 mb-2">
-                            {progressPercent === 100 ? 'Course Complete! 🎉' : 'Digital Training Complete! 📚'}
-                          </h3>
-                          <p className="text-sm text-green-700 mb-3">
-                            {progressPercent === 100 
-                              ? 'Ready to continue with the next course in your authorization?'
-                              : 'Continue with digital training for the next course while waiting for onsite sessions.'
-                            }
-                          </p>
-                          <div className="flex gap-3">
-                            <Link
-                              href={`/app/learn/courses/${nextCourseInAuth.course_id}?auth=${authorizationId}`}
-                              className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                            >
-                              Continue to Next Course →
-                            </Link>
-                            <Link
-                              href="/app/myprofile"
-                              className="inline-flex items-center px-4 py-2 border border-green-300 text-green-700 text-sm font-medium rounded-md bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                            >
-                              Back to My Courses
-                            </Link>
+                    {/* Onsite Training Module Content */}
+                    {currentModule?.type === 'onsite_training' && (
+                      <div className="space-y-4">
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <h3 className="text-lg font-semibold text-blue-900">Onsite Training Session</h3>
                           </div>
+                          <p className="text-blue-800 mb-4">
+                            This is a practical training session that must be completed in person with a qualified trainer.
+                          </p>
+
+                          {!preview && (
+                            <div className="bg-white rounded-md p-3 border">
+                              <h4 className="font-medium text-gray-900 mb-2">Next Steps:</h4>
+                              <ul className="text-sm text-gray-700 space-y-1">
+                                <li>• Contact your trainer to schedule this session</li>
+                                <li>• Ensure you have completed all prerequisite modules</li>
+                                <li>• Bring any required equipment or materials</li>
+                              </ul>
+                            </div>
+                          )}
+
+                          {preview && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                              <p className="text-amber-800 text-sm">
+                                <strong>Preview Mode:</strong> In the live course, learners would see scheduling information and trainer contact details here.
+                              </p>
+                            </div>
+                          )}
                         </div>
-                      )}
 
+                        {/* Display any requirements for onsite training */}
+                        {onsiteRequirements && onsiteRequirements.length > 0 && (
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <h4 className="font-medium text-gray-900 mb-3">Training Requirements:</h4>
+                            <div className="space-y-2">
+                              {onsiteRequirements.map((req, index) => (
+                                <div key={req.id || index} className="flex items-start space-x-2">
+                                  <div className="flex-shrink-0 w-1.5 h-1.5 bg-gray-400 rounded-full mt-2"></div>
+                                  <span className="text-sm text-gray-700">{req.label || req.description}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                    </div>
+                    {/* Onsite Assessment Module Content */}
+                    {currentModule?.type === 'onsite_assessment' && (
+                      <div className="space-y-4">
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                          <div className="flex items-center space-x-2 mb-3">
+                            <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <h3 className="text-lg font-semibold text-green-900">Onsite Assessment</h3>
+                          </div>
+                          <p className="text-green-800 mb-4">
+                            This is a practical assessment that must be completed in person with a qualified assessor.
+                          </p>
+
+                          {!preview && (
+                            <div className="bg-white rounded-md p-3 border">
+                              <h4 className="font-medium text-gray-900 mb-2">Assessment Information:</h4>
+                              <ul className="text-sm text-gray-700 space-y-1">
+                                <li>• Schedule your assessment with an approved assessor</li>
+                                <li>• Complete all training modules before assessment</li>
+                                <li>• Review assessment criteria and requirements</li>
+                              </ul>
+                            </div>
+                          )}
+
+                          {preview && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
+                              <p className="text-amber-800 text-sm">
+                                <strong>Preview Mode:</strong> In the live course, learners would see assessment criteria, schedules, and assessor contact details here.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Display assessment requirements/criteria */}
+                        {onsiteRequirements && onsiteRequirements.length > 0 && (
+                          <div className="bg-gray-50 rounded-lg p-4">
+                            <h4 className="font-medium text-gray-900 mb-3">Assessment Criteria:</h4>
+                            <div className="space-y-2">
+                              {onsiteRequirements.map((req, index) => (
+                                <div key={req.id || index} className="flex items-start space-x-2">
+                                  <div className="flex-shrink-0 w-1.5 h-1.5 bg-gray-400 rounded-full mt-2"></div>
+                                  <span className="text-sm text-gray-700">{req.label || req.description}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-12">
