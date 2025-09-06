@@ -148,13 +148,15 @@ export default async function UserTrainingRecordPDF({
 
   return (
     <div className="max-w-4xl mx-auto p-8 bg-white min-h-screen print:p-6">
-      <style jsx global>{`
-        @media print {
-          body { -webkit-print-color-adjust: exact; }
-          .no-print { display: none !important; }
-          .page-break { page-break-before: always; }
-        }
-      `}</style>
+      <style dangerouslySetInnerHTML={{
+        __html: `
+          @media print {
+            body { -webkit-print-color-adjust: exact; }
+            .no-print { display: none !important; }
+            .page-break { page-break-before: always; }
+          }
+        `
+      }} /></style>
       
       {/* Header */}
       <div className="border-b-2 border-gray-900 pb-6 mb-8">
