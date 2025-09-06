@@ -338,8 +338,7 @@ async function DueDatesCourseSection({ q }: { q: string | null }) {
 }
 
 async function DueDatesAuthorisationSection({ q }: { q: string | null }) {
-  // TODO: Implement authorization due dates loading logic
-  const completedAuthorisations: any[] = []; // Placeholder, replace with actual data loading
+  const completedAuthorisations = await loadCompletedAuthorisationsWithDueDates(q);
 
   return (
     <div className="space-y-4">
@@ -371,7 +370,7 @@ async function DueDatesAuthorisationSection({ q }: { q: string | null }) {
                   Authorisation
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Completed
+                  Approved
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Due Date
@@ -382,39 +381,42 @@ async function DueDatesAuthorisationSection({ q }: { q: string | null }) {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {completedAuthorisations.map((auth: any, index: number) => {
-                // Assuming 'auth' has properties like 'traineeName', 'authorisationName', 'completedAt', 'dueDate'
-                // And 'dueDate' is a string or Date object.
-                const today = new Date();
-                const authDueDate = new Date(auth.dueDate);
-                const timeDiff = authDueDate.getTime() - today.getTime();
-                const daysUntilDue = Math.ceil(timeDiff / (1000 * 3600 * 24));
+              {completedAuthorisations.map((auth) => {
+                  const approvedDate = new Date(auth.approved_at).toLocaleDateString();
 
-                let statusColor = "text-green-600";
-                let statusText = "No expiry";
+                  // Calculate due date based on approval date and valid days
+                  const dueDate = auth.valid_for_days 
+                    ? new Date(new Date(auth.approved_at).getTime() + (auth.valid_for_days * 24 * 60 * 60 * 1000)).toLocaleDateString()
+                    : "No expiry";
 
-                if (daysUntilDue !== null) {
-                  if (daysUntilDue < 0) {
-                    statusColor = "text-red-600";
-                    statusText = `${Math.abs(daysUntilDue)} days overdue`;
-                  } else if (daysUntilDue === 0) {
-                    statusColor = "text-red-600";
-                    statusText = "Due today";
-                  } else if (daysUntilDue <= 30) {
-                    statusColor = "text-yellow-600";
-                    statusText = `${daysUntilDue} days remaining`;
-                  } else {
-                    statusColor = "text-green-600";
-                    statusText = `${daysUntilDue} days remaining`;
+                  // Determine status based on current date vs due date
+                  const now = new Date();
+                  let statusText = "Current";
+                  let statusColor = "text-green-600";
+
+                  if (auth.valid_for_days) {
+                    const dueDateObj = new Date(new Date(auth.approved_at).getTime() + (auth.valid_for_days * 24 * 60 * 60 * 1000));
+                    const daysDiff = Math.ceil((dueDateObj.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+                    if (daysDiff < 0) {
+                      statusText = "Expired";
+                      statusColor = "text-red-600";
+                    } else if (daysDiff <= 30) {
+                      statusText = "Expiring Soon";
+                      statusColor = "text-yellow-600";
+                    }
                   }
-                }
-
                 return (
-                  <tr key={index}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{auth.traineeName || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{auth.authorisationName || 'N/A'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(auth.completedAt).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(auth.dueDate).toLocaleDateString()}</td>
+                  <tr key={auth.assignment_id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{auth.full_name || 'N/A'}</td>
+                    <td className="border-b px-4 py-3">
+                        <div className="font-medium">{auth.authorisation_title}</div>
+                        <div className="text-xs text-gray-500">
+                          Valid for: {auth.valid_for_days ? `${auth.valid_for_days} days` : 'No expiry'}
+                        </div>
+                      </td>
+                      <td className="border-b px-4 py-3 text-sm">{approvedDate}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{dueDate}</td>
                     <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${statusColor}`}>
                       {statusText}
                     </td>
@@ -428,6 +430,70 @@ async function DueDatesAuthorisationSection({ q }: { q: string | null }) {
     </div>
   );
 }
+
+async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
+  "use server";
+  noStore();
+  const supabase = await createSupabaseServer();
+  const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
+  if (!allowed) redirect("/app/home?banner=no_access");
+
+  let query = supabase
+    .from("authorisation_assignments")
+    .select(`
+      id,
+      user_id,
+      authorisation_id,
+      approved_at,
+      profiles!inner(full_name, email),
+      authorisations!inner(title, valid_for_days)
+    `)
+    .eq("assignment_status", "completed")
+    .not("approved_at", "is", null)
+    .order("approved_at", { ascending: false });
+
+  if (q && q.trim()) {
+    const like = `%${q.trim()}%`;
+    query = query.or(`profiles.full_name.ilike.${like},profiles.email.ilike.${like},authorisations.title.ilike.${like}`);
+  }
+
+  const { data: rows, error } = await query.limit(100);
+  if (error) throw new Error(error.message);
+
+  const completedAuthorisations: AuthorisationCompletionRow[] = (rows ?? []).map((row: any) => ({
+    assignment_id: row.id,
+    user_id: row.user_id,
+    authorisation_id: row.authorisation_id,
+    approved_at: row.approved_at,
+    full_name: row.profiles?.full_name ?? null,
+    email: row.profiles?.email ?? null,
+    authorisation_title: row.authorisations?.title ?? null,
+    valid_for_days: row.authorisations?.valid_for_days ?? null,
+  }));
+
+  // Filter by search term if provided (applied server-side in the query, but can be refined here if needed)
+  if (q && q.trim()) {
+    const searchTerm = q.trim().toLowerCase();
+    return completedAuthorisations.filter(auth =>
+      (auth.full_name?.toLowerCase().includes(searchTerm) ?? false) ||
+      (auth.email?.toLowerCase().includes(searchTerm) ?? false) ||
+      (auth.authorisation_title?.toLowerCase().includes(searchTerm) ?? false)
+    );
+  }
+
+  return completedAuthorisations;
+}
+
+type AuthorisationCompletionRow = {
+  assignment_id: string;
+  user_id: string;
+  authorisation_id: string;
+  approved_at: string;
+  full_name: string | null;
+  email: string | null;
+  authorisation_title: string | null;
+  valid_for_days: number | null;
+};
 
 async function UsersSection({ q }: { q: string | null }) {
   const { profiles, roleMap, grantablePool } = await loadUsersAndRoles(q);
@@ -527,7 +593,7 @@ async function loadPendingAuthorisations(q: string | null) {
     .in("id", userIds);
 
   if (profilesError) throw new Error(profilesError.message);
-  
+
   // Create a lookup map for profiles
   const profileMap = new Map((profiles || []).map(p => [p.id, p]));
 
