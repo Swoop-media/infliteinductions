@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
@@ -12,9 +11,9 @@ type Props = {
 async function loadAssignmentDetails(assignmentId: string) {
   "use server";
   noStore();
-  
+
   const supabase = await createSupabaseServer();
-  
+
   // Get the authorisation assignment details
   const { data: assignment, error: assignError } = await supabase
     .from("authorisation_assignments")
@@ -87,6 +86,40 @@ async function loadAssignmentDetails(assignmentId: string) {
     assignment,
     courses: coursesWithProgress
   };
+}
+
+// This function is intended to handle the approval of an authorisation assignment.
+async function approveAssignment(formData: FormData) {
+  "use server";
+  noStore();
+
+  const assignmentId = formData.get("assignmentId") as string;
+  const supabase = await createSupabaseServer();
+
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/auth/login");
+  }
+
+  // Update the authorisation assignment status to 'completed' and record approval details.
+  const { error } = await supabase
+    .from("authorisation_assignments")
+    .update({ 
+      assignment_status: "completed",
+      approved_at: new Date().toISOString(),
+      approved_by: user.id
+    })
+    .eq("id", assignmentId);
+
+  if (error) {
+    console.error("Error approving assignment:", error);
+    // Optionally, you could redirect with an error banner
+    // redirect(`/app/admin/review/${assignmentId}?banner=approval_failed`);
+  }
+
+  // Redirect back to the admin dashboard with a success banner
+  redirect("/app/admin?tab=pending_authorisations&banner=approval_success");
 }
 
 export default async function ReviewAssignmentPage({ params }: Props) {
@@ -168,7 +201,10 @@ export default async function ReviewAssignmentPage({ params }: Props) {
           {courses.map((course) => {
             const courseData = course.courses as any;
             const assignment = course.assignment;
+            // Check if the course assignment status is 'completed' (meaning admin approved)
             const isCompleted = assignment?.assignment_status === "completed";
+            // Check if the course assignment status is 'pending_approval' (meaning trainee completed but not yet approved)
+            const isPendingApproval = assignment?.assignment_status === "pending_approval";
 
             return (
               <div key={course.course_id} className="flex items-center justify-between p-4 border rounded-lg">
@@ -185,12 +221,15 @@ export default async function ReviewAssignmentPage({ params }: Props) {
                       "Not completed"
                     }
                   </div>
+                  {/* Display status based on whether it's completed or pending approval */}
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     isCompleted 
                       ? "bg-green-100 text-green-800" 
-                      : "bg-gray-100 text-gray-800"
+                      : isPendingApproval
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-gray-100 text-gray-800"
                   }`}>
-                    {isCompleted ? "✓ Completed" : "Not Completed"}
+                    {isCompleted ? "✓ Completed" : isPendingApproval ? "Pending Approval" : "Not Completed"}
                   </span>
                 </div>
               </div>
@@ -202,7 +241,8 @@ export default async function ReviewAssignmentPage({ params }: Props) {
       {/* Actions */}
       <div className="rounded-xl border bg-white p-6">
         <h2 className="text-lg font-semibold mb-4">Review Actions</h2>
-        <div className="flex gap-4">
+        <form action={approveAssignment} className="flex gap-4">
+          <input type="hidden" name="assignmentId" value={resolvedParams.assignmentId} />
           <button className="rounded-md bg-green-600 px-6 py-2 text-sm text-white hover:bg-green-700">
             Approve Authorisation
           </button>
@@ -212,7 +252,7 @@ export default async function ReviewAssignmentPage({ params }: Props) {
           <button className="rounded-md border px-6 py-2 text-sm hover:bg-gray-50">
             Add Notes
           </button>
-        </div>
+        </form>
         <p className="text-xs text-gray-500 mt-2">
           Note: Review functionality will be implemented in the next phase
         </p>

@@ -148,6 +148,7 @@ async function loadMyProfileAndLearning() {
   const inProgressAuth = (authWithCourses ?? []).filter(a => 
     a.assignment_status === "assigned" || a.assignment_status === "in_progress"
   );
+  // This is the section that needs to be updated to filter for 'completed' status correctly
   const completedAuth = (authWithCourses ?? []).filter(a => 
     a.assignment_status === "completed"
   );
@@ -295,7 +296,10 @@ export default async function MyProfilePage() {
                       <div className="flex-1">
                         <h3 className="font-medium">{auth.title}</h3>
                         <p className="text-sm text-gray-600 capitalize">
-                          {assignment.assignment_status.replace('_', ' ')}
+                          {assignment.assignment_status === 'pending_approval' 
+                            ? 'Pending Approval' 
+                            : assignment.assignment_status.replace('_', ' ')
+                          }
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
                           {completedCoursesCount} of {totalCourses} courses completed

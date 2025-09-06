@@ -517,7 +517,7 @@ async function loadPendingAuthorisations(q: string | null) {
         email
       )
     `)
-    .eq("assignment_status", "completed")
+    .eq("assignment_status", "pending_approval")
     .not("completed_at", "is", null)
     .order("completed_at", { ascending: false });
 

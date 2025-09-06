@@ -33,17 +33,17 @@ BEGIN
             AND ca.role = 'trainee'
             AND ca.assignment_status = 'completed';
 
-            -- If all courses are completed, mark authorization as completed
+            -- If all courses are completed, mark authorization as pending approval
             IF v_completed_courses >= v_total_courses AND v_total_courses > 0 THEN
                 UPDATE public.authorisation_assignments
                 SET 
-                    assignment_status = 'completed',
+                    assignment_status = 'pending_approval',
                     completed_at = NOW()
                 WHERE authorisation_id = v_authorization_id
                 AND user_id = NEW.user_id
-                AND assignment_status != 'completed';
+                AND assignment_status IN ('assigned', 'in_progress');
 
-                RAISE LOG 'Authorization % completed for user %', v_authorization_id, NEW.user_id;
+                RAISE LOG 'Authorization % pending approval for user %', v_authorization_id, NEW.user_id;
             END IF;
         END IF;
     END IF;
