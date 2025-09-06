@@ -510,11 +510,6 @@ async function loadPendingAuthorisations(q: string | null) {
       authorisations!inner(
         id,
         title
-      ),
-      profiles!inner(
-        id,
-        full_name,
-        email
       )
     `)
     .eq("assignment_status", "pending_approval")
@@ -523,6 +518,18 @@ async function loadPendingAuthorisations(q: string | null) {
 
   if (assignError) throw new Error(assignError.message);
   if (!assignments || assignments.length === 0) return [];
+
+  // Get user profiles separately to avoid relationship ambiguity
+  const userIds = [...new Set(assignments.map(a => a.user_id))];
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", userIds);
+
+  if (profilesError) throw new Error(profilesError.message);
+  
+  // Create a lookup map for profiles
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
 
   // For each completed authorisation, verify all courses are actually completed
   const pendingAuthorisations: PendingAuthorisationRow[] = [];
@@ -560,13 +567,14 @@ async function loadPendingAuthorisations(q: string | null) {
 
     // Only include if all courses are completed (100%)
     if (completedCount === totalCount && totalCount > 0) {
+      const profile = profileMap.get(assignment.user_id);
       pendingAuthorisations.push({
         assignment_id: assignment.id,
         user_id: assignment.user_id,
         authorisation_id: assignment.authorisation_id,
         authorisation_title: (assignment as any).authorisations.title,
-        trainee_name: (assignment as any).profiles.full_name || "",
-        trainee_email: (assignment as any).profiles.email || "",
+        trainee_name: profile?.full_name || "",
+        trainee_email: profile?.email || "",
         completed_at: assignment.completed_at,
         total_courses: totalCount,
         completed_courses: completedCount,
