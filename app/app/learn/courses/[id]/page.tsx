@@ -5,6 +5,37 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import CompleteModuleButton from "./CompleteModuleButton";
 import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
 
+// Placeholder for the new OnsiteModulePreview component
+// In a real scenario, this component would be imported from its file.
+// For this example, we'll define it inline for completeness.
+async function OnsiteModulePreview({ moduleId, moduleType, courseId, preview }: { moduleId: string; moduleType: string; courseId: string; preview: boolean }) {
+  "use server";
+  return (
+    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+      <h3 className="text-lg font-semibold text-blue-900 mb-2">
+        {moduleType === "onsite_training" ? "Onsite Training Module" : "Onsite Assessment Module"}
+      </h3>
+      <p className="text-sm text-blue-800">
+        {preview ? "Preview Mode:" : ""} This is an {moduleType === "onsite_training" ? "onsite training" : "onsite assessment"} module.
+        {preview
+          ? " In a real course, this would be completed by a trainer/assessor during an in-person session. Since this is a preview, we're just displaying a placeholder."
+          : ` In a real course, this would be completed by your trainer/assessor during an in-person session.`
+        }
+      </p>
+      {!preview && (
+        <div className="mt-4 flex justify-center">
+          <Link
+            href={`/app/train-assess/course/${courseId}?module=${moduleId}&role=trainee`}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+          >
+            View Onsite Module Details (Simulated)
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Renders a course as a learner (assignments-only approach).
  * Requires a trainee assignment for the signed-in user.
@@ -868,8 +899,8 @@ export default async function LearnerCoursePage(props: {
             <div className="mx-auto max-w-4xl p-6">
               <div className="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
                 <div className="text-sm text-red-800">
-                  ⚠️ Quiz Error: {quizError === 'auth_required' ? 'Authentication required' : 
-                                 quizError === 'no_questions' ? 'No questions found for this quiz' : 
+                  ⚠️ Quiz Error: {quizError === 'auth_required' ? 'Authentication required' :
+                                 quizError === 'no_questions' ? 'No questions found for this quiz' :
                                  'An error occurred during quiz submission'}
                 </div>
               </div>
@@ -896,9 +927,9 @@ export default async function LearnerCoursePage(props: {
                     {currentModule.type === 'digital_assessment_quiz' && quizResult && quizScore !== null && (
                       <div className="bg-white p-6 rounded-lg border">
                         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz Results</h2>
-                        <div className="p-6 rounded-md border-2 text-center" style={{ 
-                          borderColor: quizPassed ? '#10B981' : '#EF4444', 
-                          backgroundColor: quizPassed ? '#ECFDF5' : '#FEF2F2' 
+                        <div className="p-6 rounded-md border-2 text-center" style={{
+                          borderColor: quizPassed ? '#10B981' : '#EF4444',
+                          backgroundColor: quizPassed ? '#ECFDF5' : '#FEF2F2'
                         }}>
                           <div className={`text-4xl mb-4 ${quizPassed ? 'text-green-600' : 'text-red-600'}`}>
                             {quizPassed ? '🎉' : '📚'}
@@ -963,30 +994,24 @@ export default async function LearnerCoursePage(props: {
                       </div>
                     )}
 
-                    {!showQuiz && blocks?.length === 0 && currentModule.type !== 'digital_assessment_quiz' ? (
-                      <div className="text-center py-8">
-                        <div className="text-gray-500 mb-4">
-                          <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        </div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Content Available</h3>
-                        <p className="text-gray-600 mb-4">This module doesn't have any content blocks yet.</p>
-                        {currentModule?.type === 'digital_training' && (
-                          <p className="text-sm text-gray-500">Contact your course creator to add content to this training module.</p>
-                        )}
-                      </div>
-                    ) : (
-                      !showQuiz && blocks?.map((block) => (
-                        <div key={block.id} className="space-y-4">
-                          {block.kind === 'video_embed' && (
-                            <div key={block.id} className="mb-6">
-                              <SimpleVideoPlayer url={block.data.url ?? ''} courseId={courseId} title="Training Video" />
-                            </div>
-                          )}
-                          {block.kind !== 'video_embed' && <BlockView block={block} />}
-                        </div>
-                      ))
+                    {/* Onsite Training Module Preview */}
+                    {currentModule.type === 'onsite_training' && (
+                      <OnsiteModulePreview
+                        moduleId={currentModule.id}
+                        moduleType="onsite_training"
+                        courseId={courseId}
+                        preview={preview}
+                      />
+                    )}
+
+                    {/* Onsite Assessment Module Preview */}
+                    {currentModule.type === 'onsite_assessment' && (
+                      <OnsiteModulePreview
+                        moduleId={currentModule.id}
+                        moduleType="onsite_assessment"
+                        courseId={courseId}
+                        preview={preview}
+                      />
                     )}
 
                     {/* Digital Training Module Content */}
@@ -1048,7 +1073,7 @@ export default async function LearnerCoursePage(props: {
                       {(currentModule.type === "onsite_training" || currentModule.type === "onsite_assessment") && (
                         <div className="bg-blue-50 p-4 rounded-lg">
                           <p className="text-sm text-blue-800">
-                            <strong>{preview ? "Preview Mode:" : "Note:"}</strong> {preview 
+                            <strong>{preview ? "Preview Mode:" : "Note:"}</strong> {preview
                               ? `This is an ${currentModule.type === "onsite_training" ? "onsite training" : "onsite assessment"} module. In a real course, this would be completed by a ${currentModule.type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.`
                               : `This step will be completed by your ${currentModule.type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.`
                             }
@@ -1057,8 +1082,8 @@ export default async function LearnerCoursePage(props: {
                       )}
 
                       {/* Next Course in Authorization - Show for full completion or digital-only completion */}
-                      {nextCourseInAuth && (progressPercent === 100 || 
-                        (authorizationContext && 
+                      {nextCourseInAuth && (progressPercent === 100 ||
+                        (authorizationContext &&
                          // Check if all digital modules are complete and there are no onsite modules
                          digitalTrainingModules.concat(digitalQuizModules).every(m => completedModules.has(m.id)) &&
                          digitalTrainingModules.concat(digitalQuizModules).length > 0 &&
@@ -1069,7 +1094,7 @@ export default async function LearnerCoursePage(props: {
                             {progressPercent === 100 ? 'Course Complete! 🎉' : 'Digital Training Complete! 📚'}
                           </h3>
                           <p className="text-sm text-green-700 mb-3">
-                            {progressPercent === 100 
+                            {progressPercent === 100
                               ? 'Ready to continue with the next course in your authorization?'
                               : 'Continue with digital training for the next course while waiting for onsite sessions.'
                             }
