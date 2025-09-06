@@ -2,6 +2,7 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
+import PrintButton from "./PrintButton";
 
 type CompletedCourse = {
   assignment_id: string;
@@ -175,14 +176,7 @@ export default async function UserTrainingRecordPDF({
       </div>
 
       {/* Print Button */}
-      <div className="no-print mb-6">
-        <button 
-          onClick={() => window.print()} 
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-        >
-          Print / Save as PDF
-        </button>
-      </div>
+      <PrintButton />
 
       {/* Completed Authorizations */}
       <div className="mb-8">
