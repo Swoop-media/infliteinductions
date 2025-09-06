@@ -66,35 +66,71 @@ async function loadUserCompletedItems(userId: string) {
     .not("completed_at", "is", null)
     .order("completed_at", { ascending: false });
 
-  // First, let's check ALL authorization assignments for this user to debug
-  const { data: allAuthorizations } = await supabase
+  // Use the same approach as MyProfile page for authorizations
+  // Fetch all authorization assignments for this user
+  const { data: allAuthAssignments } = await supabase
     .from("authorisation_assignments")
     .select(`
       id,
-      completed_at,
+      authorisation_id,
       assignment_status,
-      authorisations!authorisation_assignments_authorisation_id_fkey(title, valid_for_years)
+      completed_at,
+      authorisations!inner(
+        id,
+        title,
+        status,
+        valid_for_days,
+        valid_for_years
+      )
     `)
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  console.log("Debug - All authorizations for user:", allAuthorizations);
+  // For each authorization, fetch its courses and the user's progress (like MyProfile does)
+  const authWithCourses = await Promise.all(
+    (allAuthAssignments ?? []).map(async (authAssignment) => {
+      // Get courses for this authorization
+      const { data: authCourses } = await supabase
+        .from("authorisation_courses")
+        .select(`
+          course_id,
+          order_index,
+          courses!inner(
+            id,
+            title,
+            status
+          )
+        `)
+        .eq("authorisation_id", authAssignment.authorisation_id)
+        .order("order_index", { ascending: true });
 
-  // Get completed authorizations with due dates (including approved and pending_approval ones)
-  const { data: completedAuthorizations } = await supabase
-    .from("authorisation_assignments")
-    .select(`
-      id,
-      completed_at,
-      assignment_status,
-      authorisations!authorisation_assignments_authorisation_id_fkey(title, valid_for_days, valid_for_years)
-    `)
-    .eq("user_id", userId)
-    .in("assignment_status", ["completed", "approved", "pending_approval"])
-    .not("completed_at", "is", null)
-    .order("completed_at", { ascending: false });
+      // Get user's course assignments for these courses
+      const courseIds = (authCourses ?? []).map(ac => ac.course_id);
+      const { data: userCourseAssignments } = courseIds.length > 0 ? await supabase
+        .from("course_assignments")
+        .select("course_id, assignment_status, completed_at")
+        .eq("user_id", userId)
+        .eq("role", "trainee")
+        .in("course_id", courseIds) : { data: [] };
 
-  console.log("Debug - Filtered completed authorizations:", completedAuthorizations);
+      const courseAssignmentMap = new Map(
+        (userCourseAssignments ?? []).map(ca => [ca.course_id, ca])
+      );
+
+      return {
+        ...authAssignment,
+        courses: (authCourses ?? []).map(ac => ({
+          ...ac,
+          assignment: courseAssignmentMap.get(ac.course_id)
+        }))
+      };
+    })
+  );
+
+  // Filter for completed authorizations (same as MyProfile page)
+  const completedAuthWithCourses = (authWithCourses ?? []).filter(a => 
+    a.assignment_status === "completed"
+  );
 
   // Process courses
   const processedCourses: CompletedCourse[] = (completedCourses || []).map(course => {
@@ -121,8 +157,8 @@ async function loadUserCompletedItems(userId: string) {
     };
   });
 
-  // Process authorizations
-  const processedAuthorizations: CompletedAuthorization[] = (completedAuthorizations || []).map(auth => {
+  // Process authorizations using the MyProfile pattern
+  const processedAuthorizations: CompletedAuthorization[] = (completedAuthWithCourses || []).map(auth => {
     const completedDate = new Date(auth.completed_at);
     const validForDays = auth.authorisations.valid_for_days;
     const validForYears = auth.authorisations.valid_for_years;
