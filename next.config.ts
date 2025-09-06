@@ -10,6 +10,16 @@ const nextConfig: NextConfig & { allowedDevOrigins?: string[] } = {
     },
   },
 
+  async redirects() {
+    return [
+      {
+        source: '/app/learn/quiz/:id',
+        destination: '/app/learn/quiz/modules/:id',
+        permanent: false,
+      },
+    ];
+  },
+
   // keep your existing custom key (if your app reads it)
   allowedDevOrigins: process.env.REPLIT_DOMAINS
     ? process.env.REPLIT_DOMAINS.split(",").slice(0, 1)
