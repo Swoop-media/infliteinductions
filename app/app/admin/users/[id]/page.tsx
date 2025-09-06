@@ -127,10 +127,16 @@ async function loadUserCompletedItems(userId: string) {
     })
   );
 
+  // Debug logging
+  console.log("Debug - All auth assignments:", allAuthAssignments);
+  console.log("Debug - Auth with courses:", authWithCourses);
+  
   // Filter for completed authorizations (same as MyProfile page)
   const completedAuthWithCourses = (authWithCourses ?? []).filter(a => 
     a.assignment_status === "completed"
   );
+  
+  console.log("Debug - Completed auth with courses:", completedAuthWithCourses);
 
   // Process courses
   const processedCourses: CompletedCourse[] = (completedCourses || []).map(course => {
