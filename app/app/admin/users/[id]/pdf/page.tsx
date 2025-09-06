@@ -156,7 +156,7 @@ export default async function UserTrainingRecordPDF({
             .page-break { page-break-before: always; }
           }
         `
-      }} /></style>
+     }} />
       
       {/* Header */}
       <div className="border-b-2 border-gray-900 pb-6 mb-8">
