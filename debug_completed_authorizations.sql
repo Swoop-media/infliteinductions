@@ -10,6 +10,7 @@ SELECT
     aa.approved_at,
     aa.created_at,
     a.title as authorization_title,
+    a.valid_for_days,
     a.valid_for_years
 FROM authorisation_assignments aa
 JOIN authorisations a ON a.id = aa.authorisation_id
@@ -23,7 +24,9 @@ SELECT
     aa.assignment_status,
     aa.completed_at,
     aa.approved_at,
-    a.title as authorization_title
+    a.title as authorization_title,
+    a.valid_for_days,
+    a.valid_for_years
 FROM authorisation_assignments aa
 JOIN authorisations a ON a.id = aa.authorisation_id
 WHERE aa.user_id = 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551'

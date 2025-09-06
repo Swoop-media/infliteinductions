@@ -87,7 +87,7 @@ async function loadUserCompletedItems(userId: string) {
       id,
       completed_at,
       assignment_status,
-      authorisations!authorisation_assignments_authorisation_id_fkey(title, valid_for_years)
+      authorisations!authorisation_assignments_authorisation_id_fkey(title, valid_for_days, valid_for_years)
     `)
     .eq("user_id", userId)
     .in("assignment_status", ["completed", "approved", "pending_approval"])
@@ -124,9 +124,11 @@ async function loadUserCompletedItems(userId: string) {
   // Process authorizations
   const processedAuthorizations: CompletedAuthorization[] = (completedAuthorizations || []).map(auth => {
     const completedDate = new Date(auth.completed_at);
+    const validForDays = auth.authorisations.valid_for_days;
     const validForYears = auth.authorisations.valid_for_years;
     
-    if (!validForYears) {
+    // Use valid_for_days if available, otherwise fall back to valid_for_years
+    if (!validForDays && !validForYears) {
       return {
         assignment_id: auth.id,
         authorization_title: auth.authorisations.title,
@@ -139,7 +141,11 @@ async function loadUserCompletedItems(userId: string) {
     }
 
     const dueDate = new Date(completedDate);
-    dueDate.setFullYear(dueDate.getFullYear() + validForYears);
+    if (validForDays) {
+      dueDate.setDate(dueDate.getDate() + validForDays);
+    } else if (validForYears) {
+      dueDate.setFullYear(dueDate.getFullYear() + validForYears);
+    }
     
     const today = new Date();
     const daysUntilExpiry = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -152,7 +158,7 @@ async function loadUserCompletedItems(userId: string) {
       assignment_id: auth.id,
       authorization_title: auth.authorisations.title,
       completed_at: auth.completed_at,
-      valid_for_years: validForYears,
+      valid_for_years: validForYears || Math.round((validForDays || 0) / 365 * 100) / 100, // Convert days to years for display
       due_date: dueDate.toISOString(),
       days_until_expiry: daysUntilExpiry,
       status
