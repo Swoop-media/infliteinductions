@@ -163,16 +163,28 @@ function PageView({ page }: { page: Page }) {
 }
 
 // Static component for onsite module preview (doesn't use server actions)
-function OnsiteModulePreviewStatic({ moduleId, moduleTitle, moduleType, courseId, moduleData, requirements }: {
+function OnsiteModulePreviewStatic({ moduleId, moduleTitle, moduleType, courseId, moduleData, requirements, blocks }: {
   moduleId: string;
   moduleTitle: string;
   moduleType: "onsite_training" | "onsite_assessment";
   courseId: string;
   moduleData?: { description?: string };
   requirements?: Array<{ id: string; title: string; description?: string; is_required: boolean }>;
+  blocks?: Array<{ id: string; kind: string; data: any; order_index: number }>;
 }) {
   const roleLabel = moduleType === 'onsite_training' ? 'Trainer' : 'Assessor';
   const actionLabel = moduleType === 'onsite_training' ? 'training' : 'assessment';
+
+  // Filter blocks for this module and sort by order
+  const moduleBlocks = (blocks || []).sort((a, b) => a.order_index - b.order_index);
+
+  const BlockView = ({ block }: { block: Block }) => {
+    if (block.kind === "rich_text") return <RichText html={String(block.data?.html || block.data?.content || "")} />;
+    if (block.kind === "file") return <FileBlock data={block.data} />;
+    if (block.kind === "video_embed") return <VideoEmbed data={block.data} />;
+    if (block.kind === "link") return <LinkBlock data={block.data} />;
+    return <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">Unsupported block kind: {block.kind}</div>;
+  };
 
   return (
     <div className="bg-white p-6 rounded-lg border">
@@ -204,9 +216,23 @@ function OnsiteModulePreviewStatic({ moduleId, moduleTitle, moduleType, courseId
           {/* Module Description */}
           {moduleData?.description && (
             <div className="mb-6">
-              <h4 className="font-medium text-gray-900 mb-2">Description:</h4>
+              <h4 className="font-medium text-gray-900 mb-2">Module Description:</h4>
               <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
                 {moduleData.description}
+              </div>
+            </div>
+          )}
+
+          {/* Content Blocks */}
+          {moduleBlocks.length > 0 && (
+            <div className="mb-6">
+              <h4 className="font-medium text-gray-900 mb-2">{roleLabel} Content:</h4>
+              <div className="space-y-4">
+                {moduleBlocks.map((block) => (
+                  <div key={block.id} className="bg-gray-50 p-3 rounded-lg">
+                    <BlockView block={block} />
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -237,27 +263,16 @@ function OnsiteModulePreviewStatic({ moduleId, moduleTitle, moduleType, courseId
                   ))}
                 </div>
               ) : (
-                <>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
-                    <span className="text-sm text-gray-700">Sample requirement checklist item</span>
-                  </div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
-                    <span className="text-sm text-gray-700">Practical demonstration completed</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
-                    <span className="text-sm text-gray-700">Safety procedures verified</span>
-                  </div>
-                </>
+                <div className="text-sm text-gray-500 italic">
+                  No requirements configured yet. Use the module builder to add specific requirements.
+                </div>
               )}
             </div>
 
             <div className="text-xs text-gray-500 italic">
               {requirements && requirements.length > 0 
-                ? "* Requirements configured by the course creator"
-                : "* No requirements configured yet. Use the module builder to add specific requirements."}
+                ? `* ${requirements.length} requirement(s) configured by the course creator`
+                : "* Use the module builder to add requirements for this onsite module."}
             </div>
           </div>
 
@@ -716,6 +731,7 @@ export default function CoursePreview({
                   courseId={courseId}
                   moduleData={moduleDescriptions[page.module.id]}
                   requirements={onsiteRequirements.filter(req => req.module_id === page.module.id)}
+                  blocks={blocks.filter(b => b.module_id === page.module.id)}
                 />
               )}
 
@@ -728,6 +744,7 @@ export default function CoursePreview({
                   courseId={courseId}
                   moduleData={moduleDescriptions[page.module.id]}
                   requirements={onsiteRequirements.filter(req => req.module_id === page.module.id)}
+                  blocks={blocks.filter(b => b.module_id === page.module.id)}
                 />
               )}
 
