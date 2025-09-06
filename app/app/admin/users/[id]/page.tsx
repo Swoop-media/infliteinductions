@@ -77,8 +77,7 @@ async function loadUserCompletedItems(userId: string) {
         id,
         title,
         status,
-        valid_for_days,
-        valid_for_years
+        valid_for_days
       )
     `)
     .eq("user_id", userId)
@@ -170,10 +169,9 @@ async function loadUserCompletedItems(userId: string) {
   const processedAuthorizations: CompletedAuthorization[] = (completedAuthWithCourses || []).map(auth => {
     const completedDate = new Date(auth.completed_at);
     const validForDays = auth.authorisations.valid_for_days;
-    const validForYears = auth.authorisations.valid_for_years;
 
-    // Use valid_for_days if available, otherwise fall back to valid_for_years
-    if (!validForDays && !validForYears) {
+    // If no valid_for_days, treat as no expiry
+    if (!validForDays) {
       return {
         assignment_id: auth.id,
         authorization_title: auth.authorisations.title,
@@ -186,11 +184,7 @@ async function loadUserCompletedItems(userId: string) {
     }
 
     const dueDate = new Date(completedDate);
-    if (validForDays) {
-      dueDate.setDate(dueDate.getDate() + validForDays);
-    } else if (validForYears) {
-      dueDate.setFullYear(dueDate.getFullYear() + validForYears);
-    }
+    dueDate.setDate(dueDate.getDate() + validForDays);
 
     const today = new Date();
     const daysUntilExpiry = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -203,7 +197,7 @@ async function loadUserCompletedItems(userId: string) {
       assignment_id: auth.id,
       authorization_title: auth.authorisations.title,
       completed_at: auth.completed_at,
-      valid_for_years: validForYears || Math.round((validForDays || 0) / 365 * 100) / 100, // Convert days to years for display
+      valid_for_years: Math.round(validForDays / 365 * 100) / 100, // Convert days to years for display
       due_date: dueDate.toISOString(),
       days_until_expiry: daysUntilExpiry,
       status
