@@ -46,6 +46,17 @@ BEGIN
         ALTER TYPE notif_type ADD VALUE 'course_expired';
     END IF;
     
+    -- Add authorisation_pending_approval type  
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_enum 
+        WHERE enumlabel = 'authorisation_pending_approval' 
+        AND enumtypid = (
+            SELECT oid FROM pg_type WHERE typname = 'notif_type'
+        )
+    ) THEN
+        ALTER TYPE notif_type ADD VALUE 'authorisation_pending_approval';
+    END IF;
+    
 EXCEPTION
     WHEN undefined_object THEN
         -- If notif_type enum doesn't exist, create it with all needed values
@@ -56,6 +67,7 @@ EXCEPTION
             'course_assigned',
             'authorization_assigned',
             'authorization_revoked',
+            'authorisation_pending_approval',
             'role_granted',
             'role_revoked',
             'status_change',
