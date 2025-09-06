@@ -5,161 +5,6 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import CompleteModuleButton from "./CompleteModuleButton";
 import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
 
-// Server component for onsite module preview with actual content
-async function OnsiteModulePreview({ moduleId, moduleType, courseId, preview }: { moduleId: string; moduleType: string; courseId: string; preview: boolean }) {
-  "use server";
-  const supabase = await createSupabaseServer();
-
-  // Load module details
-  const { data: module } = await supabase
-    .from("course_modules")
-    .select("id, title, description")
-    .eq("id", moduleId)
-    .single();
-
-  // Load content blocks for this module
-  const { data: blocks } = await supabase
-    .from("module_content_blocks")
-    .select("id, kind, data, order_index")
-    .eq("module_id", moduleId)
-    .order("order_index", { ascending: true });
-
-  // Load requirements for onsite modules
-  const { data: requirements } = await supabase
-    .from("onsite_requirements")
-    .select("id, title, description, is_required, order_index")
-    .eq("module_id", moduleId)
-    .order("order_index", { ascending: true });
-
-  const roleLabel = moduleType === "onsite_training" ? "Trainer" : "Assessor";
-  const actionLabel = moduleType === "onsite_training" ? "training" : "assessment";
-
-  return (
-    <div className="bg-white p-6 rounded-lg border">
-      <div className="flex items-start gap-4">
-        <div className="flex-shrink-0">
-          <div className="w-16 h-16 bg-orange-100 rounded-lg flex items-center justify-center">
-            {moduleType === 'onsite_training' ? (
-              <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            ) : (
-              <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v6a2 2 0 002 2h2m0-10h2a2 2 0 012 2v6a2 2 0 01-2 2h-2m0-10V3a2 2 0 00-2-2H9a2 2 0 00-2 2v2m0 10V3a2 2 0 012-2h2a2 2 0 012 2v2m0 10v2a2 2 0 01-2 2H9a2 2 0 01-2-2v-2" />
-              </svg>
-            )}
-          </div>
-        </div>
-
-        <div className="flex-1">
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">{module?.title || `${roleLabel} Module`}</h3>
-          <div className="text-sm text-gray-600 mb-4">Onsite {roleLabel} Module</div>
-
-          {preview && (
-            <div className="bg-blue-50 p-4 rounded-lg mb-4">
-              <p className="text-sm text-blue-800">
-                <strong>Preview Mode:</strong> This is an onsite {actionLabel} module. In a real course, this would be completed by a {roleLabel.toLowerCase()} during an in-person session with the trainee.
-              </p>
-            </div>
-          )}
-
-          {/* Module Description */}
-          {module?.description && (
-            <div className="mb-6">
-              <h4 className="font-medium text-gray-900 mb-2">Description:</h4>
-              <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
-                {module.description}
-              </div>
-            </div>
-          )}
-
-          {/* Content Blocks */}
-          {blocks && blocks.length > 0 && (
-            <div className="mb-6">
-              <h4 className="font-medium text-gray-900 mb-3">Module Content:</h4>
-              <div className="space-y-4">
-                {blocks.map((block) => (
-                  <div key={block.id}>
-                    <BlockView block={block} />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Requirements Section */}
-          {requirements && requirements.length > 0 && (
-            <div className="mb-6">
-              <h4 className="font-medium text-gray-900 mb-3">
-                {roleLabel} Requirements Checklist:
-              </h4>
-
-              <div className="bg-gray-50 p-4 rounded-lg">
-                <div className="space-y-3">
-                  {requirements.map((req) => (
-                    <div key={req.id} className="flex items-start gap-3">
-                      <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white mt-0.5 flex-shrink-0"></div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-700">{req.title}</span>
-                          {req.is_required && (
-                            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded">Required</span>
-                          )}
-                        </div>
-                        {req.description && (
-                          <p className="text-xs text-gray-600 mt-1">{req.description}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {(!requirements || requirements.length === 0) && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
-                    <span className="text-sm text-gray-700">Sample requirement checklist item</span>
-                  </div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
-                    <span className="text-sm text-gray-700">Practical demonstration completed</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-5 h-5 border-2 border-gray-300 rounded bg-white"></div>
-                    <span className="text-sm text-gray-700">Safety procedures verified</span>
-                  </div>
-                  <div className="text-xs text-gray-500 italic mt-3">
-                    * No requirements configured yet. Use the module builder to add specific requirements.
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Instructions for actual use */}
-          <div className="mt-6 p-3 bg-orange-50 rounded-lg">
-            <p className="text-sm text-orange-800">
-              <strong>In actual {actionLabel}:</strong> The {roleLabel.toLowerCase()} would complete the requirements checklist while working with the trainee, then mark the module as complete to advance the trainee's progress.
-            </p>
-          </div>
-
-          {!preview && (
-            <div className="mt-4 flex justify-center">
-              <Link
-                href={`/app/train-assess/course/${courseId}?module=${moduleId}&role=trainee`}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-              >
-                View Onsite Module Details (Simulated)
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /**
  * Renders a course as a learner (assignments-only approach).
  * Requires a trainee assignment for the signed-in user.
@@ -1023,8 +868,8 @@ export default async function LearnerCoursePage(props: {
             <div className="mx-auto max-w-4xl p-6">
               <div className="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
                 <div className="text-sm text-red-800">
-                  ⚠️ Quiz Error: {quizError === 'auth_required' ? 'Authentication required' :
-                                 quizError === 'no_questions' ? 'No questions found for this quiz' :
+                  ⚠️ Quiz Error: {quizError === 'auth_required' ? 'Authentication required' : 
+                                 quizError === 'no_questions' ? 'No questions found for this quiz' : 
                                  'An error occurred during quiz submission'}
                 </div>
               </div>
@@ -1051,9 +896,9 @@ export default async function LearnerCoursePage(props: {
                     {currentModule.type === 'digital_assessment_quiz' && quizResult && quizScore !== null && (
                       <div className="bg-white p-6 rounded-lg border">
                         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz Results</h2>
-                        <div className="p-6 rounded-md border-2 text-center" style={{
-                          borderColor: quizPassed ? '#10B981' : '#EF4444',
-                          backgroundColor: quizPassed ? '#ECFDF5' : '#FEF2F2'
+                        <div className="p-6 rounded-md border-2 text-center" style={{ 
+                          borderColor: quizPassed ? '#10B981' : '#EF4444', 
+                          backgroundColor: quizPassed ? '#ECFDF5' : '#FEF2F2' 
                         }}>
                           <div className={`text-4xl mb-4 ${quizPassed ? 'text-green-600' : 'text-red-600'}`}>
                             {quizPassed ? '🎉' : '📚'}
@@ -1118,24 +963,30 @@ export default async function LearnerCoursePage(props: {
                       </div>
                     )}
 
-                    {/* Onsite Training Module Preview */}
-                    {currentModule.type === 'onsite_training' && (
-                      <OnsiteModulePreview
-                        moduleId={currentModule.id}
-                        moduleType="onsite_training"
-                        courseId={courseId}
-                        preview={preview}
-                      />
-                    )}
-
-                    {/* Onsite Assessment Module Preview */}
-                    {currentModule.type === 'onsite_assessment' && (
-                      <OnsiteModulePreview
-                        moduleId={currentModule.id}
-                        moduleType="onsite_assessment"
-                        courseId={courseId}
-                        preview={preview}
-                      />
+                    {!showQuiz && blocks?.length === 0 && currentModule.type !== 'digital_assessment_quiz' ? (
+                      <div className="text-center py-8">
+                        <div className="text-gray-500 mb-4">
+                          <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </div>
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Content Available</h3>
+                        <p className="text-gray-600 mb-4">This module doesn't have any content blocks yet.</p>
+                        {currentModule?.type === 'digital_training' && (
+                          <p className="text-sm text-gray-500">Contact your course creator to add content to this training module.</p>
+                        )}
+                      </div>
+                    ) : (
+                      !showQuiz && blocks?.map((block) => (
+                        <div key={block.id} className="space-y-4">
+                          {block.kind === 'video_embed' && (
+                            <div key={block.id} className="mb-6">
+                              <SimpleVideoPlayer url={block.data.url ?? ''} courseId={courseId} title="Training Video" />
+                            </div>
+                          )}
+                          {block.kind !== 'video_embed' && <BlockView block={block} />}
+                        </div>
+                      ))
                     )}
 
                     {/* Digital Training Module Content */}
@@ -1197,7 +1048,7 @@ export default async function LearnerCoursePage(props: {
                       {(currentModule.type === "onsite_training" || currentModule.type === "onsite_assessment") && (
                         <div className="bg-blue-50 p-4 rounded-lg">
                           <p className="text-sm text-blue-800">
-                            <strong>{preview ? "Preview Mode:" : "Note:"}</strong> {preview
+                            <strong>{preview ? "Preview Mode:" : "Note:"}</strong> {preview 
                               ? `This is an ${currentModule.type === "onsite_training" ? "onsite training" : "onsite assessment"} module. In a real course, this would be completed by a ${currentModule.type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.`
                               : `This step will be completed by your ${currentModule.type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.`
                             }
@@ -1206,8 +1057,8 @@ export default async function LearnerCoursePage(props: {
                       )}
 
                       {/* Next Course in Authorization - Show for full completion or digital-only completion */}
-                      {nextCourseInAuth && (progressPercent === 100 ||
-                        (authorizationContext &&
+                      {nextCourseInAuth && (progressPercent === 100 || 
+                        (authorizationContext && 
                          // Check if all digital modules are complete and there are no onsite modules
                          digitalTrainingModules.concat(digitalQuizModules).every(m => completedModules.has(m.id)) &&
                          digitalTrainingModules.concat(digitalQuizModules).length > 0 &&
@@ -1218,7 +1069,7 @@ export default async function LearnerCoursePage(props: {
                             {progressPercent === 100 ? 'Course Complete! 🎉' : 'Digital Training Complete! 📚'}
                           </h3>
                           <p className="text-sm text-green-700 mb-3">
-                            {progressPercent === 100
+                            {progressPercent === 100 
                               ? 'Ready to continue with the next course in your authorization?'
                               : 'Continue with digital training for the next course while waiting for onsite sessions.'
                             }
