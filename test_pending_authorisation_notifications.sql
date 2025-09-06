@@ -28,8 +28,28 @@ JOIN roles r ON ur.role_id = r.id
 WHERE r.name = 'Senior Management';
 
 -- Test notification by updating an assignment to pending_approval
--- Uncomment the line below to test (replace with an actual assignment ID)
--- UPDATE authorisation_assignments SET assignment_status = 'pending_approval' WHERE id = 'your-assignment-id-here';
+-- Find a test assignment and update it
+DO $$
+DECLARE
+    test_assignment_id uuid;
+BEGIN
+    -- Get a test assignment
+    SELECT id INTO test_assignment_id 
+    FROM authorisation_assignments 
+    WHERE assignment_status IN ('in_progress', 'completed')
+    LIMIT 1;
+    
+    IF test_assignment_id IS NOT NULL THEN
+        -- Update it to pending_approval to trigger the notification
+        UPDATE authorisation_assignments 
+        SET assignment_status = 'pending_approval' 
+        WHERE id = test_assignment_id;
+        
+        RAISE NOTICE 'Updated assignment % to pending_approval', test_assignment_id;
+    ELSE
+        RAISE NOTICE 'No test assignments found to update';
+    END IF;
+END $$;
 
 -- Check if notifications were created
 SELECT 
