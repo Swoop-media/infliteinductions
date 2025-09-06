@@ -27,13 +27,6 @@ async function loadAssignmentDetails(assignmentId: string) {
         id,
         title,
         description
-      ),
-      profiles!inner(
-        id,
-        full_name,
-        email,
-        department,
-        job_description
       )
     `)
     .eq("id", assignmentId)
@@ -41,6 +34,15 @@ async function loadAssignmentDetails(assignmentId: string) {
 
   if (assignError) throw new Error(assignError.message);
   if (!assignment) throw new Error("Assignment not found");
+
+  // Get user profile separately to avoid relationship ambiguity
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, department, job_description")
+    .eq("id", assignment.user_id)
+    .single();
+
+  if (profileError) throw new Error(profileError.message);
 
   // Get all courses for this authorisation
   const { data: authCourses, error: coursesError } = await supabase
@@ -84,6 +86,7 @@ async function loadAssignmentDetails(assignmentId: string) {
 
   return {
     assignment,
+    profile,
     courses: coursesWithProgress
   };
 }
@@ -130,9 +133,8 @@ export default async function ReviewAssignmentPage({ params }: Props) {
   }
 
   const resolvedParams = await params;
-  const { assignment, courses } = await loadAssignmentDetails(resolvedParams.assignmentId);
+  const { assignment, profile, courses } = await loadAssignmentDetails(resolvedParams.assignmentId);
 
-  const profile = assignment.profiles as any;
   const authorisation = assignment.authorisations as any;
 
   return (
