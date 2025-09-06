@@ -456,7 +456,7 @@ async function assignUserAction(formData: FormData) {
       supabase.from("courses").select("title").eq("id", courseId).maybeSingle(),
       supabase.from("profiles").select("full_name, first_name, last_name").eq("id", user.id).maybeSingle()
     ]);
-    
+
     courseTitle = courseResult.data?.title || "Course";
     const profile = assignerResult.data;
     if (profile) {
@@ -519,19 +519,19 @@ async function assignUserAction(formData: FormData) {
   try {
     const { createNotification } = await import("@/app/app/_actions/notifications");
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-    
+
     const roleDisplayName = role === "trainee" ? "Trainee" : 
                            role === "onsite_trainer" ? "Onsite Trainer" : 
                            "Onsite Assessor";
-    
+
     const notificationTitle = role === "trainee" ? 
       `Course Assigned: ${courseTitle}` :
       `${roleDisplayName} Role Assigned: ${courseTitle}`;
-    
+
     const notificationBody = role === "trainee" ?
       `You have been enrolled in "${courseTitle}" by ${assignerName}. You can start learning now!` :
       `You have been assigned as ${roleDisplayName} for "${courseTitle}" by ${assignerName}.`;
-    
+
     const courseUrl = role === "trainee" ? 
       `${siteUrl}/app/learn/courses/${courseId}` :
       `${siteUrl}/app/creator/courses/${courseId}`;
@@ -596,7 +596,7 @@ async function revokeAssignmentAction(formData: FormData) {
   if (assignmentDetails) {
     try {
       const { createNotification } = await import("@/app/app/_actions/notifications");
-      
+
       // Get course and revoker details
       let courseTitle = "Course";
       let revokerName = "Admin";
@@ -605,7 +605,7 @@ async function revokeAssignmentAction(formData: FormData) {
           supabase.from("courses").select("title").eq("id", courseId).maybeSingle(),
           supabase.from("profiles").select("full_name, first_name, last_name").eq("id", user.id).maybeSingle()
         ]);
-        
+
         courseTitle = courseResult.data?.title || "Course";
         const profile = revokerResult.data;
         if (profile) {
@@ -710,10 +710,7 @@ export default async function CourseEditorPage(props: {
 
         <div className="flex items-center gap-2">
           <Link
-            href={`/app/learn/courses/${courseId}?preview=1`}
-            target="_blank"
-            rel="noopener noreferrer"
-            prefetch={false}
+            href={`/app/creator/courses/${course.id}/test`}
             className="rounded-md border px-3 py-1 text-sm hover:bg-gray-50"
             title="Open learner preview in a new tab"
           >

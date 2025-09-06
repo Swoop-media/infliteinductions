@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import CompleteModuleButton from "./CompleteModuleButton";
-import VideoPlayer from "../../../../../components/VideoPlayer";
+import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
 
 /**
  * Renders a course as a learner (assignments-only approach).
@@ -979,7 +979,12 @@ export default async function LearnerCoursePage(props: {
                     ) : (
                       !showQuiz && blocks?.map((block) => (
                         <div key={block.id} className="space-y-4">
-                          <BlockView block={block} />
+                          {block.kind === 'video_embed' && (
+                            <div key={block.id} className="mb-6">
+                              <SimpleVideoPlayer url={block.data.url ?? ''} courseId={courseId} title="Training Video" />
+                            </div>
+                          )}
+                          {block.kind !== 'video_embed' && <BlockView block={block} />}
                         </div>
                       ))
                     )}
