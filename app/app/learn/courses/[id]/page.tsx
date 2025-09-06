@@ -188,6 +188,13 @@ async function submitQuizAnswers(formData: FormData) {
   const quizId = formData.get("quizId") as string;
   const courseId = formData.get("courseId") as string;
   const authorizationId = formData.get("authorizationId") as string;
+  const preview = formData.get("preview") === "1";
+
+  // In preview mode, don't save anything, just calculate and show results
+  if (preview) {
+    redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=result&score=85&passed=1&preview=1${authorizationId ? `&auth=${authorizationId}` : ''}`);
+    return;
+  }
 
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
@@ -507,6 +514,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       <input type="hidden" name="quizId" value={quizData.id} />
       <input type="hidden" name="courseId" value={moduleData.course_id} />
       <input type="hidden" name="authorizationId" value={authorizationId || ""} />
+      <input type="hidden" name="preview" value={preview ? "1" : ""} />
 
       <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
       <p className="text-sm text-gray-600 mb-6">Answer all questions to complete the quiz.</p>
@@ -533,9 +541,17 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       })}
 
       <div className="flex justify-end pt-6 border-t">
-        <button type="submit" className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
-          Submit Quiz
-        </button>
+        {preview ? (
+          <div className="bg-blue-50 p-4 rounded-lg w-full">
+            <p className="text-sm text-blue-800 text-center">
+              <strong>Preview Mode:</strong> Quiz submission is disabled in preview mode. In a real course, learners would submit their answers here.
+            </p>
+          </div>
+        ) : (
+          <button type="submit" className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+            Submit Quiz
+          </button>
+        )}
       </div>
     </form>
   );
@@ -565,18 +581,30 @@ export default async function LearnerCoursePage(props: {
   } = await supabase.auth.getUser();
   if (userErr || !user) redirect("/auth/login");
 
-  // Must have a trainee assignment for this course
-  const { data: assignment, error: assignmentErr } = await supabase
-    .from("course_assignments")
-    .select("id, role, assignment_status")
-    .eq("course_id", courseId)
-    .eq("user_id", user.id)
-    .eq("role", "trainee")
-    .single();
+  // In preview mode, skip assignment check for course creators
+  let assignment = null;
+  if (!preview) {
+    // Must have a trainee assignment for this course
+    const { data: assignmentData, error: assignmentErr } = await supabase
+      .from("course_assignments")
+      .select("id, role, assignment_status")
+      .eq("course_id", courseId)
+      .eq("user_id", user.id)
+      .eq("role", "trainee")
+      .single();
 
-  if (assignmentErr || !assignment) {
-    console.error("No trainee assignment", assignmentErr);
-    redirect("/app/learn?error=not_assigned");
+    if (assignmentErr || !assignmentData) {
+      console.error("No trainee assignment", assignmentErr);
+      redirect("/app/learn?error=not_assigned");
+    }
+    assignment = assignmentData;
+  } else {
+    // For preview mode, create a fake assignment object
+    assignment = {
+      id: "preview",
+      role: "trainee" as const,
+      assignment_status: "active" as const
+    };
   }
 
   // Load course
@@ -655,16 +683,17 @@ export default async function LearnerCoursePage(props: {
     return (a.order_index ?? 0) - (b.order_index ?? 0);
   });
 
-  // Load assignment progress
-  const { data: assignmentProgress } = await supabase
+  // Load assignment progress (skip in preview mode)
+  const { data: assignmentProgress } = !preview ? await supabase
     .from("assignment_progress")
     .select("module_id, completed_at")
-    .eq("assignment_id", assignment.id);
+    .eq("assignment_id", assignment.id) : { data: [] };
 
-  const completedModules = new Set((assignmentProgress ?? []).map(p => p.module_id));
+  // In preview mode, no modules are locked and none are marked as completed
+  const completedModules = preview ? new Set() : new Set((assignmentProgress ?? []).map(p => p.module_id));
   const totalModules = sortedModules.length;
-  const completedCount = completedModules.size;
-  const progressPercent = totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0;
+  const completedCount = preview ? 0 : completedModules.size;
+  const progressPercent = preview ? 0 : (totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0);
 
   // Determine current module
   let currentModule = null;
@@ -707,10 +736,10 @@ export default async function LearnerCoursePage(props: {
 
   const currentModuleIndex = currentModule ? sortedModules.findIndex(m => m.id === currentModule!.id) : -1;
   const isCurrentModuleCompleted = currentModule ? completedModules.has(currentModule.id) : false;
-  const isCurrentModuleUnlocked = currentModule ? (
+  const isCurrentModuleUnlocked = preview ? true : (currentModule ? (
     currentModuleIndex === 0 ||
     sortedModules.slice(0, currentModuleIndex).every(m => completedModules.has(m.id))
-  ) : false;
+  ) : false);
 
   // Helper to check if a module is completed
   const moduleCompleted = (moduleId: string) => completedModules.has(moduleId);
@@ -755,13 +784,13 @@ export default async function LearnerCoursePage(props: {
           <div className="space-y-1">
             {sortedModules.map((module, index) => {
               const isCompleted = completedModules.has(module.id);
-              const isUnlocked = index === 0 || sortedModules.slice(0, index).every(m => completedModules.has(m.id));
+              const isUnlocked = preview ? true : (index === 0 || sortedModules.slice(0, index).every(m => completedModules.has(m.id)));
               const isCurrent = currentModule?.id === module.id;
 
               return (
                 <Link
                   key={module.id}
-                  href={isUnlocked ? `/app/learn/courses/${courseId}?module=${module.id}` : '#'}
+                  href={isUnlocked ? `/app/learn/courses/${courseId}?module=${module.id}${preview ? '&preview=1' : ''}${authorizationId ? `&auth=${authorizationId}` : ''}` : '#'}
                   className={`
                     block p-3 rounded-lg border text-sm transition-all
                     ${isCurrent
@@ -803,6 +832,11 @@ export default async function LearnerCoursePage(props: {
       <div className="flex-1 flex flex-col">
         {/* Top Navigation */}
         <div className="p-4 border-b bg-white">
+          {preview && (
+            <div className="mb-4 rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+              🔍 <strong>Preview Mode</strong> - You are testing this course as a creator. No progress will be saved and all modules are unlocked.
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-xl font-semibold">
@@ -914,14 +948,14 @@ export default async function LearnerCoursePage(props: {
                             <p className="text-sm text-gray-600">Complete this quiz to proceed</p>
                           </div>
                           <div className="flex items-center gap-2">
-                            {isCurrentModuleCompleted ? (
+                            {isCurrentModuleCompleted && !preview ? (
                               <span className="text-sm text-green-600">✓ Complete</span>
                             ) : (
                               <Link
                                 href={`/app/learn/courses/${courseId}?module=${currentModule.id}&quiz=start${preview ? "&preview=1" : ""}${authorizationId ? `&auth=${authorizationId}` : ""}`}
                                 className="rounded-md bg-black px-3 py-1 text-sm text-white"
                               >
-                                Start Quiz →
+                                {preview ? "Preview Quiz →" : "Start Quiz →"}
                               </Link>
                             )}
                           </div>
@@ -988,7 +1022,7 @@ export default async function LearnerCoursePage(props: {
 
                     {/* Module Actions */}
                     <div className="pt-6 border-t">
-                      {currentModule.type === "digital_training" && !isCurrentModuleCompleted && !showQuiz && (
+                      {currentModule.type === "digital_training" && !isCurrentModuleCompleted && !showQuiz && !preview && (
                         <CompleteModuleButton
                           assignmentId={assignment.id}
                           moduleId={currentModule.id}
@@ -998,10 +1032,21 @@ export default async function LearnerCoursePage(props: {
                         />
                       )}
 
+                      {preview && currentModule.type === "digital_training" && (
+                        <div className="bg-blue-50 p-4 rounded-lg">
+                          <p className="text-sm text-blue-800">
+                            <strong>Preview Mode:</strong> In a real course, learners would click "Mark as Complete" here to proceed to the next module.
+                          </p>
+                        </div>
+                      )}
+
                       {(currentModule.type === "onsite_training" || currentModule.type === "onsite_assessment") && (
                         <div className="bg-blue-50 p-4 rounded-lg">
                           <p className="text-sm text-blue-800">
-                            <strong>Note:</strong> This step will be completed by your {currentModule.type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.
+                            <strong>{preview ? "Preview Mode:" : "Note:"}</strong> {preview 
+                              ? `This is an ${currentModule.type === "onsite_training" ? "onsite training" : "onsite assessment"} module. In a real course, this would be completed by a ${currentModule.type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.`
+                              : `This step will be completed by your ${currentModule.type === "onsite_training" ? "trainer" : "assessor"} during an in-person session.`
+                            }
                           </p>
                         </div>
                       )}
