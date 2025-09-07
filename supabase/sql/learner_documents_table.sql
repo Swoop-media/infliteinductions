@@ -16,6 +16,20 @@ CREATE TABLE IF NOT EXISTS public.learner_documents (
   UNIQUE(user_id, block_id)
 );
 
+-- Add block_id column if it doesn't exist (for existing tables)
+DO $$ 
+BEGIN 
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'learner_documents' 
+        AND column_name = 'block_id'
+    ) THEN
+        ALTER TABLE public.learner_documents 
+        ADD COLUMN block_id uuid REFERENCES public.module_content_blocks(id) ON DELETE CASCADE;
+    END IF;
+END $$;
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_learner_documents_user_id ON public.learner_documents(user_id);
 CREATE INDEX IF NOT EXISTS idx_learner_documents_course_id ON public.learner_documents(course_id);
