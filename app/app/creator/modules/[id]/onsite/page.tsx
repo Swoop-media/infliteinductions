@@ -333,7 +333,18 @@ async function reorderRequirementsAction(formData: FormData) {
 
   if (!moduleId || !reorderedIds.length) throw new Error("Missing fields");
 
-  // Update order_index for each requirement
+  // First, set all order_index to negative values to avoid constraint violations
+  for (let i = 0; i < reorderedIds.length; i++) {
+    const { error } = await supabase
+      .from("onsite_requirements")
+      .update({ order_index: -(i + 1) })
+      .eq("id", reorderedIds[i])
+      .eq("module_id", moduleId);
+
+    if (error) throw new Error(error.message);
+  }
+
+  // Then update to the correct positive values
   for (let i = 0; i < reorderedIds.length; i++) {
     const { error } = await supabase
       .from("onsite_requirements")
