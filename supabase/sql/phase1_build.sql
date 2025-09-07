@@ -730,3 +730,17 @@ create trigger trg_course_assignment_enrol
 after insert on public.course_assignments
 for each row
 execute function public.trg_course_assignment_enrol();
+
+-- Function to automatically update the updated_at column
+-- Fixed: Added immutable search_path and SECURITY DEFINER for trigger security
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
