@@ -1,7 +1,12 @@
 -- Final cleanup for remaining search_path vulnerabilities
 -- This ensures any old function definitions are properly replaced
 
--- 1. Drop unused notify_enrolment_request function (no longer needed with direct assignments)
+-- 1. Drop unused notify_enrolment_request function and its triggers (no longer needed with direct assignments)
+-- First drop any triggers that reference this function
+DROP TRIGGER IF EXISTS enrolment_request_notification_trigger ON public.enrolments;
+DROP TRIGGER IF EXISTS notify_enrolment_request_trigger ON public.enrolments;
+
+-- Then drop the function itself
 DROP FUNCTION IF EXISTS public.notify_enrolment_request();
 
 -- 2. Fix ensure_quiz_for_module (drop and recreate to fix return type conflict)
