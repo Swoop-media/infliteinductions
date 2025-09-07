@@ -1,4 +1,6 @@
 
+"use client";
+
 import { useState } from 'react';
 import { createSupabaseClient } from '@/lib/supabase/client';
 
