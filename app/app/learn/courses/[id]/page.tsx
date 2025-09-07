@@ -767,7 +767,7 @@ export default async function LearnerCoursePage(props: {
   }
 
   // Get user's assignment for this course
-  const { data: assignment } = await supabase
+  const { data: userAssignment } = await supabase
     .from("course_assignments")
     .select("*")
     .eq("course_id", courseId)
