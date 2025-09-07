@@ -56,48 +56,135 @@ export default async function HomePage({
         </div>
       </div>
 
-      {/* Release notes */}
-      <section className="space-y-4">
-        <h2 className="text-lg font-semibold">Release notes</h2>
-        <div className="rounded-xl border bg-white p-4">
-          <div className="space-y-3">
-            <div>
-              <div className="font-medium">Version 1.0 release notes</div>
-              <div className="text-xs text-gray-500">19 DAYS, 2024</div>
-            </div>
-            <div className="text-sm text-gray-600">
-              App Structure Summary
-              My Profile (/app/myprofile)
-              Personal Dashboard: View your training progress, enrolled courses, and authorizations
-              Document Management: Upload and manage personal documents (licenses, medical certificates, etc.)
-              Progress Tracking: See in-progress and completed courses/authorizations
-              Teams Integration: Link your Microsoft Teams account for notifications
-              Creator (/app/creator)
-              Course Creation: Build training courses with multiple module types (digital training, quizzes, onsite training/assessment)
-              Content Management: Add rich text, videos, files, and interactive elements to training modules
-              Authorization Management: Create authorization workflows that bundle multiple courses
-              Assignment Tools: Assign courses and authorizations to specific users
-              Quiz Builder: Create assessments with multiple question types
-              Train & Assess (/app/train-assess)
-              Onsite Training Management: Conduct and record in-person training sessions
-              Assessment Tools: Perform onsite assessments with custom requirements and forms
-              Progress Tracking: Monitor learners who are ready for onsite components
-              Requirements Management: Define and fulfill onsite training/assessment criteria
-              Admin (/app/admin)
-              User Management: Create, archive, and manage user accounts
-              Role Assignment: Grant/revoke system roles (Admin, Trainers, Course Creators, etc.)
-              Enrollment Approvals: Approve or reject course enrollment requests
-              System Tools: Debug utilities, notification management, and data cleanup
-              Analytics: User reports and completion tracking
-              Learning (/app/learn & /app/courses)
-              Course Catalog: Browse and enroll in published courses
-              Course Player: Complete digital training modules with progress tracking
-              Quiz Taking: Complete assessments with automatic grading
-              Document Upload: Submit required documents during training
+      {/* Content sections */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Release notes */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold">Version 1.0 - App Structure</h2>
+          <div className="rounded-xl border bg-white p-4">
+            <div className="space-y-4">
+              <div>
+                <div className="font-medium text-green-700">✓ Now Available</div>
+                <div className="text-xs text-gray-500 mb-3">January 2025</div>
+              </div>
+              
+              <div className="space-y-4 text-sm">
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">👤 My Profile</h3>
+                  <ul className="text-gray-600 space-y-1 ml-4">
+                    <li>• Personal dashboard with training progress</li>
+                    <li>• Document management for licenses & certificates</li>
+                    <li>• Microsoft Teams integration for notifications</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">📚 Learning & Courses</h3>
+                  <ul className="text-gray-600 space-y-1 ml-4">
+                    <li>• Complete digital training modules with progress tracking</li>
+                    <li>• Take quizzes with automatic grading</li>
+                    <li>• Submit required documents during training</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">🛠️ Creator Tools</h3>
+                  <ul className="text-gray-600 space-y-1 ml-4">
+                    <li>• Build courses with multiple module types</li>
+                    <li>• Create authorization workflows</li>
+                    <li>• Quiz builder with multiple question types</li>
+                    <li>• Assignment of trainers and assesors for specific users</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">🎯 Train & Assess</h3>
+                  <ul className="text-gray-600 space-y-1 ml-4">
+                    <li>• Conduct onsite training sessions</li>
+                    <li>• Perform assessments with custom forms</li>
+                    <li>• Monitor learner readiness for onsite components</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">⚙️ Admin</h3>
+                  <ul className="text-gray-600 space-y-1 ml-4">
+                    <li>• User management and role assignment</li>
+                    <li>• Enrollment approvals and system tools</li>
+                    <li>• Analytics and completion tracking</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        {/* Future features */}
+        <section className="space-y-4">
+          <h2 className="text-lg font-semibold">What's Coming in the Future</h2>
+          <div className="rounded-xl border bg-white p-4">
+            <div className="space-y-4">
+              <div>
+                <div className="font-medium text-blue-700">🚀 Planned Features</div>
+                <div className="text-xs text-gray-500 mb-3">Roadmap 2025</div>
+              </div>
+              
+              <div className="space-y-4 text-sm">
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">📊 Enhanced Analytics</h3>
+                  <ul className="text-gray-600 space-y-1 ml-4">
+                    <li>• Advanced reporting and dashboards</li>
+                    <li>• Training completion trends and insights</li>
+                    <li>• Compliance tracking and audit trails</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">🤖 AI-Powered Features</h3>
+                  <ul className="text-gray-600 space-y-1 ml-4">
+                    <li>• Intelligent content recommendations</li>
+                    <li>• Automated quiz generation</li>
+                    <li>• Smart scheduling for onsite training</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">📱 Mobile Experience</h3>
+                  <ul className="text-gray-600 space-y-1 ml-4">
+                    <li>• Progressive Web App (PWA) support</li>
+                    <li>• Offline course content access</li>
+                    <li>• Mobile-optimized assessments</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">🔗 Advanced Integrations</h3>
+                  <ul className="text-gray-600 space-y-1 ml-4">
+                    <li>• LMS and SCORM compatibility</li>
+                    <li>• HR system integrations</li>
+                    <li>• Calendar and scheduling apps</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">💡 Interactive Learning</h3>
+                  <ul className="text-gray-600 space-y-1 ml-4">
+                    <li>• Virtual reality training modules</li>
+                    <li>• Interactive simulations</li>
+                    <li>• Gamification and achievement systems</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <p className="text-xs text-gray-500">
+                  Have feature requests or suggestions? Contact your administrator.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
