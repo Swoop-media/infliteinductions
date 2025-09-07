@@ -60,12 +60,12 @@ export default async function HomePage({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Release notes */}
         <section className="space-y-4">
-          <h2 className="text-lg font-semibold">Version 1.0 - App Structure</h2>
+          <h2 className="text-lg font-semibold">Version 1.0 - App </h2>
           <div className="rounded-xl border bg-white p-4">
             <div className="space-y-4">
               <div>
                 <div className="font-medium text-green-700">✓ Now Available</div>
-                <div className="text-xs text-gray-500 mb-3">January 2025</div>
+                <div className="text-xs text-gray-500 mb-3">September 2025</div>
               </div>
               
               <div className="space-y-4 text-sm">
@@ -75,6 +75,7 @@ export default async function HomePage({
                     <li>• Personal dashboard with training progress</li>
                     <li>• Document management for licenses & certificates</li>
                     <li>• Microsoft Teams integration for notifications</li>
+                    <li>• Completed courses and authorisations</li>
                   </ul>
                 </div>
 
@@ -103,6 +104,7 @@ export default async function HomePage({
                     <li>• Conduct onsite training sessions</li>
                     <li>• Perform assessments with custom forms</li>
                     <li>• Monitor learner readiness for onsite components</li>
+                    <li>• Recieve notification when onsite training and assessments are ready</li>
                   </ul>
                 </div>
 
@@ -110,8 +112,10 @@ export default async function HomePage({
                   <h3 className="font-medium text-gray-900 mb-2">⚙️ Admin</h3>
                   <ul className="text-gray-600 space-y-1 ml-4">
                     <li>• User management and role assignment</li>
-                    <li>• Enrollment approvals and system tools</li>
+                    <li>• approvals and system tools</li>
                     <li>• Analytics and completion tracking</li>
+                    <li>• Course and authorisation due date control</li>
+                    <li>• User records libary - exportable</li>
                   </ul>
                 </div>
               </div>
@@ -135,43 +139,34 @@ export default async function HomePage({
                   <ul className="text-gray-600 space-y-1 ml-4">
                     <li>• Advanced reporting and dashboards</li>
                     <li>• Training completion trends and insights</li>
-                    <li>• Compliance tracking and audit trails</li>
+                    
                   </ul>
                 </div>
 
                 <div>
                   <h3 className="font-medium text-gray-900 mb-2">🤖 AI-Powered Features</h3>
                   <ul className="text-gray-600 space-y-1 ml-4">
-                    <li>• Intelligent content recommendations</li>
+                    <li>• Co pilot agent - Course creation</li>
                     <li>• Automated quiz generation</li>
-                    <li>• Smart scheduling for onsite training</li>
+                    <li>• Co Pilot Agent Auditing courses vs relevant rules, check and training manual</li>
                   </ul>
                 </div>
 
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">📱 Mobile Experience</h3>
+                  <h3 className="font-medium text-gray-900 mb-2">💡 Notifications</h3>
                   <ul className="text-gray-600 space-y-1 ml-4">
-                    <li>• Progressive Web App (PWA) support</li>
-                    <li>• Offline course content access</li>
-                    <li>• Mobile-optimized assessments</li>
+                    <li>• User options for recieving and opting out of notification types</li>
+                    <li>• Comprehensive summaries sent to senior people</li>
+                    <li>• Comprehensive help section</li>
                   </ul>
                 </div>
 
                 <div>
-                  <h3 className="font-medium text-gray-900 mb-2">🔗 Advanced Integrations</h3>
+                  <h3 className="font-medium text-gray-900 mb-2">💡 Feedback</h3>
                   <ul className="text-gray-600 space-y-1 ml-4">
-                    <li>• LMS and SCORM compatibility</li>
-                    <li>• HR system integrations</li>
-                    <li>• Calendar and scheduling apps</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <h3 className="font-medium text-gray-900 mb-2">💡 Interactive Learning</h3>
-                  <ul className="text-gray-600 space-y-1 ml-4">
-                    <li>• Virtual reality training modules</li>
-                    <li>• Interactive simulations</li>
-                    <li>• Gamification and achievement systems</li>
+                    <li>• User feedback and improvements</li>
+                    <li>• User requested features</li>
+                  
                   </ul>
                 </div>
               </div>
