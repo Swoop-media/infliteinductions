@@ -288,11 +288,11 @@ async function assignUserAction(form: FormData) {
   if (!authId || !userId) throw new Error("Missing ids");
 
   const { data: { user } } = await supabase.auth.getUser();
-  const created_by = user?.id ?? null;
+  const assigned_by = user?.id ?? null;
 
   const { error } = await supabase
     .from("authorisation_assignments")
-    .insert({ authorisation_id: authId, user_id: userId, role, created_by });
+    .insert({ authorisation_id: authId, user_id: userId, role, assigned_by });
 
   // ignore unique conflicts
   if (error && (error as any).code !== "23505") throw new Error(error.message);
