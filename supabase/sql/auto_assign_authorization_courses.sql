@@ -1,7 +1,11 @@
 
 -- Function to automatically assign a user as trainee to all courses in an authorization
 CREATE OR REPLACE FUNCTION auto_assign_authorization_courses()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
 DECLARE
     course_record RECORD;
 BEGIN
@@ -38,7 +42,7 @@ BEGIN
     
     RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Create trigger to automatically assign courses when authorization is assigned
 DROP TRIGGER IF EXISTS trigger_auto_assign_authorization_courses ON authorisation_assignments;
