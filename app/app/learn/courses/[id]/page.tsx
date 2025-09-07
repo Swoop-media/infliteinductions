@@ -2,8 +2,9 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import CompleteModuleButton from "./CompleteModuleButton";
+import CompleteModuleButton from './CompleteModuleButton';
 import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
+import DocumentUploadBlock from './DocumentUploadBlock';
 
 /**
  * Renders a course as a learner (assignments-only approach).
@@ -765,6 +766,22 @@ export default async function LearnerCoursePage(props: {
     onsiteRequirements = requirements;
   }
 
+  // Get user's assignment for this course
+  const { data: assignment } = await supabase
+    .from("course_assignments")
+    .select("*")
+    .eq("course_id", courseId)
+    .eq("user_id", user.id)
+    .eq("role", "trainee")
+    .maybeSingle();
+
+  // Get user's uploaded documents for this course
+  const { data: userDocuments } = await supabase
+    .from("learner_documents")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("course_id", courseId);
+
   const currentModuleIndex = currentModule ? sortedModules.findIndex(m => m.id === currentModule!.id) : -1;
   const isCurrentModuleCompleted = currentModule ? completedModules.has(currentModule.id) : false;
   const isCurrentModuleUnlocked = preview ? true : (currentModule ? (
@@ -1016,7 +1033,18 @@ export default async function LearnerCoursePage(props: {
                               <SimpleVideoPlayer url={block.data.url ?? ''} courseId={courseId} title="Training Video" />
                             </div>
                           )}
-                          {block.kind !== 'video_embed' && <BlockView block={block} />}
+                          {block.kind === "request_document" && (
+                              <DocumentUploadBlock
+                                moduleId={currentModule.id}
+                                blockId={block.id}
+                                label={block.data?.label || "Please upload the requested document."}
+                                requireExpiry={block.data?.require_expiry || false}
+                                courseId={courseId}
+                                currentUserId={user.id}
+                                existingDocument={userDocuments?.find(doc => doc.block_id === block.id) || null}
+                              />
+                            )}
+                          {block.kind !== 'video_embed' && block.kind !== 'request_document' && <BlockView block={block} />}
                         </div>
                       ))
                     )}

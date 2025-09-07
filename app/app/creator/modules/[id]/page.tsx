@@ -434,7 +434,7 @@ export default async function ModuleEditorPage(props: {
         </div>
       </div>
 
-      {/* Create block (for digital training and quiz) or ensure single config block (request_document) */}
+      {/* Create block (for digital training and quiz) */}
       {(mod.type === "digital_training" || mod.type === "digital_assessment_quiz") && (
         <div className="rounded-xl border bg-white p-4">
           <div className="flex items-center justify-between">
@@ -442,8 +442,8 @@ export default async function ModuleEditorPage(props: {
               <h2 className="text-lg font-semibold">Content blocks</h2>
               <p className="text-sm text-gray-500">
                 {mod.type === "digital_assessment_quiz" 
-                  ? "Add quiz questions, text, files, videos, and links."
-                  : "Add text, files, videos, and links. Learner \"Next\" unlock can be gated by video time."
+                  ? "Add quiz questions, text, files, videos, links, and document requests."
+                  : "Add text, files, videos, links, and document requests. Learner \"Next\" unlock can be gated by video time."
                 }
               </p>
             </div>
@@ -457,25 +457,9 @@ export default async function ModuleEditorPage(props: {
                 <option value="file">📎 File</option>
                 <option value="video_embed">🎬 Video</option>
                 <option value="link">🔗 Link</option>
+                <option value="request_document">📤 Request upload from trainee</option>
               </select>
               <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">+ Add</button>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {mod.type === "request_document" && (
-        <div className="rounded-xl border bg-white p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Request settings</h2>
-              <p className="text-sm text-gray-500">Configure the prompt and whether an expiry date is required.</p>
-            </div>
-            {/* Ensure at least one config block exists */}
-            <form action={createBlock}>
-              <input type="hidden" name="module_id" value={mod.id} />
-              <input type="hidden" name="kind" value="request_document" />
-              <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Create/Reset config</button>
             </form>
           </div>
         </div>

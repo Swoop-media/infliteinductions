@@ -330,11 +330,24 @@ export default async function LearnerModulePage(props: {
               console.log(`Video progress: ${progress}`);
             };
             const DocumentRequestBlock = ({ moduleId, blockId, label, requireExpiry, currentUserId }: any) => (
-              <div className="text-sm text-gray-700">
-                <p>{label}</p>
-                <p className="text-xs text-gray-500">
-                  Document upload is handled in the course view.
-                </p>
+              <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <span className="text-xl">📤</span>
+                  <div>
+                    <h4 className="font-medium text-sm mb-1">Document Upload Required</h4>
+                    <p className="text-sm text-gray-700 mb-2">{label}</p>
+                    <p className="text-xs text-gray-500">
+                      Upload your document in the{" "}
+                      <Link 
+                        href={`/app/learn/courses/${course.id}`}
+                        className="underline text-blue-600"
+                      >
+                        full course view
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                </div>
               </div>
             );
 
@@ -424,16 +437,19 @@ export default async function LearnerModulePage(props: {
 
         {/* For document-request style content, nudge to the course page for the upload. */}
         {blocks.some((b: any) => b.kind === "request_document") && (
-          <p className="text-xs text-gray-500">
-            Uploads are completed in the full course view.{" "}
-            <Link
-              href={`/app/learn/courses/${course.id}?${preview ? "preview=1" : ""}`}
-              className="underline"
-            >
-              Open course
-            </Link>
-            .
-          </p>
+          <div className="mt-4 p-3 bg-blue-50 rounded-md">
+            <p className="text-sm text-blue-800 mb-2">📤 This module contains document upload requirements.</p>
+            <p className="text-xs text-blue-600">
+              Document uploads are handled in the full course view.{" "}
+              <Link
+                href={`/app/learn/courses/${course.id}?${preview ? "preview=1" : ""}`}
+                className="underline font-medium"
+              >
+                Open course
+              </Link>
+              {" "}to upload your documents.
+            </p>
+          </div>
         )}
       </div>
     </div>
