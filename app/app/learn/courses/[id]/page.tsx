@@ -161,6 +161,26 @@ async function BlockView({ block }: { block: any }) {
       );
     }
 
+    if (path.toLowerCase().endsWith('.pdf')) {
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-t-md border">
+            <span className="text-sm font-medium text-gray-900">{display}</span>
+            <a href={href} target="_blank" className="text-sm text-blue-600 hover:underline">
+              Open in new tab
+            </a>
+          </div>
+          <div className="border rounded-b-md bg-white">
+            <iframe
+              src={`${href}#toolbar=1&navpanes=1&scrollbar=1`}
+              className="w-full h-[800px] rounded-b-md"
+              title={display}
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <p className="text-sm">
         ⬇️{" "}
@@ -1062,7 +1082,7 @@ export default async function LearnerCoursePage(props: {
                             </div>
                           )}
 
-                          
+
                         </div>
 
                         {/* Display any requirements for onsite training */}
@@ -1107,7 +1127,7 @@ export default async function LearnerCoursePage(props: {
                             </div>
                           )}
 
-                          
+
                         </div>
 
                         {/* Display assessment requirements/criteria */}
