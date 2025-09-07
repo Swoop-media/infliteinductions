@@ -1,7 +1,11 @@
 
 -- Function to try completing an assignment when all modules are done
 CREATE OR REPLACE FUNCTION public.try_complete_assignment(p_assignment_id UUID)
-RETURNS VOID AS $$
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
 DECLARE
     v_course_id UUID;
     v_total_modules INTEGER;
@@ -17,12 +21,12 @@ BEGIN
     END IF;
     
     -- Count total modules for this course
-    SELECT COUNT(*) INTO v_total_modules
+    SELECT count(*) INTO v_total_modules
     FROM public.course_modules
     WHERE course_id = v_course_id;
     
     -- Count completed modules for this assignment
-    SELECT COUNT(*) INTO v_completed_modules
+    SELECT count(*) INTO v_completed_modules
     FROM public.assignment_progress
     WHERE assignment_id = p_assignment_id;
     
@@ -31,13 +35,13 @@ BEGIN
         UPDATE public.course_assignments
         SET 
             status = 'completed',
-            completed_at = NOW(),
-            updated_at = NOW()
+            completed_at = now(),
+            updated_at = now()
         WHERE id = p_assignment_id
         AND status != 'completed'; -- Only update if not already completed
     END IF;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$;
 
 -- Grant execute permission to authenticated users
 GRANT EXECUTE ON FUNCTION public.try_complete_assignment(UUID) TO authenticated;
