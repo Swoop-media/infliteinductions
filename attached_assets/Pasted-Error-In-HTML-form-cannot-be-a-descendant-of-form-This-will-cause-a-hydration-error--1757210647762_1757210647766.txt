@@ -1,0 +1,44 @@
+Error: In HTML, <form> cannot be a descendant of <form>.
+This will cause a hydration error.
+
+  ...
+    <ScrollAndFocusHandler segmentPath={[...]}>
+      <InnerScrollAndFocusHandler segmentPath={[...]} focusAndScrollRef={{apply:true, ...}}>
+        <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+          <LoadingBoundary loading={null}>
+            <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <InnerLayoutRouter url="/app/creat..." tree={[...]} cacheNode={{lazyData:null, ...}} ...>
+                    <ModuleEditorPage>
+                      <div className="p-6 space-y-6">
+                        <div>
+                        <div>
+                        <section className="rounded-xl...">
+                          <ul className="divide-y r...">
+                            <li className="p-4 space-y-3">
+                              <div>
+                              <div className="space-y-2">
+                                <div>
+>                               <form action={function uploadFileBlock} className="flex flex-wrap items-end gap-2">
+                                  <input>
+                                  <input>
+                                  <label>
+                                  <label>
+                                  <button>
+>                                 <form action={function clearFileBlock}>
+                    ...
+
+    at createConsoleError (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/shared/console-error.js:23:71)
+    at handleConsoleError (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/use-error-handler.js:45:54)
+    at console.error (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/next-devtools/userspace/app/errors/intercept-console-error.js:50:57)
+    at validateDOMNesting (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:2663:19)
+    at completeWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:11589:15)
+    at runWithFiberInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:873:30)
+    at completeUnitOfWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15814:19)
+    at performUnitOfWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15695:11)
+    at workLoopConcurrentByScheduler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15672:9)
+    at renderRootConcurrent (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15647:15)
+    at performWorkOnRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14941:13)
+    at performWorkOnRootViaSchedulerTask (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16767:7)
+    at MessagePort.performWorkUntilDeadline (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:45:48)
