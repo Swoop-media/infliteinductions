@@ -1062,13 +1062,7 @@ export default async function LearnerCoursePage(props: {
                             </div>
                           )}
 
-                          {preview && (
-                            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
-                              <p className="text-amber-800 text-sm">
-                                <strong>Preview Mode:</strong> In the live course, learners would see scheduling information and trainer contact details here.
-                              </p>
-                            </div>
-                          )}
+                          
                         </div>
 
                         {/* Display any requirements for onsite training */}
@@ -1113,13 +1107,7 @@ export default async function LearnerCoursePage(props: {
                             </div>
                           )}
 
-                          {preview && (
-                            <div className="bg-amber-50 border border-amber-200 rounded-md p-3">
-                              <p className="text-amber-800 text-sm">
-                                <strong>Preview Mode:</strong> In the live course, learners would see assessment criteria, schedules, and assessor contact details here.
-                              </p>
-                            </div>
-                          )}
+                          
                         </div>
 
                         {/* Display assessment requirements/criteria */}
