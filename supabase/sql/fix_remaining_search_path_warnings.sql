@@ -36,86 +36,84 @@ EXCEPTION
 END;
 $$;
 
--- 2. Fix ensure_quiz_for_module (already in ensure_quiz_for_module_rpc.sql but ensuring it's applied)
--- This function returns a table, not void
-CREATE OR REPLACE FUNCTION public.ensure_quiz_for_module(module_id_param uuid)
+-- 2. Fix ensure_quiz_for_module (drop and recreate to fix return type conflict)
+-- First drop the existing function to avoid return type conflicts
+DROP FUNCTION IF EXISTS public.ensure_quiz_for_module(uuid);
+
+-- This function returns quiz info, matching the existing RPC function signature
+CREATE OR REPLACE FUNCTION public.ensure_quiz_for_module(p_module_id uuid)
 RETURNS TABLE(
   id uuid,
-  stem text,
-  type text,
-  points integer,
-  order_index integer,
-  options jsonb
+  pass_mark integer,
+  max_attempts integer,
+  shuffle boolean
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public, pg_catalog
 AS $$
 DECLARE
-  v_quiz_count integer;
-  v_question_id uuid;
+  v_quiz_record RECORD;
+  v_module_record RECORD;
 BEGIN
-  -- Check if module already has quiz questions
-  SELECT COUNT(*) INTO v_quiz_count
-  FROM quiz_questions
-  WHERE module_id = module_id_param;
+  -- Get module information
+  SELECT course_id, type INTO v_module_record 
+  FROM course_modules 
+  WHERE course_modules.id = p_module_id;
   
-  -- If no quiz questions exist, create default ones
-  IF v_quiz_count = 0 THEN
-    -- Create first question
-    INSERT INTO quiz_questions (module_id, stem, type, points, order_index)
-    VALUES (module_id_param, 'Default quiz question 1', 'mcq', 1, 0)
-    RETURNING quiz_questions.id INTO v_question_id;
-    
-    -- Add options for first question
-    INSERT INTO quiz_options (question_id, label, is_correct)
-    VALUES 
-      (v_question_id, 'Option A', true),
-      (v_question_id, 'Option B', false),
-      (v_question_id, 'Option C', false),
-      (v_question_id, 'Option D', false);
-    
-    -- Create second question
-    INSERT INTO quiz_questions (module_id, stem, type, points, order_index)
-    VALUES (module_id_param, 'Default quiz question 2', 'mcq', 1, 1)
-    RETURNING quiz_questions.id INTO v_question_id;
-    
-    -- Add options for second question
-    INSERT INTO quiz_options (question_id, label, is_correct)
-    VALUES 
-      (v_question_id, 'Option A', true),
-      (v_question_id, 'Option B', false),
-      (v_question_id, 'Option C', false),
-      (v_question_id, 'Option D', false);
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Module not found: %', p_module_id;
   END IF;
   
-  -- Return all questions for this module with their options
-  RETURN QUERY
-  SELECT 
-    q.id,
-    q.stem,
-    q.type,
-    q.points,
-    q.order_index,
-    COALESCE(
-      jsonb_agg(
-        jsonb_build_object(
-          'id', o.id,
-          'label', o.label,
-          'is_correct', o.is_correct
-        ) ORDER BY o.label
-      ) FILTER (WHERE o.id IS NOT NULL),
-      '[]'::jsonb
-    ) as options
-  FROM quiz_questions q
-  LEFT JOIN quiz_options o ON o.question_id = q.id
-  WHERE q.module_id = module_id_param
-  GROUP BY q.id, q.stem, q.type, q.points, q.order_index
-  ORDER BY q.order_index;
+  IF v_module_record.type != 'digital_assessment_quiz' THEN
+    RAISE EXCEPTION 'Module is not a quiz type: %', v_module_record.type;
+  END IF;
+
+  -- Check if quiz already exists for this module
+  SELECT q.id, q.pass_mark, q.max_attempts, q.shuffle INTO v_quiz_record
+  FROM quizzes q
+  WHERE q.module_id = p_module_id;
+  
+  IF FOUND THEN
+    -- Return existing quiz
+    RETURN QUERY SELECT v_quiz_record.id, v_quiz_record.pass_mark, v_quiz_record.max_attempts, v_quiz_record.shuffle;
+    RETURN;
+  END IF;
+  
+  -- Check if there's a legacy course-level quiz
+  SELECT q.id, q.pass_mark, q.max_attempts, q.shuffle INTO v_quiz_record
+  FROM quizzes q
+  WHERE q.course_id = v_module_record.course_id
+  AND q.module_id IS NULL;
+  
+  IF FOUND THEN
+    -- Update legacy quiz to be associated with this module
+    UPDATE quizzes 
+    SET module_id = p_module_id 
+    WHERE quizzes.id = v_quiz_record.id;
+    
+    RETURN QUERY SELECT v_quiz_record.id, v_quiz_record.pass_mark, v_quiz_record.max_attempts, v_quiz_record.shuffle;
+    RETURN;
+  END IF;
+  
+  -- Create new quiz for this module and return it directly
+  INSERT INTO quizzes (module_id, course_id, pass_mark, max_attempts, shuffle)
+  VALUES (p_module_id, v_module_record.course_id, 70, 3, false)
+  RETURNING quizzes.id, quizzes.pass_mark, quizzes.max_attempts, quizzes.shuffle
+  INTO v_quiz_record;
+  
+  -- Link any existing questions for this module to the new quiz
+  UPDATE quiz_questions 
+  SET quiz_id = v_quiz_record.id 
+  WHERE module_id = p_module_id 
+  AND quiz_id IS NULL;
+  
+  -- Return the quiz record
+  RETURN QUERY SELECT v_quiz_record.id, v_quiz_record.pass_mark, v_quiz_record.max_attempts, v_quiz_record.shuffle;
 
 EXCEPTION
   WHEN OTHERS THEN
-    RAISE WARNING 'Failed to ensure quiz for module %: %', module_id_param, SQLERRM;
+    RAISE WARNING 'Failed to ensure quiz for module %: %', p_module_id, SQLERRM;
     -- Return empty result on error
     RETURN;
 END;
