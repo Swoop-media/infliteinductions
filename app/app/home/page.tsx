@@ -149,6 +149,7 @@ export default async function HomePage({
                     <li>• Co pilot agent - Course creation</li>
                     <li>• Automated quiz generation</li>
                     <li>• Co Pilot Agent Auditing courses vs relevant rules, check and training manual</li>
+                    <li>• Flows - assign a user there jobs and it will deliver appropriate authorisations in a set order</li>
                   </ul>
                 </div>
 
