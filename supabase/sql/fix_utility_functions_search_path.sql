@@ -89,42 +89,8 @@ EXCEPTION
 END;
 $$;
 
--- 3. Fix ensure_quiz_for_module
-CREATE OR REPLACE FUNCTION public.ensure_quiz_for_module(module_id_param uuid)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, pg_catalog
-AS $$
-DECLARE
-  v_quiz_count integer;
-BEGIN
-  -- Check if module already has quiz questions
-  SELECT COUNT(*) INTO v_quiz_count
-  FROM quiz_questions
-  WHERE module_id = module_id_param;
-  
-  -- If no quiz questions exist, create default ones
-  IF v_quiz_count = 0 THEN
-    INSERT INTO quiz_questions (module_id, stem, type, points, order_index)
-    VALUES 
-      (module_id_param, 'Default quiz question 1', 'mcq', 1, 0),
-      (module_id_param, 'Default quiz question 2', 'mcq', 1, 1);
-    
-    -- Add default options for the MCQ questions
-    INSERT INTO quiz_options (question_id, label, is_correct)
-    SELECT 
-      q.id,
-      'Option ' || generate_series(1, 4),
-      CASE WHEN generate_series(1, 4) = 1 THEN true ELSE false END
-    FROM quiz_questions q
-    WHERE q.module_id = module_id_param;
-  END IF;
-EXCEPTION
-  WHEN OTHERS THEN
-    RAISE WARNING 'Failed to ensure quiz for module %: %', module_id_param, SQLERRM;
-END;
-$$;
+-- 3. ensure_quiz_for_module is already properly fixed in ensure_quiz_for_module_rpc.sql
+-- with correct return type and search_path security
 
 -- 4. Fix send_expired_course_notifications (already fixed in course_expiry_notifications.sql)
 CREATE OR REPLACE FUNCTION public.send_expired_course_notifications()
@@ -239,5 +205,5 @@ $$;
 
 COMMENT ON FUNCTION public.check_authorization_completion() IS 'Trigger function to check authorization completion - Fixed search_path vulnerability';
 COMMENT ON FUNCTION public.link_admin_created_user() IS 'Trigger function to link admin-created users - Fixed search_path vulnerability';
-COMMENT ON FUNCTION public.ensure_quiz_for_module(uuid) IS 'Utility function to ensure quiz exists for module - Fixed search_path vulnerability';
+-- ensure_quiz_for_module is handled in ensure_quiz_for_module_rpc.sql with proper return type
 COMMENT ON FUNCTION public.send_expired_course_notifications() IS 'Function to send expired course notifications - Fixed search_path vulnerability';
