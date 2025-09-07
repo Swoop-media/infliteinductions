@@ -974,7 +974,8 @@ export default async function LearnerCoursePage(props: {
                       </div>
                     )}
 
-                    {!showQuiz && blocks?.length === 0 && currentModule.type !== 'digital_assessment_quiz' ? (
+                    {!showQuiz && blocks?.length === 0 && currentModule.type !== 'digital_assessment_quiz' && 
+                     !((currentModule?.type === 'onsite_training' || currentModule?.type === 'onsite_assessment') && onsiteRequirements && onsiteRequirements.length > 0) ? (
                       <div className="text-center py-8">
                         <div className="text-gray-500 mb-4">
                           <svg className="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
