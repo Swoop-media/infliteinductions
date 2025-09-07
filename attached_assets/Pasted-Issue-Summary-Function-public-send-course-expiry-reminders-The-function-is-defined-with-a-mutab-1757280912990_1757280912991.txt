@@ -1,0 +1,63 @@
+Issue Summary – Function public.send_course_expiry_reminders
+
+The function is defined with a mutable search_path.
+Because the search_path is not fixed, the function can resolve unqualified object names (tables, types, extensions, etc.) against whatever schema is first in a client’s search_path at runtime.
+This creates a security risk (potential RLS bypass or data leakage) and stability problems (the function may break if a schema with the same name is added later or if a user’s session changes the search_path).
+Why it matters
+
+Security – A malicious user could set search_path to a schema they control, causing the function to read or write unintended objects.
+Predictability – If the default schema order changes, the function may start referencing the wrong table or view, leading to runtime errors.
+Performance – PostgreSQL must search multiple schemas for each object reference, adding overhead.
+Recommended Fixes
+
+Lock the search_path within the function
+
+SQL Query
+
+
+
+CREATE OR REPLACE FUNCTION public.send_course_expiry_reminders(...)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER   -- if you need elevated privileges
+SET search_path = public, pg_temp;   -- explicitly list allowed schemas
+AS $$
+BEGIN
+    -- function body (fully qualified object names optional now)
+END;
+$$;
+
+SET search_path = ... makes the function’s search_path immutable for its execution.
+
+Use fully‑qualified object names
+Even with a fixed search_path, qualify every table, view, or type:
+
+SQL Query
+
+
+
+SELECT * FROM public.courses;
+INSERT INTO public.course_reminders (...)
+
+This guarantees the correct objects are used regardless of the search_path.
+
+Apply the SECURITY DEFINER role carefully
+
+If the function needs to run with elevated rights, keep SECURITY DEFINER and ensure the owner role has only the minimum required privileges.
+If no elevated rights are required, drop SECURITY DEFINER and run as the caller.
+Add a defensive SET search_path clause in the function definition
+PostgreSQL allows SET clauses in the CREATE FUNCTION statement (as shown above). This is the most straightforward way to make the search_path immutable.
+
+Run a lint check after fixing
+Re‑run the Supabase Database Advisor lint (function_search_path_mutable) to verify that the issue is resolved.
+
+Implementation Steps
+
+Retrieve the current function definition (e.g., via pg_dump -s -t public.send_course_expiry_reminders or pg_get_functiondef).
+Edit the definition:
+Add SET search_path = public, pg_temp; (or the exact list of schemas the function should see).
+Optionally qualify any unqualified object names.
+Replace the function with CREATE OR REPLACE FUNCTION … using the edited definition.
+Test the function (run it manually or trigger its normal flow) to confirm it still behaves as expected.
+Re‑run the Supabase advisor to confirm the lint warning is cleared.
+Bottom line: Lock the function’s search_path (or fully qualify all object references) to eliminate the mutable search_path vulnerability, improving both security and reliability.
