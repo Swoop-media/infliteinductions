@@ -1,7 +1,11 @@
 
 -- Function to notify Senior Management when an authorisation is pending approval
 CREATE OR REPLACE FUNCTION notify_pending_authorisation_approval()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, extensions
+AS $$
 DECLARE
     senior_manager_id UUID;
     authorisation_title TEXT;
