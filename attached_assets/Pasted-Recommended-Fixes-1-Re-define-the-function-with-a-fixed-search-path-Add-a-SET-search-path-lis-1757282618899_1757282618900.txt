@@ -1,0 +1,83 @@
+Recommended Fixes
+1. Re‑define the function with a fixed search_path
+Add a SET search_path = '<list>' clause (or RESET search_path to use the database default) in the function definition. For a function that only needs objects from the public schema, do:
+
+SQL Query
+
+
+
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER               -- Recommended for triggers that modify rows
+SET search_path = 'public'     -- Fixed, immutable search_path
+AS $$
+BEGIN
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
+
+Why SECURITY DEFINER?
+Triggers run with the privileges of the function owner, not the invoking role. Coupled with a fixed search_path, this guarantees that only objects in the intended schema are accessed, even if the caller tries to change the search path.
+
+2. If the function truly needs to be schema‑agnostic, lock the search path to the session default (which is safe because Supabase sets it to public for all users).
+SQL Query
+
+
+
+CREATE OR REPLACE FUNCTION public.handle_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = DEFAULT      -- Uses the database’s default (public)
+AS $$ ... $$;
+
+3. Reset an existing function’s search_path (quick fix)
+If you cannot immediately replace the whole definition, you can issue an ALTER FUNCTION:
+
+SQL Query
+
+
+
+ALTER FUNCTION public.handle_updated_at()
+SET search_path = 'public';
+
+or, to revert to the default:
+
+SQL Query
+
+
+
+ALTER FUNCTION public.handle_updated_at()
+RESET search_path;
+
+Note: ALTER FUNCTION … RESET is safe only if the database’s search_path is already configured to a secure value (Supabase sets it to public). Otherwise, prefer the explicit SET search_path = 'public'.
+
+4. Verify that all other functions exposed to the API follow the same pattern
+Run a diagnostic query to list any remaining functions with a mutable search path:
+
+SQL Query
+
+
+
+SELECT
+  n.nspname AS schema,
+  p.proname AS function_name,
+  pg_get_functiondef(p.oid) AS definition,
+  p.proconfig AS config
+FROM pg_proc p
+JOIN pg_namespace n ON p.pronamespace = n.oid
+WHERE p.proconfig IS NOT NULL
+  AND NOT (p.proconfig @> ARRAY['search_path=public']);
+
+If any rows appear, repeat steps 1‑3 for each.
+
+5. Add a Database Advisor check to your CI pipeline (optional but recommended)
+Pull the Advisor report after each migration (supabase db lint or via the UI) and enforce that no functions have a mutable search path before merging.
+Quick Checklist for public.handle_updated_at
+Re‑create with SET search_path = 'public' (or DEFAULT).
+Add SECURITY DEFINER (triggers usually need it).
+Test the trigger by updating a row and confirming updated_at is set correctly.
+Run the diagnostic query above to ensure no other functions are left mutable.
+Commit the migration and run supabase db push (or the appropriate deployment step).

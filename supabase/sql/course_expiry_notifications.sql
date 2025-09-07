@@ -1,11 +1,11 @@
-
 -- Function to send course expiry reminder notifications
 -- This should be called daily (via cron job or scheduled function)
 
-CREATE OR REPLACE FUNCTION send_course_expiry_reminders()
+CREATE OR REPLACE FUNCTION public.send_course_expiry_reminders()
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public, pg_catalog
 AS $$
 DECLARE
   v_site_url text;
@@ -46,7 +46,7 @@ BEGIN
 
     -- Only send notifications if within the reminder window and not yet expired
     IF v_days_until_expiry > 0 AND v_days_until_expiry <= v_assignment.retake_reminder_days THEN
-      
+
       -- Get learner details
       BEGIN
         SELECT 
@@ -156,7 +156,7 @@ BEGIN
 
     -- Only send notifications for recently expired courses (within 7 days)
     IF v_days_overdue > 0 AND v_days_overdue <= 7 THEN
-      
+
       -- Get learner details
       BEGIN
         SELECT 
