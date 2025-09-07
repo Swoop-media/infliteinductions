@@ -1,0 +1,28 @@
+ ○ Compiling /auth/callback ...
+ ✓ Compiled /auth/callback in 565ms (815 modules)
+Microsoft auth successful, redirecting to confirm: https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/auth/confirm?email=henry.morgan%40inflite.nz&password=79be5b69-e22a-4cbd-8346-cb4cdb1264e5&next=%2Fapp%2Fhome
+ GET /auth/callback?code=1.AUIA2DmwGeCb20ieXpRJ8WJDaMQjitx_pRBOhUMFOX4bSuPqAOtCAA.AgABBAIAAABVrSpeuWamRam2jAF1XRQEAwDs_wUA9P-pxiuzxbjDcWaXMpwRVl6js8f1CjiT_Lois94pwQtBZSFvUE0YjnDycoMsszNiGEO5J6RBN9Ishfbibm84eJHsFYG6g5V2MoSj9j9D3O8UeGOpBElDAqQde6gVzkS6pqa3YYInrCHk4Bxvvgy6hGOuqhfm3O9ADkSZGq-LEMTX7WAeZfPYvTjvnZ9XtIw_IKMaZlEfSSiLDlHQKgKt4uZqAvvPQR7q1THkAIv5ma4-q6zFXW4hMbGAK_4wnDvhNEOcTPzpkeH5emubtEX9jfO9Ngrwf0gC6q371lbBkomle0R6p9gAtA1JvJsXXxqHHv_DdsLIgkRwMjnEidAngGWHajpW92DwFxFko4sCNVtg9Yuy6DY1K5AX0pVwc6fIkSob52ElMWWDFFjYwOTnoFChhpoGcxARyvjnzo0YIJqFhn_ASnEFed1Jg2pm-BwxbR7r5-fdxxkGNPyE-yXsOXujO3-D-yNqcCKWL9UBVEzQQqlum2VOIPTJOByhT7yY76iudat9nG2oGy9isPll8dmuxNsPwmm7OaQVu4d9Nr8wj1ahX7UK53YRg0mLNgLTNzXE-nid10TXkDxe_n34E4IRCxb5TPGIfrO2wAihVm1j0GBjy9lEzqkuHuzl10j03dvUbrMDKF-YqN2ezZuozB4QFDMMiXgHGCmErHKTc0WHi2ICpuThIxPlPx1EmLNJ4LJFkKwGlEfGDqS-a94qthgDYNP6qrjUnNeddEBwdhWD5aBks36pMssgBvOhj1lqUiLPTXlFvVxx_dmSx1Lqbva6M8sqhUapEVkG_BkPIKS4Sl2ZByfJDpKhhopidXO16L7inf-rDJSnKlMbVYqkyy4J0CJfC1ySK3JvE8r51AfkZ0_9y59EDoTtDd4rLpcfbULQ0PGNPg&client_info=eyJ1aWQiOiIzMGRlY2JkNS01Y2VmLTRlMDEtOTFiZi1lODUzYWQ5OGJiMzIiLCJ1dGlkIjoiMTliMDM5ZDgtOWJlMC00OGRiLTllNWUtOTQ0OWYxNjI0MzY4In0&session_state=007d7549-82bf-ee5c-9d58-d7833836f21d 307 in 3357ms
+ ○ Compiling /auth/confirm ...
+ ✓ Compiled /auth/confirm in 1255ms (1116 modules)
+ GET /auth/confirm?email=henry.morgan%40inflite.nz&password=79be5b69-e22a-4cbd-8346-cb4cdb1264e5&next=%2Fapp%2Fhome 200 in 1576ms
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ○ Compiling /app/home ...
+ ✓ Compiled /app/home in 1343ms (1289 modules)
+Error: Route "/app/home" used `searchParams.notice`. `searchParams` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at HomePage (app/app/home/page.tsx:29:7)
+  27 |     <div className="space-y-8">
+  28 |       {/* Status messages */}
+> 29 |       {searchParams?.notice === "revoked" && (
+     |       ^
+  30 |         <div className="mb-4 rounded-md bg-yellow-50 p-4 border border-yellow-200">
+  31 |           <div className="text-sm text-yellow-800">
+  32 |             ✓ User assignment revoked
+Error: Route "/app/home" used `searchParams.banner`. `searchParams` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at HomePage (app/app/home/page.tsx:37:7)
+  35 |       )}
+  36 |
+> 37 |       {searchParams?.banner === "no_access" && (
+     |       ^
+  38 |         <div className="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
+  39 |           <div className="text-sm text-red-800">
+  40 |             ⚠️ Sorry, you do not have access to that page. Please contact your administrator if you believe this is an error.
