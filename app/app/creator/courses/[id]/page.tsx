@@ -710,9 +710,10 @@ export default async function CourseEditorPage(props: {
 
         <div className="flex items-center gap-2">
           <Link
-            href={`/app/creator/courses/${course.id}/test`}
+            href={`/app/learn/courses/${course.id}?preview=1`}
             className="rounded-md border px-3 py-1 text-sm hover:bg-gray-50"
             title="Open learner preview in a new tab"
+            target="_blank"
           >
             Test as learner
           </Link>
