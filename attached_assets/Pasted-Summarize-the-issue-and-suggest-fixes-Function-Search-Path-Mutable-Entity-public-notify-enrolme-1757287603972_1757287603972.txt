@@ -1,0 +1,61 @@
+Summarize the issue and suggest fixes: Function Search Path Mutable
+
+Entity: public.notify_enrolment_request
+
+Schema: public
+
+Issue: Function public.notify_enrolment_request has a role mutable search_path
+
+Description: Detects functions where the search_path parameter is not set.
+
+
+
+
+Reasoned
+
+
+Reasoned
+
+Issue Summary
+
+Entity: public.notify_enrolment_request
+Problem: The function’s search_path is mutable (it inherits the caller’s search_path).
+Why it matters: A mutable search_path allows a caller to influence which schema’s objects the function resolves, potentially exposing internal tables or allowing execution of unintended code. This is a security risk, especially for functions that run with elevated privileges.
+Suggested Fixes
+
+Set a Fixed Search Path in the Function Definition
+
+SQL Query
+
+
+
+CREATE OR REPLACE FUNCTION public.notify_enrolment_request(...)
+RETURNS ...
+LANGUAGE plpgsql
+SECURITY DEFINER          -- if the function needs elevated rights
+SET search_path = 'public'   -- lock the search_path to the safe schema
+AS $$
+BEGIN
+    -- function body
+END;
+$$;
+
+SET search_path = 'public' (or a comma‑separated list of trusted schemas) ensures the function always resolves objects from the intended schema, regardless of the caller’s environment.
+Use SECURITY DEFINER Carefully
+
+If the function must run with the privileges of its owner, keep SECURITY DEFINER.
+Combine it with the fixed search_path to avoid privilege escalation via schema manipulation.
+Mark the Function as IMMUTABLE or STABLE When Possible
+
+If the function’s output depends only on its inputs and not on database state, declare it IMMUTABLE.
+For read‑only operations that may query the database, use STABLE.
+This prevents the optimizer from assuming the function can change its behavior based on external state, reinforcing safety.
+Limit Accessible Schemas
+
+Ensure the function and its callers have USAGE privileges only on the schemas you explicitly include in the search_path.
+Revoke unnecessary USAGE on other schemas from the function owner’s role.
+Run the Advisor Check After Fixes
+
+Re‑run the Supabase Database Advisor (or get_advisors) to confirm the mutable search_path warning is cleared.
+Implementing a fixed search_path (and, where appropriate, SECURITY DEFINER + proper volatility classification) removes the primary risk associated with this advisory.
+
