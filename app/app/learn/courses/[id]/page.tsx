@@ -995,7 +995,7 @@ export default async function LearnerCoursePage(props: {
                       </div>
                     )}
 
-                    {/* Show Start Quiz button only if current module is quiz type and quiz not started */}
+                    {/* Show quiz info without redundant start button - navigation handles quiz starting */}
                     {currentModule.type === 'digital_assessment_quiz' && !showQuiz && (
                       <div className="bg-white p-6 rounded-lg border">
                         <h2 className="text-xl font-semibold text-gray-900 mb-4">Digital Assessment Quiz</h2>
@@ -1008,12 +1008,7 @@ export default async function LearnerCoursePage(props: {
                             {isCurrentModuleCompleted && !preview ? (
                               <span className="text-sm text-green-600">✓ Complete</span>
                             ) : (
-                              <Link
-                                href={`/app/learn/courses/${courseId}?module=${currentModule.id}&quiz=start${preview ? "&preview=1" : ""}${authorizationId ? `&auth=${authorizationId}` : ""}`}
-                                className="rounded-md bg-black px-3 py-1 text-sm text-white"
-                              >
-                                {preview ? "Preview Quiz →" : "Start Quiz →"}
-                              </Link>
+                              <span className="text-sm text-gray-600">Use the button below to start</span>
                             )}
                           </div>
                         </div>
@@ -1221,7 +1216,7 @@ export default async function LearnerCoursePage(props: {
                                   ) : (
                                     <Link
                                       href={`/app/learn/courses/${courseId}?module=${currentModule.id}&quiz=start${authorizationId ? `&auth=${authorizationId}` : ''}`}
-                                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                                      className="inline-flex items-center px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 font-medium"
                                     >
                                       Start Quiz
                                     </Link>
