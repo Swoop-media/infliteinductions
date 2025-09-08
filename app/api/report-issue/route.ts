@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -12,7 +11,7 @@ function supabaseAdmin() {
 async function sendTeamsMessage(message: string, recipientEmail: string = 'inductions@inflite.nz') {
   try {
     console.log("Attempting to send Teams message to:", recipientEmail);
-    
+
     // First try the existing bot debug-send endpoint
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
     const botResponse = await fetch(`${baseUrl}/api/teams/bot/debug-send`, {
@@ -23,27 +22,27 @@ async function sendTeamsMessage(message: string, recipientEmail: string = 'induc
         message: message
       })
     });
-    
+
     if (botResponse.ok) {
       console.log("✅ Teams message sent via bot endpoint");
       return true;
     } else {
       const errorData = await botResponse.json().catch(() => ({}));
       console.log("❌ Bot endpoint failed:", botResponse.status, errorData);
-      
+
       // If user not linked to Teams, that's expected - return false
       if (botResponse.status === 404 && errorData.error?.includes("not linked")) {
         console.log("📧 User not linked to Teams, will rely on database logging only");
         return false;
       }
     }
-    
+
     console.log("⚠️ Bot endpoint failed, trying fallback approach...");
-    
+
     // Fallback: Log the issue (in production you might want email fallback)
     console.log("📧 Issue report for", recipientEmail, ":", message.substring(0, 200) + "...");
     return false;
-    
+
   } catch (error) {
     console.error("Teams message failed:", error);
     console.log("📧 Issue report (fallback logging) for", recipientEmail, ":", message.substring(0, 200) + "...");
@@ -54,7 +53,7 @@ async function sendTeamsMessage(message: string, recipientEmail: string = 'induc
 export async function POST(request: NextRequest) {
   try {
     console.log("📝 Processing issue report...");
-    
+
     const { message, attachments, context, userId } = await request.json();
 
     if (!message || !userId) {
@@ -98,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     // Try to find an admin user with Teams link first
     let recipientEmail = 'inductions@inflite.nz'; // default fallback
-    
+
     try {
       const { data: adminUsers } = await supabase
         .from('profiles')
@@ -125,7 +124,7 @@ export async function POST(request: NextRequest) {
     const sent = await sendTeamsMessage(enhancedMessage, recipientEmail);
 
     console.log(`✅ Issue report processed for user ${userName}, Teams sent: ${sent}`);
-    
+
     // Always log the report to database for tracking
     try {
       await supabase.from('issue_reports').insert({

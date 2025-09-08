@@ -14,6 +14,20 @@ export async function sendTeamsDMToAppUser(appUserId: string, text: string) {
   const sb = supabaseAdmin();
   console.log("🔍 Looking up Teams link for app user:", appUserId);
   
+  // First, let's verify the user exists in profiles
+  const { data: profile, error: profileError } = await sb
+    .from("profiles")
+    .select("id, email, full_name")
+    .eq("id", appUserId)
+    .maybeSingle();
+  
+  console.log("👤 Profile lookup:", { 
+    found: !!profile, 
+    error: profileError?.message,
+    email: profile?.email,
+    name: profile?.full_name
+  });
+  
   const { data, error } = await sb
     .from("teams_links")
     .select("conversation_ref, teams_user_id, aad_object_id, user_id")
