@@ -78,13 +78,21 @@ export default function InteractiveRequirements({
         // Force a page refresh to show updated progress and handle progression
         window.location.reload();
       } else {
-        const error = await progressResponse.json();
-        console.error('Failed to complete module:', error);
-        alert('Failed to complete module. Please try again.');
+        let errorMessage = 'Failed to complete module. Please try again.';
+        try {
+          const error = await progressResponse.json();
+          errorMessage = error.error || error.message || errorMessage;
+          console.error('Failed to complete module:', error);
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          console.error('Response status:', progressResponse.status, progressResponse.statusText);
+        }
+        alert(errorMessage);
       }
     } catch (error) {
       console.error("Failed to save responses:", error);
-      alert("Failed to save responses. Please try again.");
+      const errorMessage = error instanceof Error ? error.message : "Failed to save responses. Please try again.";
+      alert(errorMessage);
     } finally {
       setIsSaving(false);
     }
