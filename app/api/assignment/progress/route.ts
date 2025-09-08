@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const assignmentId = String(body.assignmentId || "");
     const moduleId = String(body.moduleId || "");
-    const completed = Boolean(body.completed);
+    const completed = body.completed !== undefined ? Boolean(body.completed) : true;
 
     console.log("Assignment progress request:", {
       userId: user.id,

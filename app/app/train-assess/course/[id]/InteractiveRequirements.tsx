@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
@@ -37,6 +37,37 @@ export default function InteractiveRequirements({
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [selectedRatings, setSelectedRatings] = useState<Record<string, number>>({});
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load existing responses when component mounts
+  useEffect(() => {
+    const loadExistingResponses = async () => {
+      try {
+        const response = await fetch(`/api/requirement-responses?moduleId=${moduleId}&assignmentId=${assignmentId}`);
+        if (response.ok) {
+          const data = await response.json();
+          const existingResponses: Record<string, any> = {};
+          const existingRatings: Record<string, number> = {};
+          
+          data.responses?.forEach((resp: any) => {
+            existingResponses[resp.requirement_id] = resp.response_value;
+            if (typeof resp.response_value === 'number' && resp.response_value >= 1 && resp.response_value <= 5) {
+              existingRatings[resp.requirement_id] = resp.response_value;
+            }
+          });
+          
+          setResponses(existingResponses);
+          setSelectedRatings(existingRatings);
+        }
+      } catch (error) {
+        console.error('Failed to load existing responses:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadExistingResponses();
+  }, [moduleId, assignmentId]);
 
   const updateResponse = (requirementId: string, value: any) => {
     setResponses(prev => ({
@@ -68,6 +99,7 @@ export default function InteractiveRequirements({
         body: JSON.stringify({
           assignmentId: assignmentId,
           moduleId: moduleId,
+          completed: true,
         }),
       });
 
@@ -237,6 +269,16 @@ export default function InteractiveRequirements({
     return null;
   }
 
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <div className="text-center text-muted-foreground">
+          Loading requirements...
+        </div>
+      </div>
+    );
+  }
+
   const allRequiredFieldsCompleted = requirements
     .filter(req => req.required)
     .every(req => {
@@ -281,7 +323,7 @@ export default function InteractiveRequirements({
         <div className="mt-4 flex justify-end">
           <Button 
             onClick={handleSave}
-            disabled={isSaving || !allRequiredFieldsCompleted}
+            disabled={isSaving || isLoading || !allRequiredFieldsCompleted}
             className="min-w-[120px]"
           >
             {isSaving ? 'Saving...' : 'Save Progress'}
