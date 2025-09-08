@@ -664,7 +664,22 @@ async function DocumentsSection({ q }: { q: string | null }) {
       {documents.length === 0 ? (
         <p className="text-sm text-gray-600">No documents found.</p>
       ) : (
-        <SortableDocumentsTable documents={documents} />
+        <SortableDocumentsTable documents={documents.map(doc => ({
+          id: doc.id,
+          title: doc.document_name,
+          expires_on: doc.expires_on,
+          created_at: doc.upload_date,
+          profiles: {
+            full_name: doc.full_name,
+            email: doc.email
+          },
+          courses: {
+            title: doc.course_title
+          },
+          course_modules: {
+            title: doc.module_title
+          }
+        }))} />
       )}
     </div>
   );
