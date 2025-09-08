@@ -19,8 +19,15 @@ $$;
 DROP TRIGGER IF EXISTS enrolment_request_notification_trigger ON public.enrolments;
 DROP TRIGGER IF EXISTS notify_enrolment_request_trigger ON public.enrolments;
 
--- Then drop the function itself
+-- Drop all possible function signatures to ensure complete removal
 DROP FUNCTION IF EXISTS public.notify_enrolment_request();
+DROP FUNCTION IF EXISTS public.notify_enrolment_request(uuid);
+DROP FUNCTION IF EXISTS public.notify_enrolment_request(text);
+DROP FUNCTION IF EXISTS public.notify_enrolment_request(uuid, text);
+
+-- Also check for any other potential trigger references
+DROP TRIGGER IF EXISTS notify_enrolment_trigger ON public.enrolments;
+DROP TRIGGER IF EXISTS enrolment_notify_trigger ON public.enrolments;
 
 -- Add comments for documentation
 COMMENT ON FUNCTION public.update_updated_at_column() IS 'Trigger function to update updated_at column - Fixed search_path vulnerability';
