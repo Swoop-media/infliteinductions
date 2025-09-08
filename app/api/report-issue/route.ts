@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const supabase = supabaseAdmin();
     const { data: user, error: userError } = await supabase
       .from('profiles')
-      .select('full_name, email, first_name, last_name')
+      .select('full_name, email')
       .eq('id', userId)
       .single();
 
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       console.warn("⚠️ Could not fetch user details:", userError);
     }
 
-    const userName = user?.full_name || `${user?.first_name} ${user?.last_name}`.trim() || user?.email || 'Unknown User';
+    const userName = user?.full_name || user?.email || 'Unknown User';
 
     // Enhanced message with user context
     const enhancedMessage = [
@@ -138,6 +138,44 @@ export async function POST(request: NextRequest) {
     } catch (dbError) {
       console.warn("⚠️ Failed to log issue report to database:", dbError);
       // Don't fail the request if logging fails
+    }
+
+    // Create an in-app notification for admins about the issue report
+    try {
+      const { data: adminUsers } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          user_roles!inner(
+            roles!inner(name)
+          )
+        `)
+        .eq('user_roles.roles.name', 'Admin');
+
+      // Create notification for each admin
+      if (adminUsers && adminUsers.length > 0) {
+        const notifications = adminUsers.map(admin => ({
+          recipient_id: admin.id,
+          type: 'issue_report',
+          payload: {
+            reporter_id: userId,
+            reporter_name: userName,
+            reporter_email: user?.email,
+            message: message.substring(0, 200) + (message.length > 200 ? '...' : ''),
+            attachments_count: attachments?.length || 0,
+            sent_to_teams: sent,
+            created_at: new Date().toISOString(),
+            event_id: `issue_report_${userId}_${Date.now()}`
+          },
+          read: false
+        }));
+
+        await supabase.from('notifications').insert(notifications);
+        console.log(`📬 Created ${notifications.length} admin notifications for issue report`);
+      }
+    } catch (notificationError) {
+      console.warn("⚠️ Failed to create admin notifications:", notificationError);
+      // Don't fail the request if notification creation fails
     }
 
     return NextResponse.json({ success: true });

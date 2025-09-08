@@ -131,6 +131,17 @@ function formatTeamsText(
         .filter(Boolean)
         .join("\n");
 
+    case "issue_report":
+      return [
+        "🚨 Issue reported",
+        payload?.reporter_name ? `• Reporter: ${payload.reporter_name}` : "",
+        payload?.reporter_email ? `• Email: ${payload.reporter_email}` : "",
+        payload?.message ? `• Message: ${payload.message}` : "",
+        payload?.attachments_count > 0 ? `• Attachments: ${payload.attachments_count}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
     case "course_assigned":
       return [
         "📚 Course assigned",
