@@ -82,10 +82,28 @@ export default function InteractiveRequirements({
         try {
           const error = await progressResponse.json();
           errorMessage = error.error || error.message || errorMessage;
-          console.error('Failed to complete module:', error);
+          console.error('Failed to complete module:', {
+            error,
+            status: progressResponse.status,
+            statusText: progressResponse.statusText,
+            assignmentId,
+            moduleId
+          });
+          
+          // Show more specific error messages to users
+          if (error.error === 'Assignment not found') {
+            errorMessage = 'Training assignment not found. Please contact your administrator.';
+          } else if (error.error === 'Database error while fetching assignment') {
+            errorMessage = 'Database error occurred. Please try again or contact support.';
+          }
         } catch (parseError) {
           console.error('Failed to parse error response:', parseError);
-          console.error('Response status:', progressResponse.status, progressResponse.statusText);
+          console.error('Response details:', {
+            status: progressResponse.status,
+            statusText: progressResponse.statusText,
+            assignmentId,
+            moduleId
+          });
         }
         alert(errorMessage);
       }

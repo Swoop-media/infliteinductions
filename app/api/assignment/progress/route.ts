@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 
@@ -11,7 +10,7 @@ export async function POST(req: NextRequest) {
       data: { user },
       error: userErr,
     } = await supabase.auth.getUser();
-    
+
     if (userErr || !user) {
       console.log("Assignment progress: Unauthorized user");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -34,8 +33,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing assignmentId or moduleId" }, { status: 400 });
     }
 
+    // Get the assignment to verify it exists and get trainee info
+  const { data: assignment, error: assignmentError } = await supabase
+    .from('course_assignments')
+    .select(`
+      *,
+      trainee:profiles!course_assignments_user_id_fkey(id, email, full_name, first_name, last_name)
+    `)
+    .eq('id', assignmentId)
+    .single();
+
+  if (assignmentError) {
+    console.error('Assignment query error:', assignmentError);
+    return NextResponse.json({ 
+      error: 'Database error while fetching assignment',
+      details: assignmentError.message 
+    }, { status: 500 });
+  }
+
+  if (!assignment) {
+    console.error('No assignment found for ID:', assignmentId);
+    return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
+  }
+
     // Verify user owns this assignment
-    const { data: assignment, error: assignmentErr } = await supabase
+    const { data: assignmentCheck, error: assignmentErr } = await supabase
       .from("course_assignments")
       .select("id, course_id, user_id")
       .eq("id", assignmentId)
@@ -43,11 +65,11 @@ export async function POST(req: NextRequest) {
       .single();
 
     console.log("Assignment verification:", {
-      assignment,
+      assignment: assignmentCheck,
       error: assignmentErr?.message
     });
 
-    if (assignmentErr || !assignment) {
+    if (assignmentErr || !assignmentCheck) {
       console.log("Assignment progress: No valid assignment found");
       return NextResponse.json({ error: "No valid assignment found" }, { status: 403 });
     }
