@@ -42,15 +42,7 @@ export default function CompleteModuleButton({
         throw new Error(result.error || 'Failed to complete module');
       }
 
-      // Redirect with success message and refresh the page
-      const params = new URLSearchParams();
-      params.set('module', moduleId);
-      params.set('success', 'module_completed');
-      if (authorizationId) {
-        params.set('auth', authorizationId);
-      }
-
-      router.push(`/app/learn/courses/${courseId}?${params.toString()}`);
+      // Success - refresh the page to show updated progress and handle next module navigation
       router.refresh();
     } catch (error) {
       console.error('Failed to complete module:', error);
