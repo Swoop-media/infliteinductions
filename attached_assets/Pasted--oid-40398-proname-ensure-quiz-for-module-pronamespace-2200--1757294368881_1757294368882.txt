@@ -1,0 +1,48 @@
+[
+  {
+    "oid": 40398,
+    "proname": "ensure_quiz_for_module",
+    "pronamespace": 2200,
+    "proowner": 16384,
+    "prolang": 13572,
+    "procost": 100,
+    "prorows": 1000,
+    "provariadic": 0,
+    "prosupport": "-",
+    "prokind": "f",
+    "prosecdef": true,
+    "proleakproof": false,
+    "proisstrict": false,
+    "proretset": true,
+    "provolatile": "v",
+    "proparallel": "u",
+    "pronargs": 1,
+    "pronargdefaults": 0,
+    "prorettype": 2249,
+    "proargtypes": "2950",
+    "proallargtypes": [
+      2950,
+      2950,
+      23,
+      23,
+      16
+    ],
+    "proargmodes": "{i,t,t,t,t}",
+    "proargnames": [
+      "p_module_id",
+      "id",
+      "pass_mark",
+      "max_attempts",
+      "shuffle"
+    ],
+    "proargdefaults": null,
+    "protrftypes": null,
+    "prosrc": "\r\nDECLARE\r\n  v_quiz_record RECORD;\r\n  v_module_record RECORD;\r\nBEGIN\r\n  -- Get module information\r\n  SELECT course_id, type INTO v_module_record \r\n  FROM course_modules \r\n  WHERE course_modules.id = p_module_id;\r\n\r\n  IF NOT FOUND THEN\r\n    RAISE EXCEPTION 'Module not found: %', p_module_id;\r\n  END IF;\r\n\r\n  IF v_module_record.type != 'digital_assessment_quiz' THEN\r\n    RAISE EXCEPTION 'Module is not a quiz type: %', v_module_record.type;\r\n  END IF;\r\n\r\n  -- Check if quiz already exists for this module\r\n  SELECT q.id, q.pass_mark, q.max_attempts, q.shuffle INTO v_quiz_record\r\n  FROM quizzes q\r\n  WHERE q.module_id = p_module_id;\r\n\r\n  IF FOUND THEN\r\n    -- Return existing quiz\r\n    RETURN QUERY SELECT v_quiz_record.id, v_quiz_record.pass_mark, v_quiz_record.max_attempts, v_quiz_record.shuffle;\r\n    RETURN;\r\n  END IF;\r\n\r\n  -- Check if there's a legacy course-level quiz\r\n  SELECT q.id, q.pass_mark, q.max_attempts, q.shuffle INTO v_quiz_record\r\n  FROM quizzes q\r\n  WHERE q.course_id = v_module_record.course_id\r\n  AND q.module_id IS NULL;\r\n\r\n  IF FOUND THEN\r\n    -- Update legacy quiz to be associated with this module\r\n    UPDATE quizzes \r\n    SET module_id = p_module_id \r\n    WHERE quizzes.id = v_quiz_record.id;\r\n\r\n    RETURN QUERY SELECT v_quiz_record.id, v_quiz_record.pass_mark, v_quiz_record.max_attempts, v_quiz_record.shuffle;\r\n    RETURN;\r\n  END IF;\r\n\r\n  -- Create new quiz for this module and return it directly\r\n  INSERT INTO quizzes (module_id, course_id, pass_mark, max_attempts, shuffle)\r\n  VALUES (p_module_id, v_module_record.course_id, 70, 3, false)\r\n  RETURNING quizzes.id, quizzes.pass_mark, quizzes.max_attempts, quizzes.shuffle\r\n  INTO v_quiz_record;\r\n\r\n  -- Link any existing questions for this module to the new quiz\r\n  UPDATE quiz_questions \r\n  SET quiz_id = v_quiz_record.id \r\n  WHERE module_id = p_module_id \r\n  AND quiz_id IS NULL;\r\n\r\n  -- Return the quiz record\r\n  RETURN QUERY SELECT v_quiz_record.id, v_quiz_record.pass_mark, v_quiz_record.max_attempts, v_quiz_record.shuffle;\r\n\r\nEXCEPTION\r\n  WHEN OTHERS THEN\r\n    RAISE WARNING 'Failed to ensure quiz for module %: %', p_module_id, SQLERRM;\r\n    -- Return empty result on error\r\n    RETURN;\r\nEND;\r\n",
+    "probin": null,
+    "prosqlbody": null,
+    "proconfig": [
+      "search_path=public, pg_catalog"
+    ],
+    "proacl": "{=X/postgres,postgres=X/postgres,anon=X/postgres,authenticated=X/postgres,service_role=X/postgres}"
+  }
+]
