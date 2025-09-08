@@ -4,23 +4,44 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   try {
-    const { userId, message } = await request.json();
+    const { userId, email, message } = await request.json();
     
-    if (!userId || !message) {
-      return NextResponse.json({ error: "Missing userId or message" }, { status: 400 });
+    if ((!userId && !email) || !message) {
+      return NextResponse.json({ error: "Missing userId/email or message" }, { status: 400 });
     }
 
     const supabase = await createSupabaseServer();
+    
+    let targetUserId = userId;
+    
+    // If email provided but no userId, look up the user
+    if (!targetUserId && email) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+      
+      if (!profile) {
+        return NextResponse.json({ error: "User not found for email" }, { status: 404 });
+      }
+      
+      targetUserId = profile.id;
+    }
     
     // Get Teams link for this user
     const { data: teamsLink } = await supabase
       .from("teams_links")
       .select("conversation_ref")
-      .eq("user_id", userId)
+      .eq("user_id", targetUserId)
       .maybeSingle();
 
     if (!teamsLink?.conversation_ref) {
-      return NextResponse.json({ error: "User not linked to Teams" }, { status: 404 });
+      return NextResponse.json({ 
+        error: "User not linked to Teams", 
+        userId: targetUserId,
+        email: email 
+      }, { status: 404 });
     }
 
     // Send message using Bot Framework API

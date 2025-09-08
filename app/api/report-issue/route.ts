@@ -27,23 +27,27 @@ async function sendTeamsMessage(message: string, recipientEmail: string = 'induc
     if (botResponse.ok) {
       console.log("✅ Teams message sent via bot endpoint");
       return true;
+    } else {
+      const errorData = await botResponse.json().catch(() => ({}));
+      console.log("❌ Bot endpoint failed:", botResponse.status, errorData);
+      
+      // If user not linked to Teams, that's expected - return false
+      if (botResponse.status === 404 && errorData.error?.includes("not linked")) {
+        console.log("📧 User not linked to Teams, will rely on database logging only");
+        return false;
+      }
     }
     
-    console.log("⚠️ Bot endpoint failed, trying direct approach...");
+    console.log("⚠️ Bot endpoint failed, trying fallback approach...");
     
-    // Fallback: Try webhook approach or simple logging
+    // Fallback: Log the issue (in production you might want email fallback)
     console.log("📧 Issue report for", recipientEmail, ":", message.substring(0, 200) + "...");
-    
-    // For now, we'll return true and rely on database logging
-    // In production, you might want to add email fallback here
-    return true;
+    return false;
     
   } catch (error) {
     console.error("Teams message failed:", error);
-    
-    // Don't fail the entire request if Teams sending fails
     console.log("📧 Issue report (fallback logging) for", recipientEmail, ":", message.substring(0, 200) + "...");
-    return true;
+    return false;
   }
 }
 
@@ -92,8 +96,33 @@ export async function POST(request: NextRequest) {
 
     console.log("📤 Sending Teams message...");
 
+    // Try to find an admin user with Teams link first
+    let recipientEmail = 'inductions@inflite.nz'; // default fallback
+    
+    try {
+      const { data: adminUsers } = await supabase
+        .from('profiles')
+        .select(`
+          email,
+          user_roles!inner(
+            roles!inner(name)
+          ),
+          teams_links(user_id)
+        `)
+        .eq('user_roles.roles.name', 'Admin')
+        .not('teams_links', 'is', null)
+        .limit(1);
+
+      if (adminUsers && adminUsers.length > 0) {
+        recipientEmail = adminUsers[0].email;
+        console.log("📧 Sending to Teams-linked admin:", recipientEmail);
+      }
+    } catch (error) {
+      console.warn("⚠️ Could not find Teams-linked admin, using default:", recipientEmail);
+    }
+
     // Send to Teams
-    const sent = await sendTeamsMessage(enhancedMessage);
+    const sent = await sendTeamsMessage(enhancedMessage, recipientEmail);
 
     console.log(`✅ Issue report processed for user ${userName}, Teams sent: ${sent}`);
     
