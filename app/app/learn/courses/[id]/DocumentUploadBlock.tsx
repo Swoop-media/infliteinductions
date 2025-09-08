@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -52,12 +51,12 @@ export default function DocumentUploadBlock({
 
     try {
       const supabase = supabaseBrowser;
-      
+
       // Upload file to storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `learner-documents/${currentUserId}/${fileName}`;
-      
+
       const { error: uploadError } = await supabase.storage
         .from('course-files')
         .upload(filePath, file);
@@ -87,7 +86,7 @@ export default function DocumentUploadBlock({
       setSuccess('Document uploaded successfully!');
       setFile(null);
       setExpiryDate('');
-      
+
       // Refresh the page to show the uploaded document
       window.location.reload();
     } catch (err: any) {
@@ -99,11 +98,11 @@ export default function DocumentUploadBlock({
 
   const handleRemove = async () => {
     if (!existingDocument) return;
-    
+
     setUploading(true);
     try {
       const supabase = supabaseBrowser;
-      
+
       // Remove from database
       const { error: dbError } = await supabase
         .from('learner_documents')
