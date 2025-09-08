@@ -1,0 +1,38 @@
+react-dom-client.development.js:25581 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+page.tsx:73  Server  All course assignments: Array(1)
+page.tsx:93  Server  Authorization assignments: Array(1)
+page.tsx:94  Server  All course assignments: Array(1)
+page.tsx:138  Server  Authorization with courses: Array(1)
+page.tsx:157  Server  In progress courses: Array(1)
+page.tsx:158  Server  Completed courses: Array(0)
+page.tsx:159  Server  In progress auth: Array(1)
+page.tsx:160  Server  Completed auth: Array(0)
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+ReportIssueButton.tsx:92   POST https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/api/report-issue 500 (Internal Server Error)
+handleSubmit @ ReportIssueButton.tsx:92
+await in handleSubmit
+executeDispatch @ react-dom-client.development.js:16921
+runWithFiberInDEV @ react-dom-client.development.js:872
+processDispatchQueue @ react-dom-client.development.js:16971
+eval @ react-dom-client.development.js:17572
+batchedUpdates$1 @ react-dom-client.development.js:3312
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17125
+dispatchEvent @ react-dom-client.development.js:21308
+dispatchDiscreteEvent @ react-dom-client.development.js:21276
+ReportIssueButton.tsx:116  Error submitting report: 
+error @ intercept-console-error.js:62
+handleSubmit @ ReportIssueButton.tsx:116
+await in handleSubmit
+executeDispatch @ react-dom-client.development.js:16921
+runWithFiberInDEV @ react-dom-client.development.js:872
+processDispatchQueue @ react-dom-client.development.js:16971
+eval @ react-dom-client.development.js:17572
+batchedUpdates$1 @ react-dom-client.development.js:3312
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17125
+dispatchEvent @ react-dom-client.development.js:21308
+dispatchDiscreteEvent @ react-dom-client.development.js:21276
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again

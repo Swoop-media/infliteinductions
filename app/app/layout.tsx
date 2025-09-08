@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import NotificationsBell from "./_components/NotificationsBell";
 import SignOutButton from "./_components/SignOutButton";
+import ReportIssueButton from "./_components/ReportIssueButton"; // Assuming ReportIssueButton is in this path
 
 export const metadata = {
   title: "Training Platform",
@@ -38,6 +39,7 @@ export default async function AppSectionLayout({
           </nav>
 
           <nav className="flex items-center gap-2">
+            <ReportIssueButton userId={user?.id} />
             <NotificationsBell />
             {user ? (
               <SignOutButton className="rounded-md border px-3 py-1 text-sm" />
