@@ -1,0 +1,64 @@
+Summarize the issue and suggest fixes: undefined
+
+Entity: Config
+
+Schema:
+
+Issue: We have detected that the current version of postgres, supabase-postgres-17.4.1.069, has outstanding security patches available. Upgrade your database to receive the latest security patches.
+
+Description: Upgrade your postgres database to apply important security patches
+
+
+
+
+Reasoned
+
+
+Reasoned
+
+get_advisors
+
+Reasoned
+
+Issue Summary
+
+The database is running Postgres 17.4.1.069 (the Supabase‑managed version).
+Supabase has detected that this version is missing critical security patches that have been released upstream.
+Continuing to run the current version leaves the instance vulnerable to any exploits that the missing patches address.
+Why It Matters
+
+Unpatched PostgreSQL can contain vulnerabilities that allow privilege escalation, data leakage, or denial‑of‑service attacks.
+Supabase’s managed service will not automatically apply these patches until you trigger an upgrade.
+Security‑only updates are often small, but they protect against known exploits and keep compliance requirements (e.g., GDPR, PCI‑DSS) satisfied.
+Recommended Fixes
+
+Upgrade the Database Engine
+
+In the Supabase Dashboard go to Settings → Database → Version.
+Choose the latest available Postgres version (or at least the next minor release that includes the patches).
+Click Upgrade and confirm.
+The upgrade process is performed by Supabase with minimal downtime (typically a few minutes), but schedule it during a low‑traffic window if possible.
+Validate Post‑Upgrade Health
+
+After the upgrade finishes, run the Security Advisor again (or check the “Database Advisers” tab) to ensure the warning disappears.
+Execute a quick health check: SELECT version(); and verify the returned version matches the target.
+Run a few application queries to confirm normal operation.
+Update Connection Strings (if needed)
+
+Some minor version upgrades can change the default sslmode or other connection parameters.
+Verify that your SUPABASE_DB_URL and any client libraries still connect without errors.
+Review and Adjust Extensions
+
+Certain extensions (e.g., pgcrypto, postgis) may need rebuilding after a major version bump.
+In the Dashboard, under Extensions, confirm that all required extensions are still installed and enabled.
+Automate Future Updates
+
+Enable Automatic Minor Version Upgrades (if offered) so that future security patches are applied without manual intervention.
+Subscribe to Supabase release notes or set up a monitoring alert for the “Database Advisers” security category.
+Backup Before Upgrading
+
+Although Supabase creates automatic backups, consider taking a manual backup (pg_dump) or enabling a Point‑In‑Time Recovery snapshot right before the upgrade.
+This provides a quick rollback path if any compatibility issue arises with your application code.
+Bottom Line
+Applying the pending security patches by upgrading the Postgres engine is the single most important step you can take right now to protect your data and maintain a secure Supabase environment. Follow the steps above, verify the upgrade succeeded, and enable any available automation to keep the database patched continuously.
+

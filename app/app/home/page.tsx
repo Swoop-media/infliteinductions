@@ -142,6 +142,15 @@ export default async function HomePage({
                     
                   </ul>
                 </div>
+                
+                <div>
+                  <h3 className="font-medium text-gray-900 mb-2">📊 New Features</h3>
+                  <ul className="text-gray-600 space-y-1 ml-4">
+                    <li>• External Contractor courses</li>
+                    <li>• Operations notices</li>
+
+                  </ul>
+                </div>
 
                 <div>
                   <h3 className="font-medium text-gray-900 mb-2">🤖 AI-Powered Features</h3>
