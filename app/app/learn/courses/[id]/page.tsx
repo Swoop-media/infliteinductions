@@ -1227,7 +1227,7 @@ export default async function LearnerCoursePage(props: {
                                     </Link>
                                   )
                                 ) : currentModule.type === 'onsite_training' || currentModule.type === 'onsite_assessment' ? (
-                                  // Onsite modules - use CompleteModuleButton
+                                  // Onsite modules - learners cannot complete these, only trainers/assessors can
                                   isCurrentModuleCompleted ? (
                                     currentModuleIndex < sortedModules.length - 1 ? (
                                       <Link
@@ -1240,12 +1240,20 @@ export default async function LearnerCoursePage(props: {
                                       <span className="text-sm text-green-600 font-medium">Course Complete! 🎉</span>
                                     )
                                   ) : (
-                                    <CompleteModuleButton
-                                      assignmentId={assignment.id}
-                                      moduleId={currentModule.id}
-                                      courseId={courseId}
-                                      authorizationId={authorizationId}
-                                    />
+                                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                      <div className="flex items-center space-x-2 mb-2">
+                                        <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-2.186-.833-2.956 0L3.858 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                        </svg>
+                                        <h4 className="font-medium text-yellow-800">Trainer/Assessor Required</h4>
+                                      </div>
+                                      <p className="text-sm text-yellow-700">
+                                        This {currentModule.type === 'onsite_training' ? 'training session' : 'assessment'} must be completed by an assigned {currentModule.type === 'onsite_training' ? 'trainer' : 'assessor'}.
+                                      </p>
+                                      <p className="text-xs text-yellow-600 mt-2">
+                                        A notification has been sent to the appropriate personnel to schedule your session.
+                                      </p>
+                                    </div>
                                   )
                                 ) : (
                                   // Digital training module - use CompleteModuleButton or Next if already completed
