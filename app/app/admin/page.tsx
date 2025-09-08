@@ -264,70 +264,93 @@ async function loadUserDocuments(q: string | null) {
   const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
   if (!allowed) redirect("/app/home?banner=no_access");
 
-  // Fetch all user documents with expiry dates
+  // First fetch all user documents
   const { data: documents, error: documentsError } = await supabase
     .from("learner_documents")
     .select(`
       id,
       user_id,
-      document_name,
+      title,
+      file_path,
       file_type,
-      upload_date,
+      file_size,
       expires_on,
       status,
-      profiles(full_name, email),
-      courses(title),
-      course_modules(title)
+      created_at,
+      course_id,
+      module_id
     `)
     .order("expires_on", { ascending: true, nullsFirst: false });
 
   if (documentsError) throw new Error(documentsError.message);
   if (!documents || documents.length === 0) return [];
 
+  // Get unique user IDs, course IDs, and module IDs
+  const userIds = [...new Set(documents.map(d => d.user_id))];
+  const courseIds = [...new Set(documents.map(d => d.course_id).filter(Boolean))];
+  const moduleIds = [...new Set(documents.map(d => d.module_id).filter(Boolean))];
+
+  // Fetch profiles separately
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", userIds);
+
+  if (profilesError) throw new Error(profilesError.message);
+
+  // Fetch courses separately
+  const { data: courses, error: coursesError } = await supabase
+    .from("courses")
+    .select("id, title")
+    .in("id", courseIds);
+
+  if (coursesError) throw new Error(coursesError.message);
+
+  // Fetch modules separately
+  const { data: modules, error: modulesError } = await supabase
+    .from("course_modules")
+    .select("id, title")
+    .in("id", moduleIds);
+
+  if (modulesError) throw new Error(modulesError.message);
+
+  // Create lookup maps
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+  const courseMap = new Map((courses || []).map(c => [c.id, c]));
+  const moduleMap = new Map((modules || []).map(m => [m.id, m]));
+
+  // Combine the data
+  let formattedDocuments: DocumentRow[] = documents.map((doc: any) => {
+    const profile = profileMap.get(doc.user_id);
+    const course = courseMap.get(doc.course_id);
+    const module = moduleMap.get(doc.module_id);
+
+    return {
+      id: doc.id,
+      user_id: doc.user_id,
+      full_name: profile?.full_name ?? null,
+      email: profile?.email ?? null,
+      document_name: doc.title || doc.file_path?.split('/').pop() || 'Unknown Document',
+      file_type: doc.file_type || 'unknown',
+      upload_date: doc.created_at,
+      expires_on: doc.expires_on,
+      status: doc.status || 'active',
+      course_title: course?.title ?? null,
+      module_title: module?.title ?? null,
+    };
+  });
+
   // Apply search filter if provided
   if (q && q.trim()) {
     const searchTerm = q.trim().toLowerCase();
-    const filteredDocuments = documents.filter(doc => {
-      const profile = (doc as any).profiles;
-      const courseTitle = (doc as any).courses?.title;
-      const moduleTitle = (doc as any).course_modules?.title;
-      return (
-        (profile?.full_name?.toLowerCase().includes(searchTerm) ?? false) ||
-        (profile?.email?.toLowerCase().includes(searchTerm) ?? false) ||
-        (doc.document_name?.toLowerCase().includes(searchTerm) ?? false) ||
-        (courseTitle?.toLowerCase().includes(searchTerm) ?? false) ||
-        (moduleTitle?.toLowerCase().includes(searchTerm) ?? false)
-      );
-    });
-    return filteredDocuments.map((doc: any) => ({
-      id: doc.id,
-      user_id: doc.user_id,
-      full_name: doc.profiles?.full_name ?? null,
-      email: doc.profiles?.email ?? null,
-      document_name: doc.document_name,
-      file_type: doc.file_type,
-      upload_date: doc.upload_date,
-      expires_on: doc.expires_on,
-      status: doc.status,
-      course_title: doc.courses?.title ?? null,
-      module_title: doc.course_modules?.title ?? null,
-    }));
+    formattedDocuments = formattedDocuments.filter(doc =>
+      (doc.full_name?.toLowerCase().includes(searchTerm) ?? false) ||
+      (doc.email?.toLowerCase().includes(searchTerm) ?? false) ||
+      (doc.document_name?.toLowerCase().includes(searchTerm) ?? false) ||
+      (doc.course_title?.toLowerCase().includes(searchTerm) ?? false) ||
+      (doc.module_title?.toLowerCase().includes(searchTerm) ?? false)
+    );
   }
-
-  // Map to the expected format
-  const formattedDocuments: DocumentRow[] = documents.map((doc: any) => ({
-    id: doc.id,
-    user_id: doc.user_id,
-    full_name: doc.profiles?.full_name ?? null,
-    email: doc.profiles?.email ?? null,
-    document_name: doc.document_name,
-    file_type: doc.file_type,
-    upload_date: doc.upload_date,
-    expires_on: doc.expires_on,
-    status: doc.status,
-    course_title: doc.courses?.title ?? null,
-    module_title: doc.course_modules?.title ?? null,
-  }));
 
   return formattedDocuments;
 }
