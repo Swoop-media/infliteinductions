@@ -10,31 +10,51 @@ function supabaseAdmin() {
 
 async function sendTeamsMessage(message: string, recipientEmail: string = 'inductions@inflite.nz') {
   try {
-    console.log("Attempting to send Teams message to:", recipientEmail);
+    console.log("📤 Attempting to send Teams message to:", recipientEmail);
+    console.log("📝 Message preview:", message.substring(0, 150) + "...");
 
     // First try the existing bot debug-send endpoint
     const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    console.log("🌐 Using base URL:", baseUrl);
+    
+    const requestBody = {
+      email: recipientEmail,
+      message: message
+    };
+    console.log("📦 Request body:", { ...requestBody, message: requestBody.message.substring(0, 100) + "..." });
+
     const botResponse = await fetch(`${baseUrl}/api/teams/bot/debug-send`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: recipientEmail,
-        message: message
-      })
+      body: JSON.stringify(requestBody)
     });
+
+    console.log("📊 Bot endpoint response status:", botResponse.status);
 
     if (botResponse.ok) {
       console.log("✅ Teams message sent via bot endpoint");
       return true;
     } else {
-      const errorData = await botResponse.json().catch(() => ({}));
-      console.log("❌ Bot endpoint failed:", botResponse.status, errorData);
+      let errorData;
+      try {
+        errorData = await botResponse.json();
+        console.log("❌ Bot endpoint failed with data:", errorData);
+      } catch (parseError) {
+        console.log("❌ Bot endpoint failed, couldn't parse error response:", parseError);
+        const errorText = await botResponse.text().catch(() => 'No response text');
+        console.log("📄 Raw error response:", errorText);
+        errorData = { error: errorText };
+      }
 
       // If user not linked to Teams, that's expected - return false
       if (botResponse.status === 404 && errorData.error?.includes("not linked")) {
         console.log("📧 User not linked to Teams, will rely on database logging only");
         return false;
       }
+
+      // Log the specific error for debugging
+      console.log("⚠️ Bot endpoint failed with status:", botResponse.status);
+      console.log("⚠️ Error details:", errorData);
     }
 
     console.log("⚠️ Bot endpoint failed, trying fallback approach...");
@@ -44,7 +64,7 @@ async function sendTeamsMessage(message: string, recipientEmail: string = 'induc
     return false;
 
   } catch (error) {
-    console.error("Teams message failed:", error);
+    console.error("❌ Teams message failed with exception:", error);
     console.log("📧 Issue report (fallback logging) for", recipientEmail, ":", message.substring(0, 200) + "...");
     return false;
   }

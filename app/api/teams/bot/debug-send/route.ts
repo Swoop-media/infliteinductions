@@ -1,48 +1,79 @@
+import { NextResponse, NextRequest } from "next/server";
+import { createSupabaseServer, supabaseAdmin } from "@/lib/supabase/server";
 
-import { NextResponse } from "next/server";
-import { createSupabaseServer } from "@/lib/supabase/server";
-
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const { userId, email, message } = await request.json();
-    
-    if ((!userId && !email) || !message) {
-      return NextResponse.json({ error: "Missing userId/email or message" }, { status: 400 });
-    }
+    const { email, message, userId } = await request.json();
 
-    const supabase = await createSupabaseServer();
-    
+    console.log("🔍 Debug send request:", { email, hasMessage: !!message, userId });
+
+    // If userId is provided, use that; otherwise lookup by email
     let targetUserId = userId;
-    
-    // If email provided but no userId, look up the user
     if (!targetUserId && email) {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", email)
-        .maybeSingle();
-      
-      if (!profile) {
-        return NextResponse.json({ error: "User not found for email" }, { status: 404 });
-      }
-      
-      targetUserId = profile.id;
-    }
-    
-    // Get Teams link for this user
-    const { data: teamsLink } = await supabase
-      .from("teams_links")
-      .select("conversation_ref")
-      .eq("user_id", targetUserId)
-      .maybeSingle();
+      console.log("📧 Looking up user by email:", email);
+      const supabase = supabaseAdmin();
+      const { data: user, error: userError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('email', email)
+        .single();
 
-    if (!teamsLink?.conversation_ref) {
-      return NextResponse.json({ 
-        error: "User not linked to Teams", 
-        userId: targetUserId,
-        email: email 
-      }, { status: 404 });
+      if (userError) {
+        console.log("❌ User lookup error:", userError);
+      }
+
+      if (user) {
+        targetUserId = user.id;
+        console.log("✅ Found user:", { id: targetUserId, name: user.full_name });
+      } else {
+        console.log("❌ User not found for email:", email);
+        return NextResponse.json(
+          { error: "User not found", email },
+          { status: 404 }
+        );
+      }
     }
+
+    if (!targetUserId) {
+      console.log("❌ No user ID or email provided");
+      return NextResponse.json(
+        { error: "No user ID or email provided" },
+        { status: 400 }
+      );
+    }
+
+    // Get Teams link for the user
+    console.log("🔗 Looking up Teams link for user:", targetUserId);
+    const supabase = supabaseAdmin();
+    const { data: teamsLink, error } = await supabase
+      .from('teams_links')
+      .select('conversation_ref, teams_user_id, user_id, aad_object_id')
+      .eq('user_id', targetUserId)
+      .single();
+
+    if (error) {
+      console.log("❌ Teams link lookup error:", error);
+      return NextResponse.json(
+        { error: "Database error looking up Teams link", details: error.message, userId: targetUserId },
+        { status: 500 }
+      );
+    }
+
+    if (!teamsLink) {
+      console.log("⚠️ No Teams link found for user:", targetUserId);
+      return NextResponse.json(
+        { error: "User not linked to Teams", userId: targetUserId },
+        { status: 404 }
+      );
+    }
+
+    console.log("✅ Found Teams link:", { 
+      userId: teamsLink.user_id, 
+      teamsUserId: teamsLink.teams_user_id,
+      hasConversationRef: !!teamsLink.conversation_ref,
+      aadObjectId: teamsLink.aad_object_id
+    });
+
 
     // Send message using Bot Framework API
     const MicrosoftAppId = process.env.MICROSOFT_APP_ID;
@@ -59,6 +90,7 @@ export async function POST(request: Request) {
     tokenParams.set("grant_type", "client_credentials");
     tokenParams.set("scope", "https://api.botframework.com/.default");
 
+    console.log(`🚀 Requesting token from: ${tokenUrl}`);
     const tokenResponse = await fetch(tokenUrl, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -67,12 +99,13 @@ export async function POST(request: Request) {
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
-      console.error("Token request failed:", errorText);
-      return NextResponse.json({ error: "Token acquisition failed" }, { status: 500 });
+      console.error("❌ Token request failed:", errorText);
+      return NextResponse.json({ error: "Token acquisition failed", details: errorText }, { status: 500 });
     }
 
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
+    console.log("✅ Token acquired successfully.");
 
     // Parse conversation reference
     const conversationRef = teamsLink.conversation_ref;
@@ -80,7 +113,8 @@ export async function POST(request: Request) {
     const conversationId = conversationRef.conversation?.id;
 
     if (!serviceUrl || !conversationId) {
-      return NextResponse.json({ error: "Invalid conversation reference" }, { status: 400 });
+      console.error("❌ Invalid conversation reference:", conversationRef);
+      return NextResponse.json({ error: "Invalid conversation reference", userId: targetUserId }, { status: 400 });
     }
 
     // Send proactive message
@@ -97,6 +131,7 @@ export async function POST(request: Request) {
       channelId: conversationRef.channelId
     };
 
+    console.log(`🚀 Sending message to Teams conversation: ${conversationId} at ${serviceUrl}`);
     const messageResponse = await fetch(proactiveUrl, {
       method: "POST",
       headers: {
@@ -108,14 +143,15 @@ export async function POST(request: Request) {
 
     if (!messageResponse.ok) {
       const errorText = await messageResponse.text();
-      console.error("Message send failed:", errorText);
-      return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
+      console.error("❌ Message send failed:", errorText);
+      return NextResponse.json({ error: "Failed to send message", details: errorText }, { status: 500 });
     }
 
+    console.log("✅ Message sent successfully to Teams.");
     return NextResponse.json({ success: true, message: "Message sent successfully" });
 
   } catch (error) {
-    console.error("Debug send error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    console.error("❌ Internal server error:", error);
+    return NextResponse.json({ error: "Internal server error", details: (error as Error).message }, { status: 500 });
   }
 }

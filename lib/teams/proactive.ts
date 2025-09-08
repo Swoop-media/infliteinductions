@@ -3,12 +3,15 @@ import { ConversationReference, TurnContext } from "botbuilder";
 import { adapter, botAppId } from "./botAdapter";
 
 export async function sendProactive(conversationRef: any, text: string) {
-  console.log("sendProactive called with text:", text.substring(0, 100) + "...");
-  console.log("Conversation ref:", {
+  console.log("🚀 sendProactive called with text:", text.substring(0, 100) + "...");
+  console.log("📋 Full conversation ref structure:", JSON.stringify(conversationRef, null, 2));
+  console.log("🔗 Conversation ref summary:", {
     serviceUrl: conversationRef.serviceUrl,
     conversationId: conversationRef.conversation?.id,
     fromId: conversationRef.user?.id,
-    botId: conversationRef.bot?.id
+    botId: conversationRef.bot?.id,
+    channelId: conversationRef.channelId,
+    tenantId: conversationRef.conversation?.tenantId
   });
 
   // Get access token - use correct tenant for SingleTenant bots
@@ -23,12 +26,21 @@ export async function sendProactive(conversationRef: any, text: string) {
   tokenParams.set("grant_type", "client_credentials");
   tokenParams.set("scope", "https://api.botframework.com/.default");
 
-  console.log("Requesting access token...");
+  console.log("🔑 Requesting access token from:", tokenUrl);
+  console.log("🔐 Token request params:", {
+    client_id: (process.env.MICROSOFT_APP_ID || "").substring(0, 8) + "...",
+    grant_type: "client_credentials",
+    scope: "https://api.botframework.com/.default",
+    hasClientSecret: !!(process.env.MICROSOFT_APP_PASSWORD)
+  });
+  
   const tokenResponse = await fetch(tokenUrl, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: tokenParams.toString(),
   });
+
+  console.log("📊 Token response status:", tokenResponse.status);
 
   if (!tokenResponse.ok) {
     const errorText = await tokenResponse.text();

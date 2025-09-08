@@ -1,0 +1,55 @@
+Completed auth: []
+📤 Sending Teams message...
+📧 Sending Teams message to: inductions@inflite.nz
+📤 Attempting to send Teams message to: inductions@inflite.nz
+📝 Message preview: 🐛 **Issue Report**
+**URL/Page:** https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/app/admin?tab=documents
+**Issue Descri...
+🌐 Using base URL: https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev
+📦 Request body: {
+  email: 'inductions@inflite.nz',
+  message: '🐛 **Issue Report**\n' +
+    '**URL/Page:** https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf...'
+}
+ ⚠ ./app/api/teams/bot/debug-send/route.ts
+Attempted import error: 'supabaseAdmin' is not exported from '@/lib/supabase/server' (imported as 'supabaseAdmin').
+
+Import trace for requested module:
+./app/api/teams/bot/debug-send/route.ts
+
+./app/api/teams/bot/debug-send/route.ts
+Attempted import error: 'supabaseAdmin' is not exported from '@/lib/supabase/server' (imported as 'supabaseAdmin').
+
+Import trace for requested module:
+./app/api/teams/bot/debug-send/route.ts
+🔍 Debug send request: { email: 'inductions@inflite.nz', hasMessage: true, userId: undefined }
+📧 Looking up user by email: inductions@inflite.nz
+❌ Internal server error: TypeError: (0 , _lib_supabase_server__WEBPACK_IMPORTED_MODULE_1__.supabaseAdmin) is not a function
+    at POST (app/api/teams/bot/debug-send/route.ts:14:36)
+  12 |     if (!targetUserId && email) {
+  13 |       console.log("📧 Looking up user by email:", email);
+> 14 |       const supabase = supabaseAdmin();
+     |                                    ^
+  15 |       const { data: user, error: userError } = await supabase
+  16 |         .from('profiles')
+  17 |         .select('id, full_name')
+ POST /api/teams/bot/debug-send 500 in 608ms
+ ○ Compiling /api/teams/bot/debug-send ...
+📊 Bot endpoint response status: 500
+❌ Bot endpoint failed with data: {
+  error: 'Internal server error',
+  details: '(0 , _lib_supabase_server__WEBPACK_IMPORTED_MODULE_1__.supabaseAdmin) is not a function'
+}
+⚠️ Bot endpoint failed with status: 500
+⚠️ Error details: {
+  error: 'Internal server error',
+  details: '(0 , _lib_supabase_server__WEBPACK_IMPORTED_MODULE_1__.supabaseAdmin) is not a function'
+}
+⚠️ Bot endpoint failed, trying fallback approach...
+📧 Issue report for inductions@inflite.nz : 🐛 **Issue Report**
+**URL/Page:** https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/app/admin?tab=documents
+**Issue Description:**
+will it work
+**Context Information:**
+• U...
+✅ Issue report processed for user Henry Morgan, Teams sent: false
