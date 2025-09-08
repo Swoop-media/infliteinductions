@@ -1,0 +1,118 @@
+react-dom-client.development.js:25582 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+page.tsx:29  Server  Current user: aaaf24e3-9b9b-41d2-ac52-220d1ee25551
+page.tsx:38  Server  Trainer course IDs: Array(2)
+page.tsx:60  Server  Trainee assignments query error: null
+page.tsx:61  Server  Trainee assignments found: 1
+page.tsx:62  Server  Trainee assignments data: Array(1)
+page.tsx:155  Server  Final pending training items: 1
+page.tsx:156  Server  Final pending assessment items: 0
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 1467ms
+page.tsx:29  Server  Current user: aaaf24e3-9b9b-41d2-ac52-220d1ee25551
+page.tsx:38  Server  Trainer course IDs: Array(2)
+page.tsx:60  Server  Trainee assignments query error: null
+page.tsx:61  Server  Trainee assignments found: 1
+page.tsx:62  Server  Trainee assignments data: Array(1)
+page.tsx:155  Server  Final pending training items: 1
+page.tsx:156  Server  Final pending assessment items: 0
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 835ms
+page.tsx:29  Server  Current user: aaaf24e3-9b9b-41d2-ac52-220d1ee25551
+page.tsx:38  Server  Trainer course IDs: Array(2)
+page.tsx:60  Server  Trainee assignments query error: null
+page.tsx:61  Server  Trainee assignments found: 1
+page.tsx:62  Server  Trainee assignments data: Array(1)
+page.tsx:155  Server  Final pending training items: 1
+page.tsx:156  Server  Final pending assessment items: 0
+/app/train-assess:1 The resource https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/_next/static/css/app/layout.css?v=1757310429079 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 1024ms
+page.tsx:75  Server  Course page params: Object
+page.tsx:89  Server  ✅ Assignment ID found: 506f6fbe-66aa-4b45-92b6-44a608ef72b2
+page.tsx:98  Server  Course query result: Object
+page.tsx:125  Server  Assignment query result: Object
+page.tsx:137  Server  ✅ Assignment found: 506f6fbe-66aa-4b45-92b6-44a608ef72b2
+page.tsx:147  Server  Trainer assignments query result: Object
+page.tsx:155  Server  ✅ Trainer assignments verified: Array(2)
+page.tsx:166  Server  ✅ User has required role 'onsite_trainer' for session type 'training'
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 659ms
+/api/assignment/progress:1  Failed to load resource: the server responded with a status of 403 (Forbidden)
+intercept-console-error.js:57 Failed to complete module: Object
+error @ intercept-console-error.js:57
+VM3598 InteractiveRequirements.tsx:42  POST https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/api/assignment/progress 403 (Forbidden)
+handleSave @ VM3598 InteractiveRequirements.tsx:42
+await in handleSave
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277
+VM3598 InteractiveRequirements.tsx:62 Failed to complete module: {error: 'No valid assignment found'}
+error @ intercept-console-error.js:57
+handleSave @ VM3598 InteractiveRequirements.tsx:62
+await in handleSave
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 634ms
+page.tsx:75  Server  Course page params: {courseId: '4a25c12d-fc4f-4eae-8053-e1b0bff5d27e', assignmentId: '506f6fbe-66aa-4b45-92b6-44a608ef72b2', sessionType: 'training'}
+page.tsx:89  Server  ✅ Assignment ID found: 506f6fbe-66aa-4b45-92b6-44a608ef72b2
+report-hmr-latency.js:14 [Fast Refresh] done in 2062ms
+4a25c12d-fc4f-4eae-8053-e1b0bff5d27e?trainee=506f6fbe-66aa-4b45-92b6-44a608ef72b2&type=training:1 The resource https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/_next/static/css/app/layout.css?v=1757312313278 was preloaded using link preload but not used within a few seconds from the window's load event. Please make sure it has an appropriate `as` value and it is preloaded intentionally.
+page.tsx:98  Server  Course query result: {course: {…}, courseError: null}
+page.tsx:125  Server  Assignment query result: {assignment: {…}, assignmentError: null}
+page.tsx:137  Server  ✅ Assignment found: 506f6fbe-66aa-4b45-92b6-44a608ef72b2
+page.tsx:147  Server  Trainer assignments query result: {trainerAssignments: Array(2), trainerError: null}
+page.tsx:155  Server  ✅ Trainer assignments verified: (2) ['onsite_trainer', 'onsite_assessor']
+page.tsx:166  Server  ✅ User has required role 'onsite_trainer' for session type 'training'
+page.tsx:12  POST https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/app/train-assess/course/4a25c12d-fc4f-4eae-8053-e1b0bff5d27e?trainee=506f6fbe-66aa-4b45-92b6-44a608ef72b2&type=training 404 (Not Found)
+fetchServerAction @ server-action-reducer.js:47
+await in fetchServerAction
+serverActionReducer @ server-action-reducer.js:151
+clientReducer @ router-reducer.js:49
+action @ app-router-instance.js:156
+runAction @ app-router-instance.js:66
+dispatchAction @ app-router-instance.js:120
+dispatch @ app-router-instance.js:154
+eval @ use-action-queue.js:55
+startTransition @ react-dom-client.development.js:7939
+dispatch @ use-action-queue.js:54
+dispatchAppRouterAction @ use-action-queue.js:37
+eval @ app-call-server.js:17
+exports.startTransition @ react.development.js:1131
+eval @ app-call-server.js:16
+callServer @ app-call-server.js:15
+action @ react-server-dom-webpack-client.browser.development.js:800
+saveRequirementResponses @ page.tsx:12
+handleSave @ InteractiveRequirements.tsx:60
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277
+InteractiveRequirements.tsx:111 Failed to save responses: 
+error @ intercept-console-error.js:57
+handleSave @ InteractiveRequirements.tsx:111
+await in handleSave
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277
