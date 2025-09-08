@@ -1,0 +1,1250 @@
+react-dom-client.development.js:25581 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+hot-reloader-app.tsx:336  ./app/app/learn/courses/[id]/DocumentUploadBlock.tsx
+Attempted import error: 'createSupabaseClient' is not exported from '@/lib/supabase/client' (imported as 'createSupabaseClient').
+processMessage @ hot-reloader-app.tsx:336
+hot-reloader-app.tsx:336  ./app/app/learn/courses/[id]/DocumentUploadBlock.tsx
+Attempted import error: 'createSupabaseClient' is not exported from '@/lib/supabase/client' (imported as 'createSupabaseClient').
+processMessage @ hot-reloader-app.tsx:336
+page.tsx:73  Server  All course assignments: Array(1)
+page.tsx:93  Server  Authorization assignments: Array(1)
+page.tsx:94  Server  All course assignments: Array(1)
+page.tsx:138  Server  Authorization with courses: Array(1)
+page.tsx:157  Server  In progress courses: Array(1)
+page.tsx:158  Server  Completed courses: Array(0)
+page.tsx:159  Server  In progress auth: Array(1)
+page.tsx:160  Server  Completed auth: Array(0)
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+SimpleVideoPlayer.tsx:183  Allow attribute will take precedence over 'allowfullscreen'.
+setProp @ react-dom-client.development.js:18054
+setInitialProperties @ react-dom-client.development.js:18558
+completeWork @ react-dom-client.development.js:11694
+runWithFiberInDEV @ react-dom-client.development.js:872
+completeUnitOfWork @ react-dom-client.development.js:15813
+performUnitOfWork @ react-dom-client.development.js:15694
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15671
+renderRootConcurrent @ react-dom-client.development.js:15646
+performWorkOnRoot @ react-dom-client.development.js:14940
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16766
+performWorkUntilDeadline @ scheduler.development.js:45
+<iframe>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:345
+SimpleVideoPlayer @ SimpleVideoPlayer.tsx:183
+react_stack_bottom_frame @ react-dom-client.development.js:23552
+renderWithHooksAgain @ react-dom-client.development.js:6863
+renderWithHooks @ react-dom-client.development.js:6775
+updateFunctionComponent @ react-dom-client.development.js:9069
+beginWork @ react-dom-client.development.js:10628
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15677
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15671
+renderRootConcurrent @ react-dom-client.development.js:15646
+performWorkOnRoot @ react-dom-client.development.js:14940
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16766
+performWorkUntilDeadline @ scheduler.development.js:45
+"use client"
+eval @ page.tsx:1042
+Array.map @ <anonymous>:1
+LearnerCoursePage @ page.tsx:1038
+initializeElement @ react-server-dom-webpack-client.browser.development.js:1207
+eval @ react-server-dom-webpack-client.browser.development.js:2830
+initializeModelChunk @ react-server-dom-webpack-client.browser.development.js:1109
+resolveModelChunk @ react-server-dom-webpack-client.browser.development.js:1084
+resolveModel @ react-server-dom-webpack-client.browser.development.js:1907
+processFullStringRow @ react-server-dom-webpack-client.browser.development.js:2664
+processFullBinaryRow @ react-server-dom-webpack-client.browser.development.js:2606
+processBinaryChunk @ react-server-dom-webpack-client.browser.development.js:2733
+progress @ react-server-dom-webpack-client.browser.development.js:2997
+<LearnerCoursePage>
+initializeFakeTask @ react-server-dom-webpack-client.browser.development.js:2408
+resolveDebugInfo @ react-server-dom-webpack-client.browser.development.js:2433
+processFullStringRow @ react-server-dom-webpack-client.browser.development.js:2634
+processFullBinaryRow @ react-server-dom-webpack-client.browser.development.js:2606
+processBinaryChunk @ react-server-dom-webpack-client.browser.development.js:2733
+progress @ react-server-dom-webpack-client.browser.development.js:2997
+"use server"
+ResponseInstance @ react-server-dom-webpack-client.browser.development.js:1870
+createResponseFromOptions @ react-server-dom-webpack-client.browser.development.js:2858
+exports.createFromReadableStream @ react-server-dom-webpack-client.browser.development.js:3228
+createFromNextReadableStream @ fetch-server-response.ts:402
+fetchServerResponse @ fetch-server-response.ts:230
+await in fetchServerResponse
+refreshReducer @ refresh-reducer.ts:41
+clientReducer @ router-reducer.ts:41
+action @ app-router-instance.ts:217
+runAction @ app-router-instance.ts:104
+dispatchAction @ app-router-instance.ts:169
+dispatch @ app-router-instance.ts:215
+eval @ use-action-queue.ts:45
+startTransition @ react-dom-client.development.js:7938
+dispatch @ use-action-queue.ts:44
+dispatchAppRouterAction @ use-action-queue.ts:22
+eval @ app-router-instance.ts:364
+exports.startTransition @ react.development.js:1129
+refresh @ app-router-instance.ts:363
+handleComplete @ CompleteModuleButton.tsx:46
+embed.aspx?UniqueId=8d5ef6b7-a0e4-4c9f-a6da-3c682b396606&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create:293 [Sensitivity label]: Sensitivity label policy check is not enabled
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+[Deprecation] -ms-high-contrast is in the process of being deprecated. Please see <URL> for tips on updating to the new Forced Colors Mode standard.
+plt.odsp-common.js:59 Session ID: 536ac8af-f65d-49c6-9514-16b5bd69020f
+plt.odsp-common.js:59 Time in UTC:  Mon, 08 Sep 2025 01:15:10 GMT
+13.js:61  No previously cached ECS telemetry config exists - fallback to sending event
+e.sendTelemetryEvent @ 13.js:61
+(anonymous) @ 13.js:56
+(anonymous) @ 13.js:115
+i @ 13.js:115
+e._resolveSuccessCallback @ 13.js:115
+(anonymous) @ 13.js:115
+e._resolveSuccesses @ 13.js:115
+e.resolve @ 13.js:115
+(anonymous) @ 13.js:115
+i @ 13.js:115
+e._resolveSuccessCallback @ 13.js:115
+(anonymous) @ 13.js:115
+e._resolveSuccesses @ 13.js:115
+e.resolve @ 13.js:115
+n._respond @ 13.js:75
+r._xhr.onreadystatechange @ 13.js:75
+XMLHttpRequest.send
+e._fire @ 13.js:75
+(anonymous) @ 13.js:75
+(anonymous) @ 13.js:115
+i @ 13.js:115
+e._resolveSuccessCallback @ 13.js:115
+(anonymous) @ 13.js:115
+e._resolveSuccesses @ 13.js:115
+e._addCallbackSet @ 13.js:115
+e.then @ 13.js:115
+e @ 13.js:75
+e.checkQueueProcessing @ 13.js:75
+e._enqueue @ 13.js:75
+n.start @ 13.js:75
+e._performApiCall @ 13.js:73
+e.performApiGetDetailed @ 13.js:73
+t.getConfig @ 13.js:56
+p @ 13.js:56
+e.getConfig @ 13.js:56
+(anonymous) @ 13.js:57
+(anonymous) @ 13.js:115
+i @ 13.js:115
+e._resolveSuccessCallback @ 13.js:115
+(anonymous) @ 13.js:115
+e._resolveSuccesses @ 13.js:115
+e._addCallbackSet @ 13.js:115
+e.then @ 13.js:115
+_fetchSkypeEcsSettings @ 13.js:57
+e.updateConfigsToFetch @ 13.js:57
+e.initialize @ 13.js:57
+(anonymous) @ 13.js:54
+(anonymous) @ 13.js:115
+i @ 13.js:115
+e._resolveSuccessCallback @ 13.js:115
+(anonymous) @ 13.js:115
+e._resolveSuccesses @ 13.js:115
+e._addCallbackSet @ 13.js:115
+e.then @ 13.js:115
+e.initialize @ 13.js:54
+Ge @ 13.js:91
+(anonymous) @ 13.js:91
+(anonymous) @ 13.js:116
+(anonymous) @ 13.js:116
+a @ 13.js:122
+s @ 13.js:122
+(anonymous) @ 13.js:122
+(anonymous) @ 13.js:122
+He @ 13.js:91
+Fe @ 13.js:91
+(anonymous) @ 13.js:91
+(anonymous) @ 13.js:116
+(anonymous) @ 13.js:116
+a @ 13.js:122
+s @ 13.js:122
+(anonymous) @ 13.js:122
+(anonymous) @ 13.js:122
+qe @ 13.js:91
+We @ 13.js:91
+(anonymous) @ 13.js:91
+(anonymous) @ 13.js:116
+(anonymous) @ 13.js:116
+a @ 13.js:122
+s @ 13.js:122
+(anonymous) @ 13.js:122
+(anonymous) @ 13.js:122
+Ye @ 13.js:91
+(anonymous) @ 13.js:91
+(anonymous) @ 13.js:116
+(anonymous) @ 13.js:116
+a @ 13.js:122
+s @ 13.js:122
+(anonymous) @ 13.js:122
+(anonymous) @ 13.js:122
+(anonymous) @ 13.js:91
+(anonymous) @ 13.js:91
+Ia.f.hostName @ 13.js:91
+Ia @ 13.js:91
+await in Ia
+(anonymous) @ 13.js:91
+Uc @ 13.js:66
+t.unstable_runWithPriority @ 13.js:70
+Ki @ 13.js:66
+Mc @ 13.js:66
+(anonymous) @ 13.js:66
+F @ 13.js:70
+y.port1.onmessage @ 13.js:70
+13.js:57 ECS - Config fetch complete
+13.js:85 [1757294110973] - info - PlaybackSourceProvider - ifPlaybackTechAllowed: canPlayType: false, isSafari/iOS: false, isNotWindowsAndEdge: true
+13.js:85 [1757294110973] - info - PlaybackSourceProvider - ifPlaybackTechAllowed: canPlayType: false, isSafari/iOS: false, isNotWindowsAndEdge: true
+13.js:85 [1757294110973] - warn - PlaybackSourceProvider - getDownloadUrls: filter out source for tech HLS
+13.js:85 [1757294110976] - info - PlaybackSourceProvider - getDecoratedDownloadUrlsForTech: Source generator provided urls: tech: DASH, urlLength: 2
+13.js:85 [1757294110977] - info - PlaybackSourceProvider - getDecoratedDownloadUrlsForTech: Source generator provided urls: tech: PROGRESSIVE, urlLength: 1
+13.js:85 [1757294111039] - warn - ShakaOnePlayerEngine - setUpPreparser: registered instanceIdfilter, 16cf7eff-5cc0-4d96-929e-2435a4f9f690
+13.js:85 [1757294111039] - info - ShakaOnePlayerEngine - register: registering instanceId 16cf7eff-5cc0-4d96-929e-2435a4f9f690, full list: 16cf7eff-5cc0-4d96-929e-2435a4f9f690
+22757.js:2  Shaka Player's internal Manifest structure is NOT covered by semantic versioning compatibility guarantees.  It may change at any time!  Please consider filing a feature request for whatever you use getManifest() for.
+a.Hf @ 22757.js:2
+t.trySwitchTrack @ shakaengine.js:1
+(anonymous) @ shakaengine.js:1
+t.subscribe @ 13.js:85
+t.addEventListeners @ shakaengine.js:1
+(anonymous) @ shakaengine.js:1
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.initialize @ shakaengine.js:1
+(anonymous) @ 75975.js:2
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.switchToSource @ 75975.js:2
+(anonymous) @ 75975.js:2
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ onePlayer2.js:10
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.renderVideo @ onePlayer2.js:10
+(anonymous) @ onePlayer2.js:10
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+L @ onePlayer2.js:10
+A @ onePlayer2.js:10
+i.loadPlaybackCore @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.loadPlayer @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ onePlayer2.js:3
+loadPlayer @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+i.createPlaybackSession @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+createPlaybackSession @ onePlayer2.js:3
+Ia @ 13.js:91
+await in Ia
+(anonymous) @ 13.js:91
+Uc @ 13.js:66
+t.unstable_runWithPriority @ 13.js:70
+Ki @ 13.js:66
+Mc @ 13.js:66
+(anonymous) @ 13.js:66
+F @ 13.js:70
+y.port1.onmessage @ 13.js:70
+13.js:85 [1757294111041] - info - ShakaOnePlayerEngine - chooseCdnOption: citing manifest cdn qsps to decide mode: hybridQSP=null, cdnQSP=1
+13.js:85 [1757294111041] - info - CDNAdapter - setupFilters: Key and iv provided inline
+13.js:85 [1757294111053] - warn - StartupResourceManager - registerResourceWithPrefetch: accepted prefetched resource VideoManifest
+70252.js:44  [Deprecation] The keyword 'slider-vertical' specified to an 'appearance' property is not standardized. It will be removed in the future. Use <input type=range style="writing-mode: vertical-lr; direction: rtl"> instead.
+insertRule @ 70252.js:44
+i @ 70252.js:43
+insertCSSRules @ 70252.js:43
+(anonymous) @ 70252.js:67
+(anonymous) @ 70252.js:39
+(anonymous) @ 70252.js:66
+y @ 36612.js:3
+(anonymous) @ 36612.js:2
+ro @ 13.js:66
+Ro @ 13.js:66
+Ks @ 13.js:66
+wc @ 13.js:66
+Cc @ 13.js:66
+xc @ 13.js:66
+hc @ 13.js:66
+uc @ 13.js:66
+Xc @ 13.js:66
+(anonymous) @ 13.js:66
+gc @ 13.js:66
+ad @ 13.js:66
+t.render @ 13.js:66
+initializeMediaTransportControlUi @ onePlayer2.js:6
+(anonymous) @ onePlayer2.js:10
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+w @ onePlayer2.js:10
+(anonymous) @ onePlayer2.js:10
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.renderVideo @ onePlayer2.js:10
+(anonymous) @ onePlayer2.js:10
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+L @ onePlayer2.js:10
+A @ onePlayer2.js:10
+i.loadPlaybackCore @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.loadPlayer @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ onePlayer2.js:3
+loadPlayer @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+i.createPlaybackSession @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+createPlaybackSession @ onePlayer2.js:3
+Ia @ 13.js:91
+await in Ia
+(anonymous) @ 13.js:91
+Uc @ 13.js:66
+t.unstable_runWithPriority @ 13.js:70
+Ki @ 13.js:66
+Mc @ 13.js:66
+(anonymous) @ 13.js:66
+F @ 13.js:70
+y.port1.onmessage @ 13.js:70
+13.js:85 [1757294111115] - warn - StartupResourceManager - registerResourceWithPrefetch: accepted prefetched resource segment
+13.js:85 [1757294111116] - warn - StartupResourceManager - registerResourceWithPrefetch: accepted prefetched resource segment
+13.js:85 [1757294111137] - warn - StartupResourceManager - registerResourceWithPrefetch: accepted prefetched resource segment
+13.js:85 [1757294111138] - warn - StartupResourceManager - registerResourceWithPrefetch: accepted prefetched resource segment
+22757.js:2  Shaka Player's internal Manifest structure is NOT covered by semantic versioning compatibility guarantees.  It may change at any time!  Please consider filing a feature request for whatever you use getManifest() for.
+a.Hf @ 22757.js:2
+t @ shakaengine.js:1
+t.isAVBufferInSync @ shakaengine.js:1
+t.checkPlaybackReadyPolicy @ shakaengine.js:1
+t.isPlaybackReady @ shakaengine.js:1
+playerBufferingListener @ shakaengine.js:1
+ga.dispatchEvent @ 22757.js:2
+fd @ 22757.js:2
+ed @ 22757.js:2
+Vd @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+t @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+setTimeout
+rt.N @ 22757.js:2
+Xs @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+t @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+a.start @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+t @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+xf @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+t @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+Promise.then
+tc @ 22757.js:2
+Kc @ 22757.js:2
+(anonymous) @ shakaengine.js:1
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.initialize @ shakaengine.js:1
+(anonymous) @ 75975.js:2
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.switchToSource @ 75975.js:2
+(anonymous) @ 75975.js:2
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ onePlayer2.js:10
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.renderVideo @ onePlayer2.js:10
+(anonymous) @ onePlayer2.js:10
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+L @ onePlayer2.js:10
+A @ onePlayer2.js:10
+i.loadPlaybackCore @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.loadPlayer @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ onePlayer2.js:3
+loadPlayer @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+i.createPlaybackSession @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+createPlaybackSession @ onePlayer2.js:3
+Ia @ 13.js:91
+await in Ia
+(anonymous) @ 13.js:91
+Uc @ 13.js:66
+t.unstable_runWithPriority @ 13.js:70
+Ki @ 13.js:66
+Mc @ 13.js:66
+(anonymous) @ 13.js:66
+F @ 13.js:70
+y.port1.onmessage @ 13.js:70
+13.js:85 [1757294111143] - warn - ShakaOnePlayerEngine - checkPlaybackReadyPolicy: [PlaybackReadyWatch] isPlaybackReady: avSyncPolicy=true,shakaBufferPolicy=true,readystate=1
+13.js:85 [1757294111143] - warn - ShakaOnePlayerEngine - checkPlaybackReadyPolicy: [PlaybackReadyWatch] isPlaybackReady: playback ready detected
+13.js:85 [1757294111149] - info - StartupResourceManager - getStreamingConfig: streaming config applied: {"segmentPrefetchLimit":3,"maxDisabledTime":0}
+22757.js:2  Shaka Player's internal Manifest structure is NOT covered by semantic versioning compatibility guarantees.  It may change at any time!  Please consider filing a feature request for whatever you use getManifest() for.
+a.Hf @ 22757.js:2
+t @ shakaengine.js:1
+t.isAVBufferInSync @ shakaengine.js:1
+t.checkPlaybackReadyPolicy @ shakaengine.js:1
+playerBufferingListener @ shakaengine.js:1
+ga.dispatchEvent @ 22757.js:2
+fd @ 22757.js:2
+ed @ 22757.js:2
+Vd @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+t @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+setTimeout
+rt.N @ 22757.js:2
+Xs @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+t @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+a.start @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+t @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+xf @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+L @ 22757.js:2
+next @ 22757.js:2
+t @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+Promise.then
+e @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+M @ 22757.js:2
+(anonymous) @ 22757.js:2
+(anonymous) @ 22757.js:2
+Promise.then
+tc @ 22757.js:2
+Kc @ 22757.js:2
+(anonymous) @ shakaengine.js:1
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.initialize @ shakaengine.js:1
+(anonymous) @ 75975.js:2
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.switchToSource @ 75975.js:2
+(anonymous) @ 75975.js:2
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ onePlayer2.js:10
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.renderVideo @ onePlayer2.js:10
+(anonymous) @ onePlayer2.js:10
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+L @ onePlayer2.js:10
+A @ onePlayer2.js:10
+i.loadPlaybackCore @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.loadPlayer @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ onePlayer2.js:3
+loadPlayer @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+i.createPlaybackSession @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+createPlaybackSession @ onePlayer2.js:3
+Ia @ 13.js:91
+await in Ia
+(anonymous) @ 13.js:91
+Uc @ 13.js:66
+t.unstable_runWithPriority @ 13.js:70
+Ki @ 13.js:66
+Mc @ 13.js:66
+(anonymous) @ 13.js:66
+F @ 13.js:70
+y.port1.onmessage @ 13.js:70
+13.js:85 [1757294111150] - warn - ShakaOnePlayerEngine - checkPlaybackReadyPolicy: [PlaybackReadyWatch] isPlaybackReady: avSyncPolicy=true,shakaBufferPolicy=true,readystate=1
+13.js:85 [1757294111150] - warn - ShakaOnePlayerEngine - checkPlaybackReadyPolicy: [PlaybackReadyWatch] isPlaybackReady: playback ready detected
+res-1.cdn.office.net/:1  [Report Only] Refused to frame 'https://login.microsoftonline.com/' because it violates the following Content Security Policy directive: "frame-src 'self' https://support.office.com https://webshell.suite.office.com/ *.cloud.microsoft".
+
+39545.js:1   GET https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/v2.1/drives/b!mMUIgGTSkkCAhsc9WJUOqqHmKp3lbdBJj3NPyL-azmNuV9zq5ktURJ8tC8tiDFfK/items/01B5ZAXHVX6ZPI3ZFAT5GKNWR4NAVTSZQG/media/timelineeventstream/content 404 (Not Found)
+e.fetchWithTimeout @ 39545.js:1
+(anonymous) @ 39545.js:1
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+e.executeWithRetry @ 39545.js:1
+e.formRequest @ 39545.js:1
+e.makeRequest @ 39545.js:1
+e.getWithResponse @ 39545.js:1
+(anonymous) @ 68738.js:6
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.getTimelineEventsData @ 68738.js:6
+(anonymous) @ 68738.js:8
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 68738.js:8
+(anonymous) @ postPlaybackCore.js:9
+(anonymous) @ 89114.js:24
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.measureQos @ 89114.js:24
+(anonymous) @ postPlaybackCore.js:9
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+phaseSpecificWorkAndQos @ postPlaybackCore.js:9
+(anonymous) @ postPlaybackCore.js:9
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.render @ postPlaybackCore.js:9
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.startPostPlaybackWork @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.loadPlayer @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ onePlayer2.js:3
+loadPlayer @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+i.createPlaybackSession @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+createPlaybackSession @ onePlayer2.js:3
+Ia @ 13.js:91
+await in Ia
+(anonymous) @ 13.js:91
+Uc @ 13.js:66
+t.unstable_runWithPriority @ 13.js:70
+Ki @ 13.js:66
+Mc @ 13.js:66
+(anonymous) @ 13.js:66
+F @ 13.js:70
+y.port1.onmessage @ 13.js:70
+[Report Only] Refused to connect to '<URL>' because it violates the following Content Security Policy directive: "connect-src 'self' blob: <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> *.cdn.office.net *.fluidpreview.office.net *.onecdn.static.microsoft <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> graph.microsoft.com graph.microsoft.com <URL> <URL> <URL> <URL> <URL> *.cloud.microsoft graph.microsoft.com substrate.office.com <URL> <URL> <URL> <URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL>".
+
+[Report Only] Refused to connect to '<URL>' because it violates the following Content Security Policy directive: "connect-src 'self' blob: <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> *.cdn.office.net *.fluidpreview.office.net *.onecdn.static.microsoft <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> graph.microsoft.com graph.microsoft.com <URL> <URL> <URL> <URL> <URL> *.cloud.microsoft graph.microsoft.com substrate.office.com <URL> <URL> <URL> <URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL>".
+
+[Report Only] Refused to connect to '<URL>' because it violates the following Content Security Policy directive: "connect-src 'self' blob: <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> *.cdn.office.net *.fluidpreview.office.net *.onecdn.static.microsoft <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> graph.microsoft.com graph.microsoft.com <URL> <URL> <URL> <URL> <URL> *.cloud.microsoft graph.microsoft.com substrate.office.com <URL> <URL> <URL> <URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL>".
+
+[Report Only] Refused to connect to '<URL>' because it violates the following Content Security Policy directive: "connect-src 'self' blob: <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> *.cdn.office.net *.fluidpreview.office.net *.onecdn.static.microsoft <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> graph.microsoft.com graph.microsoft.com <URL> <URL> <URL> <URL> <URL> *.cloud.microsoft graph.microsoft.com substrate.office.com <URL> <URL> <URL> <URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL>".
+
+[Report Only] Refused to connect to '<URL>' because it violates the following Content Security Policy directive: "connect-src 'self' blob: <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> *.cdn.office.net *.fluidpreview.office.net *.onecdn.static.microsoft <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> graph.microsoft.com graph.microsoft.com <URL> <URL> <URL> <URL> <URL> *.cloud.microsoft graph.microsoft.com substrate.office.com <URL> <URL> <URL> <URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL>".
+
+[Report Only] Refused to connect to '<URL>' because it violates the following Content Security Policy directive: "connect-src 'self' blob: <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> *.cdn.office.net *.fluidpreview.office.net *.onecdn.static.microsoft <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> graph.microsoft.com graph.microsoft.com <URL> <URL> <URL> <URL> <URL> *.cloud.microsoft graph.microsoft.com substrate.office.com <URL> <URL> <URL> <URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL>".
+
+[Report Only] Refused to connect to '<URL>' because it violates the following Content Security Policy directive: "connect-src 'self' blob: <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> *.cdn.office.net *.fluidpreview.office.net *.onecdn.static.microsoft <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> graph.microsoft.com graph.microsoft.com <URL> <URL> <URL> <URL> <URL> *.cloud.microsoft graph.microsoft.com substrate.office.com <URL> <URL> <URL> <URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL>".
+
+[Report Only] Refused to connect to '<URL>' because it violates the following Content Security Policy directive: "connect-src 'self' blob: <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> *.cdn.office.net *.fluidpreview.office.net *.onecdn.static.microsoft <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> graph.microsoft.com graph.microsoft.com <URL> <URL> <URL> <URL> <URL> *.cloud.microsoft graph.microsoft.com substrate.office.com <URL> <URL> <URL> <URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL>".
+
+[Report Only] Refused to connect to '<URL>' because it violates the following Content Security Policy directive: "connect-src 'self' blob: <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> *.cdn.office.net *.fluidpreview.office.net *.onecdn.static.microsoft <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> graph.microsoft.com graph.microsoft.com <URL> <URL> <URL> <URL> <URL> *.cloud.microsoft graph.microsoft.com substrate.office.com <URL> <URL> <URL> <URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL>".
+
+[Report Only] Refused to connect to '<URL>' because it violates the following Content Security Policy directive: "connect-src 'self' blob: <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> *.cdn.office.net *.fluidpreview.office.net *.onecdn.static.microsoft <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> graph.microsoft.com graph.microsoft.com <URL> <URL> <URL> <URL> <URL> *.cloud.microsoft graph.microsoft.com substrate.office.com <URL> <URL> <URL> <URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL>".
+
+[Report Only] Refused to connect to '<URL>' because it violates the following Content Security Policy directive: "connect-src 'self' blob: <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> *.cdn.office.net *.fluidpreview.office.net *.onecdn.static.microsoft <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> graph.microsoft.com graph.microsoft.com <URL> <URL> <URL> <URL> <URL> *.cloud.microsoft graph.microsoft.com substrate.office.com <URL> <URL> <URL> <URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL>".
+
+[Report Only] Refused to connect to '<URL>' because it violates the following Content Security Policy directive: "connect-src 'self' blob: <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> *.cdn.office.net *.fluidpreview.office.net *.onecdn.static.microsoft <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> <URL> graph.microsoft.com graph.microsoft.com <URL> <URL> <URL> <URL> <URL> *.cloud.microsoft graph.microsoft.com substrate.office.com <URL> <URL> <URL> <URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL> ws:<URL> <URL>".
+
+res-1.cdn.office.net/:1  [Report Only] Refused to frame 'https://login.microsoftonline.com/' because it violates the following Content Security Policy directive: "frame-src 'self' https://support.office.com https://webshell.suite.office.com/ *.cloud.microsoft".
+
+95450.js:22  Some icons were re-registered. Applications should only call registerIcons for any given icon once. Redefining what an icon is may have unintended consequences. Duplicates include: 
+Edit, OpenInNewWindow, Back, Lightbulb, Webcam2Off, ChevronDown, ChevronUp, Edit, Add, Cancel (+ 2144 more)
+a @ 95450.js:22
+(anonymous) @ 95450.js:6
+setTimeout
+nt @ 95450.js:6
+Ye @ 95450.js:6
+e @ 5717.js:5
+t.buildUiManager @ postPlaybackCore.js:9
+e @ postPlaybackCore.js:9
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+Y @ onePlayer2.js:3
+Q @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.startPostPlaybackWork @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+t.loadPlayer @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ onePlayer2.js:3
+loadPlayer @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+Promise.then
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+i.createPlaybackSession @ onePlayer2.js:3
+(anonymous) @ onePlayer2.js:3
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+a @ 13.js:85
+s @ 13.js:85
+(anonymous) @ 13.js:85
+(anonymous) @ 13.js:85
+createPlaybackSession @ onePlayer2.js:3
+Ia @ 13.js:91
+await in Ia
+(anonymous) @ 13.js:91
+Uc @ 13.js:66
+t.unstable_runWithPriority @ 13.js:70
+Ki @ 13.js:66
+Mc @ 13.js:66
+(anonymous) @ 13.js:66
+F @ 13.js:70
+y.port1.onmessage @ 13.js:70
