@@ -51,7 +51,7 @@ export default function DocumentUploadBlock({
     setSuccess(null);
 
     try {
-      const supabase = createSupabaseClient();
+      const supabase = supabaseBrowser;
       
       // Upload file to storage
       const fileExt = file.name.split('.').pop();
@@ -102,7 +102,7 @@ export default function DocumentUploadBlock({
     
     setUploading(true);
     try {
-      const supabase = createSupabaseClient();
+      const supabase = supabaseBrowser;
       
       // Remove from database
       const { error: dbError } = await supabase
