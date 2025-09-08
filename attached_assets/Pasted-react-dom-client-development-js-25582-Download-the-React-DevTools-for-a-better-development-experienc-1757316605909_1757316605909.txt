@@ -1,0 +1,32 @@
+react-dom-client.development.js:25582 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+page.tsx:75  Server  Course page params: Object
+page.tsx:89  Server  ✅ Assignment ID found: 506f6fbe-66aa-4b45-92b6-44a608ef72b2
+page.tsx:98  Server  Course query result: Object
+page.tsx:125  Server  Assignment query result: Object
+page.tsx:137  Server  ✅ Assignment found: 506f6fbe-66aa-4b45-92b6-44a608ef72b2
+page.tsx:147  Server  Trainer assignments query result: Object
+page.tsx:155  Server  ✅ Trainer assignments verified: Array(2)
+page.tsx:166  Server  ✅ User has required role 'onsite_trainer' for session type 'training'
+InteractiveRequirements.tsx:63  POST https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/api/assignment/progress 500 (Internal Server Error)
+handleSave @ InteractiveRequirements.tsx:63
+await in handleSave
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277
+InteractiveRequirements.tsx:85 Failed to complete module: {error: {…}, status: 500, statusText: 'Internal Server Error', assignmentId: '506f6fbe-66aa-4b45-92b6-44a608ef72b2', moduleId: 'e17d633c-44e9-49d1-aed8-165652ba3ed4'}
+error @ intercept-console-error.js:57
+handleSave @ InteractiveRequirements.tsx:85
+await in handleSave
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277

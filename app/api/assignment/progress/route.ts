@@ -56,12 +56,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Assignment not found' }, { status: 404 });
   }
 
-    // Verify user owns this assignment
+    // Verify user can manage this assignment (either as the trainee or as a trainer/assessor)
     const { data: assignmentCheck, error: assignmentErr } = await supabase
       .from("course_assignments")
       .select("id, course_id, user_id")
       .eq("id", assignmentId)
-      .eq("user_id", user.id)
       .single();
 
     console.log("Assignment verification:", {
@@ -70,8 +69,28 @@ export async function POST(req: NextRequest) {
     });
 
     if (assignmentErr || !assignmentCheck) {
-      console.log("Assignment progress: No valid assignment found");
-      return NextResponse.json({ error: "No valid assignment found" }, { status: 403 });
+      console.log("Assignment progress: Assignment not found");
+      return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
+    }
+
+    // Check if user is the trainee (owns the assignment) OR is a trainer/assessor for this course
+    const isTrainee = assignmentCheck.user_id === user.id;
+    let isTrainerOrAssessor = false;
+
+    if (!isTrainee) {
+      const { data: trainerRoles } = await supabase
+        .from("course_assignments")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("course_id", assignmentCheck.course_id)
+        .in("role", ["onsite_trainer", "onsite_assessor"]);
+
+      isTrainerOrAssessor = trainerRoles && trainerRoles.length > 0;
+    }
+
+    if (!isTrainee && !isTrainerOrAssessor) {
+      console.log("Assignment progress: User not authorized to manage this assignment");
+      return NextResponse.json({ error: "Not authorized to manage this assignment" }, { status: 403 });
     }
 
     // Insert or update assignment progress
