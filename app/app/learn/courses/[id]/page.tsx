@@ -912,6 +912,15 @@ export default async function LearnerCoursePage(props: {
               </div>
             </div>
           )}
+          {searchParams?.success === "module_completed" && (
+            <div className="mx-auto max-w-4xl p-6">
+              <div className="mb-4 rounded-md bg-green-50 p-4 border border-green-200">
+                <div className="text-sm text-green-800">
+                  ✅ Module completed successfully!
+                </div>
+              </div>
+            </div>
+          )}
           {quizError && (
             <div className="mx-auto max-w-4xl p-6">
               <div className="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
@@ -1169,6 +1178,118 @@ export default async function LearnerCoursePage(props: {
                                   <span className="text-sm text-gray-700">{req.label || req.description}</span>
                                 </div>
                               ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Navigation Controls */}
+                    {isCurrentModuleUnlocked && !preview && (
+                      <div className="mt-8 pt-6 border-t border-gray-200">
+                        <div className="flex items-center justify-between">
+                          {/* Previous Button */}
+                          <div>
+                            {currentModuleIndex > 0 && (
+                              <Link
+                                href={`/app/learn/courses/${courseId}?module=${sortedModules[currentModuleIndex - 1].id}${authorizationId ? `&auth=${authorizationId}` : ''}`}
+                                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                              >
+                                ← Previous
+                              </Link>
+                            )}
+                          </div>
+
+                          {/* Next Button */}
+                          <div>
+                            {currentModule && (
+                              <>
+                                {/* Show different next buttons based on module type and completion status */}
+                                {currentModule.type === 'digital_assessment_quiz' ? (
+                                  // Quiz module - show start quiz or completed status
+                                  isCurrentModuleCompleted ? (
+                                    currentModuleIndex < sortedModules.length - 1 ? (
+                                      <Link
+                                        href={`/app/learn/courses/${courseId}?module=${sortedModules[currentModuleIndex + 1].id}${authorizationId ? `&auth=${authorizationId}` : ''}`}
+                                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                                      >
+                                        Next Module →
+                                      </Link>
+                                    ) : (
+                                      <span className="text-sm text-green-600 font-medium">Course Complete! 🎉</span>
+                                    )
+                                  ) : (
+                                    <Link
+                                      href={`/app/learn/courses/${courseId}?module=${currentModule.id}&quiz=start${authorizationId ? `&auth=${authorizationId}` : ''}`}
+                                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                                    >
+                                      Start Quiz
+                                    </Link>
+                                  )
+                                ) : currentModule.type === 'onsite_training' || currentModule.type === 'onsite_assessment' ? (
+                                  // Onsite modules - use CompleteModuleButton
+                                  isCurrentModuleCompleted ? (
+                                    currentModuleIndex < sortedModules.length - 1 ? (
+                                      <Link
+                                        href={`/app/learn/courses/${courseId}?module=${sortedModules[currentModuleIndex + 1].id}${authorizationId ? `&auth=${authorizationId}` : ''}`}
+                                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                                      >
+                                        Next Module →
+                                      </Link>
+                                    ) : (
+                                      <span className="text-sm text-green-600 font-medium">Course Complete! 🎉</span>
+                                    )
+                                  ) : (
+                                    <CompleteModuleButton
+                                      assignmentId={assignment.id}
+                                      moduleId={currentModule.id}
+                                      courseId={courseId}
+                                      authorizationId={authorizationId}
+                                    />
+                                  )
+                                ) : (
+                                  // Digital training module - use CompleteModuleButton or Next if already completed
+                                  isCurrentModuleCompleted ? (
+                                    currentModuleIndex < sortedModules.length - 1 ? (
+                                      <Link
+                                        href={`/app/learn/courses/${courseId}?module=${sortedModules[currentModuleIndex + 1].id}${authorizationId ? `&auth=${authorizationId}` : ''}`}
+                                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+                                      >
+                                        Next Module →
+                                      </Link>
+                                    ) : (
+                                      <span className="text-sm text-green-600 font-medium">Course Complete! 🎉</span>
+                                    )
+                                  ) : (
+                                    <CompleteModuleButton
+                                      assignmentId={assignment.id}
+                                      moduleId={currentModule.id}
+                                      courseId={courseId}
+                                      authorizationId={authorizationId}
+                                    />
+                                  )
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Course completion and authorization progression */}
+                        {completedCount === totalModules && totalModules > 0 && authorizationContext && nextCourseInAuth && (
+                          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h4 className="font-medium text-green-900">Course Complete!</h4>
+                                <p className="text-sm text-green-700">
+                                  Ready for the next course in your authorization
+                                </p>
+                              </div>
+                              <Link
+                                href={`/app/learn/courses/${nextCourseInAuth.course_id}?auth=${authorizationId}`}
+                                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                              >
+                                Continue to {nextCourseInAuth.courses.title} →
+                              </Link>
                             </div>
                           </div>
                         )}
