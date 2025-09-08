@@ -5,6 +5,41 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PDFExportButton } from "./PDFExportButton";
 
+// Component for viewing uploaded documents
+function DocumentViewButton({ filePath, title }: { filePath: string; title: string }) {
+  const handleView = async () => {
+    try {
+      // Create a signed URL for the document
+      const response = await fetch('/api/admin/document-view', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filePath }),
+      });
+      
+      if (response.ok) {
+        const { signedUrl } = await response.json();
+        window.open(signedUrl, '_blank');
+      } else {
+        alert('Failed to access document');
+      }
+    } catch (error) {
+      console.error('Error viewing document:', error);
+      alert('Failed to access document');
+    }
+  };
+
+  return (
+    <button
+      onClick={handleView}
+      className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
+    >
+      View
+    </button>
+  );
+}
+
 
 
 const DEPARTMENTS = [
@@ -64,6 +99,21 @@ async function loadUserCompletedItems(userId: string) {
     .eq("assignment_status", "completed")
     .not("completed_at", "is", null)
     .order("completed_at", { ascending: false });
+
+  // Get uploaded documents
+  const { data: uploadedDocuments } = await supabase
+    .from("learner_documents")
+    .select(`
+      id,
+      title,
+      file_path,
+      expires_on,
+      created_at,
+      courses!learner_documents_course_id_fkey(title),
+      course_modules!learner_documents_module_id_fkey(title)
+    `)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
 
   // Fetch authorization assignments - using exact same pattern as MyProfile
   const { data: allAuthAssignments, error: authError } = await supabase
@@ -204,7 +254,7 @@ async function loadUserCompletedItems(userId: string) {
     };
   });
 
-  return { processedCourses, processedAuthorizations };
+  return { processedCourses, processedAuthorizations, uploadedDocuments: uploadedDocuments || [] };
 }
 
 function getStatusColor(status: string) {
@@ -270,7 +320,7 @@ export default async function EditUserPage({
     );
   }
 
-  const { processedCourses, processedAuthorizations } = await loadUserCompletedItems(resolvedParams.id);
+  const { processedCourses, processedAuthorizations, uploadedDocuments } = await loadUserCompletedItems(resolvedParams.id);
 
   return (
     <div className="space-y-6 p-6">
@@ -422,6 +472,41 @@ export default async function EditUserPage({
                       <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(auth.status)}`}>
                         {getStatusText(auth.status, auth.days_until_expiry)}
                       </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Uploaded Documents */}
+          <div className="rounded-lg border bg-white p-4">
+            <h2 className="text-lg font-medium mb-4">Uploaded Documents ({uploadedDocuments.length})</h2>
+            {uploadedDocuments.length === 0 ? (
+              <p className="text-sm text-gray-500">No uploaded documents found.</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {uploadedDocuments.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-sm">{doc.title}</h3>
+                      <p className="text-xs text-gray-600">
+                        Course: {doc.courses?.title || 'Unknown'}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        Module: {doc.course_modules?.title || 'Unknown'}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        Uploaded: {new Date(doc.created_at).toLocaleDateString()}
+                      </p>
+                      {doc.expires_on && (
+                        <p className="text-xs text-gray-600">
+                          Expires: {new Date(doc.expires_on).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    <div className="ml-3">
+                      <DocumentViewButton filePath={doc.file_path} title={doc.title} />
                     </div>
                   </div>
                 ))}
