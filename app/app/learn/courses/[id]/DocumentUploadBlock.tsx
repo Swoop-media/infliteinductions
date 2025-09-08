@@ -63,22 +63,19 @@ export default function DocumentUploadBlock({
 
       if (uploadError) throw uploadError;
 
-      // Save document record
-      const documentData = {
-        user_id: currentUserId,
-        course_id: courseId,
-        module_id: moduleId,
-        block_id: blockId,
-        title: file.name,
-        file_path: filePath,
-        expires_on: requireExpiry ? expiryDate : null,
-      };
-
-      const { error: dbError } = await supabase
-        .from('learner_documents')
-        .upsert(documentData, {
-          onConflict: 'user_id,block_id',
-          ignoreDuplicates: false
+      // Save document record using the upsert function
+      const { data: documentId, error: dbError } = await supabase
+        .rpc('upsert_learner_document', {
+          p_user_id: currentUserId,
+          p_course_id: courseId,
+          p_module_id: moduleId,
+          p_block_id: blockId,
+          p_title: file.name,
+          p_file_path: filePath,
+          p_file_size: file.size,
+          p_file_type: file.type,
+          p_expires_on: requireExpiry ? expiryDate : null,
+          p_assignment_id: null
         });
 
       if (dbError) throw dbError;
