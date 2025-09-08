@@ -8,9 +8,9 @@ function supabaseAdmin() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-async function sendTeamsMessage(message: string, recipientEmail: string = 'inductions@inflite.nz') {
+async function sendTeamsMessageToUser(message: string, recipientUserId: string) {
   try {
-    console.log("📤 Attempting to send Teams message to:", recipientEmail);
+    console.log("📤 Attempting to send Teams message to user ID:", recipientUserId);
     console.log("📝 Message preview:", message.substring(0, 150) + "...");
 
     // First try the existing bot debug-send endpoint
@@ -18,7 +18,7 @@ async function sendTeamsMessage(message: string, recipientEmail: string = 'induc
     console.log("🌐 Using base URL:", baseUrl);
     
     const requestBody = {
-      email: recipientEmail,
+      userId: recipientUserId,
       message: message
     };
     console.log("📦 Request body:", { ...requestBody, message: requestBody.message.substring(0, 100) + "..." });
@@ -60,12 +60,12 @@ async function sendTeamsMessage(message: string, recipientEmail: string = 'induc
     console.log("⚠️ Bot endpoint failed, trying fallback approach...");
 
     // Fallback: Log the issue (in production you might want email fallback)
-    console.log("📧 Issue report for", recipientEmail, ":", message.substring(0, 200) + "...");
+    console.log("📧 Issue report for user", recipientUserId, ":", message.substring(0, 200) + "...");
     return false;
 
   } catch (error) {
     console.error("❌ Teams message failed with exception:", error);
-    console.log("📧 Issue report (fallback logging) for", recipientEmail, ":", message.substring(0, 200) + "...");
+    console.log("📧 Issue report (fallback logging) for user", recipientUserId, ":", message.substring(0, 200) + "...");
     return false;
   }
 }
@@ -115,12 +115,12 @@ export async function POST(request: NextRequest) {
 
     console.log("📤 Sending Teams message...");
 
-    // Send to the default recipient (inductions@inflite.nz)
-    const recipientEmail = 'inductions@inflite.nz';
-    console.log("📧 Sending Teams message to:", recipientEmail);
+    // Send to the specific user instead of email lookup
+    const recipientUserId = '1b44c8f5-95aa-4f8c-8110-8f36106b4d10';
+    console.log("📧 Sending Teams message to user ID:", recipientUserId);
 
-    // Send to Teams
-    const sent = await sendTeamsMessage(enhancedMessage, recipientEmail);
+    // Send to Teams using userId instead of email
+    const sent = await sendTeamsMessageToUser(enhancedMessage, recipientUserId);
 
     console.log(`✅ Issue report processed for user ${userName}, Teams sent: ${sent}`);
 
