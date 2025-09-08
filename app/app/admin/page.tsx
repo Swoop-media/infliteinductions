@@ -7,17 +7,19 @@ import { hasRole } from "@/lib/roles";
 import SortableDueDatesTable from "./_components/SortableDueDatesTable";
 import SortableUsersTable from "./_components/SortableUsersTable";
 import SortableAuthorisationsTable from "./_components/SortableAuthorisationsTable";
+import SortableDocumentsTable from "./_components/SortableDocumentsTable";
 
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "due_dates_courses" | "due_dates_authorisations" | "users" | "pending_authorisations";
+type TabKey = "due_dates_courses" | "due_dates_authorisations" | "users" | "pending_authorisations" | "documents";
 
 function tabFromSearch(sp: Record<string, string | string[] | undefined>): TabKey {
   const raw = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab || "";
   if (raw === "users") return "users";
   if (raw === "due_dates_authorisations") return "due_dates_authorisations";
   if (raw === "pending_authorisations") return "pending_authorisations";
+  if (raw === "documents") return "documents";
   return "due_dates_courses";
 }
 
@@ -239,6 +241,99 @@ async function loadUsersAndRoles(q: string | null) {
 }
 
 /* --------------------------
+   DOCUMENTS
+---------------------------*/
+type DocumentRow = {
+  id: string;
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  document_name: string;
+  file_type: string;
+  upload_date: string;
+  expires_on: string | null;
+  status: string;
+  course_title: string | null;
+  module_title: string | null;
+};
+
+async function loadUserDocuments(q: string | null) {
+  "use server";
+  noStore();
+  const supabase = await createSupabaseServer();
+  const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
+  if (!allowed) redirect("/app/home?banner=no_access");
+
+  // Fetch all user documents with expiry dates
+  const { data: documents, error: documentsError } = await supabase
+    .from("learner_documents")
+    .select(`
+      id,
+      user_id,
+      document_name,
+      file_type,
+      upload_date,
+      expires_on,
+      status,
+      profiles(full_name, email),
+      courses(title),
+      course_modules(title)
+    `)
+    .order("expires_on", { ascending: true, nullsFirst: false });
+
+  if (documentsError) throw new Error(documentsError.message);
+  if (!documents || documents.length === 0) return [];
+
+  // Apply search filter if provided
+  if (q && q.trim()) {
+    const searchTerm = q.trim().toLowerCase();
+    const filteredDocuments = documents.filter(doc => {
+      const profile = (doc as any).profiles;
+      const courseTitle = (doc as any).courses?.title;
+      const moduleTitle = (doc as any).course_modules?.title;
+      return (
+        (profile?.full_name?.toLowerCase().includes(searchTerm) ?? false) ||
+        (profile?.email?.toLowerCase().includes(searchTerm) ?? false) ||
+        (doc.document_name?.toLowerCase().includes(searchTerm) ?? false) ||
+        (courseTitle?.toLowerCase().includes(searchTerm) ?? false) ||
+        (moduleTitle?.toLowerCase().includes(searchTerm) ?? false)
+      );
+    });
+    return filteredDocuments.map((doc: any) => ({
+      id: doc.id,
+      user_id: doc.user_id,
+      full_name: doc.profiles?.full_name ?? null,
+      email: doc.profiles?.email ?? null,
+      document_name: doc.document_name,
+      file_type: doc.file_type,
+      upload_date: doc.upload_date,
+      expires_on: doc.expires_on,
+      status: doc.status,
+      course_title: doc.courses?.title ?? null,
+      module_title: doc.course_modules?.title ?? null,
+    }));
+  }
+
+  // Map to the expected format
+  const formattedDocuments: DocumentRow[] = documents.map((doc: any) => ({
+    id: doc.id,
+    user_id: doc.user_id,
+    full_name: doc.profiles?.full_name ?? null,
+    email: doc.profiles?.email ?? null,
+    document_name: doc.document_name,
+    file_type: doc.file_type,
+    upload_date: doc.upload_date,
+    expires_on: doc.expires_on,
+    status: doc.status,
+    course_title: doc.courses?.title ?? null,
+    module_title: doc.course_modules?.title ?? null,
+  }));
+
+  return formattedDocuments;
+}
+
+
+/* --------------------------
    PAGE
 ---------------------------*/
 export default async function AdminPage({
@@ -262,9 +357,27 @@ export default async function AdminPage({
   const tabs: { key: TabKey; label: string; href: string }[] = [
     { key: "due_dates_courses", label: "Due Dates - Courses", href: "/app/admin?tab=due_dates_courses" },
     { key: "due_dates_authorisations", label: "Due Dates - Authorisations", href: "/app/admin?tab=due_dates_authorisations" },
+    { key: "documents", label: "Due Dates - Documents", href: "/app/admin?tab=documents" },
     { key: "users", label: "Users & Roles", href: "/app/admin?tab=users" },
     { key: "pending_authorisations", label: "Pending Authorisations", href: "/app/admin?tab=pending_authorisations" },
   ];
+
+  // Fetch necessary data based on the active tab
+  let documents: DocumentRow[] = [];
+  let pendingAssignments: any[] = []; // Placeholder, replace with actual type if available
+  let profiles: Profile[] = [];
+  let roleMap: Map<string, string[]> = new Map();
+  let grantablePool: string[] = [];
+
+  if (tab === "documents") {
+    documents = await loadUserDocuments(q);
+  } else if (tab === "users") {
+    ({ profiles, roleMap, grantablePool } = await loadUsersAndRoles(q));
+  } else if (tab === "pending_authorisations") {
+    // Fetch pending authorisations (assuming a similar loading function exists or is adapted)
+    // For now, using a placeholder function. You'll need to implement loadPendingAuthorisations similar to others.
+    pendingAssignments = await loadPendingAuthorisations(q);
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -300,6 +413,8 @@ export default async function AdminPage({
           <DueDatesCourseSection q={q} />
         ) : tab === "due_dates_authorisations" ? (
           <DueDatesAuthorisationSection q={q} />
+        ) : tab === "documents" ? (
+          <DocumentsSection q={q} />
         ) : tab === "users" ? (
           <UsersSection q={q} />
         ) : (
@@ -416,7 +531,7 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
         ((row as any).authorisations?.title?.toLowerCase().includes(searchTerm) ?? false)
       );
     });
-    
+
     const { data: filteredData, error } = { data: filteredRows, error: null };
 
   return filteredData.map((row: any) => ({
@@ -499,6 +614,34 @@ async function UsersSection({ q }: { q: string | null }) {
           roleMap={roleMap}
           grantablePool={grantablePool}
         />
+      )}
+    </div>
+  );
+}
+
+async function DocumentsSection({ q }: { q: string | null }) {
+  const documents = await loadUserDocuments(q);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">User Documents</h2>
+        <form method="get" action="/app/admin" className="flex items-center gap-2">
+          <input type="hidden" name="tab" value="documents" />
+          <input
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Search name, email, document, course, or module"
+            className="w-80 rounded-md border px-3 py-2 text-sm"
+          />
+          <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Search</button>
+        </form>
+      </div>
+
+      {documents.length === 0 ? (
+        <p className="text-sm text-gray-600">No documents found.</p>
+      ) : (
+        <SortableDocumentsTable documents={documents} />
       )}
     </div>
   );
