@@ -103,6 +103,22 @@ ON public.learner_documents
 FOR ALL 
 TO service_role;
 
+-- Admins and course creators can read all documents
+DROP POLICY IF EXISTS "learner_documents_admin_read" ON public.learner_documents;
+CREATE POLICY "learner_documents_admin_read" 
+ON public.learner_documents 
+FOR SELECT 
+TO authenticated 
+USING (
+  public.app_has_role(auth.uid(), 'Admin') OR
+  public.app_has_role(auth.uid(), 'Senior management') OR
+  EXISTS (
+    SELECT 1 FROM public.courses c
+    WHERE c.id = learner_documents.course_id
+    AND c.created_by = auth.uid()
+  )
+);
+
 -- Update timestamp trigger
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
