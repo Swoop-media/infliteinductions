@@ -19,15 +19,27 @@ $$;
 DROP TRIGGER IF EXISTS enrolment_request_notification_trigger ON public.enrolments;
 DROP TRIGGER IF EXISTS notify_enrolment_request_trigger ON public.enrolments;
 
--- Drop all possible function signatures to ensure complete removal
+-- Complete removal of notify_enrolment_request function (no longer used with assignment system)
+-- Drop all triggers that might reference the function
+DROP TRIGGER IF EXISTS enrolment_insert_notify ON public.course_enrolments;
+DROP TRIGGER IF EXISTS enrolment_insert_notify_alt ON public.enrolments;
+DROP TRIGGER IF EXISTS notify_enrolment_trigger ON public.enrolments;
+DROP TRIGGER IF EXISTS enrolment_notify_trigger ON public.enrolments;
+DROP TRIGGER IF EXISTS enrolment_request_notification_trigger ON public.enrolments;
+DROP TRIGGER IF EXISTS notify_enrolment_request_trigger ON public.enrolments;
+
+-- Drop the trigger function
+DROP FUNCTION IF EXISTS public.on_enrolment_insert_notify();
+
+-- Drop all possible function signatures for notify_enrolment_request
 DROP FUNCTION IF EXISTS public.notify_enrolment_request();
 DROP FUNCTION IF EXISTS public.notify_enrolment_request(uuid);
 DROP FUNCTION IF EXISTS public.notify_enrolment_request(text);
 DROP FUNCTION IF EXISTS public.notify_enrolment_request(uuid, text);
+DROP FUNCTION IF EXISTS public.notify_enrolment_request(uuid, uuid);
 
--- Also check for any other potential trigger references
-DROP TRIGGER IF EXISTS notify_enrolment_trigger ON public.enrolments;
-DROP TRIGGER IF EXISTS enrolment_notify_trigger ON public.enrolments;
+-- Clean up any RPC functions that might have similar signatures
+DROP FUNCTION IF EXISTS public.notify_enrolment_request(p_user_id uuid, p_course_id uuid);
 
 -- Add comments for documentation
 COMMENT ON FUNCTION public.update_updated_at_column() IS 'Trigger function to update updated_at column - Fixed search_path vulnerability';
