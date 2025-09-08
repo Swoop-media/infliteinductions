@@ -144,9 +144,17 @@ export default function DocumentUploadBlock({
               <p className="font-medium text-sm">✅ Document uploaded:</p>
               <p className="text-sm text-gray-600">{existingDocument.title}</p>
               <p className="text-xs text-gray-500">
-                Uploaded: {new Date(existingDocument.created_at).toLocaleDateString()}
+                Uploaded: {new Date(existingDocument.created_at).toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: 'numeric' 
+                })}
                 {existingDocument.expires_on && (
-                  <span> • Expires: {new Date(existingDocument.expires_on).toLocaleDateString()}</span>
+                  <span> • Expires: {new Date(existingDocument.expires_on).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })}</span>
                 )}
               </p>
             </div>
