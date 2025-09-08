@@ -33,13 +33,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing assignmentId or moduleId" }, { status: 400 });
     }
 
-    // Get the assignment to verify it exists and get trainee info
+    // Get the assignment to verify it exists
   const { data: assignment, error: assignmentError } = await supabase
     .from('course_assignments')
-    .select(`
-      *,
-      trainee:profiles!course_assignments_user_id_fkey(id, email, full_name, first_name, last_name)
-    `)
+    .select('*')
     .eq('id', assignmentId)
     .single();
 
