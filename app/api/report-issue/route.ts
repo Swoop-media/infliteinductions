@@ -95,30 +95,9 @@ export async function POST(request: NextRequest) {
 
     console.log("📤 Sending Teams message...");
 
-    // Try to find an admin user with Teams link first
-    let recipientEmail = 'inductions@inflite.nz'; // default fallback
-
-    try {
-      const { data: adminUsers } = await supabase
-        .from('profiles')
-        .select(`
-          email,
-          user_roles!inner(
-            roles!inner(name)
-          ),
-          teams_links(user_id)
-        `)
-        .eq('user_roles.roles.name', 'Admin')
-        .not('teams_links', 'is', null)
-        .limit(1);
-
-      if (adminUsers && adminUsers.length > 0) {
-        recipientEmail = adminUsers[0].email;
-        console.log("📧 Sending to Teams-linked admin:", recipientEmail);
-      }
-    } catch (error) {
-      console.warn("⚠️ Could not find Teams-linked admin, using default:", recipientEmail);
-    }
+    // Send to the default recipient (inductions@inflite.nz)
+    const recipientEmail = 'inductions@inflite.nz';
+    console.log("📧 Sending Teams message to:", recipientEmail);
 
     // Send to Teams
     const sent = await sendTeamsMessage(enhancedMessage, recipientEmail);
