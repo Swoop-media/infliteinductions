@@ -31,6 +31,14 @@ DROP TRIGGER IF EXISTS notify_enrolment_request_trigger ON public.enrolments;
 -- Drop the trigger function
 DROP FUNCTION IF EXISTS public.on_enrolment_insert_notify();
 
+-- First drop all triggers that depend on on_enrolment_insert_notify
+DROP TRIGGER IF EXISTS trg_enrolment_insert_notify ON public.course_enrolments;
+DROP TRIGGER IF EXISTS enrolment_insert_notify ON public.course_enrolments;
+DROP TRIGGER IF EXISTS enrolment_insert_notify_alt ON public.enrolments;
+
+-- Now drop the trigger function
+DROP FUNCTION IF EXISTS public.on_enrolment_insert_notify();
+
 -- Drop all possible function signatures for notify_enrolment_request
 DROP FUNCTION IF EXISTS public.notify_enrolment_request();
 DROP FUNCTION IF EXISTS public.notify_enrolment_request(uuid);
