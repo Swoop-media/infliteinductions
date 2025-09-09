@@ -68,13 +68,14 @@ async function fetchData(search: string | null) {
 export default async function AdminUsersPage({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const isAdmin = await hasRole("Admin");
   if (!isAdmin) redirect("/app/home");
 
+  const params = await searchParams;
   const search =
-    (Array.isArray(searchParams?.q) ? searchParams?.q[0] : searchParams?.q) ??
+    (Array.isArray(params?.q) ? params?.q[0] : params?.q) ??
     null;
 
   const { roles, profiles, userRoles, error } = await fetchData(search);
