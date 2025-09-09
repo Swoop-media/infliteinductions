@@ -5,20 +5,13 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import CompleteModuleButton from './CompleteModuleButton';
 import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
 import DocumentUploadBlock from './DocumentUploadBlock';
+import { ModuleType, BlockKind } from "@/lib/types/module";
 
 /**
  * Renders a course as a learner (assignments-only approach).
  * Requires a trainee assignment for the signed-in user.
  */
 type RouteParams = { id: string };
-
-type ModuleType =
-  | "digital_training"
-  | "digital_assessment_quiz"
-  | "onsite_training"
-  | "onsite_assessment";
-
-type BlockKind = "rich_text" | "link" | "video_embed" | "file" | "request_document";
 
 const TYPE_ORDER: ModuleType[] = [
   "digital_training",

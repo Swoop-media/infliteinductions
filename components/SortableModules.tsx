@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ModuleType } from "@/lib/types/module";
 
 function classNames(...xs: (string | false | null | undefined)[]) {
   return xs.filter(Boolean).join(" ");
@@ -56,13 +57,6 @@ function DraggableRow({
     </li>
   );
 }
-
-export type ModuleType =
-  | "digital_training"
-  | "digital_assessment_quiz"
-  | "onsite_training"
-  | "onsite_assessment"
-  | "request_document";
 
 export default function SortableModules({
   initialItems,

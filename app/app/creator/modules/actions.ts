@@ -2,22 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
-
-export type ModuleType =
-  | "onsite_training"
-  | "onsite_assessment"
-  | "digital_training"
-  | "digital_assessment"
-  | "quiz"
-  | string;
+import { ModuleType } from "@/lib/types/module";
 
 function tabForType(t: ModuleType) {
   return t; // your tabs match the type names for onsite_*; adjust if needed for others
 }
 
-export function moduleEditHref(type: ModuleType, id: string) {
+export function moduleEditHref(type: ModuleType, id: string): string {
   if (type === "onsite_training" || type === "onsite_assessment") return `/app/creator/modules/${id}/onsite`;
-  if (type === "quiz" || type === "digital_assessment") return `/app/creator/modules/${id}/quiz`;
+  if (type === "digital_assessment_quiz") return `/app/creator/modules/${id}/quiz`;
   return `/app/creator/modules/${id}`; // default editor
 }
 

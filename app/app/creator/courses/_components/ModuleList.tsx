@@ -1,13 +1,6 @@
 import Link from "next/link";
 import { moveModuleAction, deleteModuleAction, moduleEditHref } from "@/app/app/creator/modules/actions";
-
-export type ModuleType =
-  | "onsite_training"
-  | "onsite_assessment"
-  | "digital_training"
-  | "digital_assessment"
-  | "quiz"
-  | string;
+import { ModuleType } from "@/lib/types/module";
 
 type Row = {
   id: string;

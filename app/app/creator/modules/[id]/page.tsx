@@ -4,18 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import VideoPlayer from '@/components/VideoPlayer';
+import { ModuleType, BlockKind } from "@/lib/types/module";
 
 export const dynamic = "force-dynamic";
-
-/** Types */
-type ModuleType =
-  | "digital_training"
-  | "digital_assessment_quiz"
-  | "onsite_training"
-  | "onsite_assessment"
-  | "request_document";
-
-type BlockKind = "rich_text" | "link" | "video_embed" | "file" | "request_document" | "quiz_questions";
 
 type ModuleRow = {
   id: string;
