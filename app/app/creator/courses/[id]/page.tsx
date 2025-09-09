@@ -552,8 +552,7 @@ async function assignUserAction(formData: FormData) {
         url: courseUrl,
         // Use a unique event ID to prevent duplicate notifications
         event_id: `course_assign_${courseId}_${userId}_${role}_${Date.now()}`
-      },
-      sendTeams: true
+      }
     });
   } catch (notifyError) {
     console.warn("Failed to send course assignment notification:", notifyError);
@@ -636,8 +635,7 @@ async function revokeAssignmentAction(formData: FormData) {
           revokedBy: revokerName,
           revokedById: user.id,
           event_id: `course_revoke_${courseId}_${assignmentDetails.user_id}_${assignmentDetails.role}_${Date.now()}`
-        },
-        sendTeams: true
+        }
       });
     } catch (notifyError) {
       console.warn("Failed to send assignment revocation notification:", notifyError);
