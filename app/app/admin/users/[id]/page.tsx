@@ -32,11 +32,11 @@ const JOBS = [
 
 // Raw types from Supabase query results
 type CourseAssignmentWithCourse = {
-  id: string;
-  completed_at: string;
+  id: any;
+  completed_at: any;
   courses: {
-    title: string;
-    valid_for_days: number | null;
+    title: any;
+    valid_for_days: any;
   };
 };
 
@@ -51,15 +51,15 @@ type CompletedCourse = {
 };
 
 type AuthorizationAssignmentWithDetails = {
-  id: string;
-  authorisation_id: string;
-  assignment_status: string;
-  completed_at: string | null;
+  id: any;
+  authorisation_id: any;
+  assignment_status: any;
+  completed_at: any;
   authorisations: {
-    id: string;
-    title: string;
-    status: string;
-    valid_for_days: number | null;
+    id: any;
+    title: any;
+    status: any;
+    valid_for_days: any;
   };
   courses?: any[];
 };
@@ -181,7 +181,7 @@ async function loadUserCompletedItems(userId: string) {
   console.log("Debug - Completed auth with courses:", completedAuthWithCourses);
 
   // Process courses
-  const processedCourses: CompletedCourse[] = (completedCourses as CourseAssignmentWithCourse[] || []).map(course => {
+  const processedCourses: CompletedCourse[] = (completedCourses || []).map((course: any) => {
     const completedDate = new Date(course.completed_at);
     const validForDays = course.courses?.valid_for_days || 365; // Default to 1 year
     const dueDate = new Date(completedDate);
@@ -206,8 +206,8 @@ async function loadUserCompletedItems(userId: string) {
   });
 
   // Process authorizations using the MyProfile pattern
-  const processedAuthorizations: CompletedAuthorization[] = (completedAuthWithCourses as AuthorizationAssignmentWithDetails[] || []).map(auth => {
-    const completedDate = new Date(auth.completed_at!);
+  const processedAuthorizations: CompletedAuthorization[] = (completedAuthWithCourses || []).map((auth: any) => {
+    const completedDate = new Date(auth.completed_at);
     const validForDays = auth.authorisations?.valid_for_days;
 
     // If no valid_for_days, treat as no expiry
@@ -215,7 +215,7 @@ async function loadUserCompletedItems(userId: string) {
       return {
         assignment_id: auth.id,
         authorization_title: auth.authorisations?.title || 'Unknown Authorization',
-        completed_at: auth.completed_at!,
+        completed_at: auth.completed_at,
         valid_for_years: null,
         due_date: null,
         days_until_expiry: null,
@@ -236,7 +236,7 @@ async function loadUserCompletedItems(userId: string) {
     return {
       assignment_id: auth.id,
       authorization_title: auth.authorisations?.title || 'Unknown Authorization',
-      completed_at: auth.completed_at!,
+      completed_at: auth.completed_at,
       valid_for_years: Math.round(validForDays / 365 * 100) / 100, // Convert days to years for display
       due_date: dueDate.toISOString(),
       days_until_expiry: daysUntilExpiry,
@@ -481,10 +481,10 @@ export default async function EditUserPage({
                     <div className="flex-1">
                       <h3 className="font-medium text-sm">{doc.title}</h3>
                       <p className="text-xs text-gray-600">
-                        Course: {doc.courses?.title || 'Unknown'}
+                        Course: {(doc.courses as any)?.title || 'Unknown'}
                       </p>
                       <p className="text-xs text-gray-600">
-                        Module: {doc.course_modules?.title || 'Unknown'}
+                        Module: {(doc.course_modules as any)?.title || 'Unknown'}
                       </p>
                       <p className="text-xs text-gray-600">
                         Uploaded: {new Date(doc.created_at).toLocaleDateString()}

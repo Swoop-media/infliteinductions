@@ -109,9 +109,9 @@ async function loadUserCompletedItems(userId: string) {
   ) || [];
 
   // Process courses
-  const processedCourses: CompletedCourse[] = (completedCourses || []).map(course => {
+  const processedCourses: CompletedCourse[] = (completedCourses || []).map((course: any) => {
     const completedDate = new Date(course.completed_at);
-    const validForDays = course.courses.valid_for_days || 365;
+    const validForDays = course.courses?.valid_for_days || 365;
     const dueDate = new Date(completedDate);
     dueDate.setDate(dueDate.getDate() + validForDays);
     
@@ -124,7 +124,7 @@ async function loadUserCompletedItems(userId: string) {
 
     return {
       assignment_id: course.id,
-      course_title: course.courses.title,
+      course_title: course.courses?.title || 'Unknown Course',
       completed_at: course.completed_at,
       valid_for_days: validForDays,
       due_date: dueDate.toISOString(),
@@ -134,15 +134,15 @@ async function loadUserCompletedItems(userId: string) {
   });
 
   // Process authorizations using the MyProfile pattern
-  const processedAuthorizations: CompletedAuthorization[] = (completedAuthWithCourses || []).map(auth => {
+  const processedAuthorizations: CompletedAuthorization[] = (completedAuthWithCourses || []).map((auth: any) => {
     const completedDate = new Date(auth.completed_at);
-    const validForDays = auth.authorisations.valid_for_days;
+    const validForDays = auth.authorisations?.valid_for_days;
 
     // If no valid_for_days, treat as no expiry
     if (!validForDays) {
       return {
         assignment_id: auth.id,
-        authorization_title: auth.authorisations.title,
+        authorization_title: auth.authorisations?.title || 'Unknown Authorization',
         completed_at: auth.completed_at,
         valid_for_years: null,
         due_date: null,
@@ -163,7 +163,7 @@ async function loadUserCompletedItems(userId: string) {
 
     return {
       assignment_id: auth.id,
-      authorization_title: auth.authorisations.title,
+      authorization_title: auth.authorisations?.title || 'Unknown Authorization',
       completed_at: auth.completed_at,
       valid_for_years: Math.round(validForDays / 365 * 100) / 100, // Convert days to years for display
       due_date: dueDate.toISOString(),
