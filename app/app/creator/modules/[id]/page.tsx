@@ -435,7 +435,7 @@ export default async function ModuleEditorPage(props: {
       </div>
 
       {/* Create block (for digital training and quiz) */}
-      {(mod.type === "digital_training" || mod.type === "digital_assessment_quiz" || mod.type === "request_document") && (
+      {(mod.type === "digital_training" || mod.type === "digital_assessment_quiz") && (
         <div className="rounded-xl border bg-white p-4">
           <div className="flex items-center justify-between">
             <div>
