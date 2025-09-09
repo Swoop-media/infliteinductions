@@ -667,10 +667,15 @@ async function revokeAssignmentAction(formData: FormData) {
   redirect(next);
 }
 
+/** Search params interface for this page */
+interface CourseEditorSearchParams extends Record<string, string | string[] | undefined> {
+  notice?: string | string[] | undefined;
+}
+
 /** Page */
 export default async function CourseEditorPage(props: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<CourseEditorSearchParams>;
 }) {
   const { id: courseId } = await props.params;
   const searchParams = (await (props.searchParams ?? Promise.resolve({}))) || {};
