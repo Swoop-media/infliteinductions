@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     let processedCount = 0;
-    const notificationIds = [];
+    const notificationIds: string[] = [];
 
     for (const notification of pendingNotifications) {
       try {
