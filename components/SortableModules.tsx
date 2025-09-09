@@ -61,7 +61,8 @@ export type ModuleType =
   | "digital_training"
   | "digital_assessment_quiz"
   | "onsite_training"
-  | "onsite_assessment";
+  | "onsite_assessment"
+  | "request_document";
 
 export default function SortableModules({
   initialItems,
