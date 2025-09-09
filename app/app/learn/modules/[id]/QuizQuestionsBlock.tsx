@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import { createSupabaseClient } from "@/lib/supabase/client";
+import { supabaseBrowser as createSupabaseClient } from "@/lib/supabase/client";
 
 interface QuizQuestion {
   id: string;

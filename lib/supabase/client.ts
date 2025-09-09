@@ -9,3 +9,6 @@ import type { Database } from "./types";
  */
 export const supabaseBrowser = createClientComponentClient<Database>();
 
+// Add the missing export for backward compatibility
+export const createSupabaseClient = () => supabaseBrowser;
+
