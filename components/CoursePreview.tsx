@@ -155,14 +155,14 @@ type CoursePreviewProps = {
     id: string;
     course_id: string;
     title: string;
-    type: string;
+    type: "digital_training" | "digital_assessment_quiz" | "onsite_training" | "onsite_assessment" | "request_document";
     order_index: number;
     stage?: string;
   }>;
   blocks: Array<{
     id: string;
     module_id: string;
-    kind: string;
+    kind: "rich_text" | "file" | "video_embed" | "link" | "request_document" | "quiz_questions";
     data: any;
     order_index: number;
   }>;
@@ -187,14 +187,14 @@ export default function CoursePreview({
     id: string;
     course_id: string;
     title: string;
-    type: string;
+    type: "digital_training" | "digital_assessment_quiz" | "onsite_training" | "onsite_assessment" | "request_document";
     order_index: number;
     stage?: string;
   }>;
   blocks: Array<{
     id: string;
     module_id: string;
-    kind: string;
+    kind: "rich_text" | "file" | "video_embed" | "link" | "request_document" | "quiz_questions";
     data: any;
     order_index: number;
   }>;
