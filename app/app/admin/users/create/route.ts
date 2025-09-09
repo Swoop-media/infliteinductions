@@ -78,32 +78,103 @@ export async function POST(req: Request) {
     // Small delay to ensure auth user is fully committed to database
     await new Promise(resolve => setTimeout(resolve, 100));
 
-    // Create profile record
-    const { data: profile, error: profileError } = await supabaseService
+    // Check if profile already exists (might be created automatically)
+    const { data: existingProfile } = await supabaseService
       .from("profiles")
-      .insert({
-        id: userId,
-        email: email,
-        full_name: full_name,
-        department: department || null,
-        job_description: job_description || null,
-        created_via_admin: true,
-        awaiting_first_login: true
-      })
-      .select()
-      .single();
+      .select("id")
+      .eq("id", userId)
+      .maybeSingle();
 
-    if (profileError) {
-      console.error("Profile creation error:", profileError);
-      // If profile creation fails, clean up the auth user
-      try {
-        await supabaseService.auth.admin.deleteUser(userId);
-        console.log("Cleaned up auth user after profile creation failure");
-      } catch (cleanupError) {
-        console.error("Failed to cleanup auth user:", cleanupError);
+    let profile;
+    if (existingProfile) {
+      // Profile already exists, update it with our data
+      const { data: updatedProfile, error: updateError } = await supabaseService
+        .from("profiles")
+        .update({
+          email: email,
+          full_name: full_name,
+          department: department || null,
+          job_description: job_description || null,
+          created_via_admin: true,
+          awaiting_first_login: true
+        })
+        .eq("id", userId)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Profile update error:", updateError);
+        // If profile update fails, clean up the auth user
+        try {
+          await supabaseService.auth.admin.deleteUser(userId);
+          console.log("Cleaned up auth user after profile update failure");
+        } catch (cleanupError) {
+          console.error("Failed to cleanup auth user:", cleanupError);
+        }
+        back.searchParams.set("error", `Failed to update user profile: ${updateError.message}`);
+        return NextResponse.redirect(back);
       }
-      back.searchParams.set("error", `Failed to create user profile: ${profileError.message}`);
-      return NextResponse.redirect(back);
+      profile = updatedProfile;
+    } else {
+      // Create profile record
+      const { data: newProfile, error: profileError } = await supabaseService
+        .from("profiles")
+        .insert({
+          id: userId,
+          email: email,
+          full_name: full_name,
+          department: department || null,
+          job_description: job_description || null,
+          created_via_admin: true,
+          awaiting_first_login: true
+        })
+        .select()
+        .single();
+
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        // Check if it's a duplicate key error - if so, try to update instead
+        if (profileError.message.includes("duplicate")) {
+          const { data: retryProfile, error: retryError } = await supabaseService
+            .from("profiles")
+            .update({
+              email: email,
+              full_name: full_name,
+              department: department || null,
+              job_description: job_description || null,
+              created_via_admin: true,
+              awaiting_first_login: true
+            })
+            .eq("id", userId)
+            .select()
+            .single();
+
+          if (retryError) {
+            console.error("Profile update retry error:", retryError);
+            try {
+              await supabaseService.auth.admin.deleteUser(userId);
+              console.log("Cleaned up auth user after profile creation failure");
+            } catch (cleanupError) {
+              console.error("Failed to cleanup auth user:", cleanupError);
+            }
+            back.searchParams.set("error", `Failed to create user profile: ${retryError.message}`);
+            return NextResponse.redirect(back);
+          }
+          profile = retryProfile;
+        } else {
+          // If it's not a duplicate error, clean up and fail
+          try {
+            await supabaseService.auth.admin.deleteUser(userId);
+            console.log("Cleaned up auth user after profile creation failure");
+          } catch (cleanupError) {
+            console.error("Failed to cleanup auth user:", cleanupError);
+          }
+          back.searchParams.set("error", `Failed to create user profile: ${profileError.message}`);
+          return NextResponse.redirect(back);
+        }
+      } else {
+        profile = newProfile;
+      }
     }
 
     console.log("Created profile for user:", userId);
