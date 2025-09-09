@@ -99,11 +99,12 @@ async function loadMyDocs() {
 export default async function MyDocumentsPage({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const ok = (Array.isArray(searchParams?.ok) ? searchParams?.ok[0] : searchParams?.ok) ?? null;
+  const sp = (await (searchParams ?? Promise.resolve({}))) || {};
+  const ok = (Array.isArray(sp?.ok) ? sp?.ok[0] : sp?.ok) ?? null;
   const err =
-    (Array.isArray(searchParams?.error) ? searchParams?.error[0] : searchParams?.error) ?? null;
+    (Array.isArray(sp?.error) ? sp?.error[0] : sp?.error) ?? null;
 
   const { items, error } = await loadMyDocs();
 
