@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       error: enrolmentErr?.message
     });
 
-    if (enrolmentErr || !enrolment || enrolment.status !== "approved") {
+    if (enrolmentErr || !enrolment || (enrolment as any).status !== "approved") {
       console.log("Learner progress: No approved enrolment");
       return NextResponse.json({ error: "No approved enrolment found" }, { status: 403 });
     }

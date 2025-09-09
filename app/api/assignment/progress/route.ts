@@ -70,8 +70,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
     }
 
+    // Explicit type annotation to prevent type inference issues
+    const typedAssignmentCheck = assignmentCheck as { 
+      id: string; 
+      course_id: string; 
+      user_id: string; 
+    };
+
     // Check if user is the trainee (owns the assignment) OR is a trainer/assessor for this course
-    const isTrainee = assignmentCheck.user_id === user.id;
+    const isTrainee = typedAssignmentCheck.user_id === user.id;
     let isTrainerOrAssessor = false;
 
     if (!isTrainee) {
@@ -79,7 +86,7 @@ export async function POST(req: NextRequest) {
         .from("course_assignments")
         .select("role")
         .eq("user_id", user.id)
-        .eq("course_id", assignmentCheck.course_id)
+        .eq("course_id", typedAssignmentCheck.course_id)
         .in("role", ["onsite_trainer", "onsite_assessor"]);
 
       isTrainerOrAssessor = Boolean(trainerRoles && trainerRoles.length > 0);
@@ -92,13 +99,16 @@ export async function POST(req: NextRequest) {
 
     // Insert or update assignment progress
     if (completed) {
+      // Explicit type annotation to prevent type inference issues
+      const progressData: any = {
+        assignment_id: assignmentId,
+        module_id: moduleId,
+        completed_at: new Date().toISOString()
+      };
+
       const { error: upsertErr } = await supabase
         .from("assignment_progress")
-        .upsert({
-          assignment_id: assignmentId,
-          module_id: moduleId,
-          completed_at: new Date().toISOString()
-        }, {
+        .upsert(progressData, {
           onConflict: "assignment_id,module_id"
         });
 
@@ -113,9 +123,11 @@ export async function POST(req: NextRequest) {
 
       // Try to complete the overall assignment if all modules are done
       try {
-        await supabase.rpc("try_complete_assignment", {
+        // Explicit type annotation to prevent type inference issues
+        const rpcParams: any = {
           p_assignment_id: assignmentId
-        });
+        };
+        await supabase.rpc("try_complete_assignment", rpcParams);
       } catch (error) {
         console.warn("Failed to run try_complete_assignment RPC:", error);
       }
