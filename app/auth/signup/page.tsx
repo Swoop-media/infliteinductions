@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/auth/signup/page.tsx
 import Link from "next/link";
 

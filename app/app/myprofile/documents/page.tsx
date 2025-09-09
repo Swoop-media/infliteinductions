@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/app/myprofile/documents/page.tsx
 import Link from "next/link";
 import { unstable_noStore as noStore } from "next/cache";

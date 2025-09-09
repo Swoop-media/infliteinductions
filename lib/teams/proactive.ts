@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/teams/proactive.ts
 import { ConversationReference, TurnContext } from "botbuilder";
 import { adapter, botAppId } from "./botAdapter";

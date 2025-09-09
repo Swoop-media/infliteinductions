@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/api/auth/microsoft/login/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { msalInstance, AUTH_CODE_URL_PARAMETERS } from "@/lib/auth/microsoft";

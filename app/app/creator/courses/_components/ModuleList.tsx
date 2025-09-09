@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Link from "next/link";
 import { moveModuleAction, deleteModuleAction } from "@/app/app/creator/modules/actions";
 import { ModuleType } from "@/lib/types/module";

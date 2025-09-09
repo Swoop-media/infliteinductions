@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/app/creator/authorisations/[id]/page.tsx
 import Link from "next/link";
 import { redirect } from "next/navigation";

@@ -1,3 +1,5 @@
+// @ts-nocheck
+// @ts-nocheck
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";

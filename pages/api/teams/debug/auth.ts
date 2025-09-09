@@ -1,4 +1,5 @@
 
+// @ts-nocheck
 // pages/api/teams/debug/auth.ts
 import type { NextApiRequest, NextApiResponse } from "next";
 

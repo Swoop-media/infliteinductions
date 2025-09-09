@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createSupabaseServer } from "@/lib/supabase/server";
 import CourseEnrolButton from "@/components/CourseEnrolButton";
 

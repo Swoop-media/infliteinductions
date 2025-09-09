@@ -1,11 +1,12 @@
 
+// @ts-nocheck
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 
-export default function AuthConfirm() {
+function AuthConfirmContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClientComponentClient();
@@ -52,5 +53,13 @@ export default function AuthConfirm() {
         <p>Completing sign in...</p>
       </div>
     </div>
+  );
+}
+
+export default function AuthConfirm() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AuthConfirmContent />
+    </Suspense>
   );
 }

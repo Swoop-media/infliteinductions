@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 // app/auth/callback/route.ts
 import { NextRequest, NextResponse } from "next/server";

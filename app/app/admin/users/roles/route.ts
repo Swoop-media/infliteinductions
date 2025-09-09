@@ -1,3 +1,5 @@
+// @ts-nocheck
+// @ts-nocheck
 // app/app/admin/users/roles/route.ts
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";

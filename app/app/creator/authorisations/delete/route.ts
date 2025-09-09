@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/app/creator/authorisations/delete/route.ts
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";

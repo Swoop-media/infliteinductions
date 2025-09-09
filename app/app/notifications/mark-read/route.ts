@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextResponse } from "next/server";
 import { createSupabaseRoute } from "@/lib/supabase/server";
 

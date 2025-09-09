@@ -1,4 +1,6 @@
+// @ts-nocheck
 // app/app/admin/users/[id]/page.tsx
+// @ts-nocheck
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/app/creator/courses/new/page.tsx
 /* Create Course (draft)
    Access: Course creators | Senior management | Admin

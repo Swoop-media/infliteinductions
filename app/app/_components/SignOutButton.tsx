@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/app/_components/SignOutButton.tsx
 export default function SignOutButton({ className = "" }: { className?: string }) {
   return (

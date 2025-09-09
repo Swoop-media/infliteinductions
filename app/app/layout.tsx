@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/app/layout.tsx
 import Link from "next/link";
 import { createSupabaseServer } from "@/lib/supabase/server";

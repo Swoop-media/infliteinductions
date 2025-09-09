@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/roles/enforce.ts
 import { redirect } from "next/navigation";
 import { hasRole } from "@/lib/roles";

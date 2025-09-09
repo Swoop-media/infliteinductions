@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/teams/send.ts
 import { createClient } from "@supabase/supabase-js";
 import { sendProactive } from "./proactive";

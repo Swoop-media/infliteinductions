@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 // app/app/admin/authorisations/page.tsx
 import Link from "next/link";

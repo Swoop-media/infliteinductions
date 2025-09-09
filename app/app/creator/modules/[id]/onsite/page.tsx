@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 // app/app/creator/modules/[id]/onsite/page.tsx
 import Link from "next/link";

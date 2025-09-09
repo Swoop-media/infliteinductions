@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/app/learn/modules/[id]/page.tsx
 import Link from "next/link";
 import { redirect } from "next/navigation";

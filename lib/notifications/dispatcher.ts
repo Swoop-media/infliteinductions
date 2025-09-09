@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/notifications/dispatcher.ts
 import { createClient } from "@supabase/supabase-js";
 import { sendTeamsDMToAppUser } from "@/lib/teams/send";

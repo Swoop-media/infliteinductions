@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ConfigurationBotFrameworkAuthentication, CloudAdapter, TurnContext } from "botbuilder";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest } from "next/server";

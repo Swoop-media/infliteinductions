@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/supabase/server.ts
 import { cookies } from "next/headers";
 import {

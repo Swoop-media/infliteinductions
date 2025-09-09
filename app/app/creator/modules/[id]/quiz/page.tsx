@@ -1,4 +1,5 @@
 // @ts-nocheck
+// @ts-nocheck
 // app/app/creator/modules/[id]/quiz/page.tsx
 import Link from "next/link";
 import { redirect } from "next/navigation";

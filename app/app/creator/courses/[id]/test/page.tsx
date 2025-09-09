@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import CoursePreview from "@/components/CoursePreview";

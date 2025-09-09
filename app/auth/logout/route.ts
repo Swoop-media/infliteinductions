@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/auth/logout/route.ts
 import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";

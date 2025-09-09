@@ -16,7 +16,6 @@
     "plugins": [{ "name": "next" }],
     "strictNullChecks": true,
     "maxNodeModuleJsDepth": 2,
-    "noStrictGenericChecks": true,
 
     "baseUrl": ".",
     "paths": {

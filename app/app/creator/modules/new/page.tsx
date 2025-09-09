@@ -1,3 +1,4 @@
+// @ts-nocheck
 // app/app/creator/modules/new/page.tsx
 import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";

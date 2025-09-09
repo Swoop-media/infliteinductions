@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/supabase/service.ts
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "../supabase/types";

@@ -1,0 +1,73 @@
+Build failed
+Your deployment attempt had the following errors:
+TypeScript compilation error in app/api/learner/progress/route.ts at line 66 - Supabase upsert operation has type mismatch
+Build process failed during type checking with Next.js 15.4.6
+Supabase client type definitions don't match the expected schema for learner_progress table
+Agent suggestions
+    const { error: upsertErr, data: upsertData } = await supabase
+      .from("learner_progress")
+      .upsert({
+        user_id: user.id,
+        course_id: courseId,
+        module_id: moduleId,
+        block_id: blockId,
+        page_index: pageIndex,
+        total_pages: totalPages,
+        completed,
+        updated_at: new Date().toISOString()
+      }, {
+        onConflict: "user_id,course_id,module_id"
+      })
+      .select();
+    const { error: upsertErr, data: upsertData } = await supabase
+      .from("learner_progress")
+      .upsert({
+        user_id: user.id,
+        course_id: courseId,
+        module_id: moduleId,
+        block_id: blockId,
+        page_index: pageIndex,
+        total_pages: totalPages,
+        completed,
+        updated_at: new Date().toISOString()
+      } as any, {
+        onConflict: "user_id,course_id,module_id"
+      })
+      .select();
+    // Insert or update learner progress
+    const { error: upsertErr, data: upsertData } = await supabase
+    // Insert or update learner progress
+    type LearnerProgressInsert = {
+      user_id: string;
+      course_id: string;
+      module_id: string;
+      block_id: string | null;
+      page_index: number;
+      total_pages: number;
+      completed: boolean;
+      updated_at: string;
+    };
+
+    const progressRecord: LearnerProgressInsert = {
+      user_id: user.id,
+      course_id: courseId,
+      module_id: moduleId,
+      block_id: blockId,
+      page_index: pageIndex,
+      total_pages: totalPages,
+      completed,
+      updated_at: new Date().toISOString()
+    };
+
+    const { error: upsertErr, data: upsertData } = await supabase
+      .upsert({
+        user_id: user.id,
+        course_id: courseId,
+        module_id: moduleId,
+        block_id: blockId,
+        page_index: pageIndex,
+        total_pages: totalPages,
+        completed,
+        updated_at: new Date().toISOString()
+      }, {
+      .upsert(progressRecord, {

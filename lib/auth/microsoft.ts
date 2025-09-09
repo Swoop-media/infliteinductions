@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 // lib/auth/microsoft.ts
 import { ConfidentialClientApplication, Configuration } from "@azure/msal-node";

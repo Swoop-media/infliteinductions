@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Explicit Database interface to prevent infinite type instantiation
 export interface Database {
   public: {

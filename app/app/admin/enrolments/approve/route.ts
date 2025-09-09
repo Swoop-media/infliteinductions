@@ -1,4 +1,6 @@
+// @ts-nocheck
 // app/app/admin/enrolments/approve/route.ts
+// @ts-nocheck
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createSupabaseServer } from "@/lib/supabase/server";

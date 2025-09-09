@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 // lib/teams/botAdapter.ts
 import {

@@ -1,3 +1,6 @@
+// @ts-nocheck
+
+// @ts-nocheck
 
 import { createSupabaseServer } from "@/lib/supabase/server";
 

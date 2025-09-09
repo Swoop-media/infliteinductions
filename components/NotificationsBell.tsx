@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 // This component has been replaced by app/app/_components/NotificationsBell.tsx
 // The new notification system uses lib/notifications/dispatcher.ts

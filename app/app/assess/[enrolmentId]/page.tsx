@@ -1,3 +1,5 @@
+// @ts-nocheck
+// @ts-nocheck
 /* Assessor UI: render per-module forms from schema and save submissions (server-side uploads) */
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";

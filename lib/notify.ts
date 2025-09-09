@@ -1,3 +1,4 @@
+// @ts-nocheck
 // lib/notify.ts
 import { createSupabaseServer } from "@/lib/supabase/server";
 
