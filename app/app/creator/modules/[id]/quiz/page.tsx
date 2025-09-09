@@ -37,6 +37,17 @@ type QuizRow = Record<string, any>;
 type QuestionRow = Record<string, any>;
 type OptionRow = Record<string, any>;
 
+/** Explicit types for Supabase query results to prevent type instantiation issues */
+type QuizQuestionSelect = {
+  data: { order_index?: number | null } | null;
+  error: any;
+};
+
+type SupabaseQueryResult<T = any> = {
+  data: T | null;
+  error: any;
+};
+
 /** ---------------- schema-aware helpers ---------------- */
 async function signedUrl(path: string | null | undefined) {
   "use server";
@@ -265,29 +276,48 @@ async function updateSettings(formData: FormData) {
   redirect(`/app/creator/modules/${moduleId}/quiz?notice=saved`);
 }
 
+/** Wrapper function for Supabase queries with explicit typing */
+async function executeSupabaseQuery<T = any>(
+  queryFn: () => Promise<{ data: T | null; error: any }>
+): Promise<{ data: T | null; error: any }> {
+  try {
+    return await queryFn();
+  } catch (error) {
+    return { data: null, error };
+  }
+}
+
 /** determine the next order_index for questions (best effort) */
-async function nextQuestionOrder(quiz: QuizRow, mod: ModuleRow) {
+async function nextQuestionOrder(quiz: QuizRow, mod: ModuleRow): Promise<number> {
   "use server";
   const supabase = await createSupabaseServer();
   const tries = [
-    { col: "quiz_id", val: quiz.id },
-    { col: "module_id", val: mod.id },
-    { col: "course_id", val: mod.course_id },
+    { col: "quiz_id" as const, val: quiz.id },
+    { col: "module_id" as const, val: mod.id },
+    { col: "course_id" as const, val: mod.course_id },
   ];
+  
   for (const t of tries) {
     try {
-      const r = await supabase
-        .from("quiz_questions")
-        .select("order_index")
-        .eq(t.col as any, t.val)
-        .order("order_index", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!r.error) {
-        const next = ((r.data?.order_index ?? -1) as number) + 1;
+      // Explicit typing to prevent infinite type instantiation
+      const r: SupabaseQueryResult<{ order_index?: number | null }> = await executeSupabaseQuery(() =>
+        supabase
+          .from("quiz_questions")
+          .select("order_index")
+          .eq(t.col, t.val)
+          .order("order_index", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      );
+      
+      if (!r.error && r.data) {
+        const orderIndex = r.data.order_index;
+        const next: number = ((orderIndex ?? -1) as number) + 1;
         return next;
       }
-    } catch {}
+    } catch {
+      // Continue to next attempt
+    }
   }
   return 0;
 }
