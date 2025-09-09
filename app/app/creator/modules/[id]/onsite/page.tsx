@@ -362,13 +362,18 @@ async function reorderRequirementsAction(formData: FormData) {
 // -----------------------------
 // Page
 // -----------------------------
+interface OnsiteModuleSearchParams extends Record<string, string | string[] | undefined> {
+  ok?: string | string[] | undefined;
+  error?: string | string[] | undefined;
+}
+
 export default async function OnsiteModulePage(props: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<OnsiteModuleSearchParams>;
 }) {
   const params = await props.params;
   const moduleId = params.id;
-  const sp = await (props.searchParams ?? Promise.resolve({}));
+  const sp: OnsiteModuleSearchParams = await (props.searchParams ?? Promise.resolve({}));
   const ok = firstParam(sp, "ok");
   const errParam = firstParam(sp, "error");
 

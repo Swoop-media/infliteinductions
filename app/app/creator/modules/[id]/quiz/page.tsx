@@ -690,14 +690,18 @@ async function removeQuestionImage(formData: FormData) {
   redirect(`/app/creator/modules/${moduleId}/quiz?notice=saved`);
 }
 
+interface QuizEditorSearchParams extends Record<string, string | string[] | undefined> {
+  notice?: string | string[] | undefined;
+}
+
 /** ---------------- page ---------------- */
 export default async function QuizEditorPage(props: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<QuizEditorSearchParams>;
 }) {
   const { id } = await props.params;
   const moduleId = id;
-  const sp = (await (props.searchParams ?? Promise.resolve({}))) || {};
+  const sp: QuizEditorSearchParams = (await (props.searchParams ?? Promise.resolve({}))) || {};
   const notice = (Array.isArray(sp.notice) ? sp.notice[0] : sp.notice) ?? null;
 
   const { module, quiz } = await loadModuleAndEnsureQuiz(moduleId);
