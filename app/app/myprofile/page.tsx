@@ -383,9 +383,9 @@ export default async function MyProfilePage() {
               {completedAuth.length === 0 ? (
                 <p className="text-sm text-gray-500">No completed authorizations yet.</p>
               ) : (
-                completedAuth.map((assignment) => {
+                completedAuth.map((assignment: any) => {
                   const auth = assignment.authorisations;
-                  const totalCourses = assignment.courses.length;
+                  const totalCourses = assignment.courses?.length || 0;
 
                   return (
                     <div key={assignment.id} className="rounded-lg border p-4 bg-green-50">
@@ -439,7 +439,7 @@ export default async function MyProfilePage() {
               {completedCourses.length === 0 ? (
                 <p className="text-sm text-gray-500">No completed individual courses yet.</p>
               ) : (
-                completedCourses.map((assignment) => {
+                completedCourses.map((assignment: any) => {
                   const course = assignment.courses;
                   return (
                     <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
