@@ -503,12 +503,12 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
   const { data: { user } } = await supabase.auth.getUser();
 
   // Check if quiz is already completed
-  const { data: progress } = await supabase.from("assignment_progress").select("module_id").eq("assignment_id", assignmentId).eq("module_id", moduleId).single();
+  const { data: progress } = await supabase.from("assignment_progress").select("module_id").eq("assignment_id", assignmentId).eq("module_id", moduleId).maybeSingle();
   const isCompleted = !!progress;
 
   if (isCompleted) {
     // Fetch quiz result if completed
-    const { data: result } = await supabase.from("quiz_attempts").select("score_pct, passed").eq("quiz_id", quizData.id).eq("user_id", user?.id).order("created_at", { ascending: false }).limit(1).single();
+    const { data: result } = await supabase.from("quiz_attempts").select("score_pct, passed").eq("quiz_id", quizData.id).eq("user_id", user?.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
     return (
       <div className="bg-white p-6 rounded-lg border">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz Complete</h2>

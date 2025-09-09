@@ -105,14 +105,14 @@ export default async function TrainAssessPage() {
           .from("profiles")
           .select("full_name, email")
           .eq("id", traineeId)
-          .single();
+          .maybeSingle();
 
         // Get course info separately
         const { data: courseInfo } = await supabase
           .from("courses")
           .select("title")
           .eq("id", courseId)
-          .single();
+          .maybeSingle();
 
         const traineeName = traineeProfile?.full_name || traineeProfile?.email || "Unknown";
         const traineeEmail = traineeProfile?.email || "";
