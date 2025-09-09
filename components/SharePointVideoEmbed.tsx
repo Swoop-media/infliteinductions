@@ -30,7 +30,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
   useEffect(() => {
     setIsMounted(true);
     addDebugLog('Component mounted', { url, courseId });
-  }, []);
+  }, [courseId, url]);
 
   useEffect(() => {
     if (!isMounted || typeof window === 'undefined') return;

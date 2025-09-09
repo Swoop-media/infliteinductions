@@ -38,7 +38,7 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
       addDebugLog(`URL parsing failed: ${error}`);
       return null;
     }
-  }, []);
+  }, [addDebugLog]);
 
   const testVideoAccess = useCallback(async (): Promise<{success: boolean, error?: string}> => {
     try {
@@ -70,7 +70,7 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
       addDebugLog(`Proxy request error: ${error}`);
       return { success: false, error: `Network error: ${error}` };
     }
-  }, [videoUrl]);
+  }, [videoUrl, addDebugLog]);
 
   const checkVideoAccess = useCallback(async () => {
     try {
