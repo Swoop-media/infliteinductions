@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     }
 
     // Check if user has admin role
-    const isAdmin = await hasRole(user.id, "Admin");
+    const isAdmin = await hasRole("Admin");
     if (!isAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
