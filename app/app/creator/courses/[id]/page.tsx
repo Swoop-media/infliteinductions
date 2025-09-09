@@ -678,7 +678,7 @@ export default async function CourseEditorPage(props: {
   searchParams?: Promise<CourseEditorSearchParams>;
 }) {
   const { id: courseId } = await props.params;
-  const searchParams = (await (props.searchParams ?? Promise.resolve({}))) || {};
+  const searchParams: CourseEditorSearchParams = (await (props.searchParams ?? Promise.resolve({}))) || {};
 
   const activeTab = tabKeyFromSearch(searchParams);
   const noticeCode =
