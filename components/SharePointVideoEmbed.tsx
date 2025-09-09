@@ -89,9 +89,9 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
         clearTimeout(authCheckTimeoutRef.current);
       }
     };
-  }, [courseId, isMounted, url, isAuthenticated, authAttempted, addDebugLog, handleAuthenticate]);
+  }, [courseId, isMounted, url, isAuthenticated, authAttempted, handleAuthenticate]);
 
-  const handleAuthenticate = async () => {
+  const handleAuthenticate = useCallback(async () => {
     if (typeof window === 'undefined') return;
 
     try {
@@ -208,7 +208,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
       setAuthError('Failed to open authentication window. Please try again.');
       setIsLoading(false);
     }
-  };
+  }, [url, courseId, isLoading, authAttempted, addDebugLog]);
 
   const handleIframeLoad = () => {
     addDebugLog('SharePoint iframe loaded successfully');

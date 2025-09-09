@@ -112,7 +112,7 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
 
     addDebugLog(`Component mounted with videoUrl: ${videoUrl}`);
     checkVideoAccess();
-  }, [videoUrl, checkVideoAccess, addDebugLog]);
+  }, [videoUrl, checkVideoAccess]);
 
   
 

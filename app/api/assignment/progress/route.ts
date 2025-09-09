@@ -42,9 +42,9 @@ export async function POST(req: NextRequest) {
 
   if (assignmentError) {
     console.error('Assignment query error:', assignmentError);
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Database error while fetching assignment',
-      details: assignmentError.message 
+      details: assignmentError.message
     }, { status: 500 });
   }
 
@@ -113,16 +113,16 @@ export async function POST(req: NextRequest) {
 
       // Try to complete the overall assignment if all modules are done
       try {
-        await supabase.rpc("try_complete_assignment", { 
-          p_assignment_id: assignmentId 
+        await supabase.rpc("try_complete_assignment", {
+          p_assignment_id: assignmentId
         });
       } catch (error) {
         console.warn("Failed to run try_complete_assignment RPC:", error);
       }
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       completed,
       assignmentId,
       moduleId
