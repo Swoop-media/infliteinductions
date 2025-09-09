@@ -578,9 +578,20 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
   );
 }
 
+interface LearnerCourseSearchParams {
+  module?: string;
+  auth?: string;
+  quiz?: string;
+  score?: string;
+  passed?: string;
+  error?: string;
+  preview?: string;
+  success?: string;
+}
+
 export default async function LearnerCoursePage(props: {
   params: Promise<RouteParams>;
-  searchParams?: Promise<{ module?: string; auth?: string; quiz?: string; score?: string; passed?: string; error?: string }>;
+  searchParams?: Promise<LearnerCourseSearchParams>;
 }) {
   const { id: courseId } = await props.params;
   const searchParams = await props.searchParams;

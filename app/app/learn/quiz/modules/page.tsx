@@ -387,13 +387,20 @@ async function submitQuiz(formData: FormData) {
   );
 }
 
+interface QuizModulesSearchParams extends Record<string, string | string[] | undefined> {
+  preview?: string | string[] | undefined;
+  result?: string | string[] | undefined;
+  score?: string | string[] | undefined;
+  error?: string | string[] | undefined;
+}
+
 /** PAGE */
 export default async function QuizPlayerPage(props: {
   params: Promise<{ moduleId: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<QuizModulesSearchParams>;
 }) {
   const { moduleId } = await props.params;
-  const sp = (await (props.searchParams ?? Promise.resolve({}))) || {};
+  const sp: QuizModulesSearchParams = (await (props.searchParams ?? Promise.resolve({}))) || {};
   const preview = ((Array.isArray(sp.preview) ? sp.preview[0] : sp.preview) ?? "") === "1";
   const result = (Array.isArray(sp.result) ? sp.result[0] : sp.result) ?? null;
   const scoreStr = (Array.isArray(sp.score) ? sp.score[0] : sp.score) ?? null;

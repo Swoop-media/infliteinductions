@@ -96,12 +96,17 @@ async function loadMyDocs() {
   return { items, error: null };
 }
 
+interface MyDocumentsSearchParams extends Record<string, string | string[] | undefined> {
+  ok?: string | string[] | undefined;
+  error?: string | string[] | undefined;
+}
+
 export default async function MyDocumentsPage({
   searchParams,
 }: {
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<MyDocumentsSearchParams>;
 }) {
-  const sp = (await (searchParams ?? Promise.resolve({}))) || {};
+  const sp: MyDocumentsSearchParams = (await (searchParams ?? Promise.resolve({}))) || {};
   const ok = (Array.isArray(sp?.ok) ? sp?.ok[0] : sp?.ok) ?? null;
   const err =
     (Array.isArray(sp?.error) ? sp?.error[0] : sp?.error) ?? null;

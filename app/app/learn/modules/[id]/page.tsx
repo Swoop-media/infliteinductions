@@ -226,12 +226,16 @@ async function loadBlocks(moduleId: string) {
   return resp.data ?? [];
 }
 
+interface LearnerModuleSearchParams extends Record<string, string | string[] | undefined> {
+  preview?: string | string[] | undefined;
+}
+
 export default async function LearnerModulePage(props: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<LearnerModuleSearchParams>;
 }) {
   const { id } = await props.params;
-  const sp = (await (props.searchParams ?? Promise.resolve({}))) || {};
+  const sp: LearnerModuleSearchParams = (await (props.searchParams ?? Promise.resolve({}))) || {};
   const preview = ((Array.isArray(sp.preview) ? sp.preview[0] : sp.preview) ?? "") === "1";
 
   const supabase = await createSupabaseServer();
