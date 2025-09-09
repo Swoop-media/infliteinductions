@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { moveModuleAction, deleteModuleAction, moduleEditHref } from "@/app/app/creator/modules/actions";
+import { moveModuleAction, deleteModuleAction } from "@/app/app/creator/modules/actions";
 import { ModuleType } from "@/lib/types/module";
+import { moduleEditHref } from "@/lib/utils/module";
 
 type Row = {
   id: string;

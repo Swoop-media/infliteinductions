@@ -8,12 +8,6 @@ function tabForType(t: ModuleType) {
   return t; // your tabs match the type names for onsite_*; adjust if needed for others
 }
 
-export function moduleEditHref(type: ModuleType, id: string): string {
-  if (type === "onsite_training" || type === "onsite_assessment") return `/app/creator/modules/${id}/onsite`;
-  if (type === "digital_assessment_quiz") return `/app/creator/modules/${id}/quiz`;
-  return `/app/creator/modules/${id}`; // default editor
-}
-
 export async function moveModuleAction(formData: FormData) {
   const supabase = await createSupabaseServer();
 
