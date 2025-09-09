@@ -16,12 +16,12 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
   const [attemptCount, setAttemptCount] = useState(0);
 
-  const addDebugLog = (message: string) => {
+  const addDebugLog = useCallback((message: string) => {
     const timestamp = new Date().toISOString();
     const logEntry = `[${timestamp}] ${message}`;
     console.log('VideoPlayer Debug:', logEntry);
     setDebugLogs(prev => [...prev, logEntry]);
-  };
+  }, []);
 
   const parseSharePointUrl = useCallback((url: string) => {
     try {

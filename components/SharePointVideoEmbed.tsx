@@ -20,12 +20,12 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
   const authCheckTimeoutRef = useRef<NodeJS.Timeout>();
 
   // Debug logging function
-  const addDebugLog = (message: string, data?: any) => {
+  const addDebugLog = useCallback((message: string, data?: any) => {
     const timestamp = new Date().toISOString().substring(11, 23);
     const logMessage = `[${timestamp}] ${message}`;
     console.log(logMessage, data || '');
     setDebugLogs(prev => [...prev, logMessage + (data ? ` | ${JSON.stringify(data)}` : '')]);
-  };
+  }, []);
 
   useEffect(() => {
     setIsMounted(true);

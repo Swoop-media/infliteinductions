@@ -55,13 +55,13 @@ async function saveRequirementResponses(moduleId: string, assignmentId: string, 
 }
 
 interface CoursePlayerProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
-  searchParams: {
+  }>;
+  searchParams: Promise<{
     trainee?: string;
     type?: 'training' | 'assessment';
-  };
+  }>;
 }
 
 export default async function CoursePlayerPage({ params, searchParams }: CoursePlayerProps) {
