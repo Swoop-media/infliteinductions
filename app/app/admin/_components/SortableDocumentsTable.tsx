@@ -14,10 +14,10 @@ type Document = {
     email: string | null;
   } | null;
   courses: {
-    title: string;
+    title: string | null;
   } | null;
   course_modules: {
-    title: string;
+    title: string | null;
   } | null;
 };
 
