@@ -206,6 +206,7 @@ export async function POST(req: Request) {
       type: "course_assigned",
       title: `Course Assigned: ${course.title}`,
       body: `You have been enrolled in "${course.title}" by ${assignerName}. You can start learning now!`,
+      sendTeams: true,
       data: {
         courseTitle: course.title,
         courseId: course.id,

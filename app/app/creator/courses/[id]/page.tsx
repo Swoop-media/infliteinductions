@@ -541,6 +541,7 @@ async function assignUserAction(formData: FormData) {
       type: "enrolment_approved", // Use existing enum value
       title: notificationTitle,
       body: notificationBody,
+      sendTeams: true,
       data: {
         courseTitle,
         courseId,
@@ -626,6 +627,7 @@ async function revokeAssignmentAction(formData: FormData) {
         type: "enrolment_revoked", // Use existing enum value
         title: `Assignment Revoked: ${courseTitle}`,
         body: `Your ${roleDisplayName} assignment for "${courseTitle}" has been revoked by ${revokerName}.`,
+        sendTeams: true,
         data: {
           courseTitle,
           courseId,

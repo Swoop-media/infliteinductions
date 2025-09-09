@@ -76,6 +76,7 @@ export async function POST(req: Request) {
       type: "role_granted",
       title: `Role Granted: ${roleRow.name}`,
       body: `You have been granted the "${roleRow.name}" role by ${granterName}.`,
+      sendTeams: true,
       data: {
         roleName: roleRow.name,
         roleId: roleRow.id,
