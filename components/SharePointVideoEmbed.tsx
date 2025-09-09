@@ -30,7 +30,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
   useEffect(() => {
     setIsMounted(true);
     addDebugLog('Component mounted', { url, courseId });
-  }, [courseId, url]);
+  }, [courseId, url, addDebugLog]);
 
   useEffect(() => {
     if (!isMounted || typeof window === 'undefined') return;
@@ -89,7 +89,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
         clearTimeout(authCheckTimeoutRef.current);
       }
     };
-  }, [courseId, isMounted, url, isAuthenticated, authAttempted]);
+  }, [courseId, isMounted, url, isAuthenticated, authAttempted, addDebugLog, handleAuthenticate]);
 
   const handleAuthenticate = async () => {
     if (typeof window === 'undefined') return;

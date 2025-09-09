@@ -100,7 +100,7 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
       setAuthError(error instanceof Error ? error.message : 'Unknown error');
       setAuthStatus('needs_auth');
     }
-  }, [videoUrl, parseSharePointUrl, testVideoAccess]);
+  }, [videoUrl, parseSharePointUrl, testVideoAccess, addDebugLog]);
 
   useEffect(() => {
     if (!videoUrl) {
@@ -112,7 +112,7 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
 
     addDebugLog(`Component mounted with videoUrl: ${videoUrl}`);
     checkVideoAccess();
-  }, [videoUrl, checkVideoAccess]); // Added checkVideoAccess to dependencies
+  }, [videoUrl, checkVideoAccess, addDebugLog]);
 
   
 

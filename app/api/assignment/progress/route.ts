@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
         .eq("course_id", assignmentCheck.course_id)
         .in("role", ["onsite_trainer", "onsite_assessor"]);
 
-      isTrainerOrAssessor = trainerRoles ? trainerRoles.length > 0 : false;
+      isTrainerOrAssessor = Boolean(trainerRoles && trainerRoles.length > 0);
     }
 
     if (!isTrainee && !isTrainerOrAssessor) {
