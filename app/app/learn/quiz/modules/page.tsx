@@ -302,7 +302,7 @@ async function submitQuiz(formData: FormData) {
     const correctIds = correctMap.get(qid) ?? [];
     const isCorrect = sel && correctIds.includes(sel);
     if (isCorrect) correctCount++;
-    answers[qid] = { selected: sel || undefined, correct: isCorrect };
+    answers[qid] = { selected: sel || undefined, correct: !!isCorrect };
   }
 
   const total = qIds.length || 1;
@@ -418,11 +418,20 @@ export default async function QuizPlayerPage(props: {
   }
 
   const { module, quiz, enrolment, qWithOptions, attempts, usedLegacy } = data;
+  if (!module || !quiz || !qWithOptions || !attempts) {
+    return (
+      <div className="p-6">
+        <h1 className="text-xl font-semibold">Quiz</h1>
+        <p className="text-red-600">Failed to load quiz data</p>
+        <Link href="/app/courses" className="underline">Back</Link>
+      </div>
+    );
+  }
   const timeLimit = quiz.time_limit_seconds ?? null;
 
   // Attempt guard (best-effort; if table missing, attempts is [])
-  const attemptsUsed = attempts.length;
-  const maxAttempts = quiz.max_attempts ?? null;
+  const attemptsUsed = attempts?.length ?? 0;
+  const maxAttempts = quiz?.max_attempts ?? null;
   const attemptsLeft = maxAttempts == null ? null : Math.max(0, maxAttempts - attemptsUsed);
   const atLimit = !preview && maxAttempts != null && attemptsLeft === 0;
 
@@ -431,7 +440,7 @@ export default async function QuizPlayerPage(props: {
       {/* header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{module.title || "Quiz"}</h1>
+          <h1 className="text-2xl font-bold">{module?.title || "Quiz"}</h1>
           <div className="text-xs text-gray-500">Digital assessment</div>
           {preview && (
             <div className="mt-2 rounded border border-yellow-300 bg-yellow-50 px-2 py-1 text-xs text-yellow-900 inline-block">
@@ -440,7 +449,7 @@ export default async function QuizPlayerPage(props: {
           )}
         </div>
         <Link
-          href={`/app/learn/courses/${module.course_id}?${preview ? "preview=1" : ""}`}
+          href={`/app/learn/courses/${module?.course_id}?${preview ? "preview=1" : ""}`}
           className="rounded-md border px-3 py-1 text-sm"
         >
           Back to course
@@ -480,7 +489,7 @@ export default async function QuizPlayerPage(props: {
       <section className="rounded-xl border bg-white p-4 space-y-4">
         {/* Meta */}
         <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
-          <div>Pass mark: {quiz.pass_mark ?? 80}%</div>
+          <div>Pass mark: {quiz?.pass_mark ?? 80}%</div>
           {maxAttempts != null && (
             <div>
               Attempts: {attemptsUsed}/{maxAttempts}
@@ -496,17 +505,17 @@ export default async function QuizPlayerPage(props: {
 
         {/* Questions form */}
         <form action={submitQuiz} className="space-y-6">
-          <input type="hidden" name="module_id" value={module.id} />
-          <input type="hidden" name="quiz_id" value={quiz.id} />
-          <input type="hidden" name="course_id" value={module.course_id} />
+          <input type="hidden" name="module_id" value={module?.id || ''} />
+          <input type="hidden" name="quiz_id" value={quiz?.id || ''} />
+          <input type="hidden" name="course_id" value={module?.course_id || ''} />
           <input type="hidden" name="preview" value={preview ? "1" : ""} />
 
-          {qWithOptions.length === 0 ? (
+          {(qWithOptions?.length ?? 0) === 0 ? (
             <p className="text-sm text-gray-500">No questions yet.</p>
           ) : (
             <ul className="space-y-6">
               {await Promise.all(
-                qWithOptions.map(async ({ question, options, imageUrl }, idx) => (
+                (qWithOptions || []).map(async ({ question, options, imageUrl }, idx) => (
                   <li key={question.id} className="rounded-md border p-3 space-y-3">
                     <div className="text-sm font-medium">
                       {idx + 1}.{" "}
@@ -547,7 +556,7 @@ export default async function QuizPlayerPage(props: {
 
           <div className="flex items-center justify-between pt-2">
             <div className="text-xs text-gray-500">
-              {preview ? "Preview run — not recorded." : attempts.length ? `Last attempt: ${new Date(attempts[0].created_at ?? Date.now()).toLocaleString()}` : ""}
+              {preview ? "Preview run — not recorded." : (attempts?.length ?? 0) > 0 ? `Last attempt: ${new Date(attempts?.[0]?.created_at ?? Date.now()).toLocaleString()}` : ""}
             </div>
             <button
               id="submitBtn"
