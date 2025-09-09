@@ -96,6 +96,11 @@ async function runCleanupAction(formData: FormData) {
 
   // Update in small chunks to be gentle
   const chunkSize = 200;
+  if (!rows || rows.length === 0) {
+    redirect(`/app/admin/tools/signed-url-cleanup?ok=cleaned_0`);
+    return;
+  }
+  
   for (let i = 0; i < rows.length; i += chunkSize) {
     const chunk = rows.slice(i, i + chunkSize);
     // Prepare parallel updates
