@@ -27,9 +27,12 @@ export default async function AssessPage({
   params,
   searchParams,
 }: {
-  params: { enrolmentId: string };
+  params: Promise<{ enrolmentId: string }>;
   searchParams: Promise<{ module?: string }>;
 }) {
+  const { enrolmentId } = await params;
+  const { module: moduleParam } = await searchParams;
+
   const supabase = await createSupabaseServer();
 
   // Require login
@@ -40,7 +43,7 @@ export default async function AssessPage({
   const { data: enrol, error: eErr } = await supabase
     .from("enrolments")
     .select("*")
-    .eq("id", params.enrolmentId)
+    .eq("id", enrolmentId)
     .maybeSingle<EnrolmentRow>();
   if (eErr || !enrol) notFound();
 
@@ -60,7 +63,7 @@ export default async function AssessPage({
   const trainingSchema = schemas.find((s) => s.module === "onsite_training")?.schema || [];
   const assessmentSchema = schemas.find((s) => s.module === "onsite_assessment")?.schema || [];
 
-  const moduleParam = (searchParams?.module as "onsite_training" | "onsite_assessment" | undefined) || "onsite_training";
+  const activeModule = (moduleParam as "onsite_training" | "onsite_assessment" | undefined) || "onsite_training";
 
   // ---------- SERVER ACTION (service-side uploads + upsert) ----------
   async function submitAssessorForm(fd: FormData) {
@@ -73,7 +76,7 @@ export default async function AssessPage({
     const answers_json = String(fd.get("answers_json") || "{}");
 
     if (!enrolment_id || !module) {
-      redirect(`/app/assess/${params.enrolmentId}?error=missing_fields`);
+      redirect(`/app/assess/${enrolmentId}?error=missing_fields`);
     }
 
     // Parse answers posted from client (non-file values)
@@ -122,7 +125,7 @@ export default async function AssessPage({
         upsert: false,
       });
       if (up.error) {
-        redirect(`/app/assess/${params.enrolmentId}?error=${encodeURIComponent("Upload failed: " + up.error.message)}`);
+        redirect(`/app/assess/${enrolmentId}?error=${encodeURIComponent("Upload failed: " + up.error.message)}`);
       }
 
       // Record storage location in answers
@@ -135,7 +138,7 @@ export default async function AssessPage({
       .upsert([{ enrolment_id, module, answers }], { onConflict: "enrolment_id,module" });
 
     if (error) {
-      redirect(`/app/assess/${params.enrolmentId}?error=${encodeURIComponent(error.message)}`);
+      redirect(`/app/assess/${enrolmentId}?error=${encodeURIComponent(error.message)}`);
     }
 
     // Mark module as completed in module_progress
@@ -167,9 +170,9 @@ export default async function AssessPage({
       }
     }
 
-    revalidatePath(`/app/assess/${params.enrolmentId}`);
+    revalidatePath(`/app/assess/${enrolmentId}`);
     revalidatePath(`/app/train-assess`);
-    redirect(`/app/assess/${params.enrolmentId}?ok=submitted&module=${module}`);
+    redirect(`/app/assess/${enrolmentId}?ok=submitted&module=${module}`);
   }
 
   // ---------- UI ----------
@@ -178,7 +181,7 @@ export default async function AssessPage({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-semibold">Assessment — {course?.title || "Course"}</h2>
-          <p className="text-xs text-muted-foreground">Enrolment: {params.enrolmentId}</p>
+          <p className="text-xs text-muted-foreground">Enrolment: {enrolmentId}</p>
         </div>
         <Link href="/app" className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50">
           Back
@@ -186,19 +189,19 @@ export default async function AssessPage({
       </div>
 
       <div className="flex gap-2">
-        <Tab href={`/app/assess/${params.enrolmentId}?module=onsite_training`} active={moduleParam === "onsite_training"}>
+        <Tab href={`/app/assess/${enrolmentId}?module=onsite_training`} active={activeModule === "onsite_training"}>
           Onsite training
         </Tab>
-        <Tab href={`/app/assess/${params.enrolmentId}?module=onsite_assessment`} active={moduleParam === "onsite_assessment"}>
+        <Tab href={`/app/assess/${enrolmentId}?module=onsite_assessment`} active={activeModule === "onsite_assessment"}>
           Onsite assessment
         </Tab>
       </div>
 
-      {moduleParam === "onsite_training" ? (
+      {activeModule === "onsite_training" ? (
         <Section title="Onsite training form">
           <AssessorFormRenderer
             schema={trainingSchema as any[]}
-            enrolmentId={params.enrolmentId}
+            enrolmentId={enrolmentId}
             module="onsite_training"
             onSubmitToServer={submitAssessorForm}
           />
@@ -207,7 +210,7 @@ export default async function AssessPage({
         <Section title="Onsite assessment form">
           <AssessorFormRenderer
             schema={assessmentSchema as any[]}
-            enrolmentId={params.enrolmentId}
+            enrolmentId={enrolmentId}
             module="onsite_assessment"
             onSubmitToServer={submitAssessorForm}
           />
