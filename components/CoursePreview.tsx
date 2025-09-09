@@ -8,7 +8,7 @@ type Module = {
   id: string;
   course_id: string;
   title: string;
-  type: "digital_training" | "digital_assessment_quiz" | "onsite_training" | "onsite_assessment";
+  type: "digital_training" | "digital_assessment_quiz" | "onsite_training" | "onsite_assessment" | "request_document";
   order_index: number;
   stage?: string | null;
 };
@@ -16,7 +16,7 @@ type Module = {
 type Block = {
   id: string;
   module_id: string;
-  kind: "rich_text" | "file" | "video_embed" | "link";
+  kind: "rich_text" | "file" | "video_embed" | "link" | "request_document" | "quiz_questions";
   data: any;
   order_index: number;
 };
@@ -24,7 +24,7 @@ type Block = {
 type Page = {
   module: Module;
   block?: Block;
-  pageKind: "content_block" | "quiz" | "onsite_training" | "onsite_assessment";
+  pageKind: "content_block" | "quiz" | "onsite_training" | "onsite_assessment" | "request_document";
   indexLabel: string;
 };
 
@@ -119,6 +119,15 @@ function PageView({ page }: { page: Page }) {
       <div className="space-y-3">
         <h3 className="text-lg font-semibold">Onsite Assessment: {module.title}</h3>
         <p className="text-sm text-gray-600">Assessed in person. Show instructions/prereqs here.</p>
+      </div>
+    );
+  }
+
+  if (pageKind === "request_document") {
+    return (
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold">Document Request: {module.title}</h3>
+        <p className="text-sm text-gray-600">This module requests document uploads from learners.</p>
       </div>
     );
   }
@@ -248,6 +257,12 @@ export default function CoursePreview({
           module: m,
           pageKind: "onsite_assessment",
           indexLabel: `Onsite Assessment ${moduleCounter}`,
+        });
+      } else if (m.type === "request_document") {
+        result.push({
+          module: m,
+          pageKind: "request_document",
+          indexLabel: `Document Request ${moduleCounter}`,
         });
       }
     }
