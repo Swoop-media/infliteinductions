@@ -28,7 +28,10 @@ DROP TRIGGER IF EXISTS enrolment_notify_trigger ON public.enrolments;
 DROP TRIGGER IF EXISTS enrolment_request_notification_trigger ON public.enrolments;
 DROP TRIGGER IF EXISTS notify_enrolment_request_trigger ON public.enrolments;
 
--- Drop the trigger function
+-- First drop the trigger that depends on the function
+DROP TRIGGER IF EXISTS trg_enrolment_insert_notify ON public.course_enrolments;
+
+-- Then drop the function
 DROP FUNCTION IF EXISTS public.on_enrolment_insert_notify();
 
 -- Fix on_enrolment_insert_notify function by adding fixed search_path
