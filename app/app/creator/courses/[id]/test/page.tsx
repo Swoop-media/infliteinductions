@@ -1,7 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import CoursePreview from "@/components/CoursePreview";
-import SimpleVideoPlayer from "@/components/SimpleVideoPlayer"; // Updated import
 
 type RouteParams = { id: string };
 
@@ -60,7 +59,6 @@ export default async function TestCoursePage(props: { params: Promise<RouteParam
         modules={modules ?? []}
         blocks={blocks ?? []}
         mode="preview"  // no persistence in preview
-        videoPlayerComponent={SimpleVideoPlayer} // Pass SimpleVideoPlayer here
       />
     </div>
   );
