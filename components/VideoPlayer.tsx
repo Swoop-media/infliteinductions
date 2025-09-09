@@ -23,49 +23,7 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
     setDebugLogs(prev => [...prev, logEntry]);
   };
 
-  const checkVideoAccess = useCallback(async () => {
-    try {
-      addDebugLog('Starting video access check...');
-      setAuthStatus('checking');
-      setAuthError(null);
-
-      // Parse the SharePoint URL
-      const urlInfo = parseSharePointUrl(videoUrl);
-      addDebugLog(`Parsed URL info: ${JSON.stringify(urlInfo)}`);
-
-      // Try a simple fetch to see if we can access the video
-      const testResult = await testVideoAccess();
-
-      if (testResult.success) {
-        addDebugLog('Video access successful - can embed directly');
-        setAuthStatus('authenticated');
-        setVideoSrc(videoUrl);
-      } else {
-        addDebugLog(`Video access failed: ${testResult.error}`);
-        setAuthStatus('needs_auth');
-        setAuthError(testResult.error || 'Authentication required');
-      }
-
-    } catch (error) {
-      addDebugLog(`Video access check failed: ${error}`);
-      setAuthError(error instanceof Error ? error.message : 'Unknown error');
-      setAuthStatus('needs_auth');
-    }
-  }, [videoUrl]); // Dependency array includes videoUrl
-
-  useEffect(() => {
-    if (!videoUrl) {
-      addDebugLog('No video URL provided');
-      setAuthError('No video URL provided');
-      setAuthStatus('error');
-      return;
-    }
-
-    addDebugLog(`Component mounted with videoUrl: ${videoUrl}`);
-    checkVideoAccess();
-  }, [videoUrl, checkVideoAccess]); // Added checkVideoAccess to dependencies
-
-  const parseSharePointUrl = (url: string) => {
+  const parseSharePointUrl = useCallback((url: string) => {
     try {
       const urlObj = new URL(url);
       return {
@@ -80,9 +38,9 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
       addDebugLog(`URL parsing failed: ${error}`);
       return null;
     }
-  };
+  }, []);
 
-  const testVideoAccess = async (): Promise<{success: boolean, error?: string}> => {
+  const testVideoAccess = useCallback(async (): Promise<{success: boolean, error?: string}> => {
     try {
       addDebugLog('Testing video access with proxy...');
       const response = await fetch('/api/video-proxy', {
@@ -112,7 +70,51 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
       addDebugLog(`Proxy request error: ${error}`);
       return { success: false, error: `Network error: ${error}` };
     }
-  };
+  }, [videoUrl]);
+
+  const checkVideoAccess = useCallback(async () => {
+    try {
+      addDebugLog('Starting video access check...');
+      setAuthStatus('checking');
+      setAuthError(null);
+
+      // Parse the SharePoint URL
+      const urlInfo = parseSharePointUrl(videoUrl);
+      addDebugLog(`Parsed URL info: ${JSON.stringify(urlInfo)}`);
+
+      // Try a simple fetch to see if we can access the video
+      const testResult = await testVideoAccess();
+
+      if (testResult.success) {
+        addDebugLog('Video access successful - can embed directly');
+        setAuthStatus('authenticated');
+        setVideoSrc(videoUrl);
+      } else {
+        addDebugLog(`Video access failed: ${testResult.error}`);
+        setAuthStatus('needs_auth');
+        setAuthError(testResult.error || 'Authentication required');
+      }
+
+    } catch (error) {
+      addDebugLog(`Video access check failed: ${error}`);
+      setAuthError(error instanceof Error ? error.message : 'Unknown error');
+      setAuthStatus('needs_auth');
+    }
+  }, [videoUrl, parseSharePointUrl, testVideoAccess]);
+
+  useEffect(() => {
+    if (!videoUrl) {
+      addDebugLog('No video URL provided');
+      setAuthError('No video URL provided');
+      setAuthStatus('error');
+      return;
+    }
+
+    addDebugLog(`Component mounted with videoUrl: ${videoUrl}`);
+    checkVideoAccess();
+  }, [videoUrl, checkVideoAccess]); // Added checkVideoAccess to dependencies
+
+  
 
   const openSharePointAuth = () => {
     addDebugLog('Opening SharePoint authentication in new tab');

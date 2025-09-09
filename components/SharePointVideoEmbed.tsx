@@ -89,7 +89,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
         clearTimeout(authCheckTimeoutRef.current);
       }
     };
-  }, [courseId, isMounted, url]); // Removed dependency on `isAuthenticated` and `authAttempted` as they are managed within the effect and can cause re-renders.
+  }, [courseId, isMounted, url, isAuthenticated, authAttempted]);
 
   const handleAuthenticate = async () => {
     if (typeof window === 'undefined') return;

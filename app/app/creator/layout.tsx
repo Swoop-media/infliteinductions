@@ -56,6 +56,6 @@ export default async function CreatorLayout({ children }: { children: ReactNode 
  * If you already have "@/lib/utils" with cn(), delete this and the import above.
  */
 // @ts-ignore
-export function cn(...classes: Array<string | false | null | undefined>) {
+function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
