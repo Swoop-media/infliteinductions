@@ -109,7 +109,7 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("id", assignmentId)
     .eq("course_id", courseId)
     .eq("role", "trainee")
-    .single();
+    .maybeSingle();
 
   // Get profile separately if assignment found
   let profile = null;
