@@ -4,8 +4,8 @@ import { headers } from "next/headers";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 
-function makeURL(path: string): URL {
-  const h = headers();
+async function makeURL(path: string): Promise<URL> {
+  const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   return new URL(path, `${proto}://${host}`);
@@ -13,7 +13,7 @@ function makeURL(path: string): URL {
 
 export async function POST(req: Request) {
   const isAdmin = await hasRole("Admin");
-  if (!isAdmin) return NextResponse.redirect(makeURL("/app/home"));
+  if (!isAdmin) return NextResponse.redirect(await makeURL("/app/home"));
 
   const supabase = await createSupabaseServer();
   const form = await req.formData();
@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const department = String(form.get("department") || "");
   const job_description = String(form.get("job_description") || "");
 
-  const back = makeURL(`/app/admin/users/${user_id}`);
+  const back = await makeURL(`/app/admin/users/${user_id}`);
   if (!user_id) {
     back.searchParams.set("error", "Missing user_id");
     return NextResponse.redirect(back);

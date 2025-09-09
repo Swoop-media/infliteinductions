@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   // Authz: only Admins can change roles
   const isAdmin = await hasRole("Admin");
   if (!isAdmin) {
-    const back = headers().get("referer") || "/app/home";
+    const back = (await headers()).get("referer") || "/app/home";
     return NextResponse.redirect(new URL(`${back}?error=forbidden`, req.url));
   }
 
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   const action = String(form.get("action") || "");
 
   if (!user_id || !role_name || !action) {
-    const back = headers().get("referer") || "/app/admin/users";
+    const back = (await headers()).get("referer") || "/app/admin/users";
     return NextResponse.redirect(new URL(`${back}?error=missing+fields`, req.url));
   }
 
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     // ignore notification errors
   }
 
-  const back = headers().get("referer") || "/app/admin/users";
+  const back = (await headers()).get("referer") || "/app/admin/users";
   const dest = new URL(back, req.url);
   if (rpcErr) dest.searchParams.set("error", rpcErr);
   else dest.searchParams.set("ok", "1");

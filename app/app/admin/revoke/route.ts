@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createSupabaseServer } from "@/lib/supabase/server";
 
-function makeURL(path: string): URL {
-  const h = headers();
+async function makeURL(path: string): Promise<URL> {
+  const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   return new URL(path, `${proto}://${host}`);
@@ -14,12 +14,12 @@ export async function POST(req: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.redirect(makeURL("/"));
+  if (!user) return NextResponse.redirect(await makeURL("/"));
 
   const form = await req.formData();
   const enrolment_id = String(form.get("enrolment_id") || "").trim();
 
-  const to = makeURL("/app/admin?tab=enrolments");
+  const to = await makeURL("/app/admin?tab=enrolments");
   if (!enrolment_id) {
     to.searchParams.set("error", "Missing enrolment_id");
     return NextResponse.redirect(to);
