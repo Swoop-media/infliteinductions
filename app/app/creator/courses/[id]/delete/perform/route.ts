@@ -12,7 +12,7 @@ async function makeURL(path: string): Promise<URL> {
 
 // Optional: if someone GETs /perform by mistake, just send them back nicely.
 export async function GET() {
-  const to = makeURL("/app/creator");
+  const to = await makeURL("/app/creator");
   to.searchParams.set("error", "Invalid method.");
   return NextResponse.redirect(to);
 }
@@ -29,7 +29,7 @@ export async function POST(
     || (await hasRole("Course Creators"))
     || (await hasRole("Creator"));
 
-  const to = makeURL("/app/creator");
+  const to = await makeURL("/app/creator");
   if (!can) {
     to.searchParams.set("error", "Not authorized.");
     return NextResponse.redirect(to);
