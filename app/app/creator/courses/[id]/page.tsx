@@ -598,7 +598,7 @@ async function revokeAssignmentAction(formData: FormData) {
   if (!user) throw new Error("Not authenticated");
 
   // Get assignment details before deletion for notification
-  let assignmentDetails = null;
+  let assignmentDetails: { user_id: string; role: "trainee" | "onsite_trainer" | "onsite_assessor"; course_id: string } | null = null;
   try {
     const { data: assignment } = await supabase
       .from("course_assignments")
