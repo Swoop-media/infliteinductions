@@ -1,4 +1,6 @@
-import { ConfigurationBotFrameworkAuthentication, CloudAdapter } from "botbuilder";
+import { ConfigurationBotFrameworkAuthentication, CloudAdapter, TurnContext } from "botbuilder";
+import { createClient } from "@supabase/supabase-js";
+import { NextRequest } from "next/server";
 
 const botAuth = new ConfigurationBotFrameworkAuthentication({
   MicrosoftAppId: process.env.MICROSOFT_APP_ID!,
