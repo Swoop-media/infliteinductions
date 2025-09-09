@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     userId,
     courseId,
     timestamp: new Date().toISOString(),
-    checks: {}
+    checks: {} as any
   };
 
   try {
