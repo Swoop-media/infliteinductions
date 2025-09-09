@@ -391,7 +391,7 @@ export default async function MyProfilePage() {
                     <div key={assignment.id} className="rounded-lg border p-4 bg-green-50">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="font-medium">{auth.title}</h3>
+                          <h3 className="font-medium">{auth?.title || 'Untitled Authorization'}</h3>
                           <p className="text-sm text-gray-600">
                             Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
                           </p>
@@ -444,7 +444,7 @@ export default async function MyProfilePage() {
                   return (
                     <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
                       <div>
-                        <h3 className="font-medium">{course.title ?? "Untitled"}</h3>
+                        <h3 className="font-medium">{course?.title ?? "Untitled"}</h3>
                         <p className="text-sm text-gray-600">
                           Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
                         </p>
@@ -452,7 +452,7 @@ export default async function MyProfilePage() {
                       <div className="flex items-center gap-2">
                         <Pill tone="green">Completed</Pill>
                         <Link
-                          href={`/app/learn/courses/${course.id}`}
+                          href={`/app/learn/courses/${course?.id}`}
                           className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
                         >
                           View

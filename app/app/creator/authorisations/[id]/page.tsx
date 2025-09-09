@@ -316,9 +316,20 @@ async function revokeAssignmentAction(form: FormData) {
 }
 
 /** Page */
+// Define proper types for search parameters
+type SearchParamsType = {
+  notice?: string | string[];
+  error?: string | string[];
+  tab?: string | string[];
+  q?: string | string[];
+  dept?: string | string[];
+  tag?: string | string[];
+  [key: string]: string | string[] | undefined;
+};
+
 export default async function Page(props: {
   params: Promise<{ id: string }>;
-  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+  searchParams?: Promise<SearchParamsType>;
 }) {
   const { id } = await props.params;
 
@@ -327,7 +338,7 @@ export default async function Page(props: {
     redirect("/app/creator/authorisations/new");
   }
 
-  const search = (await (props.searchParams ?? Promise.resolve({}))) || {};
+  const search: SearchParamsType = (await (props.searchParams ?? Promise.resolve({}))) || {};
   const activeTab = tabKeyFromSearch(search);
   const banner = noticeMessage(
     (Array.isArray(search.notice) ? search.notice[0] : search.notice) || undefined

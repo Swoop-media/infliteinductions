@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
 
     // Find user by email
-    const existingAuthUser = users?.find(u => u.email === email);
+    const existingAuthUser = users?.find((u: any) => u.email === email);
 
     if (existingAuthUser) {
       // User exists, use their ID
