@@ -53,20 +53,21 @@ export async function POST(request: NextRequest) {
     if (assignments) {
       for (const assignment of assignments) {
         // Explicit type annotation to prevent type inference issues
-        const course = (assignment as any).courses as { 
+        const typedAssignment = assignment as any;
+        const course = typedAssignment.courses as { 
           title: string; 
           valid_for_days: number; 
           retake_reminder_days: number 
         };
         if (course.valid_for_days && course.retake_reminder_days) {
-          const completedDate = new Date(assignment.completed_at);
+          const completedDate = new Date(typedAssignment.completed_at);
           const dueDate = new Date(completedDate);
           dueDate.setDate(dueDate.getDate() + course.valid_for_days);
           const daysUntilExpiry = Math.ceil((dueDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
           
-          console.log(`Assignment ${assignment.id}:`, {
+          console.log(`Assignment ${typedAssignment.id}:`, {
             course: course.title,
-            completedAt: assignment.completed_at,
+            completedAt: typedAssignment.completed_at,
             dueDate: dueDate.toISOString().split('T')[0],
             daysUntilExpiry,
             validForDays: course.valid_for_days,
@@ -100,13 +101,16 @@ export async function POST(request: NextRequest) {
       expiredResult: expiredResult.error ? { error: expiredResult.error.message } : { success: true },
       debug: {
         assignmentsFound: assignments?.length || 0,
-        assignments: assignments?.map(a => ({
-          id: a.id,
-          course: (a.courses as any)?.title,
-          completed: a.completed_at,
-          validDays: (a.courses as any)?.valid_for_days,
-          reminderDays: (a.courses as any)?.retake_reminder_days
-        })) || []
+        assignments: assignments?.map(a => {
+          const typedA = a as any;
+          return {
+            id: typedA.id,
+            course: (typedA.courses as any)?.title,
+            completed: typedA.completed_at,
+            validDays: (typedA.courses as any)?.valid_for_days,
+            reminderDays: (typedA.courses as any)?.retake_reminder_days
+          };
+        }) || []
       }
     });
 
