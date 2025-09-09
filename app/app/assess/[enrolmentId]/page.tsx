@@ -55,10 +55,13 @@ export default async function AssessPage({
     .maybeSingle<{ id: string; title: string | null }>();
 
   // Load schemas
-  const { data: schemas = [] } = await supabase
+  const { data: schemasData } = await supabase
     .from("assessor_form_schemas")
     .select("*")
     .eq("course_id", enrol.course_id) as { data: SchemaRow[] | null };
+
+  // Add null check for schemas variable before using .find() method
+  const schemas = schemasData || [];
 
   const trainingSchema = schemas.find((s) => s.module === "onsite_training")?.schema || [];
   const assessmentSchema = schemas.find((s) => s.module === "onsite_assessment")?.schema || [];
