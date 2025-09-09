@@ -120,7 +120,7 @@ async function loadCourse(courseId: string): Promise<LoadCourseResult> {
     .from("courses")
     .select("*")
     .eq("id", courseId)
-    .single();
+    .maybeSingle();
 
   if (error || !course) {
     return { user, course: null, err: error?.message ?? "Course not found" };
