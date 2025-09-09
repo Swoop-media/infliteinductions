@@ -1,4 +1,4 @@
-import { ConfigurationBotFrameworkAuthentication } from "botbuilder";
+import { ConfigurationBotFrameworkAuthentication, CloudAdapter } from "botbuilder";
 
 const botAuth = new ConfigurationBotFrameworkAuthentication({
   MicrosoftAppId: process.env.MICROSOFT_APP_ID!,
