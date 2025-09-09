@@ -43,7 +43,7 @@ export default async function TeamsDebugPage() {
               id: user.id, 
               email: user.email,
               profile: profile,
-              roles: userRoles?.map(ur => ur.roles?.name)
+              roles: userRoles?.map(ur => (ur as any)?.roles?.name).filter(Boolean)
             }, null, 2)}
           </pre>
         </div>
