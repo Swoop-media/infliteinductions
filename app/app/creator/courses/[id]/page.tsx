@@ -89,7 +89,28 @@ function noticeMessage(code?: string) {
 }
 
 /** Server loaders */
-async function loadCourse(courseId: string) {
+type CourseRow = {
+  id: string;
+  title: string;
+  description: string | null;
+  status: "draft" | "published" | "archived";
+  valid_for_days: number | null;
+  retake_reminder_days: number | null;
+  notification_lead_days: number | null;
+  department: string | null;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+type LoadCourseResult = {
+  user: any;
+  course: CourseRow | null;
+  err: string | null;
+};
+
+async function loadCourse(courseId: string): Promise<LoadCourseResult> {
   "use server";
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
@@ -102,9 +123,9 @@ async function loadCourse(courseId: string) {
     .single();
 
   if (error || !course) {
-    return { user, course: null as any, err: error?.message ?? "Course not found" };
+    return { user, course: null, err: error?.message ?? "Course not found" };
   }
-  return { user, course, err: null as string | null };
+  return { user, course: course as CourseRow, err: null };
 }
 
 async function loadModules(courseId: string, type?: ModuleType) {
