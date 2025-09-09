@@ -120,7 +120,7 @@ export async function POST(req: Request) {
   // Clean up any existing enrollment records to start fresh
   const { createSupabaseService } = await import("@/lib/supabase/service");
   const supabaseService = await createSupabaseService();
-  
+
   // Clean up both enrolment tables
   const { error: cleanupError1 } = await supabaseService
     .from("course_enrolments")
@@ -162,7 +162,7 @@ export async function POST(req: Request) {
   // Verify the assignment was created
   if (!error && assignmentData && assignmentData.length > 0) {
     console.log("✅ Course assignment created successfully:", assignmentData[0]);
-    
+
     // Double-check by querying it back
     const { data: verifyData, error: verifyError } = await supabase
       .from("course_assignments")
@@ -171,7 +171,7 @@ export async function POST(req: Request) {
       .eq("course_id", course_id)
       .eq("role", "trainee")
       .single();
-    
+
     console.log("Assignment verification:", {
       verifyData,
       verifyError: verifyError?.message || null

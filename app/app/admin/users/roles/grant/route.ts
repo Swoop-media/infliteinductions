@@ -61,16 +61,16 @@ export async function POST(req: Request) {
   // Send notification to user about role being granted
   try {
     const { createNotification } = await import("@/app/app/_actions/notifications");
-    
+
     // Get granter name
     const { data: granter } = await supabase
       .from("profiles")
       .select("first_name, last_name")
       .eq("id", user.id)
       .maybeSingle();
-    
+
     const granterName = granter ? `${granter.first_name} ${granter.last_name}`.trim() : "Admin";
-    
+
     await createNotification({
       recipientUserId: user_id,
       type: "role_granted",
