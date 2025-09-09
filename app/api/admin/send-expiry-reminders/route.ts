@@ -52,7 +52,12 @@ export async function POST(request: NextRequest) {
     console.log("Found assignments:", assignments?.length || 0);
     if (assignments) {
       for (const assignment of assignments) {
-        const course = assignment.courses as any;
+        // Explicit type annotation to prevent type inference issues
+        const course = (assignment as any).courses as { 
+          title: string; 
+          valid_for_days: number; 
+          retake_reminder_days: number 
+        };
         if (course.valid_for_days && course.retake_reminder_days) {
           const completedDate = new Date(assignment.completed_at);
           const dueDate = new Date(completedDate);
