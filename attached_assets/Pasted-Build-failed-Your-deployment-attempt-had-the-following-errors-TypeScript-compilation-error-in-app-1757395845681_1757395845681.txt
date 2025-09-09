@@ -1,0 +1,77 @@
+Build failed
+Your deployment attempt had the following errors:
+TypeScript compilation error in app/api/process-pending-notifications/route.ts at line 55
+Argument of type 'any' is not assignable to parameter of type 'never' for notification.id
+The notificationIds array is declared but never properly typed, causing TypeScript to infer 'never[]' type
+Agent suggestions
+const notificationIds = [];
+const notificationIds: string[] = [];
+for (const notification of pendingNotifications) {
+        console.log(`Processing notification ${notification.id} for user ${notification.recipient_id}`);
+        
+        await notifyUser(
+          notification.recipient_id,
+          notification.type,
+          notification.title,
+          notification.message,
+          notification.metadata
+        );
+
+        notificationIds.push(notification.id);
+for (const notification of pendingNotifications) {
+        console.log(`Processing notification ${notification.id} for user ${notification.recipient_id}`);
+        
+        await notifyUser(
+          notification.recipient_id,
+          notification.type,
+          notification.title,
+          notification.message,
+          notification.metadata
+        );
+
+        notificationIds.push(notification.id as string);
+let processedCount = 0;
+    const notificationIds = [];
+let processedCount = 0;
+    const notificationIds: string[] = [];
+
+    for (const notification of pendingNotifications) {
+      console.log(`Processing notification ${notification.id} for user ${notification.recipient_id}`);
+      
+      await notifyUser(
+        notification.recipient_id,
+        notification.type,
+        notification.title,
+        notification.message,
+        notification.metadata
+      );
+
+      notificationIds.push(notification.id);
+      processedCount++;
+      
+      console.log(`✅ Processed notification ${notification.id} for user ${notification.recipient_id}`);
+    }
+
+    // Mark notifications as processed
+    if (notificationIds.length > 0) {
+      const { error: updateError } = await supabase
+        .from('notifications')
+        .update({ processed_at: new Date().toISOString() })
+        .in('id', notificationIds);
+
+      if (updateError) {
+        console.error('Error updating notifications:', updateError);
+        return NextResponse.json({ error: 'Failed to update notifications' }, { status: 500 });
+      }
+    }
+
+    return NextResponse.json({ 
+      message: `Processed ${processedCount} notifications`,
+      processed: processedCount 
+    });
+
+  } catch (error) {
+    console.error('Error processing notifications:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
