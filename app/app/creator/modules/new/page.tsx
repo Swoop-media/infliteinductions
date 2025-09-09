@@ -11,7 +11,7 @@ type ModuleType =
 export default async function NewModulePage({
   searchParams,
 }: {
-  searchParams: Record<string, string | string[] | undefined>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const supabase = await createSupabaseServer();
 
@@ -20,9 +20,10 @@ export default async function NewModulePage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/auth/signin");
 
-  const course_id = String(searchParams.course_id || "");
-  const type = String(searchParams.type || "") as ModuleType;
-  const title = (searchParams.title ? String(searchParams.title) : "").trim();
+  const resolvedSearchParams = await searchParams;
+  const course_id = String(resolvedSearchParams.course_id || "");
+  const type = String(resolvedSearchParams.type || "") as ModuleType;
+  const title = (resolvedSearchParams.title ? String(resolvedSearchParams.title) : "").trim();
 
   if (!course_id || !type) {
     return (
