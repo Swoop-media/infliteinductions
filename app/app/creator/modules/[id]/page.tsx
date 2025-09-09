@@ -434,25 +434,19 @@ export default async function ModuleEditorPage(props: {
         </div>
       </div>
 
-      {/* Create block (for digital training and quiz) */}
-      {(mod.type === "digital_training" || mod.type === "digital_assessment_quiz") && (
+      {/* Create block (for digital training) */}
+      {mod.type === "digital_training" && (
         <div className="rounded-xl border bg-white p-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-semibold">Content blocks</h2>
               <p className="text-sm text-gray-500">
-                {mod.type === "digital_assessment_quiz" 
-                  ? "Add quiz questions, text, files, videos, links, and document requests."
-                  : "Add text, files, videos, links, and document requests. Learner \"Next\" unlock can be gated by video time."
-                }
+                Add text, files, videos, links, and document requests. Learner "Next" unlock can be gated by video time.
               </p>
             </div>
             <form action={createBlock} className="flex items-center gap-2">
               <input type="hidden" name="module_id" value={mod.id} />
               <select name="kind" className="rounded-md border px-3 py-2 text-sm">
-                {mod.type === "digital_assessment_quiz" && (
-                  <option value="quiz_questions">❓ Quiz Questions</option>
-                )}
                 <option value="rich_text">✍️ Rich text</option>
                 <option value="file">📎 File</option>
                 <option value="video_embed">🎬 Video</option>
