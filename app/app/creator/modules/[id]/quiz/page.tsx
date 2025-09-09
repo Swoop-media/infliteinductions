@@ -90,8 +90,8 @@ async function loadModuleAndEnsureQuiz(moduleId: string) {
 
   // First: quiz by module_id (if column exists)
   const byModule = await trySelect(
-    () =>
-      supabase
+    async () =>
+      await supabase
         .from("quizzes")
         .select("*")
         .eq("module_id", moduleId)
