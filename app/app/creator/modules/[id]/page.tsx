@@ -415,7 +415,7 @@ export default async function ModuleEditorPage(props: {
           <div className="text-xs text-gray-500">
             Module • {mod.type === "digital_training" ? "Digital training"
               : mod.type === "request_document" ? "Document request"
-              : mod.type.replace("_", " ")}
+              : String(mod.type).replace("_", " ")}
           </div>
         </div>
         <div className="flex items-center gap-2">
