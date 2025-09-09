@@ -30,6 +30,16 @@ const JOBS = [
   "Engineer",
 ];
 
+// Raw types from Supabase query results
+type CourseAssignmentWithCourse = {
+  id: string;
+  completed_at: string;
+  courses: {
+    title: string;
+    valid_for_days: number | null;
+  };
+};
+
 type CompletedCourse = {
   assignment_id: string;
   course_title: string;
@@ -38,6 +48,20 @@ type CompletedCourse = {
   due_date: string;
   days_until_expiry: number;
   status: 'current' | 'expiring_soon' | 'expired';
+};
+
+type AuthorizationAssignmentWithDetails = {
+  id: string;
+  authorisation_id: string;
+  assignment_status: string;
+  completed_at: string | null;
+  authorisations: {
+    id: string;
+    title: string;
+    status: string;
+    valid_for_days: number | null;
+  };
+  courses?: any[];
 };
 
 type CompletedAuthorization = {
@@ -157,9 +181,9 @@ async function loadUserCompletedItems(userId: string) {
   console.log("Debug - Completed auth with courses:", completedAuthWithCourses);
 
   // Process courses
-  const processedCourses: CompletedCourse[] = (completedCourses || []).map(course => {
+  const processedCourses: CompletedCourse[] = (completedCourses as CourseAssignmentWithCourse[] || []).map(course => {
     const completedDate = new Date(course.completed_at);
-    const validForDays = course.courses.valid_for_days || 365; // Default to 1 year
+    const validForDays = course.courses?.valid_for_days || 365; // Default to 1 year
     const dueDate = new Date(completedDate);
     dueDate.setDate(dueDate.getDate() + validForDays);
 
@@ -172,7 +196,7 @@ async function loadUserCompletedItems(userId: string) {
 
     return {
       assignment_id: course.id,
-      course_title: course.courses.title,
+      course_title: course.courses?.title || 'Unknown Course',
       completed_at: course.completed_at,
       valid_for_days: validForDays,
       due_date: dueDate.toISOString(),
@@ -182,16 +206,16 @@ async function loadUserCompletedItems(userId: string) {
   });
 
   // Process authorizations using the MyProfile pattern
-  const processedAuthorizations: CompletedAuthorization[] = (completedAuthWithCourses || []).map(auth => {
-    const completedDate = new Date(auth.completed_at);
-    const validForDays = auth.authorisations.valid_for_days;
+  const processedAuthorizations: CompletedAuthorization[] = (completedAuthWithCourses as AuthorizationAssignmentWithDetails[] || []).map(auth => {
+    const completedDate = new Date(auth.completed_at!);
+    const validForDays = auth.authorisations?.valid_for_days;
 
     // If no valid_for_days, treat as no expiry
     if (!validForDays) {
       return {
         assignment_id: auth.id,
-        authorization_title: auth.authorisations.title,
-        completed_at: auth.completed_at,
+        authorization_title: auth.authorisations?.title || 'Unknown Authorization',
+        completed_at: auth.completed_at!,
         valid_for_years: null,
         due_date: null,
         days_until_expiry: null,
@@ -211,8 +235,8 @@ async function loadUserCompletedItems(userId: string) {
 
     return {
       assignment_id: auth.id,
-      authorization_title: auth.authorisations.title,
-      completed_at: auth.completed_at,
+      authorization_title: auth.authorisations?.title || 'Unknown Authorization',
+      completed_at: auth.completed_at!,
       valid_for_years: Math.round(validForDays / 365 * 100) / 100, // Convert days to years for display
       due_date: dueDate.toISOString(),
       days_until_expiry: daysUntilExpiry,
