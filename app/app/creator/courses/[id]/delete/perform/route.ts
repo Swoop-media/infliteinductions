@@ -18,9 +18,10 @@ export async function GET() {
 }
 
 export async function POST(
-  _req: Request,
-  { params }: { params: { id: string } }
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   const supabase = await createSupabaseServer();
 
   const can =
@@ -34,7 +35,7 @@ export async function POST(
     return NextResponse.redirect(to);
   }
 
-  const { error } = await supabase.from("courses").delete().eq("id", params.id);
+  const { error } = await supabase.from("courses").delete().eq("id", id);
 
   if (error) {
     const fk = (error as any).code === "23503"; // foreign_key_violation

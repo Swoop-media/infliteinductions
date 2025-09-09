@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -23,19 +23,7 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
     setDebugLogs(prev => [...prev, logEntry]);
   };
 
-  useEffect(() => {
-    if (!videoUrl) {
-      addDebugLog('No video URL provided');
-      setAuthError('No video URL provided');
-      setAuthStatus('error');
-      return;
-    }
-
-    addDebugLog(`Component mounted with videoUrl: ${videoUrl}`);
-    checkVideoAccess();
-  }, [videoUrl, attemptCount]);
-
-  const checkVideoAccess = async () => {
+  const checkVideoAccess = useCallback(async () => {
     try {
       addDebugLog('Starting video access check...');
       setAuthStatus('checking');
@@ -63,7 +51,19 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
       setAuthError(error instanceof Error ? error.message : 'Unknown error');
       setAuthStatus('needs_auth');
     }
-  };
+  }, [videoUrl]); // Dependency array includes videoUrl
+
+  useEffect(() => {
+    if (!videoUrl) {
+      addDebugLog('No video URL provided');
+      setAuthError('No video URL provided');
+      setAuthStatus('error');
+      return;
+    }
+
+    addDebugLog(`Component mounted with videoUrl: ${videoUrl}`);
+    checkVideoAccess();
+  }, [videoUrl, checkVideoAccess]); // Added checkVideoAccess to dependencies
 
   const parseSharePointUrl = (url: string) => {
     try {
