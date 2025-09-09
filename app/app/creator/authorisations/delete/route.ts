@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 
-function makeURL(path: string): URL {
+async function makeURL(path: string): Promise<URL> {
   const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "http";
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
@@ -17,7 +17,7 @@ export async function POST(req: Request) {
     (await hasRole("Admin")) ||
     (await hasRole("Course creators")) ||
     (await hasRole("Senior management"));
-  const back = makeURL("/app/creator");
+  const back = await makeURL("/app/creator");
   back.searchParams.set("tab", "authorisations");
 
   if (!allowed) {
