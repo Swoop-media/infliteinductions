@@ -88,9 +88,9 @@ export default function VideoPlayer({ videoUrl, courseId, title }: VideoPlayerPr
       const response = await fetch('/api/video-proxy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           url: videoUrl,
-          userAgent: navigator.userAgent 
+          userAgent: navigator.userAgent
         })
       });
 

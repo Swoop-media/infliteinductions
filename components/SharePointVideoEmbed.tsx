@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
@@ -41,10 +40,10 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
     // Parse SharePoint URL for debugging
     try {
       const parsedUrl = new URL(url);
-      addDebugLog('Parsed SharePoint URL', { 
-        hostname: parsedUrl.hostname, 
+      addDebugLog('Parsed SharePoint URL', {
+        hostname: parsedUrl.hostname,
         pathname: parsedUrl.pathname,
-        search: parsedUrl.search 
+        search: parsedUrl.search
       });
     } catch (e) {
       addDebugLog('Error parsing SharePoint URL', { error: e.message });
@@ -57,10 +56,10 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
     try {
       const storedAuth = localStorage.getItem(authKey);
       isAlreadyAuthed = storedAuth === 'true';
-      addDebugLog('LocalStorage auth check', { 
-        authKey, 
-        storedAuth, 
-        isAlreadyAuthed 
+      addDebugLog('LocalStorage auth check', {
+        authKey,
+        storedAuth,
+        isAlreadyAuthed
       });
     } catch (e) {
       addDebugLog('LocalStorage not available', { error: e.message });
@@ -75,7 +74,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
       addDebugLog('SharePoint authentication required - will auto-trigger');
       setShowAuthPrompt(true);
       setIsLoading(false);
-      
+
       // Auto-trigger authentication after a short delay to improve UX
       setTimeout(() => {
         if (!isAuthenticated && !authAttempted) {
@@ -90,7 +89,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
         clearTimeout(authCheckTimeoutRef.current);
       }
     };
-  }, [courseId, isMounted, url]);
+  }, [courseId, isMounted, url]); // Removed dependency on `isAuthenticated` and `authAttempted` as they are managed within the effect and can cause re-renders.
 
   const handleAuthenticate = async () => {
     if (typeof window === 'undefined') return;
@@ -127,7 +126,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
       }
 
       addDebugLog('Auth window opened successfully');
-      
+
       // Focus the auth window
       try {
         authWindow.focus();
@@ -185,7 +184,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
             addDebugLog('Error closing auth window on timeout', { error: e.message });
           }
         }
-        
+
         // If still loading, assume authentication was successful
         if (isLoading && !authCompleted) {
           addDebugLog('Timeout reached, assuming authentication completed');
@@ -213,10 +212,10 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
 
   const handleIframeLoad = () => {
     addDebugLog('SharePoint iframe loaded successfully');
-    
+
     // Always hide loading when iframe loads
     setIsLoading(false);
-    
+
     // If we're authenticated but the iframe might be showing a login screen,
     // try to detect it and automatically retry
     if (isAuthenticated) {
@@ -238,14 +237,14 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
             } catch (e) {
               addDebugLog('Cannot check iframe src', { error: e.message });
             }
-            
+
             // Alternative: check if iframe is very small (sign of login prompt)
             const rect = iframe.getBoundingClientRect();
             if (rect.height < 200) {
               addDebugLog('Iframe appears to be showing minimal content, might be login screen');
             }
           }
-          
+
           addDebugLog('SharePoint content appears to be loaded');
         } catch (e) {
           addDebugLog('Error checking iframe content', { error: e.message });
@@ -271,7 +270,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
     } catch (e) {
       addDebugLog('Failed to clear auth from localStorage', { error: e.message });
     }
-    
+
     setIsAuthenticated(false);
     setShowAuthPrompt(true);
     setAuthError(null);
@@ -300,12 +299,12 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Connecting to SharePoint Video</h3>
           <p className="text-sm text-gray-600 mb-4">
-            {authAttempted ? 
+            {authAttempted ?
               'If the authentication window closed, the video should load automatically. If you still see this message, please click to retry.' :
               'This video requires Microsoft authentication. A sign-in window will open automatically.'
             }
           </p>
-          
+
           <div className="space-y-3">
             {!authAttempted ? (
               <div className="w-full inline-flex items-center justify-center px-4 py-2 text-sm text-gray-600">
@@ -340,7 +339,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
                 Clear cache and try again
               </button>
             )}
-            
+
             {isAuthenticated && (
               <button
                 onClick={clearAuthAndRetry}
@@ -361,7 +360,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
           <p className="text-xs text-gray-500 mt-3">
             A new window will open for authentication. Close the window after signing in.
           </p>
-          
+
           {authError && (
             <div className="mt-3 p-2 bg-red-50 border border-red-200 rounded">
               <p className="text-xs text-red-600">{authError}</p>
@@ -442,7 +441,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
         onLoad={handleIframeLoad}
         onError={handleIframeError}
       />
-      
+
       {/* Refresh button overlay - shown when authenticated but potentially stuck on login */}
       {isAuthenticated && !isLoading && (
         <div className="absolute bottom-4 right-4 z-30">

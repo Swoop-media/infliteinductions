@@ -124,11 +124,12 @@ async function runCleanupAction(formData: FormData) {
 export default async function SignedUrlCleanupPage({
   searchParams,
 }: {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const ok = (Array.isArray(searchParams?.ok) ? searchParams?.ok[0] : searchParams?.ok) ?? null;
+  const params = await searchParams;
+  const ok = (Array.isArray(params?.ok) ? params?.ok[0] : params?.ok) ?? null;
   const error =
-    (Array.isArray(searchParams?.error) ? searchParams?.error[0] : searchParams?.error) ?? null;
+    (Array.isArray(params?.error) ? params?.error[0] : params?.error) ?? null;
 
   const { affectedCount, sample } = await loadData();
 
