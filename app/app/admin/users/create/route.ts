@@ -13,7 +13,7 @@ async function makeURL(path: string): Promise<URL> {
 
 export async function POST(req: Request) {
   const isAdmin = await hasRole("Admin");
-  if (!isAdmin) return NextResponse.redirect(makeURL("/app/home"));
+  if (!isAdmin) return NextResponse.redirect(await makeURL("/app/home"));
 
   const supabase = await createSupabaseServer();
   const supabaseService = supabaseAdmin();
