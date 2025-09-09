@@ -13,9 +13,10 @@ const msalConfig: Configuration = {
 
 export const msalInstance = new ConfidentialClientApplication(msalConfig);
 
-export const REDIRECT_URI = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`;
+// Note: REDIRECT_URI is now dynamically determined based on the request host
+// in the route handlers to support both development and production environments
 
 export const AUTH_CODE_URL_PARAMETERS = {
   scopes: ["openid", "profile", "email", "User.Read"],
-  redirectUri: REDIRECT_URI,
+  // redirectUri will be added dynamically in the route handlers
 };

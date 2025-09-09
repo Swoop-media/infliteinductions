@@ -11,7 +11,10 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
 
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`;
+  // Always use the actual request host, not environment variable
+  const host = req.headers.get('host');
+  const protocol = req.headers.get('x-forwarded-proto') || 'https';
+  const siteUrl = `${protocol}://${host}`;
 
   if (!code) {
     return NextResponse.redirect(new URL("/auth/signin?error=missing_code", siteUrl));
@@ -136,6 +139,9 @@ export async function GET(req: NextRequest) {
 
   } catch (error) {
     console.error("Microsoft auth callback error:", error);
-    return NextResponse.redirect(new URL("/auth/signin?error=auth_failed", siteUrl));
+    const host = req.headers.get('host');
+    const protocol = req.headers.get('x-forwarded-proto') || 'https';
+    const errorSiteUrl = `${protocol}://${host}`;
+    return NextResponse.redirect(new URL("/auth/signin?error=auth_failed", errorSiteUrl));
   }
 }
