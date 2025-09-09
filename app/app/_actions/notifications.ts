@@ -49,7 +49,7 @@ export async function markNotificationRead(formData: FormData) {
   }
 
   // Revalidate current page
-  const referer = headers().get("referer") || "/app/home";
+  const referer = (await headers()).get("referer") || "/app/home";
   try {
     const p = new URL(referer);
     revalidatePath(p.pathname);
@@ -82,7 +82,7 @@ export async function markAllNotificationsRead() {
       .eq("read", false);
   }
 
-  const referer = headers().get("referer") || "/app/home";
+  const referer = (await headers()).get("referer") || "/app/home";
   try {
     const p = new URL(referer);
     revalidatePath(p.pathname);
