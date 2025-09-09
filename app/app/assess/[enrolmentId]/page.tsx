@@ -92,6 +92,10 @@ export default async function AssessPage({
     }
 
     // Get schema for this module so we know which file fields to expect
+    if (!enrol) {
+      redirect(`/app/assess/${enrolmentId}?error=enrolment_not_found`);
+    }
+    
     const { data: schemaRow } = await supa
       .from("assessor_form_schemas")
       .select("*")
