@@ -30,9 +30,10 @@ async function loadCourse(id: string) {
 export default async function ConfirmDeletePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
-  const { course, err } = await loadCourse(params.id);
+  const { id } = await params;
+  const { course, err } = await loadCourse(id);
 
   if (err || !course) {
     return (
