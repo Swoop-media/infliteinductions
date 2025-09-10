@@ -16,6 +16,8 @@ interface InProgressCourse {
   assignment_status: string;
   trainee_email?: string;
   trainee_name?: string;
+  total_modules: number;
+  completed_modules: number;
 }
 
 interface Props {
@@ -46,15 +48,38 @@ function getSortIcon(column: SortField, sortField: SortField | null, sortDirecti
     : <ChevronDown className="h-4 w-4 text-blue-600" />;
 }
 
-// Function to display assignment status
-const getStatusDisplay = (status: string) => {
-  switch (status) {
-    case 'assigned':
-      return <span className="text-blue-600 font-medium">Not Started</span>;
-    case 'in_progress':
-      return <span className="text-yellow-600 font-medium">In Progress</span>;
-    default:
-      return <span className="text-gray-600 font-medium">{status}</span>;
+// Function to display progress status
+const getProgressDisplay = (course: InProgressCourse) => {
+  const { completed_modules, total_modules, assignment_status } = course;
+  
+  if (total_modules === 0) {
+    return <span className="text-gray-500">No modules</span>;
+  }
+  
+  const progressText = `${completed_modules}/${total_modules} modules`;
+  
+  if (completed_modules === 0) {
+    return (
+      <div className="flex flex-col">
+        <span className="text-blue-600 font-medium">Not Started</span>
+        <span className="text-xs text-gray-500">{progressText}</span>
+      </div>
+    );
+  } else if (completed_modules === total_modules) {
+    return (
+      <div className="flex flex-col">
+        <span className="text-green-600 font-medium">Completed</span>
+        <span className="text-xs text-gray-500">{progressText}</span>
+      </div>
+    );
+  } else {
+    const percentage = Math.round((completed_modules / total_modules) * 100);
+    return (
+      <div className="flex flex-col">
+        <span className="text-yellow-600 font-medium">{percentage}% Complete</span>
+        <span className="text-xs text-gray-500">{progressText}</span>
+      </div>
+    );
   }
 };
 
@@ -191,7 +216,7 @@ export default function SortableCourseProgressTable({ inProgressCourses }: Props
                 {formatDate(course.assigned_at)}
               </td>
               <td className="px-4 py-3 text-sm">
-                {getStatusDisplay(course.assignment_status)}
+                {getProgressDisplay(course)}
               </td>
             </tr>
           ))}

@@ -178,6 +178,8 @@ type InProgressCourseRow = {
   assignment_status: string;
   trainee_email?: string;
   trainee_name?: string;
+  total_modules: number;
+  completed_modules: number;
 };
 
 async function loadInProgressCourses(q: string | null) {
@@ -187,11 +189,12 @@ async function loadInProgressCourses(q: string | null) {
   const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
   if (!allowed) redirect("/app/home?banner=no_access");
 
-  // Get course assignments that are not completed
+  // Get course assignments that are not completed (only trainee role to avoid duplicates)
   const { data: assignments, error: assignError } = await supabase
     .from("course_assignments")
     .select("id, user_id, course_id, assignment_status, created_at")
     .in("assignment_status", ["assigned", "in_progress"])
+    .eq("role", "trainee")
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -201,6 +204,7 @@ async function loadInProgressCourses(q: string | null) {
   // Get unique user and course IDs
   const userIds = [...new Set(assignments.map(a => a.user_id))];
   const courseIds = [...new Set(assignments.map(a => a.course_id))];
+  const assignmentIds = assignments.map(a => a.id);
 
   // Get profiles
   const { data: profiles, error: profileError } = await supabase
@@ -218,14 +222,47 @@ async function loadInProgressCourses(q: string | null) {
 
   if (courseError) throw new Error(courseError.message);
 
+  // Get course modules to count total modules
+  const { data: courseModules, error: moduleError } = await supabase
+    .from("course_modules")
+    .select("id, course_id")
+    .in("course_id", courseIds);
+
+  if (moduleError) throw new Error(moduleError.message);
+
+  // Get assignment progress to count completed modules
+  const { data: progress, error: progressError } = await supabase
+    .from("assignment_progress")
+    .select("assignment_id, module_id, completed_at")
+    .in("assignment_id", assignmentIds)
+    .not("completed_at", "is", null);
+
+  if (progressError) throw new Error(progressError.message);
+
   // Create lookup maps
   const profileMap = new Map((profiles || []).map(p => [p.id, p]));
   const courseMap = new Map((courses || []).map(c => [c.id, c]));
+  
+  // Count modules per course
+  const moduleCounts = new Map();
+  (courseModules || []).forEach(module => {
+    const count = moduleCounts.get(module.course_id) || 0;
+    moduleCounts.set(module.course_id, count + 1);
+  });
+
+  // Count completed modules per assignment
+  const completedCounts = new Map();
+  (progress || []).forEach(p => {
+    const count = completedCounts.get(p.assignment_id) || 0;
+    completedCounts.set(p.assignment_id, count + 1);
+  });
 
   // Transform data
   let inProgressCourses = assignments.map((assignment) => {
     const profile = profileMap.get(assignment.user_id);
     const course = courseMap.get(assignment.course_id);
+    const totalModules = moduleCounts.get(assignment.course_id) || 0;
+    const completedModules = completedCounts.get(assignment.id) || 0;
 
     return {
       assignment_id: assignment.id,
@@ -236,6 +273,8 @@ async function loadInProgressCourses(q: string | null) {
       assignment_status: assignment.assignment_status,
       trainee_email: profile?.email || "",
       trainee_name: profile?.full_name || "",
+      total_modules: totalModules,
+      completed_modules: completedModules,
     };
   });
 
