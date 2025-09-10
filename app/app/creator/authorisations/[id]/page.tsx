@@ -128,6 +128,29 @@ async function saveDetailsAction(form: FormData) {
   const deptSelect = String(form.get("department_select") || "").trim();
   const deptNew = String(form.get("department_new") || "").trim();
   const department = deptNew || deptSelect || null;
+  
+  // If a new department was typed, save it to the departments table
+  if (deptNew && deptNew.length > 0) {
+    try {
+      // Check if department already exists
+      const { data: existing } = await supabase
+        .from("departments")
+        .select("name")
+        .eq("name", deptNew)
+        .maybeSingle();
+      
+      // Only insert if it doesn't exist
+      if (!existing) {
+        await supabase
+          .from("departments")
+          .insert({ name: deptNew });
+      }
+    } catch (error) {
+      // Don't fail the whole operation if department insert fails
+      console.warn("Failed to save new department:", error);
+    }
+  }
+  
   const tagsCsv = String(form.get("tags_csv") || "").trim();
   const tags =
     tagsCsv.length === 0
