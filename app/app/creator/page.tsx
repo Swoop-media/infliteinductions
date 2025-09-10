@@ -2,6 +2,7 @@
 // app/app/creator/page.tsx
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import DeleteAuthorisationButton from "./_components/DeleteAuthorisationButton";
@@ -55,6 +56,55 @@ function statusTone(status: CourseRow["status"] | AuthzRow["status"]) {
     default:
       return "default";
   }
+}
+
+// Server Action for duplicating courses
+async function duplicateCourseAction(formData: FormData) {
+  "use server";
+  
+  const supabase = await createSupabaseServer();
+  
+  // Get the current user
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    redirect("/auth/login");
+  }
+
+  const originalCourseId = formData.get('courseId') as string;
+  if (!originalCourseId) {
+    redirect("/app/creator?error=no_course_id");
+  }
+
+  // Fetch the original course
+  const { data: originalCourse, error: courseError } = await supabase
+    .from('courses')
+    .select('title')
+    .eq('id', originalCourseId)
+    .single();
+
+  if (courseError || !originalCourse) {
+    redirect("/app/creator?error=course_not_found");
+  }
+
+  // Create the new course - exactly like the existing course creation
+  const newCourseTitle = `Copy of ${originalCourse.title}`;
+  const { data: newCourse, error: newCourseError } = await supabase
+    .from('courses')
+    .insert({
+      title: newCourseTitle,
+      status: 'draft',
+      created_by: user.id
+    })
+    .select('id')
+    .single();
+
+  if (newCourseError) {
+    redirect("/app/creator?error=failed_to_create_course");
+  }
+
+  // Revalidate and redirect
+  revalidatePath("/app/creator");
+  redirect("/app/creator?ok=course_duplicated");
 }
 
 function FlashBanner({ ok, error }: { ok?: string | null; error?: string | null }) {
@@ -194,7 +244,7 @@ export default async function CreatorHome({
                     >
                       Edit
                     </Link>
-                    <form action="/app/creator/duplicate-course" method="POST" className="inline">
+                    <form action={duplicateCourseAction} className="inline">
                       <input type="hidden" name="courseId" value={c.id} />
                       <button
                         type="submit"
