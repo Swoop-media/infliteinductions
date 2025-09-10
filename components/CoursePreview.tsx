@@ -44,19 +44,139 @@ function RichText({ html }: { html: string }) {
 function FileBlock({ data }: { data: any }) {
   const url: string | undefined = data?.url || data?.path || data?.publicUrl || data?.public_url;
   const label: string = data?.label || data?.name || "Download file";
+  
   if (!url) {
     return <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">File reference missing a URL.</div>;
   }
+
+  // Detect file type from URL or label
+  const getFileType = (url: string, label: string) => {
+    const urlLower = url.toLowerCase();
+    const labelLower = label.toLowerCase();
+    
+    if (urlLower.includes('.pdf') || labelLower.includes('.pdf')) return 'pdf';
+    if (urlLower.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) || labelLower.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) return 'image';
+    if (urlLower.match(/\.(doc|docx)$/i) || labelLower.match(/\.(doc|docx)$/i)) return 'word';
+    if (urlLower.match(/\.(xls|xlsx)$/i) || labelLower.match(/\.(xls|xlsx)$/i)) return 'excel';
+    if (urlLower.match(/\.(ppt|pptx)$/i) || labelLower.match(/\.(ppt|pptx)$/i)) return 'powerpoint';
+    if (urlLower.match(/\.(txt|md)$/i) || labelLower.match(/\.(txt|md)$/i)) return 'text';
+    return 'other';
+  };
+
+  const fileType = getFileType(url, label);
+
+  // Get appropriate icon based on file type
+  const getFileIcon = (type: string) => {
+    switch (type) {
+      case 'pdf': return '📕';
+      case 'image': return '🖼️';
+      case 'word': return '📝';
+      case 'excel': return '📊';
+      case 'powerpoint': return '📽️';
+      case 'text': return '📄';
+      default: return '📎';
+    }
+  };
+
+  const renderInlinePreview = () => {
+    switch (fileType) {
+      case 'pdf':
+        return (
+          <div className="w-full">
+            <iframe
+              src={url}
+              className="w-full h-96 border rounded-md"
+              title={label}
+              loading="lazy"
+            />
+          </div>
+        );
+      
+      case 'image':
+        return (
+          <div className="w-full">
+            <img
+              src={url}
+              alt={label}
+              className="max-w-full h-auto rounded-md border"
+              loading="lazy"
+            />
+          </div>
+        );
+      
+      case 'word':
+      case 'excel':
+      case 'powerpoint':
+        // Try Office Online viewer for Microsoft documents
+        const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(url)}`;
+        return (
+          <div className="w-full">
+            <iframe
+              src={officeViewerUrl}
+              className="w-full h-96 border rounded-md"
+              title={label}
+              loading="lazy"
+            />
+          </div>
+        );
+      
+      default:
+        // For other file types, try to show in an iframe but provide fallback
+        return (
+          <div className="w-full">
+            <div className="bg-gray-50 border rounded-md p-4 text-center">
+              <div className="text-4xl mb-2">{getFileIcon(fileType)}</div>
+              <p className="text-sm text-gray-600 mb-3">Preview not available for this file type</p>
+              <p className="text-xs text-gray-500">Use the download button below to view the file</p>
+            </div>
+          </div>
+        );
+    }
+  };
+
   return (
-    <a
-      className="inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-    >
-      <span aria-hidden>📄</span>
-      {label}
-    </a>
+    <div className="space-y-4">
+      {/* File Preview */}
+      <div className="rounded-lg border bg-white overflow-hidden">
+        <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">{getFileIcon(fileType)}</span>
+            <div>
+              <h4 className="font-medium text-gray-900 text-sm">{label}</h4>
+              <p className="text-xs text-gray-500 capitalize">{fileType} file</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              Open
+            </a>
+            <a
+              href={url}
+              download
+              className="inline-flex items-center gap-1 px-3 py-1 text-xs border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Download
+            </a>
+          </div>
+        </div>
+        
+        {/* Inline Preview */}
+        <div className="p-4">
+          {renderInlinePreview()}
+        </div>
+      </div>
+    </div>
   );
 }
 
