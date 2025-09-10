@@ -5,7 +5,6 @@ import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import CompleteModuleButton from './CompleteModuleButton';
 import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
-import PowerPointSlideshow from "@/components/PowerPointSlideshow";
 import DocumentUploadBlock from './DocumentUploadBlock';
 import { ModuleType, BlockKind } from "@/lib/types/module";
 
@@ -230,30 +229,22 @@ async function BlockView({ block }: { block: any }) {
       );
     }
 
-    // PowerPoint files - use slideshow viewer
-    if (fileType === 'powerpoint') {
-      // Extract the actual file path from the proxy URL
-      const actualPath = href.replace('/app/files/', '').replace(/%2F/g, '/');
-      return (
-        <div className="rounded-md border bg-white overflow-hidden">
-          <FileHeader />
-          <PowerPointSlideshow filePath={decodeURIComponent(actualPath)} title={display} />
-        </div>
-      );
-    }
-
-    // Other Microsoft Office files (Word, Excel)
-    if (fileType === 'word' || fileType === 'excel') {
+    // Microsoft Office files (Word, Excel, PowerPoint)
+    if (fileType === 'word' || fileType === 'excel' || fileType === 'powerpoint') {
       return (
         <div className="rounded-md border bg-white overflow-hidden">
           <FileHeader />
           <div className="p-8 bg-gray-50 border-t text-center">
             <div className="text-6xl mb-4">{getFileIcon(fileType)}</div>
             <h3 className="text-xl font-semibold text-gray-900 mb-3">
-              {fileType === 'word' ? 'Word Document' : 'Excel Spreadsheet'}
+              {fileType === 'word' ? 'Word Document' : 
+               fileType === 'excel' ? 'Excel Spreadsheet' : 
+               'PowerPoint Presentation'}
             </h3>
             <p className="text-gray-600 mb-4 max-w-md mx-auto">
-              {`${fileType === 'word' ? 'Word documents' : 'Excel spreadsheets'} cannot be previewed in the browser. Click "Open" above to download and view the file.`}
+              {fileType === 'powerpoint' 
+                ? 'PowerPoint files are not supported. Please convert to PDF before uploading.'
+                : `${fileType === 'word' ? 'Word documents' : 'Excel spreadsheets'} cannot be previewed in the browser. Click "Open" above to download and view the file.`}
             </p>
             <div className="text-sm text-gray-500">
               <p className="mb-2">📄 <strong>File:</strong> {display}</p>
