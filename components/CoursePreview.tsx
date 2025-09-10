@@ -109,32 +109,25 @@ function FileBlock({ data }: { data: any }) {
       case 'powerpoint':
         return (
           <div className="w-full">
-            <div className="bg-gray-50 border rounded-md p-8 text-center">
-              <div className="text-4xl mb-4">{getFileIcon(fileType)}</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {fileType === 'word' ? 'Word Document' : 
-                 fileType === 'excel' ? 'Excel Spreadsheet' : 
-                 'PowerPoint Presentation'}
-              </h3>
-              <p className="text-sm text-gray-600 mb-3">
-                This {fileType} file cannot be previewed inline for security reasons.
-              </p>
-              <p className="text-xs text-gray-500">
-                Click the "Open" button above to view the document in a new tab.
-              </p>
-            </div>
+            <iframe
+              src={url}
+              className="w-full h-96 border rounded-md"
+              title={label}
+              loading="lazy"
+            />
           </div>
         );
       
       default:
-        // For other file types, try to show in an iframe but provide fallback
+        // For other file types, try to show in an iframe
         return (
           <div className="w-full">
-            <div className="bg-gray-50 border rounded-md p-4 text-center">
-              <div className="text-4xl mb-2">{getFileIcon(fileType)}</div>
-              <p className="text-sm text-gray-600 mb-3">Preview not available for this file type</p>
-              <p className="text-xs text-gray-500">Use the download button below to view the file</p>
-            </div>
+            <iframe
+              src={url}
+              className="w-full h-96 border rounded-md"
+              title={label}
+              loading="lazy"
+            />
           </div>
         );
     }

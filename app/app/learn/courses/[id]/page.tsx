@@ -231,50 +231,29 @@ async function BlockView({ block }: { block: any }) {
       return (
         <div className="rounded-md border bg-white overflow-hidden">
           <FileHeader />
-          <div className="p-8 bg-gray-50 border-t text-center">
-            <div className="text-4xl mb-4">{getFileIcon(fileType)}</div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {fileType === 'word' ? 'Word Document' : 
-               fileType === 'excel' ? 'Excel Spreadsheet' : 
-               'PowerPoint Presentation'}
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              This {fileType} file cannot be previewed inline for security reasons.
-            </p>
-            <p className="text-xs text-gray-500">
-              Click the "Open" button above to view the document in a new tab.
-            </p>
+          <div className="border-t">
+            <iframe
+              src={href}
+              className="w-full h-[600px]"
+              title={display}
+              loading="lazy"
+            />
           </div>
         </div>
       );
     }
 
-    // Text files
-    if (fileType === 'text') {
-      return (
-        <div className="rounded-md border bg-white overflow-hidden">
-          <FileHeader />
-          <div className="p-4 bg-gray-50 border-t">
-            <div className="text-sm text-gray-600 text-center py-8">
-              <div className="text-4xl mb-2">📄</div>
-              <p className="mb-3">Text file preview</p>
-              <p className="text-xs text-gray-500">Use the buttons above to open or download the file</p>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Other file types
+    // Text files and other file types - try to display inline
     return (
       <div className="rounded-md border bg-white overflow-hidden">
         <FileHeader />
-        <div className="p-4 bg-gray-50 border-t">
-          <div className="text-sm text-gray-600 text-center py-8">
-            <div className="text-4xl mb-2">{getFileIcon(fileType)}</div>
-            <p className="mb-3">Preview not available for this file type</p>
-            <p className="text-xs text-gray-500">Use the buttons above to open or download the file</p>
-          </div>
+        <div className="border-t">
+          <iframe
+            src={href}
+            className="w-full h-[600px]"
+            title={display}
+            loading="lazy"
+          />
         </div>
       </div>
     );
