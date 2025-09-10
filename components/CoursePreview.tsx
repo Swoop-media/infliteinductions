@@ -5,6 +5,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import SimpleVideoPlayer from "./SimpleVideoPlayer";
 import SharePointVideoEmbed from "./SharePointVideoEmbed";
+import PowerPointSlideshow from "./PowerPointSlideshow";
 
 /** Data shapes coming from your pages */
 type Module = {
@@ -104,23 +105,29 @@ function FileBlock({ data }: { data: any }) {
           </div>
         );
       
+      case 'powerpoint':
+        // Extract the actual file path from the proxy URL if it's a proxy URL
+        let actualPath = url;
+        if (url.includes('/app/files/')) {
+          actualPath = decodeURIComponent(url.replace('/app/files/', '').replace(/%2F/g, '/'));
+        }
+        return (
+          <div className="w-full">
+            <PowerPointSlideshow filePath={actualPath} title={label} />
+          </div>
+        );
+      
       case 'word':
       case 'excel':
-      case 'powerpoint':
         return (
           <div className="w-full">
             <div className="bg-gray-50 border rounded-md p-8 text-center">
               <div className="text-6xl mb-4">{getFileIcon(fileType)}</div>
               <h3 className="text-xl font-semibold text-gray-900 mb-3">
-                {fileType === 'word' ? 'Word Document' : 
-                 fileType === 'excel' ? 'Excel Spreadsheet' : 
-                 'PowerPoint Presentation'}
+                {fileType === 'word' ? 'Word Document' : 'Excel Spreadsheet'}
               </h3>
               <p className="text-gray-600 mb-4 max-w-md mx-auto">
-                {fileType === 'powerpoint' 
-                  ? 'PowerPoint presentations cannot be previewed in the browser. Click "Open" above to download and view the presentation.'
-                  : `${fileType === 'word' ? 'Word documents' : 'Excel spreadsheets'} cannot be previewed in the browser. Click "Open" above to download and view the file.`
-                }
+                {`${fileType === 'word' ? 'Word documents' : 'Excel spreadsheets'} cannot be previewed in the browser. Click "Open" above to download and view the file.`}
               </p>
               <div className="text-sm text-gray-500">
                 <p className="mb-2">📄 <strong>File:</strong> {label}</p>
