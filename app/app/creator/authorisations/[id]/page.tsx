@@ -124,6 +124,7 @@ async function saveDetailsAction(form: FormData) {
   const title = String(form.get("title") || "").trim();
   const description = String(form.get("description") || "").trim();
   const validForStr = String(form.get("valid_for_days") || "");
+  const retakeReminderStr = String(form.get("retake_reminder_days") || "");
   const deptSelect = String(form.get("department_select") || "").trim();
   const deptNew = String(form.get("department_new") || "").trim();
   const department = deptNew || deptSelect || null;
@@ -137,7 +138,11 @@ async function saveDetailsAction(form: FormData) {
   if (title) patch.title = title;
   if (validForStr !== "") {
     const n = Number(validForStr);
-    patch.valid_for_days = Number.isFinite(n) ? n : null;
+    patch.valid_for_days = Number.isFinite(n) && n >= 0 ? n : null;
+  }
+  if (retakeReminderStr !== "") {
+    const n = Number(retakeReminderStr);
+    patch.retake_reminder_days = Number.isFinite(n) && n >= 0 ? n : null;
   }
 
   const { error } = await supabase.from("authorisations").update(patch).eq("id", id);
@@ -356,6 +361,12 @@ export default async function Page(props: {
     );
   }
 
+  // Load departments for details tab
+  let allDepartments: string[] = [];
+  if (activeTab === "details") {
+    allDepartments = await loadAllDepartments();
+  }
+
   // Preload depending on tab
   let chosenCourses: any[] = [];
   let searchResults: any[] = [];
@@ -430,7 +441,7 @@ export default async function Page(props: {
       </div>
 
       <div className="rounded-xl border p-4">
-        {activeTab === "details" && <DetailsTab auth={auth} />}
+        {activeTab === "details" && <DetailsTab auth={auth} allDepartments={allDepartments} />}
 
         {activeTab === "courses" && (
           <CoursesTab authId={id} chosen={chosenCourses} results={searchResults} search={search} />
@@ -451,9 +462,29 @@ export default async function Page(props: {
 }
 
 /** ---- Details Tab ---- */
-const DEFAULT_DEPTS = ["Skydive","Helicopter","Fixed wing","Inflite general","Safety"] as const;
+async function loadAllDepartments() {
+  "use server";
+  const supabase = await createSupabaseServer();
+  
+  // Get unique departments from both courses and authorisations tables
+  const { data: courseDepts } = await supabase
+    .from("courses")
+    .select("department")
+    .not("department", "is", null);
+  
+  const { data: authDepts } = await supabase
+    .from("authorisations")
+    .select("department")
+    .not("department", "is", null);
+  
+  const allDepts = new Set<string>();
+  courseDepts?.forEach(row => { if (row.department) allDepts.add(row.department); });
+  authDepts?.forEach(row => { if (row.department) allDepts.add(row.department); });
+  
+  return Array.from(allDepts).sort();
+}
 
-function DetailsTab({ auth }: { auth: any }) {
+function DetailsTab({ auth, allDepartments }: { auth: any; allDepartments: string[] }) {
   const tagsCsv = Array.isArray(auth.tags) ? (auth.tags as string[]).join(", ") : "";
   return (
     <div className="space-y-8">
@@ -477,20 +508,32 @@ function DetailsTab({ auth }: { auth: any }) {
 
         <div className="grid gap-2">
           <label className="text-sm">Valid for (days)</label>
-          <select
+          <input
+            type="number"
             name="valid_for_days"
             defaultValue={auth.valid_for_days == null ? "" : String(auth.valid_for_days)}
+            min="0"
+            placeholder="e.g. 365 for 1 year, 0 for no expiry"
             className="w-full rounded-md border px-3 py-2"
-          >
-            <option value="">— Select period —</option>
-            <option value="0">No expiry</option>
-            <option value="30">30 days</option>
-            <option value="90">90 days (3 months)</option>
-            <option value="180">180 days (6 months)</option>
-            <option value="365">365 days (1 year)</option>
-            <option value="730">730 days (2 years)</option>
-            <option value="1095">1095 days (3 years)</option>
-          </select>
+          />
+          <div className="text-xs text-gray-500">
+            Number of days this authorisation is valid for. Use 0 for no expiry.
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <label className="text-sm">Retake reminder (days before expiry)</label>
+          <input
+            type="number"
+            name="retake_reminder_days"
+            defaultValue={auth.retake_reminder_days == null ? "" : String(auth.retake_reminder_days)}
+            min="0"
+            placeholder="e.g. 30 to remind 30 days before expiry"
+            className="w-full rounded-md border px-3 py-2"
+          />
+          <div className="text-xs text-gray-500">
+            How many days before expiry to send retake reminders. Leave empty for no reminders.
+          </div>
         </div>
 
         <div className="grid gap-1">
@@ -501,7 +544,7 @@ function DetailsTab({ auth }: { auth: any }) {
             className="w-full rounded-md border px-3 py-2"
           >
             <option value="">— Select department —</option>
-            {DEFAULT_DEPTS.map((d) => <option key={d} value={d}>{d}</option>)}
+            {allDepartments.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
           <input
             name="department_new"
