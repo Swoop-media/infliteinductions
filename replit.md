@@ -6,6 +6,12 @@ INFLITE Induction & Training is a comprehensive Learning Management System (LMS)
 
 Preferred communication style: Simple, everyday language.
 
+## UI/UX Preferences
+- Learner interface focuses on content delivery with minimal distractions
+- Compact navigation sidebar (w-56/224px) to maximize content space
+- Reduced padding in content blocks (p-4 instead of p-6) for better space utilization
+- PowerPoint files blocked with clear guidance to convert to PDF
+
 # System Architecture
 
 ## Frontend Architecture
