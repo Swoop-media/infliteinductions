@@ -136,53 +136,152 @@ async function BlockView({ block }: { block: any }) {
     }
 
     const href = fileProxy(path);
+    
+    // Enhanced file type detection
+    const getFileType = (path: string, display: string) => {
+      const pathLower = path.toLowerCase();
+      const displayLower = display.toLowerCase();
+      
+      if (pathLower.endsWith('.pdf') || displayLower.includes('.pdf')) return 'pdf';
+      if (isImagePath(path)) return 'image';
+      if (pathLower.match(/\.(doc|docx)$/i) || displayLower.match(/\.(doc|docx)$/i)) return 'word';
+      if (pathLower.match(/\.(xls|xlsx)$/i) || displayLower.match(/\.(xls|xlsx)$/i)) return 'excel';
+      if (pathLower.match(/\.(ppt|pptx)$/i) || displayLower.match(/\.(ppt|pptx)$/i)) return 'powerpoint';
+      if (pathLower.match(/\.(txt|md)$/i) || displayLower.match(/\.(txt|md)$/i)) return 'text';
+      return 'other';
+    };
 
-    if (isImagePath(path)) {
-      return (
-        <figure className="space-y-2">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={href}
-            alt={display}
-            className="max-h-[480px] w-auto rounded-md border object-contain"
-          />
-          <figcaption className="text-xs text-gray-500">
-            {display} •{" "}
-            <a href={href} target="_blank" className="underline">
-              open in new tab
-            </a>
-          </figcaption>
-        </figure>
-      );
-    }
+    const fileType = getFileType(path, display);
+    
+    // Get appropriate icon and label
+    const getFileIcon = (type: string) => {
+      switch (type) {
+        case 'pdf': return '📕';
+        case 'image': return '🖼️';
+        case 'word': return '📝';
+        case 'excel': return '📊';
+        case 'powerpoint': return '📽️';
+        case 'text': return '📄';
+        default: return '📎';
+      }
+    };
 
-    if (path.toLowerCase().endsWith('.pdf')) {
-      return (
-        <div className="space-y-2">
-          <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-t-md border">
-            <span className="text-sm font-medium text-gray-900">{display}</span>
-            <a href={href} target="_blank" className="text-sm text-blue-600 hover:underline">
-              Open in new tab
-            </a>
+    // Enhanced header component for all file types
+    const FileHeader = () => (
+      <div className="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-t-md border border-b-0">
+        <div className="flex items-center gap-2">
+          <span className="text-lg">{getFileIcon(fileType)}</span>
+          <div>
+            <h4 className="text-sm font-medium text-gray-900">{display}</h4>
+            <p className="text-xs text-gray-500 capitalize">{fileType} file</p>
           </div>
-          <div className="border rounded-b-md bg-white">
-            <iframe
-              src={`${href}#toolbar=1&navpanes=1&scrollbar=1`}
-              className="w-full h-[800px] rounded-b-md"
-              title={display}
+        </div>
+        <div className="flex gap-2">
+          <a 
+            href={href} 
+            target="_blank" 
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            Open
+          </a>
+          <a 
+            href={href} 
+            download 
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Download
+          </a>
+        </div>
+      </div>
+    );
+
+    // Image files
+    if (fileType === 'image') {
+      return (
+        <div className="rounded-md border bg-white overflow-hidden">
+          <FileHeader />
+          <div className="p-4">
+            <img
+              src={href}
+              alt={display}
+              className="max-w-full h-auto rounded border"
+              loading="lazy"
             />
           </div>
         </div>
       );
     }
 
+    // PDF files
+    if (fileType === 'pdf') {
+      return (
+        <div className="rounded-md border bg-white overflow-hidden">
+          <FileHeader />
+          <div className="border-t">
+            <iframe
+              src={`${href}#toolbar=1&navpanes=1&scrollbar=1`}
+              className="w-full h-[600px]"
+              title={display}
+              loading="lazy"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // Microsoft Office files (Word, Excel, PowerPoint)
+    if (fileType === 'word' || fileType === 'excel' || fileType === 'powerpoint') {
+      const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(href)}`;
+      return (
+        <div className="rounded-md border bg-white overflow-hidden">
+          <FileHeader />
+          <div className="border-t">
+            <iframe
+              src={officeViewerUrl}
+              className="w-full h-[600px]"
+              title={display}
+              loading="lazy"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    // Text files
+    if (fileType === 'text') {
+      return (
+        <div className="rounded-md border bg-white overflow-hidden">
+          <FileHeader />
+          <div className="p-4 bg-gray-50 border-t">
+            <div className="text-sm text-gray-600 text-center py-8">
+              <div className="text-4xl mb-2">📄</div>
+              <p className="mb-3">Text file preview</p>
+              <p className="text-xs text-gray-500">Use the buttons above to open or download the file</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Other file types
     return (
-      <p className="text-sm">
-        ⬇️{" "}
-        <a href={href} target="_blank" className="underline break-all">
-          {display}
-        </a>
-      </p>
+      <div className="rounded-md border bg-white overflow-hidden">
+        <FileHeader />
+        <div className="p-4 bg-gray-50 border-t">
+          <div className="text-sm text-gray-600 text-center py-8">
+            <div className="text-4xl mb-2">{getFileIcon(fileType)}</div>
+            <p className="mb-3">Preview not available for this file type</p>
+            <p className="text-xs text-gray-500">Use the buttons above to open or download the file</p>
+          </div>
+        </div>
+      </div>
     );
   }
 
