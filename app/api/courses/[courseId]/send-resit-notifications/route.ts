@@ -4,7 +4,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
     const supabase = await createSupabaseServer();
@@ -15,7 +15,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const courseId = params.courseId;
+    const { courseId } = await params;
     const body = await request.json();
     const { selectedTrainees } = body;
 
