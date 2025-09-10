@@ -238,12 +238,6 @@ export default async function MyProfilePage() {
           >
             My documents
           </Link>
-          <Link
-            href="/app/courses"
-            className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
-          >
-            Browse courses
-          </Link>
         </div>
       </div>
 
