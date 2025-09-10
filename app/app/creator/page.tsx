@@ -192,6 +192,15 @@ export default async function CreatorHome({
                     >
                       Edit
                     </Link>
+                    <form action="/app/creator/duplicate-course" method="POST" className="inline">
+                      <input type="hidden" name="courseId" value={c.id} />
+                      <button
+                        type="submit"
+                        className="rounded-md border px-3 py-1.5 text-sm border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                      >
+                        Duplicate
+                      </button>
+                    </form>
                     <Link
                       href={`/app/creator/courses/${c.id}/delete`}
                       className="rounded-md border px-3 py-1.5 text-sm border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
