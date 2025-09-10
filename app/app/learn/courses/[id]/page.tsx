@@ -231,13 +231,23 @@ async function BlockView({ block }: { block: any }) {
       return (
         <div className="rounded-md border bg-white overflow-hidden">
           <FileHeader />
-          <div className="border-t">
-            <iframe
-              src={href}
-              className="w-full h-[600px]"
-              title={display}
-              loading="lazy"
-            />
+          <div className="p-8 bg-gray-50 border-t text-center">
+            <div className="text-6xl mb-4">{getFileIcon(fileType)}</div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-3">
+              {fileType === 'word' ? 'Word Document' : 
+               fileType === 'excel' ? 'Excel Spreadsheet' : 
+               'PowerPoint Presentation'}
+            </h3>
+            <p className="text-gray-600 mb-4 max-w-md mx-auto">
+              {fileType === 'powerpoint' 
+                ? 'PowerPoint presentations cannot be previewed in the browser. Click "Open" above to download and view the presentation.'
+                : `${fileType === 'word' ? 'Word documents' : 'Excel spreadsheets'} cannot be previewed in the browser. Click "Open" above to download and view the file.`
+              }
+            </p>
+            <div className="text-sm text-gray-500">
+              <p className="mb-2">📄 <strong>File:</strong> {display}</p>
+              <p>🔒 This file is securely stored and requires download to view</p>
+            </div>
           </div>
         </div>
       );
