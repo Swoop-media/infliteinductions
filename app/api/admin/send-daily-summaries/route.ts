@@ -446,59 +446,66 @@ export async function POST(req: NextRequest) {
           combinedMessage += `📄 **Documents**: All valid ✅\n\n`;
         }
         
-        // Add details if there are items
-        if (allCourses.length > 0 || allAuthorisations.length > 0 || allDocuments.length > 0) {
-          combinedMessage += `---\n\n`;
-          
-          // Add course details
-          if (topCourses.length > 0) {
-            combinedMessage += `**Course Details** (Top ${topCourses.length}):\n`;
-            for (const course of topCourses.slice(0, 5)) {
-              const daysText = course.days_until_expiry < 0 
-                ? `${Math.abs(course.days_until_expiry)} days overdue`
-                : course.days_until_expiry === 0 
-                ? `Today`
-                : `${course.days_until_expiry} days`;
-              combinedMessage += `• ${course.user_name} - ${course.course_title} (${daysText})\n`;
-            }
-            if (topCourses.length > 5) {
-              combinedMessage += `• ... and ${topCourses.length - 5} more\n`;
-            }
-            combinedMessage += `\n`;
+        // Add details section with up to 25 entries each
+        combinedMessage += `---\n\n`;
+        
+        // Add course details (up to 25)
+        if (topCourses.length > 0) {
+          combinedMessage += `**📚 COURSES (Next ${topCourses.length} expiring):**\n`;
+          for (const course of topCourses) {
+            const daysText = course.days_until_expiry < 0 
+              ? `⚠️ ${Math.abs(course.days_until_expiry)}d overdue`
+              : course.days_until_expiry === 0 
+              ? `🔴 Today`
+              : course.days_until_expiry <= 7
+              ? `🟡 ${course.days_until_expiry}d`
+              : course.days_until_expiry <= 30
+              ? `🟠 ${course.days_until_expiry}d`
+              : `${course.days_until_expiry}d`;
+            combinedMessage += `• **${course.user_name}** - ${course.course_title} (${daysText})\n`;
           }
-          
-          // Add authorisation details
-          if (topAuthorisations.length > 0) {
-            combinedMessage += `**Authorisation Details** (Top ${topAuthorisations.length}):\n`;
-            for (const auth of topAuthorisations.slice(0, 5)) {
-              const daysText = auth.days_until_expiry < 0 
-                ? `${Math.abs(auth.days_until_expiry)} days overdue`
-                : auth.days_until_expiry === 0 
-                ? `Today`
-                : `${auth.days_until_expiry} days`;
-              combinedMessage += `• ${auth.user_name} - ${auth.authorisation_title} (${daysText})\n`;
-            }
-            if (topAuthorisations.length > 5) {
-              combinedMessage += `• ... and ${topAuthorisations.length - 5} more\n`;
-            }
-            combinedMessage += `\n`;
+          combinedMessage += `\n`;
+        } else {
+          combinedMessage += `**📚 COURSES:** No upcoming expiries\n\n`;
+        }
+        
+        // Add authorisation details (up to 25)
+        if (topAuthorisations.length > 0) {
+          combinedMessage += `**🛡️ AUTHORISATIONS (Next ${topAuthorisations.length} expiring):**\n`;
+          for (const auth of topAuthorisations) {
+            const daysText = auth.days_until_expiry < 0 
+              ? `⚠️ ${Math.abs(auth.days_until_expiry)}d overdue`
+              : auth.days_until_expiry === 0 
+              ? `🔴 Today`
+              : auth.days_until_expiry <= 7
+              ? `🟡 ${auth.days_until_expiry}d`
+              : auth.days_until_expiry <= 30
+              ? `🟠 ${auth.days_until_expiry}d`
+              : `${auth.days_until_expiry}d`;
+            combinedMessage += `• **${auth.user_name}** - ${auth.authorisation_title} (${daysText})\n`;
           }
-          
-          // Add document details
-          if (topDocuments.length > 0) {
-            combinedMessage += `**Document Details** (Top ${topDocuments.length}):\n`;
-            for (const doc of topDocuments.slice(0, 5)) {
-              const daysText = doc.days_until_expiry < 0 
-                ? `${Math.abs(doc.days_until_expiry)} days overdue`
-                : doc.days_until_expiry === 0 
-                ? `Today`
-                : `${doc.days_until_expiry} days`;
-              combinedMessage += `• ${doc.user_name} - ${doc.document_title} (${daysText})\n`;
-            }
-            if (topDocuments.length > 5) {
-              combinedMessage += `• ... and ${topDocuments.length - 5} more\n`;
-            }
+          combinedMessage += `\n`;
+        } else {
+          combinedMessage += `**🛡️ AUTHORISATIONS:** No upcoming expiries\n\n`;
+        }
+        
+        // Add document details (up to 25)
+        if (topDocuments.length > 0) {
+          combinedMessage += `**📄 DOCUMENTS (Next ${topDocuments.length} expiring):**\n`;
+          for (const doc of topDocuments) {
+            const daysText = doc.days_until_expiry < 0 
+              ? `⚠️ ${Math.abs(doc.days_until_expiry)}d overdue`
+              : doc.days_until_expiry === 0 
+              ? `🔴 Today`
+              : doc.days_until_expiry <= 7
+              ? `🟡 ${doc.days_until_expiry}d`
+              : doc.days_until_expiry <= 30
+              ? `🟠 ${doc.days_until_expiry}d`
+              : `${doc.days_until_expiry}d`;
+            combinedMessage += `• **${doc.user_name}** - ${doc.document_title} (${daysText})\n`;
           }
+        } else {
+          combinedMessage += `**📄 DOCUMENTS:** No upcoming expiries\n`;
         }
         
         // Always send the combined message
