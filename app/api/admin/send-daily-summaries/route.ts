@@ -337,21 +337,39 @@ export async function POST(req: NextRequest) {
 
     const supabase = supabaseAdmin();
 
-    // Fetch all admin users - join with user_roles and roles tables
+    // First get the Admin role ID
+    const { data: adminRole, error: roleError } = await supabase
+      .from("roles")
+      .select("id")
+      .eq("name", "Admin")
+      .single();
+
+    if (roleError || !adminRole) {
+      return NextResponse.json({ 
+        error: "Admin role not found", 
+        details: roleError?.message 
+      }, { status: 404 });
+    }
+
+    // Get all user IDs who have the Admin role
+    const { data: adminUserRoles, error: userRoleError } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role_id", adminRole.id);
+
+    if (userRoleError || !adminUserRoles || adminUserRoles.length === 0) {
+      return NextResponse.json({ 
+        error: "No admin users found", 
+        details: userRoleError?.message 
+      }, { status: 404 });
+    }
+
+    // Get profile information for all admin users
+    const adminUserIds = adminUserRoles.map(ur => ur.user_id);
     const { data: adminUsers, error: adminError } = await supabase
       .from("profiles")
-      .select(`
-        id, 
-        email, 
-        full_name,
-        user_roles!inner (
-          role_id,
-          roles!inner (
-            name
-          )
-        )
-      `)
-      .eq("user_roles.roles.name", "Admin");
+      .select("id, email, full_name")
+      .in("id", adminUserIds);
 
     if (adminError || !adminUsers || adminUsers.length === 0) {
       return NextResponse.json({ 
