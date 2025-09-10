@@ -11,6 +11,7 @@ export type NotificationType =
   | "enrolment_approved"
   | "enrolment_revoked"
   | "course_completed"
+  | "course_updated"
   | "authorisation_ready";
 
 /**
@@ -56,6 +57,8 @@ export async function notifyUser(options: {
       ? `Enrolment approved: ${payload?.course_title ?? ""}`
       : type === "enrolment_revoked"
       ? `Enrolment revoked: ${payload?.course_title ?? ""}`
+      : type === "course_updated"
+      ? `Course Updated - Resit Required: ${payload?.course_title ?? ""}`
       : "Notification from INFLITE Induction & Training");
 
   const emailText =
@@ -72,6 +75,8 @@ export async function notifyUser(options: {
           return `Your enrolment was approved for: ${payload?.course_title ?? ""}.`;
         case "enrolment_revoked":
           return `Your enrolment was revoked for: ${payload?.course_title ?? ""}.`;
+        case "course_updated":
+          return `The course "${payload?.course_title ?? ""}" has been updated and you need to complete it again. Please log in to start your resit.`;
         default:
           return `You have a new notification in INFLITE Induction & Training.`;
       }
