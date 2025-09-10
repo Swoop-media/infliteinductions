@@ -125,31 +125,7 @@ async function saveDetailsAction(form: FormData) {
   const description = String(form.get("description") || "").trim();
   const validForStr = String(form.get("valid_for_days") || "");
   const retakeReminderStr = String(form.get("retake_reminder_days") || "");
-  const deptSelect = String(form.get("department_select") || "").trim();
-  const deptNew = String(form.get("department_new") || "").trim();
-  const department = deptNew || deptSelect || null;
-  
-  // If a new department was typed, save it to the departments table
-  if (deptNew && deptNew.length > 0) {
-    try {
-      // Check if department already exists
-      const { data: existing } = await supabase
-        .from("departments")
-        .select("name")
-        .eq("name", deptNew)
-        .maybeSingle();
-      
-      // Only insert if it doesn't exist
-      if (!existing) {
-        await supabase
-          .from("departments")
-          .insert({ name: deptNew });
-      }
-    } catch (error) {
-      // Don't fail the whole operation if department insert fails
-      console.warn("Failed to save new department:", error);
-    }
-  }
+  const department = String(form.get("department_select") || "").trim() || null;
   
   const tagsCsv = String(form.get("tags_csv") || "").trim();
   const tags =
@@ -555,7 +531,7 @@ function DetailsTab({ auth, allDepartments }: { auth: any; allDepartments: strin
           </div>
         </div>
 
-        <div className="grid gap-1">
+        <div className="grid gap-2">
           <label className="text-sm">Department</label>
           <select
             name="department_select"
@@ -565,11 +541,6 @@ function DetailsTab({ auth, allDepartments }: { auth: any; allDepartments: strin
             <option value="">— Select department —</option>
             {allDepartments.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
-          <input
-            name="department_new"
-            className="mt-1 w-full rounded-md border px-3 py-2"
-            placeholder="Or type a new department"
-          />
         </div>
 
         <div className="grid gap-1">
