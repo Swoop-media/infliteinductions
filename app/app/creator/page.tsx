@@ -71,6 +71,8 @@ function FlashBanner({ ok, error }: { ok?: string | null; error?: string | null 
         ? "Course deleted."
         : ok === "authorisation_deleted"
         ? "Authorisation deleted."
+        : ok === "course_duplicated"
+        ? "Course duplicated successfully."
         : "Saved.";
     return (
       <div className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-800">
