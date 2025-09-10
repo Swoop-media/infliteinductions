@@ -22,6 +22,7 @@ export type NotificationType =
   | "enrolment_approved"
   | "enrolment_revoked"
   | "course_assigned"
+  | "course_updated"
   | "authorization_assigned"
   | "authorization_revoked"
   | "authorisation_pending_approval"
@@ -149,6 +150,17 @@ function formatTeamsText(
         course ? `• Course: ${course}` : "",
         payload?.assignedBy ? `• Assigned by: ${payload.assignedBy}` : "",
         url ? `• Start learning: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "course_updated":
+      return [
+        "🔄 Course updated - Resit required",
+        course ? `• Course: ${course}` : "",
+        payload?.senderName ? `• Updated by: ${payload.senderName}` : "",
+        "• The course content has changed and you need to complete it again",
+        url ? `• Start resit: ${url}` : "",
       ]
         .filter(Boolean)
         .join("\n");

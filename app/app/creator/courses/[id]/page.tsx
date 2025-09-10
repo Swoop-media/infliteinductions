@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import ResitNotificationMenu from "./_components/ResitNotificationMenu";
 
 /** Types & helpers */
 type ModuleType =
@@ -85,6 +86,7 @@ function noticeMessage(code?: string) {
     case "module_reordered": return "Module order updated.";
     case "assigned": return "Person assigned to course.";
     case "revoked": return "Assignment revoked.";
+    case "resit_notifications_sent": return "Resit notifications sent successfully.";
     default: return null;
   }
 }
@@ -982,6 +984,9 @@ function DetailsTab({
           Draft: only editors/owners see it. Published: visible to learners. Archived: hidden for new learners.
         </div>
       </div>
+
+      {/* Resit notification menu for published courses */}
+      <ResitNotificationMenu courseId={courseId} courseStatus={course.status} />
     </div>
   );
 }
