@@ -47,9 +47,14 @@ async function sendTeamsMessageToUser(message: string, recipientUserId: string) 
         errorData = { error: errorText };
       }
 
-      // If user not linked to Teams, that's expected - return false
+      // Handle expected failure cases
       if (botResponse.status === 404 && errorData.error?.includes("not linked")) {
         console.log("📧 User not linked to Teams, will rely on database logging only");
+        return false;
+      }
+      
+      if (botResponse.status === 503 && errorData.error?.includes("Teams bot not configured")) {
+        console.log("⚠️ Teams bot is not configured, will rely on database logging only");
         return false;
       }
 

@@ -8,6 +8,20 @@ export async function POST(request: NextRequest) {
 
     console.log("🔍 Debug send request:", { email, hasMessage: !!message, userId });
 
+    // Check if Teams bot credentials are configured
+    const MicrosoftAppId = process.env.MICROSOFT_APP_ID;
+    const MicrosoftAppPassword = process.env.MICROSOFT_APP_PASSWORD;
+    const MicrosoftAppType = process.env.MICROSOFT_APP_TYPE;
+    const MicrosoftAppTenantId = process.env.MICROSOFT_APP_TENANT_ID;
+
+    if (!MicrosoftAppId || !MicrosoftAppPassword || !MicrosoftAppType || !MicrosoftAppTenantId) {
+      console.log("⚠️ Teams bot credentials not configured - Teams integration disabled");
+      return NextResponse.json(
+        { error: "Teams bot not configured - missing required environment variables" },
+        { status: 503 }
+      );
+    }
+
     // If userId is provided, use that; otherwise lookup by email
     let targetUserId = userId;
     if (!targetUserId && email) {
@@ -77,10 +91,6 @@ export async function POST(request: NextRequest) {
 
 
     // Send message using Bot Framework API
-    const MicrosoftAppId = process.env.MICROSOFT_APP_ID;
-    const MicrosoftAppPassword = process.env.MICROSOFT_APP_PASSWORD;
-    const MicrosoftAppType = process.env.MICROSOFT_APP_TYPE;
-    const MicrosoftAppTenantId = process.env.MICROSOFT_APP_TENANT_ID;
 
     // Get token
     const tenant = MicrosoftAppType === "SingleTenant" ? MicrosoftAppTenantId : "botframework.com";

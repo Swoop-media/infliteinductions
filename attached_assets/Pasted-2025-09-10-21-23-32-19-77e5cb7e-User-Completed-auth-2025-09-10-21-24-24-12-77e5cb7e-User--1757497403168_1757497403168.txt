@@ -1,0 +1,140 @@
+2025-09-10 21:23:32.19
+77e5cb7e
+User
+Completed auth: []
+2025-09-10 21:24:24.12
+77e5cb7e
+User
+📝 Processing issue report...
+2025-09-10 21:24:24.13
+77e5cb7e
+User
+👤 Getting user details for: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+📤 Sending Teams message...
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+📧 Sending Teams message to user ID: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+📤 Attempting to send Teams message to user ID: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+📝 Message preview: 🐛 **Issue Report**
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+**URL/Page:** https://inflite-training.replit.app/app/myprofile
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+**Issue Description:**
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+Remove browse courses
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+**Context Informatio...
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+🌐 Using base URL: https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+📦 Request body: {
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+userId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10',
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+message: '🐛 **Issue Report**\n' +
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+'**URL/Page:** https://inflite-training.replit.app/app/myprofile\n' +
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+'**Issue Descript...'
+2025-09-10 21:24:24.79
+77e5cb7e
+User
+}
+2025-09-10 21:24:24.95
+77e5cb7e
+User
+📊 Bot endpoint response status: 503
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+❌ Bot endpoint failed, couldn't parse error response: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+at JSON.parse (<anonymous>)
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+at async w (.next/server/app/api/report-issue/route.js:1:4687)
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+at async x (.next/server/app/api/report-issue/route.js:1:6656)
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+📄 Raw error response: No response text
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+⚠️ Bot endpoint failed with status: 503
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+⚠️ Error details: { error: 'No response text' }
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+⚠️ Bot endpoint failed, trying fallback approach...
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+📧 Issue report for user 1b44c8f5-95aa-4f8c-8110-8f36106b4d10 : 🐛 **Issue Report**
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+**URL/Page:** https://inflite-training.replit.app/app/myprofile
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+**Issue Description:**
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+Remove browse courses
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+**Context Information:**
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+• User ID: 1b44c8f5-95aa-4f8c-8110-8f36106b4d...
+2025-09-10 21:24:24.96
+77e5cb7e
+User
+✅ Issue report processed for user Henry Morgan, Teams sent: false
+2025-09-10 21:24:25.60
+77e5cb7e
+User
+📊 Issue report logged to database
