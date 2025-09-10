@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
-import { sendTeamsNotification } from "@/lib/teams/proactive";
+import { sendTeamsDMToAppUser } from "@/lib/teams/send";
 
 // Type definitions
 type CourseWithDueDate = {
@@ -373,17 +373,17 @@ export async function POST(req: NextRequest) {
       try {
         // Send course summary
         if (allCourses.length > 0) {
-          await sendTeamsNotification(admin.id, courseMessage);
+          await sendTeamsDMToAppUser(admin.id, courseMessage);
         }
         
         // Send authorisation summary
         if (allAuthorisations.length > 0) {
-          await sendTeamsNotification(admin.id, authorisationMessage);
+          await sendTeamsDMToAppUser(admin.id, authorisationMessage);
         }
         
         // Send document summary
         if (allDocuments.length > 0) {
-          await sendTeamsNotification(admin.id, documentMessage);
+          await sendTeamsDMToAppUser(admin.id, documentMessage);
         }
         
         results.push({
