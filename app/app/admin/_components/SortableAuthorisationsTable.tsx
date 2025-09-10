@@ -5,7 +5,7 @@
 import { useState, useMemo } from "react";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
-type SortField = 'trainee' | 'authorisation' | 'approved' | 'due_date' | 'status';
+type SortField = 'trainee' | 'authorisation' | 'department' | 'approved' | 'due_date' | 'status';
 type SortDirection = 'asc' | 'desc';
 
 interface AuthorisationCompletionRow {
@@ -16,6 +16,7 @@ interface AuthorisationCompletionRow {
   full_name: string | null;
   email: string | null;
   authorisation_title: string | null;
+  department: string | null;
   valid_for_days: number | null;
 }
 
@@ -125,6 +126,10 @@ export default function SortableAuthorisationsTable({ completedAuthorisations }:
           aValue = a.authorisation_title || '';
           bValue = b.authorisation_title || '';
           break;
+        case 'department':
+          aValue = a.department || '';
+          bValue = b.department || '';
+          break;
         case 'approved':
           aValue = new Date(a.approved_at).getTime();
           bValue = new Date(b.approved_at).getTime();
@@ -200,6 +205,15 @@ export default function SortableAuthorisationsTable({ completedAuthorisations }:
             </th>
             <th
               className="border-b border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
+              onClick={() => handleSort('department')}
+            >
+              <div className="flex items-center justify-between">
+                Department
+                {getSortIcon('department', sortField, sortDirection)}
+              </div>
+            </th>
+            <th
+              className="border-b border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('approved')}
             >
               <div className="flex items-center justify-between">
@@ -238,6 +252,9 @@ export default function SortableAuthorisationsTable({ completedAuthorisations }:
                 <div className="text-xs text-gray-500">
                   Valid for: {auth.valid_for_days ? `${auth.valid_for_days} days` : 'No expiry'}
                 </div>
+              </td>
+              <td className="border-b px-4 py-3 text-sm">
+                {auth.department || '—'}
               </td>
               <td className="border-b px-4 py-3 text-sm">
                 {formatDate(auth.approved_at)}

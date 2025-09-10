@@ -58,6 +58,7 @@ type CompletedCourseRow = {
   user_id: string;
   completed_at: string;
   title: string;
+  department: string;
   valid_for_days: number;
   retake_reminder_days: number;
   new_due_date: string;
@@ -101,7 +102,7 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
   // Get courses
   const { data: courses, error: courseError } = await supabase
     .from("courses")
-    .select("id, title, valid_for_days, created_by")
+    .select("id, title, valid_for_days, created_by, department")
     .in("id", courseIds);
 
   if (courseError) throw new Error(courseError.message);
@@ -139,6 +140,7 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
       user_id: assignment.user_id,
       completed_at: assignment.completed_at,
       title: course?.title || "Unknown Course",
+      department: course?.department || "",
       valid_for_days: validForDays,
       retake_reminder_days: 30, // Default reminder threshold
       new_due_date: dueDate.toISOString(),
@@ -517,7 +519,7 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
       user_id,
       authorisation_id,
       approved_at,
-      authorisations!inner(title, valid_for_days)
+      authorisations!inner(title, valid_for_days, department)
     `)
     .eq("assignment_status", "completed")
     .not("approved_at", "is", null)
@@ -567,6 +569,7 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
       full_name: row.profiles?.full_name ?? null,
       email: row.profiles?.email ?? null,
       authorisation_title: row.authorisations?.title ?? null,
+      department: row.authorisations?.department ?? null,
       valid_for_days: row.authorisations?.valid_for_days ?? null,
     }));
   }
@@ -580,6 +583,7 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
     full_name: row.profiles?.full_name ?? null,
     email: row.profiles?.email ?? null,
     authorisation_title: row.authorisations?.title ?? null,
+    department: row.authorisations?.department ?? null,
     valid_for_days: row.authorisations?.valid_for_days ?? null,
   }));
 
@@ -594,6 +598,7 @@ type AuthorisationCompletionRow = {
   full_name: string | null;
   email: string | null;
   authorisation_title: string | null;
+  department: string | null;
   valid_for_days: number | null;
 };
 

@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 
-type SortField = 'trainee' | 'course' | 'completed' | 'due_date' | 'status';
+type SortField = 'trainee' | 'course' | 'department' | 'completed' | 'due_date' | 'status';
 type SortDirection = 'asc' | 'desc';
 
 interface CompletedCourse {
@@ -12,6 +12,7 @@ interface CompletedCourse {
   user_id: string;
   completed_at: string;
   title: string;
+  department?: string;
   valid_for_days: number;
   retake_reminder_days: number;
   new_due_date: string;
@@ -92,6 +93,10 @@ export default function SortableDueDatesTable({ completedCourses }: Props) {
           aValue = a.title;
           bValue = b.title;
           break;
+        case 'department':
+          aValue = a.department || '';
+          bValue = b.department || '';
+          break;
         case 'completed':
           aValue = new Date(a.completed_at).getTime();
           bValue = new Date(b.completed_at).getTime();
@@ -154,6 +159,15 @@ export default function SortableDueDatesTable({ completedCourses }: Props) {
             </th>
             <th
               className="border-b border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
+              onClick={() => handleSort('department')}
+            >
+              <div className="flex items-center justify-between">
+                Department
+                {getSortIcon('department', sortField, sortDirection)}
+              </div>
+            </th>
+            <th
+              className="border-b border-gray-300 px-4 py-3 text-left text-sm font-medium text-gray-700 cursor-pointer hover:bg-gray-100"
               onClick={() => handleSort('completed')}
             >
               <div className="flex items-center justify-between">
@@ -192,6 +206,9 @@ export default function SortableDueDatesTable({ completedCourses }: Props) {
                 <div className="text-xs text-gray-500">
                   Valid for {course.valid_for_days} days
                 </div>
+              </td>
+              <td className="border-b px-4 py-3 text-sm">
+                {course.department || '—'}
               </td>
               <td className="border-b px-4 py-3 text-sm">
                 {formatDate(course.completed_at)}
