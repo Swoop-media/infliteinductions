@@ -10,16 +10,18 @@ import SortableDueDatesTable from "./_components/SortableDueDatesTable";
 import SortableUsersTable from "./_components/SortableUsersTable";
 import SortableAuthorisationsTable from "./_components/SortableAuthorisationsTable";
 import SortableDocumentsTable from "./_components/SortableDocumentsTable";
+import SortableCourseProgressTable from "./_components/SortableCourseProgressTable";
 
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "due_dates_courses" | "due_dates_authorisations" | "users" | "pending_authorisations" | "documents";
+type TabKey = "due_dates_courses" | "due_dates_authorisations" | "course_progress" | "users" | "pending_authorisations" | "documents";
 
 function tabFromSearch(sp: Record<string, string | string[] | undefined>): TabKey {
   const raw = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab || "";
   if (raw === "users") return "users";
   if (raw === "due_dates_authorisations") return "due_dates_authorisations";
+  if (raw === "course_progress") return "course_progress";
   if (raw === "pending_authorisations") return "pending_authorisations";
   if (raw === "documents") return "documents";
   return "due_dates_courses";
@@ -162,6 +164,93 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
   }
 
   return completedCourses;
+}
+
+/* --------------------------
+   IN-PROGRESS COURSES
+---------------------------*/
+type InProgressCourseRow = {
+  assignment_id: string;
+  user_id: string;
+  assigned_at: string;
+  title: string;
+  department: string;
+  assignment_status: string;
+  trainee_email: string;
+  trainee_name: string;
+};
+
+async function loadInProgressCourses(q: string | null) {
+  "use server";
+  noStore();
+  const supabase = await createSupabaseServer();
+  const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
+  if (!allowed) redirect("/app/home?banner=no_access");
+
+  // Get course assignments that are not completed
+  const { data: assignments, error: assignError } = await supabase
+    .from("course_assignments")
+    .select("id, user_id, course_id, assignment_status, created_at")
+    .in("assignment_status", ["assigned", "in_progress"])
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (assignError) throw new Error(assignError.message);
+  if (!assignments || assignments.length === 0) return [];
+
+  // Get unique user and course IDs
+  const userIds = [...new Set(assignments.map(a => a.user_id))];
+  const courseIds = [...new Set(assignments.map(a => a.course_id))];
+
+  // Get profiles
+  const { data: profiles, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", userIds);
+
+  if (profileError) throw new Error(profileError.message);
+
+  // Get courses
+  const { data: courses, error: courseError } = await supabase
+    .from("courses")
+    .select("id, title, department")
+    .in("id", courseIds);
+
+  if (courseError) throw new Error(courseError.message);
+
+  // Create lookup maps
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+  const courseMap = new Map((courses || []).map(c => [c.id, c]));
+
+  // Transform data
+  let inProgressCourses = assignments.map((assignment) => {
+    const profile = profileMap.get(assignment.user_id);
+    const course = courseMap.get(assignment.course_id);
+
+    return {
+      assignment_id: assignment.id,
+      user_id: assignment.user_id,
+      assigned_at: assignment.created_at,
+      title: course?.title || "Unknown Course",
+      department: course?.department || "",
+      assignment_status: assignment.assignment_status,
+      trainee_email: profile?.email || "",
+      trainee_name: profile?.full_name || "",
+    };
+  });
+
+  // Apply search filter if provided
+  if (q && q.trim()) {
+    const searchTerm = q.trim().toLowerCase();
+    inProgressCourses = inProgressCourses.filter(course =>
+      (course.trainee_name?.toLowerCase().includes(searchTerm)) ||
+      (course.trainee_email?.toLowerCase().includes(searchTerm)) ||
+      (course.title?.toLowerCase().includes(searchTerm)) ||
+      (course.department?.toLowerCase().includes(searchTerm))
+    );
+  }
+
+  return inProgressCourses;
 }
 
 /* --------------------------
@@ -384,6 +473,7 @@ export default async function AdminPage({
   const tabs: { key: TabKey; label: string; href: string }[] = [
     { key: "due_dates_courses", label: "Due Dates - Courses", href: "/app/admin?tab=due_dates_courses" },
     { key: "due_dates_authorisations", label: "Due Dates - Authorisations", href: "/app/admin?tab=due_dates_authorisations" },
+    { key: "course_progress", label: "Course Progress", href: "/app/admin?tab=course_progress" },
     { key: "documents", label: "Due Dates - Documents", href: "/app/admin?tab=documents" },
     { key: "users", label: "Users & Roles", href: "/app/admin?tab=users" },
     { key: "pending_authorisations", label: "Pending Authorisations", href: "/app/admin?tab=pending_authorisations" },
@@ -395,16 +485,6 @@ export default async function AdminPage({
   let profiles: Profile[] = [];
   let roleMap: Map<string, string[]> = new Map();
   let grantablePool: string[] = [];
-
-  if (tab === "documents") {
-    documents = await loadUserDocuments(q);
-  } else if (tab === "users") {
-    ({ profiles, roleMap, grantablePool } = await loadUsersAndRoles(q));
-  } else if (tab === "pending_authorisations") {
-    // Fetch pending authorisations (assuming a similar loading function exists or is adapted)
-    // For now, using a placeholder function. You'll need to implement loadPendingAuthorisations similar to others.
-    pendingAssignments = await loadPendingAuthorisations(q);
-  }
 
   return (
     <div className="p-6 space-y-6">
@@ -440,6 +520,8 @@ export default async function AdminPage({
           <DueDatesCourseSection q={q} />
         ) : tab === "due_dates_authorisations" ? (
           <DueDatesAuthorisationSection q={q} />
+        ) : tab === "course_progress" ? (
+          <CourseProgressSection q={q} />
         ) : tab === "documents" ? (
           <DocumentsSection q={q} />
         ) : tab === "users" ? (
@@ -500,6 +582,30 @@ async function DueDatesAuthorisationSection({ q }: { q: string | null }) {
       </div>
 
       <SortableAuthorisationsTable completedAuthorisations={completedAuthorisations} />
+    </div>
+  );
+}
+
+async function CourseProgressSection({ q }: { q: string | null }) {
+  const inProgressCourses = await loadInProgressCourses(q);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Course Progress</h2>
+        <form method="get" action="/app/admin" className="flex items-center gap-2">
+          <input type="hidden" name="tab" value="course_progress" />
+          <input
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Search trainee, course, or email"
+            className="w-80 rounded-md border px-3 py-2 text-sm"
+          />
+          <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Search</button>
+        </form>
+      </div>
+
+      <SortableCourseProgressTable inProgressCourses={inProgressCourses} />
     </div>
   );
 }
