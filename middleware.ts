@@ -17,8 +17,26 @@ export async function middleware(req: NextRequest) {
     const supabase = createMiddlewareClient<Database>({ req, res });
     // This only sets/refreshes cookies; it does NOT read the request body.
     await supabase.auth.getSession();
-  } catch {
-    // Ignore middleware auth errors; never block the request pipeline
+  } catch (error: any) {
+    // Handle specific refresh token errors by clearing auth cookies
+    if (error?.code === 'refresh_token_not_found' || error?.message?.includes('refresh_token_not_found')) {
+      console.log('Clearing invalid refresh token cookies');
+      
+      // Clear Supabase auth cookies
+      res.cookies.delete('supabase-auth-token');
+      res.cookies.delete('sb-auth-token');
+      res.cookies.delete('supabase-auth-token-code-verifier');
+      
+      // If this is a page request (not API), redirect to login
+      if (!req.nextUrl.pathname.startsWith('/api') && 
+          !req.nextUrl.pathname.startsWith('/auth') && 
+          req.nextUrl.pathname !== '/') {
+        const loginUrl = new URL('/auth/login', req.url);
+        return NextResponse.redirect(loginUrl);
+      }
+    }
+    
+    // Ignore other middleware auth errors; never block the request pipeline
   }
 
   return res;
