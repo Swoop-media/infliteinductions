@@ -174,10 +174,10 @@ type InProgressCourseRow = {
   user_id: string;
   assigned_at: string;
   title: string;
-  department: string;
+  department?: string;
   assignment_status: string;
-  trainee_email: string;
-  trainee_name: string;
+  trainee_email?: string;
+  trainee_name?: string;
 };
 
 async function loadInProgressCourses(q: string | null) {
