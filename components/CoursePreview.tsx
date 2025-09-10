@@ -102,11 +102,53 @@ function PageView({ page, courseId }: { page: Page; courseId?: string }) {
 
   if (pageKind === "quiz") {
     return (
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold">Quiz: {module.title}</h3>
-        <div className="rounded-md bg-indigo-50 p-3 text-indigo-800">
-          This is a placeholder. Wire this to <code>quiz_questions</code> / <code>quiz_options</code> /{" "}
-          <code>quiz_answers</code> to make it functional.
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Digital Assessment Quiz</h3>
+        <div className="rounded-xl border bg-white p-6">
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-medium text-gray-900">{module.title}</h4>
+              <p className="text-sm text-gray-600 mt-1">Complete this quiz to proceed</p>
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-medium text-blue-800">Quiz Preview Mode</span>
+              </div>
+              <p className="text-sm text-blue-700">
+                Use the button below to start the quiz and see how it looks to learners. 
+                Your answers won't be saved in preview mode.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <a
+                href={`/app/learn/modules/${module.id}?preview=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Start Quiz Preview
+              </a>
+              <a
+                href={`/app/creator/modules/${module.id}/quiz`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                Edit Quiz
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     );
