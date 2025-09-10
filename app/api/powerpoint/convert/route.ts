@@ -9,12 +9,21 @@ import { promisify } from 'util';
 const execAsync = promisify(exec);
 
 // Helper to download file from SharePoint using internal proxy
-async function downloadSharePointFile(filePath: string, localPath: string, host: string) {
-  const proxyUrl = `https://${host}/app/files/${encodeURIComponent(filePath)}`;
+async function downloadSharePointFile(filePath: string, localPath: string) {
+  // Use the internal file proxy endpoint directly
+  const proxyUrl = `/app/files/${encodeURIComponent(filePath)}`;
   
-  const response = await fetch(proxyUrl, {
+  // Get cookies properly
+  const cookieStore = await cookies();
+  const cookieHeader = cookieStore.getAll().map(c => `${c.name}=${c.value}`).join('; ');
+  
+  // Use local server URL for internal fetch (no host header vulnerability)
+  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:5000';
+  const fullUrl = `${baseUrl}${proxyUrl}`;
+  
+  const response = await fetch(fullUrl, {
     headers: {
-      'Cookie': cookies().toString()
+      'Cookie': cookieHeader
     }
   });
 
@@ -44,9 +53,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File path required' }, { status: 400 });
     }
 
-    // Create cache directory for converted images
+    // Create private cache directory for converted images (not in public!)
     const safePath = filePath.replace(/[^a-zA-Z0-9-_]/g, '_');
-    const cacheDir = path.join(process.cwd(), 'public', 'powerpoint', safePath);
+    const cacheDir = path.join(process.cwd(), '.slides_cache', safePath);
     await fs.mkdir(cacheDir, { recursive: true });
 
     // Check if conversion already exists
@@ -61,7 +70,11 @@ export async function POST(request: NextRequest) {
         });
 
       if (slides.length > 0) {
-        const slideUrls = slides.map(slide => `/powerpoint/${safePath}/${slide}`);
+        // Return authenticated URLs for slides
+        const slideUrls = slides.map((slide, index) => {
+          const slideNum = slide.match(/slide-(\d+)/)?.[1] || String(index + 1);
+          return `/api/powerpoint/slides?presentation=${safePath}&slide=${slideNum}`;
+        });
         return NextResponse.json({ 
           slides: slideUrls,
           totalSlides: slides.length,
@@ -78,11 +91,9 @@ export async function POST(request: NextRequest) {
     
     const localFilePath = path.join(tempDir, `${safePath}.pptx`);
     
-    // Get the host from request headers
-    const host = request.headers.get('host') || 'localhost:5000';
-    
     try {
-      await downloadSharePointFile(filePath, localFilePath, host);
+      // Download without using dangerous host header
+      await downloadSharePointFile(filePath, localFilePath);
     } catch (error) {
       console.error('Failed to download SharePoint file:', error);
       // For demo purposes, create a sample presentation
@@ -181,7 +192,11 @@ print("SUCCESS:3")
         return numA - numB;
       });
 
-    const slideUrls = slides.map(slide => `/powerpoint/${safePath}/${slide}`);
+    // Return authenticated URLs for slides
+    const slideUrls = slides.map((slide, index) => {
+      const slideNum = slide.match(/slide-(\d+)/)?.[1] || String(index + 1);
+      return `/api/powerpoint/slides?presentation=${safePath}&slide=${slideNum}`;
+    });
 
     return NextResponse.json({ 
       slides: slideUrls,
