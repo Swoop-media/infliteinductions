@@ -986,7 +986,7 @@ function DetailsTab({
       </div>
 
       {/* Resit notification menu for published courses */}
-      <ResitNotificationMenu courseId={courseId} courseStatus={course.status} />
+      <ResitNotificationMenu courseId={course.id} courseStatus={course.status} />
     </div>
   );
 }

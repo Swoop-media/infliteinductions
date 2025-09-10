@@ -21,7 +21,7 @@ async function getCompletedTrainees(courseId: string): Promise<CompletedTrainee[
       id,
       user_id,
       completed_at,
-      profiles!inner(
+      profiles!course_assignments_user_fk(
         full_name,
         email
       )
