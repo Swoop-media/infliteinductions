@@ -3,6 +3,8 @@
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import SimpleVideoPlayer from "./SimpleVideoPlayer";
+import SharePointVideoEmbed from "./SharePointVideoEmbed";
 
 /** Data shapes coming from your pages */
 type Module = {
@@ -58,23 +60,29 @@ function FileBlock({ data }: { data: any }) {
   );
 }
 
-function VideoEmbed({ data }: { data: any }) {
+function VideoEmbed({ data, courseId }: { data: any; courseId?: string }) {
   const src: string | undefined = data?.embedUrl || data?.embed_url || data?.url;
   const title: string = data?.title || "Embedded video";
+  
   if (!src) {
     return <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">Video block missing an embed URL.</div>;
   }
-  return (
-    <div className="aspect-video w-full overflow-hidden rounded-lg border">
-      <iframe
-        src={src}
-        title={title}
-        className="h-full w-full"
-        allow="autoplay; fullscreen; picture-in-picture"
-        allowFullScreen
-      />
-    </div>
-  );
+
+  // Check if this is a SharePoint video that needs special authentication handling
+  try {
+    const url = new URL(src);
+    const hostname = url.hostname.replace(/^www\./, '');
+    
+    if (hostname.includes('.sharepoint.com')) {
+      // Use the specialized SharePoint video embed component for authentication
+      return <SharePointVideoEmbed url={src} courseId={courseId || 'unknown'} />;
+    }
+  } catch (error) {
+    // If URL parsing fails, fall through to SimpleVideoPlayer
+  }
+
+  // For all other video types (YouTube, Vimeo, direct links), use SimpleVideoPlayer
+  return <SimpleVideoPlayer url={src} courseId={courseId} title={title} />;
 }
 
 function LinkBlock({ data }: { data: any }) {
@@ -89,7 +97,7 @@ function LinkBlock({ data }: { data: any }) {
 }
 
 /** One page renderer */
-function PageView({ page }: { page: Page }) {
+function PageView({ page, courseId }: { page: Page; courseId?: string }) {
   const { module, pageKind, block } = page;
 
   if (pageKind === "quiz") {
@@ -142,7 +150,7 @@ function PageView({ page }: { page: Page }) {
       <h3 className="text-lg font-semibold">{module.title}</h3>
       {block.kind === "rich_text" && <RichText html={String(block.data?.html || block.data?.content || "")} />}
       {block.kind === "file" && <FileBlock data={block.data} />}
-      {block.kind === "video_embed" && <VideoEmbed data={block.data} />}
+      {block.kind === "video_embed" && <VideoEmbed data={block.data} courseId={courseId} />}
       {block.kind === "link" && <LinkBlock data={block.data} />}
     </div>
   );
@@ -500,7 +508,7 @@ export default function CoursePreview({
         {/* Page body */}
         <div className="rounded-xl border p-4">
           {page ? (
-            <PageView page={page} />
+            <PageView page={page} courseId={courseId} />
           ) : (
             <div className="rounded-md bg-gray-50 p-4 text-sm text-gray-600">
               This course doesn’t have any content yet.
