@@ -466,22 +466,18 @@ async function loadAllDepartments() {
   "use server";
   const supabase = await createSupabaseServer();
   
-  // Get unique departments from both courses and authorisations tables
-  const { data: courseDepts } = await supabase
-    .from("courses")
-    .select("department")
-    .not("department", "is", null);
+  // Get all departments from the departments table
+  const { data: departments, error } = await supabase
+    .from("departments")
+    .select("name")
+    .order("name", { ascending: true });
   
-  const { data: authDepts } = await supabase
-    .from("authorisations")
-    .select("department")
-    .not("department", "is", null);
+  if (error) {
+    console.error("Error loading departments:", error);
+    return [];
+  }
   
-  const allDepts = new Set<string>();
-  courseDepts?.forEach(row => { if (row.department) allDepts.add(row.department); });
-  authDepts?.forEach(row => { if (row.department) allDepts.add(row.department); });
-  
-  return Array.from(allDepts).sort();
+  return departments?.map(dept => dept.name).filter(Boolean) || [];
 }
 
 function DetailsTab({ auth, allDepartments }: { auth: any; allDepartments: string[] }) {
