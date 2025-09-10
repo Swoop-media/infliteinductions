@@ -12,6 +12,7 @@ export type NotificationType =
   | "enrolment_revoked"
   | "course_completed"
   | "course_updated"
+  | "course_published"  // ✅ Added for future use (can be disabled via env var)
   | "authorisation_ready";
 
 /**
@@ -28,6 +29,13 @@ export async function notifyUser(options: {
   payload?: Record<string, any>;
 }) {
   const { recipientId, recipientEmail, type, subject, text, payload = {} } = options;
+
+  // ✅ Feature flag: Disable course publishing notifications (keep code for future use)
+  const DISABLE_COURSE_PUBLISH_NOTIFICATIONS = process.env.DISABLE_COURSE_PUBLISH_NOTIFICATIONS === 'true';
+  if (type === 'course_published' && DISABLE_COURSE_PUBLISH_NOTIFICATIONS) {
+    console.log('🔕 Course publishing notifications are disabled via feature flag');
+    return;
+  }
 
   const supabase = await createSupabaseServer();
   const { error: insertErr } = await supabase.from("notifications").insert({
@@ -59,6 +67,8 @@ export async function notifyUser(options: {
       ? `Enrolment revoked: ${payload?.course_title ?? ""}`
       : type === "course_updated"
       ? `Course Updated - Resit Required: ${payload?.course_title ?? ""}`
+      : type === "course_published"
+      ? `Course Published: ${payload?.title ?? ""}`
       : "Notification from INFLITE Induction & Training");
 
   const emailText =
@@ -77,6 +87,8 @@ export async function notifyUser(options: {
           return `Your enrolment was revoked for: ${payload?.course_title ?? ""}.`;
         case "course_updated":
           return `The course "${payload?.course_title ?? ""}" has been updated and you need to complete it again. Please log in to start your resit.`;
+        case "course_published":
+          return `A new course "${payload?.title ?? ""}" has been published and is now available for enrollment.`;
         default:
           return `You have a new notification in INFLITE Induction & Training.`;
       }
