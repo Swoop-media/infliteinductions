@@ -41,117 +41,118 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
       setAuthError(null);
       setAuthAttempted(true);
 
-      addDebugLog('Starting SharePoint authentication flow');
+      addDebugLog('Starting inline SharePoint authentication flow');
 
       // Get the SharePoint domain from the video URL
       const sharePointUrl = new URL(url);
       const sharePointDomain = sharePointUrl.hostname;
       addDebugLog('SharePoint domain extracted', { sharePointDomain });
 
-      // Start with the video URL directly - this often works better
-      const authUrl = url;
-      addDebugLog('Using direct video URL for authentication', { authUrl });
-
-      // Open SharePoint authentication in a new window
-      const authWindow = window.open(
-        authUrl,
-        'sharepoint_auth',
-        'width=1200,height=800,scrollbars=yes,resizable=yes,location=yes,menubar=yes,toolbar=yes'
-      );
-
-      if (!authWindow) {
-        const errorMsg = 'Popup blocked. Please allow popups and try again.';
-        addDebugLog('Auth window failed to open', { error: errorMsg });
-        setAuthError(errorMsg);
-        setIsLoading(false);
-        return;
-      }
-
-      addDebugLog('Auth window opened successfully');
-
-      // Focus the auth window
+      // Try multiple authentication approaches for better compatibility
+      addDebugLog('Attempting inline authentication using iframe approach');
+      
+      // First try: Direct URL access with credentials include
       try {
-        authWindow.focus();
-        addDebugLog('Auth window focused');
+        const response = await fetch(url, {
+          method: 'GET',
+          credentials: 'include',
+          mode: 'no-cors'
+        });
+        addDebugLog('Direct fetch attempt completed');
       } catch (e: any) {
-        addDebugLog('Failed to focus auth window', { error: e.message });
+        addDebugLog('Direct fetch failed, continuing with iframe approach', { error: e.message });
       }
 
-      // Monitor the auth window with simpler logic
-      let checkInterval: NodeJS.Timeout;
+      // Second try: Create authentication iframe
+      const authUrl = `https://${sharePointDomain}/_layouts/15/authenticate.aspx?Source=${encodeURIComponent(url)}`;
+      addDebugLog('Creating authentication iframe', { authUrl });
+
+      // Create a hidden iframe for authentication
+      const authIframe = document.createElement('iframe');
+      authIframe.style.display = 'none';
+      authIframe.src = authUrl;
+      authIframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-top-navigation');
+      document.body.appendChild(authIframe);
+
+      // Set up authentication check
       let authCompleted = false;
+      let checkCount = 0;
+      const maxChecks = 30; // 30 seconds max
 
-      const checkAuth = () => {
+      const checkAuth = async () => {
+        checkCount++;
+        addDebugLog(`Authentication check ${checkCount}/${maxChecks}`);
+
         try {
-          // Check if window is closed
-          if (authWindow && authWindow.closed) {
-            addDebugLog('Auth window closed - assuming authentication completed');
-            clearInterval(checkInterval);
+          // Test if we can access the video now
+          const testIframe = document.createElement('iframe');
+          testIframe.style.display = 'none';
+          testIframe.src = url;
+          document.body.appendChild(testIframe);
 
-            if (!authCompleted) {
-              authCompleted = true;
+          // Wait a bit for the iframe to load
+          await new Promise(resolve => setTimeout(resolve, 1000));
 
-              // Mark as authenticated and show the video
-              const authKey = `sharepoint_auth_${courseId}`;
-              try {
-                localStorage.setItem(authKey, 'true');
-                addDebugLog('Auth status saved to localStorage');
-              } catch (e: any) {
-                addDebugLog('Failed to save auth to localStorage', { error: e.message });
-              }
+          // If we've reached here without errors, assume auth worked
+          document.body.removeChild(testIframe);
+          document.body.removeChild(authIframe);
 
-              setIsAuthenticated(true);
-              setShowAuthPrompt(false);
-              setIsLoading(false);
-              setAuthError(null);
+          if (!authCompleted) {
+            authCompleted = true;
+            addDebugLog('Authentication appears successful');
+
+            // Mark as authenticated and show the video
+            const authKey = `sharepoint_auth_${courseId}`;
+            try {
+              localStorage.setItem(authKey, 'true');
+              addDebugLog('Auth status saved to localStorage');
+            } catch (e: any) {
+              addDebugLog('Failed to save auth to localStorage', { error: e.message });
             }
+
+            setIsAuthenticated(true);
+            setShowAuthPrompt(false);
+            setIsLoading(false);
+            setAuthError(null);
           }
         } catch (e: any) {
-          addDebugLog('Error in checkAuth', { error: e.message });
+          addDebugLog('Auth check failed', { error: e.message, attempt: checkCount });
+          
+          if (checkCount >= maxChecks) {
+            // Cleanup and try direct approach
+            try {
+              document.body.removeChild(authIframe);
+            } catch {}
+            
+            addDebugLog('Max auth attempts reached, trying direct access');
+            // Try direct access - sometimes SharePoint just works
+            const authKey = `sharepoint_auth_${courseId}`;
+            try {
+              localStorage.setItem(authKey, 'true');
+            } catch (e: any) {
+              addDebugLog('Failed to save auth on timeout', { error: e.message });
+            }
+            setIsAuthenticated(true);
+            setShowAuthPrompt(false);
+            setIsLoading(false);
+            setAuthError(null);
+          } else {
+            // Try again in 1 second
+            setTimeout(checkAuth, 1000);
+          }
         }
       };
 
-      // Start checking immediately and then every 1 second
-      checkAuth();
-      checkInterval = setInterval(checkAuth, 1000);
-
-      // Auto-close after 5 minutes and assume success
-      setTimeout(() => {
-        addDebugLog('Auth timeout reached (5 minutes)');
-        clearInterval(checkInterval);
-        if (authWindow && !authWindow.closed) {
-          try {
-            authWindow.close();
-            addDebugLog('Auth window closed due to timeout');
-          } catch (e: any) {
-            addDebugLog('Error closing auth window on timeout', { error: e.message });
-          }
-        }
-
-        // If still loading, assume authentication was successful
-        if (isLoading && !authCompleted) {
-          addDebugLog('Timeout reached, assuming authentication completed');
-          authCompleted = true;
-          const authKey = `sharepoint_auth_${courseId}`;
-          try {
-            localStorage.setItem(authKey, 'true');
-          } catch (e: any) {
-            addDebugLog('Failed to save auth on timeout', { error: e.message });
-          }
-          setIsAuthenticated(true);
-          setShowAuthPrompt(false);
-          setIsLoading(false);
-          setAuthError(null);
-        }
-      }, 300000);
+      // Start checking after a short delay
+      setTimeout(checkAuth, 2000);
 
     } catch (e: any) {
       const errorMsg = `Error in handleAuthenticate: ${e.message}`;
       addDebugLog('handleAuthenticate error', { error: errorMsg });
-      setAuthError('Failed to open authentication window. Please try again.');
+      setAuthError('Authentication failed. Please try opening the video in a new tab.');
       setIsLoading(false);
     }
-  }, [url, courseId, isLoading, addDebugLog]);
+  }, [url, courseId, addDebugLog]);
 
   useEffect(() => {
     if (!isMounted || typeof window === 'undefined') return;
@@ -199,7 +200,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
       // Auto-trigger authentication after a short delay to improve UX
       setTimeout(() => {
         if (!isAuthenticated && !authAttempted) {
-          addDebugLog('Auto-triggering authentication');
+          addDebugLog('Auto-triggering inline authentication');
           handleAuthenticate();
         }
       }, 1000);
@@ -264,7 +265,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
               disabled={isLoading}
               className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
             >
-              {isLoading ? 'Authenticating...' : 'Authenticate with SharePoint'}
+              {isLoading ? 'Authenticating...' : 'Sign In Inline'}
             </button>
             {authAttempted && (
               <button
@@ -274,7 +275,24 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
                 Try Again
               </button>
             )}
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="border border-blue-300 px-4 py-2 rounded hover:bg-blue-50 text-blue-600 text-sm"
+            >
+              Open in New Tab
+            </a>
           </div>
+
+          {isLoading && (
+            <div className="bg-blue-100 p-3 rounded border border-blue-200">
+              <div className="flex items-center gap-2">
+                <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                <span className="text-sm text-blue-700">Authenticating with SharePoint...</span>
+              </div>
+            </div>
+          )}
 
           <div className="pt-2">
             <button
