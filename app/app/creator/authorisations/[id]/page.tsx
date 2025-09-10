@@ -361,9 +361,9 @@ export default async function Page(props: {
     );
   }
 
-  // Load departments for details tab
+  // Load departments for details and courses tabs
   let allDepartments: string[] = [];
-  if (activeTab === "details") {
+  if (activeTab === "details" || activeTab === "courses") {
     allDepartments = await loadAllDepartments();
   }
 
@@ -444,7 +444,7 @@ export default async function Page(props: {
         {activeTab === "details" && <DetailsTab auth={auth} allDepartments={allDepartments} />}
 
         {activeTab === "courses" && (
-          <CoursesTab authId={id} chosen={chosenCourses} results={searchResults} search={search} />
+          <CoursesTab authId={id} chosen={chosenCourses} results={searchResults} search={search} allDepartments={allDepartments} />
         )}
 
         {activeTab === "assignments" && (
@@ -596,11 +596,13 @@ function CoursesTab({
   chosen,
   results,
   search,
+  allDepartments,
 }: {
   authId: string;
   chosen: Array<{ ac_id: string; course_id: string; order_index: number; title: string; department: string|null; tags: string[] }>;
   results: Array<{ id: string; title: string; department: string|null; tags: string[] }>;
   search: Record<string, string | string[] | undefined>;
+  allDepartments: string[];
 }) {
   const q = (Array.isArray(search.q) ? search.q[0] : search.q) ?? "";
   const dept = (Array.isArray(search.dept) ? search.dept[0] : search.dept) ?? "";
@@ -662,7 +664,7 @@ function CoursesTab({
             />
             <select name="dept" defaultValue={dept} className="rounded-md border px-3 py-2 text-sm">
               <option value="">Any department</option>
-              {DEFAULT_DEPTS.map((d) => <option key={d} value={d}>{d}</option>)}
+              {allDepartments.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
             <input
               name="tag"
