@@ -337,11 +337,21 @@ export async function POST(req: NextRequest) {
 
     const supabase = supabaseAdmin();
 
-    // Fetch all admin users
+    // Fetch all admin users - join with user_roles and roles tables
     const { data: adminUsers, error: adminError } = await supabase
       .from("profiles")
-      .select("id, email, full_name")
-      .contains("roles", ["Admin"]);
+      .select(`
+        id, 
+        email, 
+        full_name,
+        user_roles!inner (
+          role_id,
+          roles!inner (
+            name
+          )
+        )
+      `)
+      .eq("user_roles.roles.name", "Admin");
 
     if (adminError || !adminUsers || adminUsers.length === 0) {
       return NextResponse.json({ 
