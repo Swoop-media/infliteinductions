@@ -608,7 +608,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
 
   // Render quiz questions if not completed
   return (
-    <form action={submitQuizAnswers} className="bg-white p-6 rounded-lg border">
+    <form action={submitQuizAnswers} className="bg-white p-4 rounded-lg border">
       <input type="hidden" name="moduleId" value={moduleId} />
       <input type="hidden" name="assignmentId" value={assignmentId} />
       <input type="hidden" name="quizId" value={quizData.id} />
@@ -885,9 +885,9 @@ export default async function LearnerCoursePage(props: {
   return (
     <div className="flex h-screen">
       {/* Left Sidebar */}
-      <div className="w-80 border-r bg-gray-50 flex flex-col">
+      <div className="w-56 border-r bg-gray-50 flex flex-col">
         {/* Course Header */}
-        <div className="p-4 border-b bg-white">
+        <div className="p-3 border-b bg-white">
           {authorizationContext ? (
             <div className="space-y-2">
               <Link href="/app/myprofile" className="text-sm text-blue-600 hover:underline block">
@@ -969,7 +969,7 @@ export default async function LearnerCoursePage(props: {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
         {/* Top Navigation */}
-        <div className="p-4 border-b bg-white">
+        <div className="p-3 border-b bg-white">
           {preview && (
             <div className="mb-4 rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-900">
               🔍 <strong>Preview Mode</strong> - You are testing this course as a creator. No progress will be saved and all modules are unlocked.
@@ -1023,7 +1023,7 @@ export default async function LearnerCoursePage(props: {
             </div>
           )}
           {currentModule ? (
-            <div className="max-w-4xl mx-auto p-6">
+            <div className="max-w-5xl mx-auto px-6 py-4">
               <div className="bg-white rounded-xl border shadow-sm p-8 space-y-6">
 
                 {/* Module Content */}
@@ -1041,9 +1041,9 @@ export default async function LearnerCoursePage(props: {
 
                     {/* Show Quiz Results */}
                     {currentModule.type === 'digital_assessment_quiz' && quizResult && quizScore !== null && (
-                      <div className="bg-white p-6 rounded-lg border">
+                      <div className="bg-white p-4 rounded-lg border">
                         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz Results</h2>
-                        <div className="p-6 rounded-md border-2 text-center" style={{ 
+                        <div className="p-4 rounded-md border-2 text-center" style={{ 
                           borderColor: quizPassed ? '#10B981' : '#EF4444', 
                           backgroundColor: quizPassed ? '#ECFDF5' : '#FEF2F2' 
                         }}>
@@ -1087,7 +1087,7 @@ export default async function LearnerCoursePage(props: {
 
                     {/* Show quiz info without redundant start button - navigation handles quiz starting */}
                     {currentModule.type === 'digital_assessment_quiz' && !showQuiz && (
-                      <div className="bg-white p-6 rounded-lg border">
+                      <div className="bg-white p-4 rounded-lg border">
                         <h2 className="text-xl font-semibold text-gray-900 mb-4">Digital Assessment Quiz</h2>
                         <div className="flex items-center justify-between">
                           <div>
@@ -1145,7 +1145,7 @@ export default async function LearnerCoursePage(props: {
 
                     {/* Digital Training Module Content */}
                     {currentModule.type === 'digital_training' && !isCurrentModuleCompleted && !showQuiz && (
-                      <div className="bg-white p-6 rounded-lg border">
+                      <div className="bg-white p-4 rounded-lg border">
                         <div className="flex items-start gap-4">
                           <div className="flex-shrink-0">
                             <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">

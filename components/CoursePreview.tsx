@@ -148,7 +148,7 @@ function FileBlock({ data }: { data: any }) {
     <div className="space-y-4">
       {/* File Preview */}
       <div className="rounded-lg border bg-white overflow-hidden">
-        <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
+        <div className="px-3 py-2 bg-gray-50 border-b flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-lg">{getFileIcon(fileType)}</span>
             <div>
@@ -172,7 +172,7 @@ function FileBlock({ data }: { data: any }) {
         </div>
         
         {/* Inline Preview */}
-        <div className="p-4">
+        <div className="p-3">
           {renderInlinePreview()}
         </div>
       </div>
@@ -224,14 +224,14 @@ function PageView({ page, courseId }: { page: Page; courseId?: string }) {
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Digital Assessment Quiz</h3>
-        <div className="rounded-xl border bg-white p-6">
+        <div className="rounded-xl border bg-white p-4">
           <div className="space-y-4">
             <div>
               <h4 className="font-medium text-gray-900">{module.title}</h4>
               <p className="text-sm text-gray-600 mt-1">Complete this quiz to proceed</p>
             </div>
             
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <div className="flex items-center gap-2 mb-2">
                 <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -605,9 +605,9 @@ export default function CoursePreview({
   };
 
   return (
-    <div className="grid gap-6 md:grid-cols-[260px_1fr]">
+    <div className="grid gap-4 md:grid-cols-[220px_1fr]">
       {/* Left rail: outline */}
-      <aside className="h-full rounded-xl border p-4">
+      <aside className="h-full rounded-xl border p-3">
         <div className="mb-3 font-semibold">{courseTitle || "Course"}</div>
         {courseDescription ? (
           <p className="mb-4 line-clamp-3 text-sm text-gray-600">{courseDescription}</p>
@@ -668,7 +668,7 @@ export default function CoursePreview({
         </div>
 
         {/* Page body */}
-        <div className="rounded-xl border p-4">
+        <div className="rounded-xl border p-3">
           {page ? (
             <PageView page={page} courseId={courseId} />
           ) : (
