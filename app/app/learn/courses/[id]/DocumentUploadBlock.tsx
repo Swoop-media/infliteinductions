@@ -41,6 +41,13 @@ export default function DocumentUploadBlock({
       return;
     }
 
+    // Block PowerPoint files
+    const fileName = file.name.toLowerCase();
+    if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) {
+      setError('PowerPoint files are not supported. Please convert to PDF before uploading.');
+      return;
+    }
+
     if (requireExpiry && !expiryDate) {
       setError('Please set an expiry date');
       return;

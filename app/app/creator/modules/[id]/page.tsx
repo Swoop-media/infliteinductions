@@ -295,6 +295,12 @@ async function uploadFileBlock(formData: FormData) {
 
   if (!moduleId || !blockId || !file) throw new Error("Missing fields");
 
+  // Block PowerPoint files
+  const fileName = file.name.toLowerCase();
+  if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) {
+    throw new Error("PowerPoint files are not supported. Please convert to PDF before uploading.");
+  }
+
   // Remove previous if exists
   const { data: cur } = await supabase
     .from("module_content_blocks")
@@ -611,7 +617,13 @@ export default async function ModuleEditorPage(props: {
                             </label>
                             <label className="grid gap-1">
                               <span className="text-xs text-gray-600">Choose file</span>
-                              <input type="file" name="file" className="text-sm" />
+                              <input 
+                                type="file" 
+                                name="file" 
+                                className="text-sm" 
+                                accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,image/*,video/*"
+                              />
+                              <span className="text-xs text-red-600">⚠️ PowerPoint files not supported - convert to PDF</span>
                             </label>
                             <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Upload / Replace</button>
                           </form>
