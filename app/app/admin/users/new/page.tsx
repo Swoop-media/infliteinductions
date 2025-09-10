@@ -70,7 +70,7 @@ export default async function NewUserPage({
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Add New User</h1>
         <Link
-          href="/app/admin/users"
+          href="/app/admin?tab=users"
           className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
         >
           ← Back to Users
@@ -207,7 +207,7 @@ export default async function NewUserPage({
             Create User
           </button>
           <Link
-            href="/app/admin/users"
+            href="/app/admin?tab=users"
             className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
           >
             Cancel
