@@ -58,17 +58,22 @@ export default function ResitNotificationMenu({
   const [sending, setSending] = useState(false);
   const router = useRouter();
 
+  useEffect(() => {
+    // Only fetch data for published courses
+    if (courseStatus === "published") {
+      fetchCompletedTrainees(courseId).then(trainees => {
+        setCompletedTrainees(trainees);
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
+    }
+  }, [courseId, courseStatus]);
+
   // Only show for published courses
   if (courseStatus !== "published") {
     return null;
   }
-
-  useEffect(() => {
-    fetchCompletedTrainees(courseId).then(trainees => {
-      setCompletedTrainees(trainees);
-      setLoading(false);
-    });
-  }, [courseId]);
 
   // Don't show if no one has completed the course
   if (loading) {
