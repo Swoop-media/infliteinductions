@@ -176,7 +176,7 @@ async function BlockView({ block }: { block: any }) {
             <p className="text-xs text-gray-500 capitalize">{fileType} file</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div>
           <a 
             href={href} 
             target="_blank" 
@@ -187,16 +187,6 @@ async function BlockView({ block }: { block: any }) {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
             </svg>
             Open
-          </a>
-          <a 
-            href={href} 
-            download 
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs border border-gray-300 text-gray-700 rounded hover:bg-gray-50 transition-colors"
-          >
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Download
           </a>
         </div>
       </div>
@@ -238,17 +228,22 @@ async function BlockView({ block }: { block: any }) {
 
     // Microsoft Office files (Word, Excel, PowerPoint)
     if (fileType === 'word' || fileType === 'excel' || fileType === 'powerpoint') {
-      const officeViewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(href)}`;
       return (
         <div className="rounded-md border bg-white overflow-hidden">
           <FileHeader />
-          <div className="border-t">
-            <iframe
-              src={officeViewerUrl}
-              className="w-full h-[600px]"
-              title={display}
-              loading="lazy"
-            />
+          <div className="p-8 bg-gray-50 border-t text-center">
+            <div className="text-4xl mb-4">{getFileIcon(fileType)}</div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {fileType === 'word' ? 'Word Document' : 
+               fileType === 'excel' ? 'Excel Spreadsheet' : 
+               'PowerPoint Presentation'}
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              This {fileType} file cannot be previewed inline for security reasons.
+            </p>
+            <p className="text-xs text-gray-500">
+              Click the "Open" button above to view the document in a new tab.
+            </p>
           </div>
         </div>
       );
