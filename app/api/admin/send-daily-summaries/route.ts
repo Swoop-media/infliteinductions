@@ -399,28 +399,119 @@ export async function POST(req: NextRequest) {
     const results = [];
     for (const admin of adminUsers) {
       try {
-        // Send course summary
+        // Always send a combined summary message
+        const today = new Date().toLocaleDateString('en-NZ', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+        
+        let combinedMessage = `📊 **Daily Training Summary**\n`;
+        combinedMessage += `📅 Date: ${today}\n\n`;
+        
+        // Add course section
         if (allCourses.length > 0) {
-          await sendTeamsDMToAppUser(admin.id, courseMessage);
+          combinedMessage += `🎓 **Courses**: ${allCourses.length} expiring\n`;
+          const urgent = allCourses.filter(c => c.days_until_expiry <= 7);
+          if (urgent.length > 0) {
+            combinedMessage += `   ⚠️ ${urgent.length} need immediate attention\n`;
+          }
+          combinedMessage += `\n`;
+        } else {
+          combinedMessage += `🎓 **Courses**: All up to date ✅\n\n`;
         }
         
-        // Send authorisation summary
+        // Add authorisation section
         if (allAuthorisations.length > 0) {
-          await sendTeamsDMToAppUser(admin.id, authorisationMessage);
+          combinedMessage += `📜 **Authorisations**: ${allAuthorisations.length} expiring\n`;
+          const urgent = allAuthorisations.filter(a => a.days_until_expiry <= 30);
+          if (urgent.length > 0) {
+            combinedMessage += `   ⚠️ ${urgent.length} need attention this month\n`;
+          }
+          combinedMessage += `\n`;
+        } else {
+          combinedMessage += `📜 **Authorisations**: All current ✅\n\n`;
         }
         
-        // Send document summary
+        // Add document section
         if (allDocuments.length > 0) {
-          await sendTeamsDMToAppUser(admin.id, documentMessage);
+          combinedMessage += `📄 **Documents**: ${allDocuments.length} expiring\n`;
+          const urgent = allDocuments.filter(d => d.days_until_expiry <= 7);
+          if (urgent.length > 0) {
+            combinedMessage += `   ⚠️ ${urgent.length} need immediate attention\n`;
+          }
+          combinedMessage += `\n`;
+        } else {
+          combinedMessage += `📄 **Documents**: All valid ✅\n\n`;
         }
+        
+        // Add details if there are items
+        if (allCourses.length > 0 || allAuthorisations.length > 0 || allDocuments.length > 0) {
+          combinedMessage += `---\n\n`;
+          
+          // Add course details
+          if (topCourses.length > 0) {
+            combinedMessage += `**Course Details** (Top ${topCourses.length}):\n`;
+            for (const course of topCourses.slice(0, 5)) {
+              const daysText = course.days_until_expiry < 0 
+                ? `${Math.abs(course.days_until_expiry)} days overdue`
+                : course.days_until_expiry === 0 
+                ? `Today`
+                : `${course.days_until_expiry} days`;
+              combinedMessage += `• ${course.user_name} - ${course.course_title} (${daysText})\n`;
+            }
+            if (topCourses.length > 5) {
+              combinedMessage += `• ... and ${topCourses.length - 5} more\n`;
+            }
+            combinedMessage += `\n`;
+          }
+          
+          // Add authorisation details
+          if (topAuthorisations.length > 0) {
+            combinedMessage += `**Authorisation Details** (Top ${topAuthorisations.length}):\n`;
+            for (const auth of topAuthorisations.slice(0, 5)) {
+              const daysText = auth.days_until_expiry < 0 
+                ? `${Math.abs(auth.days_until_expiry)} days overdue`
+                : auth.days_until_expiry === 0 
+                ? `Today`
+                : `${auth.days_until_expiry} days`;
+              combinedMessage += `• ${auth.user_name} - ${auth.authorisation_title} (${daysText})\n`;
+            }
+            if (topAuthorisations.length > 5) {
+              combinedMessage += `• ... and ${topAuthorisations.length - 5} more\n`;
+            }
+            combinedMessage += `\n`;
+          }
+          
+          // Add document details
+          if (topDocuments.length > 0) {
+            combinedMessage += `**Document Details** (Top ${topDocuments.length}):\n`;
+            for (const doc of topDocuments.slice(0, 5)) {
+              const daysText = doc.days_until_expiry < 0 
+                ? `${Math.abs(doc.days_until_expiry)} days overdue`
+                : doc.days_until_expiry === 0 
+                ? `Today`
+                : `${doc.days_until_expiry} days`;
+              combinedMessage += `• ${doc.user_name} - ${doc.document_title} (${daysText})\n`;
+            }
+            if (topDocuments.length > 5) {
+              combinedMessage += `• ... and ${topDocuments.length - 5} more\n`;
+            }
+          }
+        }
+        
+        // Always send the combined message
+        await sendTeamsDMToAppUser(admin.id, combinedMessage);
         
         results.push({
           userId: admin.id,
           userName: admin.full_name || admin.email,
           status: "success",
-          coursesSent: allCourses.length > 0,
-          authorisationsSent: allAuthorisations.length > 0,
-          documentsSent: allDocuments.length > 0
+          coursesSent: true, // Changed to true since we always send now
+          authorisationsSent: true,
+          documentsSent: true,
+          itemsFound: allCourses.length + allAuthorisations.length + allDocuments.length
         });
       } catch (error) {
         console.error(`Failed to send notifications to admin ${admin.id}:`, error);
