@@ -8,16 +8,16 @@ export async function POST(request: NextRequest) {
 
     console.log("🔍 Debug send request:", { email, hasMessage: !!message, userId });
 
-    // Check if Teams bot credentials are configured
+    // Get Microsoft Bot credentials
     const MicrosoftAppId = process.env.MICROSOFT_APP_ID;
     const MicrosoftAppPassword = process.env.MICROSOFT_APP_PASSWORD;
     const MicrosoftAppType = process.env.MICROSOFT_APP_TYPE;
     const MicrosoftAppTenantId = process.env.MICROSOFT_APP_TENANT_ID;
 
     if (!MicrosoftAppId || !MicrosoftAppPassword || !MicrosoftAppType || !MicrosoftAppTenantId) {
-      console.log("⚠️ Teams bot credentials not configured - Teams integration disabled");
+      console.log("❌ Teams bot credentials missing");
       return NextResponse.json(
-        { error: "Teams bot not configured - missing required environment variables" },
+        { error: "Teams bot credentials missing" },
         { status: 503 }
       );
     }
