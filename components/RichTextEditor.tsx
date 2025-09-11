@@ -40,8 +40,10 @@ export default function RichTextEditor({
       TextStyle,
       Color,
       Image.configure({
+        inline: false,
+        allowBase64: true,
         HTMLAttributes: {
-          class: 'max-w-full h-auto rounded-md',
+          class: 'max-w-full h-auto rounded-md cursor-pointer',
         },
       }),
       TextAlign.configure({
@@ -58,6 +60,67 @@ export default function RichTextEditor({
     editorProps: {
       attributes: {
         class: 'prose prose-sm max-w-none focus:outline-none min-h-[200px] p-3',
+      },
+      handleDrop: (view, event, slice, moved) => {
+        if (!moved && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]) {
+          const file = event.dataTransfer.files[0];
+          const fileReader = new FileReader();
+          
+          fileReader.onload = (e) => {
+            const { schema } = view.state;
+            const coordinates = view.posAtCoords({ left: event.clientX, top: event.clientY });
+            if (coordinates && e.target?.result) {
+              const node = schema.nodes.image.create({ src: e.target.result });
+              const transaction = view.state.tr.insert(coordinates.pos, node);
+              view.dispatch(transaction);
+            }
+          };
+          
+          if (file.type.startsWith('image/')) {
+            fileReader.readAsDataURL(file);
+            return true;
+          }
+        }
+        return false;
+      },
+      handlePaste: (view, event) => {
+        const items = Array.from(event.clipboardData?.items || []);
+        for (const item of items) {
+          if (item.type.indexOf('image') === 0) {
+            const file = item.getAsFile();
+            if (file && moduleId) {
+              // Upload pasted image
+              const uploadPastedImage = async () => {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('moduleId', moduleId);
+                
+                try {
+                  const response = await fetch('/api/upload-image', {
+                    method: 'POST',
+                    body: formData,
+                  });
+                  
+                  if (response.ok) {
+                    const data = await response.json();
+                    if (data.url) {
+                      const { schema } = view.state;
+                      const node = schema.nodes.image.create({ src: data.url });
+                      const transaction = view.state.tr.replaceSelectionWith(node);
+                      view.dispatch(transaction);
+                    }
+                  }
+                } catch (error) {
+                  console.error('Failed to upload pasted image:', error);
+                }
+              };
+              
+              uploadPastedImage();
+              return true;
+            }
+          }
+        }
+        return false;
       },
     },
     immediatelyRender: false,
@@ -149,6 +212,28 @@ export default function RichTextEditor({
     '#808080', // Gray
     '#8B4513', // Brown
   ];
+
+  // Add image size controls
+  const setImageSize = useCallback((size: 'small' | 'medium' | 'large' | 'full') => {
+    if (!editor) return;
+    
+    const sizeMap = {
+      small: '25%',
+      medium: '50%',
+      large: '75%',
+      full: '100%'
+    };
+    
+    const { state } = editor;
+    const { selection } = state;
+    const node = state.doc.nodeAt(selection.from);
+    
+    if (node && node.type.name === 'image') {
+      editor.chain().focus().updateAttributes('image', {
+        style: `width: ${sizeMap[size]}; height: auto;`
+      }).run();
+    }
+  }, [editor]);
 
   return (
     <div className="border rounded-md">
@@ -339,14 +424,52 @@ export default function RichTextEditor({
         <div className="w-px bg-gray-300 mx-1" />
 
         {/* Image */}
-        <button
-          onClick={() => setShowImageDialog(true)}
-          className="px-2 py-1 text-sm rounded hover:bg-gray-200"
-          title="Insert Image"
-          type="button"
-        >
-          🖼️ Image
-        </button>
+        <div className="relative group">
+          <button
+            onClick={() => setShowImageDialog(true)}
+            className="px-2 py-1 text-sm rounded hover:bg-gray-200"
+            title="Insert Image"
+            type="button"
+          >
+            🖼️ Image
+          </button>
+          {editor.isActive('image') && (
+            <div className="absolute top-full left-0 mt-1 bg-white border rounded shadow-lg p-2 hidden group-hover:flex gap-1 z-10">
+              <button
+                type="button"
+                onClick={() => setImageSize('small')}
+                className="px-2 py-1 text-xs rounded hover:bg-gray-100"
+                title="Small (25%)"
+              >
+                S
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageSize('medium')}
+                className="px-2 py-1 text-xs rounded hover:bg-gray-100"
+                title="Medium (50%)"
+              >
+                M
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageSize('large')}
+                className="px-2 py-1 text-xs rounded hover:bg-gray-100"
+                title="Large (75%)"
+              >
+                L
+              </button>
+              <button
+                type="button"
+                onClick={() => setImageSize('full')}
+                className="px-2 py-1 text-xs rounded hover:bg-gray-100"
+                title="Full (100%)"
+              >
+                Full
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="w-px bg-gray-300 mx-1" />
 

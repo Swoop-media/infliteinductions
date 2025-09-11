@@ -3,3 +3,130 @@
 @tailwind utilities;
 
 html, body, :root { height: 100%; }
+
+/* TipTap Editor Styles */
+.ProseMirror {
+  min-height: 200px;
+  outline: none;
+}
+
+.ProseMirror p {
+  margin: 0.5em 0;
+}
+
+.ProseMirror h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin: 0.67em 0;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0.83em 0;
+}
+
+.ProseMirror h3 {
+  font-size: 1.17em;
+  font-weight: bold;
+  margin: 1em 0;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  padding-left: 2em;
+  margin: 1em 0;
+}
+
+.ProseMirror li {
+  margin: 0.25em 0;
+}
+
+/* Image styles with resize capabilities */
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1em auto;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  position: relative;
+}
+
+/* Selected image styling */
+.ProseMirror img.ProseMirror-selectednode {
+  outline: 3px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Image wrapper for resize functionality */
+.image-resizer {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  margin: 1em 0;
+}
+
+.image-resizer.ProseMirror-selectednode::after {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  right: -8px;
+  bottom: -8px;
+  border: 2px solid #3b82f6;
+  pointer-events: none;
+  border-radius: 0.5rem;
+}
+
+/* Resize handles */
+.image-resizer.ProseMirror-selectednode::before {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  right: -8px;
+  width: 16px;
+  height: 16px;
+  background: #3b82f6;
+  cursor: se-resize;
+  border-radius: 50%;
+  z-index: 10;
+}
+
+/* Text alignment styles */
+.ProseMirror [style*="text-align: left"] {
+  text-align: left;
+}
+
+.ProseMirror [style*="text-align: center"] {
+  text-align: center;
+}
+
+.ProseMirror [style*="text-align: right"] {
+  text-align: right;
+}
+
+/* Font family styles */
+.ProseMirror [style*="font-family: Arial"] {
+  font-family: Arial, sans-serif;
+}
+
+.ProseMirror [style*="font-family: 'Times New Roman'"] {
+  font-family: 'Times New Roman', serif;
+}
+
+.ProseMirror [style*="font-family: 'Courier New'"] {
+  font-family: 'Courier New', monospace;
+}
+
+.ProseMirror [style*="font-family: Georgia"] {
+  font-family: Georgia, serif;
+}
+
+.ProseMirror [style*="font-family: Verdana"] {
+  font-family: Verdana, sans-serif;
+}
+
+.ProseMirror [style*="font-family: 'Comic Sans MS'"] {
+  font-family: 'Comic Sans MS', cursive;
+}

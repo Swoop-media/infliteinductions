@@ -40,13 +40,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: uploadError.message }, { status: 500 });
     }
 
-    // Get public URL
-    const { data: urlData } = supabase.storage
+    // Create a signed URL (valid for 1 year)
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('course-files')
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 365 * 24 * 60 * 60); // 1 year in seconds
+
+    if (signedUrlError || !signedUrlData) {
+      return NextResponse.json({ error: 'Failed to create signed URL' }, { status: 500 });
+    }
 
     return NextResponse.json({ 
-      url: urlData.publicUrl,
+      url: signedUrlData.signedUrl,
       path: fileName 
     });
   } catch (error) {
