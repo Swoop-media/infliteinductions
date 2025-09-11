@@ -24,12 +24,12 @@ export async function POST(req: Request) {
       .upsert({
         user_id,
         course_id,
-        assigned_by: user.id,
+        created_by: user.id,
         role,
         status: 'active',
         assigned_at: new Date().toISOString()
       }, {
-        onConflict: 'user_id,course_id',
+        onConflict: 'user_id,course_id,role',
         ignoreDuplicates: false
       })
       .select()

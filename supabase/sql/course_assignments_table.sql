@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS public.course_assignments (
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   course_id UUID NOT NULL REFERENCES public.courses(id) ON DELETE CASCADE,
   role TEXT NOT NULL CHECK (role IN ('trainee', 'onsite_trainer', 'onsite_assessor')) DEFAULT 'trainee',
-  assigned_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   status TEXT NOT NULL CHECK (status IN ('active', 'revoked')) DEFAULT 'active',
   assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   revoked_at TIMESTAMPTZ,
