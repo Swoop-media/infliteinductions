@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
+import RichTextBlock from "./_components/RichTextBlock";
 import VideoPlayer from '@/components/VideoPlayer';
 import { ModuleType, BlockKind } from "@/lib/types/module";
 
@@ -502,24 +503,12 @@ export default async function ModuleEditorPage(props: {
 
                     {/* Editors per kind */}
                     {b.kind === "rich_text" && (
-                      <form action={updateRichText} className="space-y-2">
-                        <input type="hidden" name="module_id" value={mod.id} />
-                        <input type="hidden" name="block_id" value={b.id} />
-                        <label className="text-xs text-gray-600">Text</label>
-                        <textarea
-                          name="text"
-                          defaultValue={String(b.data?.text ?? "")}
-                          rows={6}
-                          className="w-full rounded-md border px-3 py-2 text-sm"
-                          placeholder="Write your content…"
-                        />
-                        <div>
-                          <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Save</button>
-                        </div>
-                        <p className="text-xs text-gray-500">
-                          Basic text is supported. (Learner view escape-renders the text for safety.)
-                        </p>
-                      </form>
+                      <RichTextBlock
+                        moduleId={mod.id}
+                        blockId={b.id}
+                        initialContent={String(b.data?.text ?? "")}
+                        updateAction={updateRichText}
+                      />
                     )}
 
                     {b.kind === "link" && (
