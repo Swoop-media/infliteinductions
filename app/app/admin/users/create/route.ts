@@ -192,7 +192,7 @@ export async function POST(req: Request) {
         user_id: userId,
         course_id: course_id,
         role: "trainee" as const,
-        assigned_by: user.id,
+        created_by: user.id,
         assignment_status: "assigned" as const
       }));
 
