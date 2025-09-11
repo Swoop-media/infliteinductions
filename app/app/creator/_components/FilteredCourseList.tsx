@@ -159,7 +159,7 @@ export default function FilteredCourseList({
                   )}
                 </div>
                 <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-                  Updated {new Date(c.updated_at || c.created_at).toLocaleString()}
+                  Updated {new Date(c.updated_at || c.created_at).toISOString().replace('T', ' ').slice(0, 19)}
                   {Array.isArray(c.tags) && c.tags.length > 0 && (
                     <>
                       {" · "}

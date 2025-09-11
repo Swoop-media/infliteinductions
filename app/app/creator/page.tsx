@@ -230,7 +230,7 @@ export default async function CreatorHome({
                       <Badge tone={statusTone(a.status)}>{a.status}</Badge>
                     </div>
                     <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-                      Updated {new Date(a.updated_at || a.created_at).toLocaleString()}
+                      Updated {new Date(a.updated_at || a.created_at).toISOString().replace('T', ' ').slice(0, 19)}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
