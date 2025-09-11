@@ -182,6 +182,28 @@ export default function RichTextEditor({
     }
   }, [editor, moduleId]);
 
+  // Add image size controls - Define this before the early return
+  const setImageSize = useCallback((size: 'small' | 'medium' | 'large' | 'full') => {
+    if (!editor) return;
+    
+    const sizeMap = {
+      small: '25%',
+      medium: '50%',
+      large: '75%',
+      full: '100%'
+    };
+    
+    const { state } = editor;
+    const { selection } = state;
+    const node = state.doc.nodeAt(selection.from);
+    
+    if (node && node.type.name === 'image') {
+      editor.chain().focus().updateAttributes('image', {
+        style: `width: ${sizeMap[size]}; height: auto;`
+      }).run();
+    }
+  }, [editor]);
+
   if (!editor) {
     return null;
   }
@@ -212,28 +234,6 @@ export default function RichTextEditor({
     '#808080', // Gray
     '#8B4513', // Brown
   ];
-
-  // Add image size controls
-  const setImageSize = useCallback((size: 'small' | 'medium' | 'large' | 'full') => {
-    if (!editor) return;
-    
-    const sizeMap = {
-      small: '25%',
-      medium: '50%',
-      large: '75%',
-      full: '100%'
-    };
-    
-    const { state } = editor;
-    const { selection } = state;
-    const node = state.doc.nodeAt(selection.from);
-    
-    if (node && node.type.name === 'image') {
-      editor.chain().focus().updateAttributes('image', {
-        style: `width: ${sizeMap[size]}; height: auto;`
-      }).run();
-    }
-  }, [editor]);
 
   return (
     <div className="border rounded-md">
