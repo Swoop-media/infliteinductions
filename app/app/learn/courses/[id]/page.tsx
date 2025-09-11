@@ -91,8 +91,8 @@ async function BlockView({ block }: { block: any }) {
     const text = String(data.text ?? "");
     return (
       <div
-        className="prose max-w-none whitespace-pre-wrap text-sm"
-        dangerouslySetInnerHTML={{ __html: escapeHtml(text) }}
+        className="prose prose-sm max-w-none"
+        dangerouslySetInnerHTML={{ __html: text }}
       />
     );
   }
