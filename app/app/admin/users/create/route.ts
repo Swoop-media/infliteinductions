@@ -181,13 +181,15 @@ export async function POST(req: Request) {
 
     // Get current admin user for assignment tracking
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
+    if (!user || !user.id) {
+      console.error("Admin user lookup failed:", { user: user ? 'exists but no id' : 'null' });
       back.searchParams.set("error", "Unable to identify admin user");
       return NextResponse.redirect(back);
     }
 
     // Assign courses if selected
     if (course_ids.length > 0) {
+      console.log("Creating course assignments for user:", userId, "by admin:", user.id);
       const courseAssignments = course_ids.map(course_id => ({
         user_id: userId,
         course_id: course_id,
@@ -203,6 +205,8 @@ export async function POST(req: Request) {
       if (courseError) {
         console.error("Course assignment error:", courseError);
         // Don't fail the entire operation, just log the error
+      } else {
+        console.log("Successfully created", courseAssignments.length, "course assignments");
       }
     }
 
