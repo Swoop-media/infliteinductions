@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import DeleteAuthorisationButton from "./_components/DeleteAuthorisationButton";
+import FilteredCourseList from "./_components/FilteredCourseList";
 
 type CourseRow = {
   id: string;
@@ -14,6 +15,7 @@ type CourseRow = {
   updated_at: string;
   created_at: string;
   tags: string[] | null;
+  department: string | null;
 };
 
 type AuthzRow = {
@@ -158,9 +160,9 @@ export default async function CreatorHome({
     await Promise.all([
       supabase
         .from("courses")
-        .select("id,title,status,updated_at,created_at,tags")
+        .select("id,title,status,updated_at,created_at,tags,department")
         .order("updated_at", { ascending: false })
-        .limit(25),
+        .limit(100),
       supabase
         .from("authorisations")
         .select("id,title,status,updated_at,created_at")
@@ -193,84 +195,10 @@ export default async function CreatorHome({
       </div>
 
       {tab === "courses" ? (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Courses</h2>
-            <Link
-              href="/app/creator/courses/new"
-              className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white hover:opacity-90"
-            >
-              + Create Course
-            </Link>
-          </div>
-
-          {courses.length === 0 ? (
-            <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-              No courses yet. Click <span className="font-medium">Create Course</span> to get started.
-            </div>
-          ) : (
-            <ul className="divide-y rounded-md border">
-              {courses.map((c) => (
-                <li key={c.id} className="flex items-center justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/app/creator/courses/${c.id}`}
-                        className="truncate text-sm font-medium hover:underline"
-                      >
-                        {c.title || "Untitled"}
-                      </Link>
-                      <Badge tone={statusTone(c.status)}>{c.status}</Badge>
-                    </div>
-                    <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-                      Updated {new Date(c.updated_at || c.created_at).toLocaleString()}
-                      {Array.isArray(c.tags) && c.tags.length > 0 && (
-                        <>
-                          {" · "}
-                          {c.tags.slice(0, 3).map((t, i) => (
-                            <span key={t + i} className="mr-1 inline-block rounded bg-gray-100 px-1.5 py-0.5 text-[10px]">
-                              {t}
-                            </span>
-                          ))}
-                          {c.tags.length > 3 && <span className="text-[10px]">+{c.tags.length - 3}</span>}
-                        </>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Link
-                      href={`/app/creator/courses/${c.id}`}
-                      className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
-                    >
-                      Edit
-                    </Link>
-                    <form action={duplicateCourseAction} className="inline">
-                      <input type="hidden" name="courseId" value={c.id} />
-                      <button
-                        type="submit"
-                        className="rounded-md border px-3 py-1.5 text-sm border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
-                      >
-                        Duplicate
-                      </button>
-                    </form>
-                    <Link
-                      href={`/app/creator/courses/${c.id}/delete`}
-                      className="rounded-md border px-3 py-1.5 text-sm border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
-                    >
-                      Delete
-                    </Link>
-                    <Link
-                      href={`/app/creator/courses/${c.id}?tab=assignments`}
-                      className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
-                    >
-                      Assign
-                    </Link>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <FilteredCourseList 
+          courses={courses} 
+          duplicateCourseAction={duplicateCourseAction}
+        />
       ) : (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
