@@ -56,6 +56,7 @@ export default function RichTextEditor({
         class: 'prose prose-sm max-w-none focus:outline-none min-h-[200px] p-3',
       },
     },
+    immediatelyRender: false,
   });
 
   const addImage = useCallback(() => {
