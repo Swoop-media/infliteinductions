@@ -18,6 +18,10 @@ export async function POST(req: Request) {
   if (!allowed) return NextResponse.redirect(await makeURL("/app/home"));
 
   const supabase = await createSupabaseServer();
+  
+  // Get the current user's ID for approved_by field
+  const { data: { user } } = await supabase.auth.getUser();
+  const currentUserId = user?.id;
 
   const form = await req.formData();
   const enrolment_id = String(form.get("enrolment_id") || "").trim();
@@ -30,7 +34,8 @@ export async function POST(req: Request) {
   // Update using the normal client; RLS allows this for Admin/Trainers
   const updateData: any = { 
     status: "approved",
-    approved_at: new Date().toISOString()
+    approved_at: new Date().toISOString(),
+    approved_by: currentUserId // Set the approver's ID
   };
   const { error } = await supabase
     .from("course_enrolments")
@@ -53,7 +58,8 @@ export async function POST(req: Request) {
           {
             user_id: enrolment.user_id,
             course_id: enrolment.course_id,
-            role: "trainee"
+            role: "trainee",
+            created_by: currentUserId // Add the approver as the creator
           },
           { onConflict: "course_id,user_id,role", ignoreDuplicates: true }
         );
