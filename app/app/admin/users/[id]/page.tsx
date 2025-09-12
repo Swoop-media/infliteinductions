@@ -542,52 +542,33 @@ export default async function EditUserPage({
 
         {/* Right Column - Assignment Management & Completed Items */}
         <div className="space-y-6">
-          {/* Current Course Assignments */}
+          {/* Completed Authorizations */}
           <div className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-medium mb-4">Current Course Assignments ({allCourseAssignments.length})</h2>
-            {allCourseAssignments.length === 0 ? (
-              <p className="text-sm text-gray-500">No course assignments found.</p>
+            <h2 className="text-lg font-medium mb-4">Completed Authorizations ({processedAuthorizations.length})</h2>
+            {processedAuthorizations.length === 0 ? (
+              <p className="text-sm text-gray-500">No completed authorizations found.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {allCourseAssignments.map((assignment) => (
-                      <tr key={assignment.id}>
-                        <td className="px-3 py-2 text-sm font-medium text-gray-900">
-                          {assignment.courses?.title || 'Unknown Course'}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-500">
-                          {assignment.created_at ? new Date(assignment.created_at).toLocaleDateString() : 'N/A'}
-                        </td>
-                        <td className="px-3 py-2 text-sm">
-                          <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                            assignment.assignment_status === 'completed' 
-                              ? 'bg-green-100 text-green-700' 
-                              : assignment.assignment_status === 'in_progress'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            {assignment.assignment_status || 'assigned'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-500">
-                          {assignment.completed_at 
-                            ? `Completed ${new Date(assignment.completed_at).toLocaleDateString()}` 
-                            : 'In Progress'
-                          }
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {processedAuthorizations.map((auth) => (
+                  <div key={auth.assignment_id} className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-sm">{auth.authorization_title}</h3>
+                      <p className="text-xs text-gray-600">
+                        Completed: {new Date(auth.completed_at).toLocaleDateString()}
+                      </p>
+                      {auth.due_date && (
+                        <p className="text-xs text-gray-600">
+                          Due: {new Date(auth.due_date).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    <div className="ml-3">
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(auth.status)}`}>
+                        {getStatusText(auth.status, auth.days_until_expiry)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -642,63 +623,6 @@ export default async function EditUserPage({
             )}
           </div>
 
-          {/* Assign New Courses */}
-          {availableCourses.length > 0 && (
-            <div className="rounded-lg border bg-white p-4">
-              <h2 className="text-lg font-medium mb-4">Assign Courses</h2>
-              <form action="/app/admin/users/assign-course" method="post" className="space-y-3">
-                <input type="hidden" name="user_id" value={profile.id} />
-                <div className="space-y-2">
-                  {availableCourses.map((course) => (
-                    <label key={course.id} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="course_ids"
-                        value={course.id}
-                        className="mr-2 rounded border-gray-300"
-                      />
-                      <span className="text-sm">{course.title}</span>
-                    </label>
-                  ))}
-                </div>
-                <button
-                  type="submit"
-                  className="rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
-                >
-                  Assign Selected Courses
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* Assign New Authorizations */}
-          {availableAuthorizations.length > 0 && (
-            <div className="rounded-lg border bg-white p-4">
-              <h2 className="text-lg font-medium mb-4">Assign Authorizations</h2>
-              <form action="/app/admin/users/assign-authorization" method="post" className="space-y-3">
-                <input type="hidden" name="user_id" value={profile.id} />
-                <div className="space-y-2">
-                  {availableAuthorizations.map((auth) => (
-                    <label key={auth.id} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="authorization_ids"
-                        value={auth.id}
-                        className="mr-2 rounded border-gray-300"
-                      />
-                      <span className="text-sm">{auth.title}</span>
-                    </label>
-                  ))}
-                </div>
-                <button
-                  type="submit"
-                  className="rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
-                >
-                  Assign Selected Authorizations
-                </button>
-              </form>
-            </div>
-          )}
           {/* Completed Courses */}
           <div className="rounded-lg border bg-white p-4">
             <h2 className="text-lg font-medium mb-4">Completed Courses ({processedCourses.length})</h2>
@@ -730,33 +654,52 @@ export default async function EditUserPage({
             )}
           </div>
 
-          {/* Completed Authorizations */}
+          {/* Current Course Assignments */}
           <div className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-medium mb-4">Completed Authorizations ({processedAuthorizations.length})</h2>
-            {processedAuthorizations.length === 0 ? (
-              <p className="text-sm text-gray-500">No completed authorizations found.</p>
+            <h2 className="text-lg font-medium mb-4">Current Course Assignments ({allCourseAssignments.length})</h2>
+            {allCourseAssignments.length === 0 ? (
+              <p className="text-sm text-gray-500">No course assignments found.</p>
             ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {processedAuthorizations.map((auth) => (
-                  <div key={auth.assignment_id} className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-sm">{auth.authorization_title}</h3>
-                      <p className="text-xs text-gray-600">
-                        Completed: {new Date(auth.completed_at).toLocaleDateString()}
-                      </p>
-                      {auth.due_date && (
-                        <p className="text-xs text-gray-600">
-                          Due: {new Date(auth.due_date).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                    <div className="ml-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(auth.status)}`}>
-                        {getStatusText(auth.status, auth.days_until_expiry)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {allCourseAssignments.map((assignment) => (
+                      <tr key={assignment.id}>
+                        <td className="px-3 py-2 text-sm font-medium text-gray-900">
+                          {assignment.courses?.title || 'Unknown Course'}
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-500">
+                          {assignment.created_at ? new Date(assignment.created_at).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="px-3 py-2 text-sm">
+                          <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                            assignment.assignment_status === 'completed' 
+                              ? 'bg-green-100 text-green-700' 
+                              : assignment.assignment_status === 'in_progress'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {assignment.assignment_status || 'assigned'}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-sm text-gray-500">
+                          {assignment.completed_at 
+                            ? `Completed ${new Date(assignment.completed_at).toLocaleDateString()}` 
+                            : 'In Progress'
+                          }
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -795,6 +738,64 @@ export default async function EditUserPage({
               </div>
             )}
           </div>
+
+          {/* Assign New Authorizations */}
+          {availableAuthorizations.length > 0 && (
+            <div className="rounded-lg border bg-white p-4">
+              <h2 className="text-lg font-medium mb-4">Assign Authorizations</h2>
+              <form action="/app/admin/users/assign-authorization" method="post" className="space-y-3">
+                <input type="hidden" name="user_id" value={profile.id} />
+                <div className="space-y-2">
+                  {availableAuthorizations.map((auth) => (
+                    <label key={auth.id} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="authorization_ids"
+                        value={auth.id}
+                        className="mr-2 rounded border-gray-300"
+                      />
+                      <span className="text-sm">{auth.title}</span>
+                    </label>
+                  ))}
+                </div>
+                <button
+                  type="submit"
+                  className="rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+                >
+                  Assign Selected Authorizations
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Assign New Courses */}
+          {availableCourses.length > 0 && (
+            <div className="rounded-lg border bg-white p-4">
+              <h2 className="text-lg font-medium mb-4">Assign Courses</h2>
+              <form action="/app/admin/users/assign-course" method="post" className="space-y-3">
+                <input type="hidden" name="user_id" value={profile.id} />
+                <div className="space-y-2">
+                  {availableCourses.map((course) => (
+                    <label key={course.id} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="course_ids"
+                        value={course.id}
+                        className="mr-2 rounded border-gray-300"
+                      />
+                      <span className="text-sm">{course.title}</span>
+                    </label>
+                  ))}
+                </div>
+                <button
+                  type="submit"
+                  className="rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
+                >
+                  Assign Selected Courses
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
     </div>
