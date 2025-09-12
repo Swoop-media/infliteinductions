@@ -407,12 +407,22 @@ export default async function OnsiteModulePage(props: {
               Create checklist requirements for trainers and assessors to complete during onsite sessions
             </p>
           </div>
-          <Link
-            href={`/app/creator/courses/${mod.course_id}?tab=${mod.type}`}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-          >
-            ← Back to course
-          </Link>
+          <div className="flex items-center space-x-3">
+            <Link
+              href={`/app/learn/modules/${mod.id}?preview=1`}
+              className="rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Test as learner
+            </Link>
+            <Link
+              href={`/app/creator/courses/${mod.course_id}?tab=${mod.type}`}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              ← Back to course
+            </Link>
+          </div>
         </div>
 
         {/* Flash banners */}
