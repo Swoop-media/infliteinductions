@@ -19,7 +19,8 @@ INSERT INTO sites (name, address) VALUES
     ('Head Office', 'Main Corporate Location'),
     ('Warehouse A', 'Primary Storage Facility'),
     ('Construction Site 1', 'New Development Project'),
-    ('Remote Location', 'Off-site Work Location')
+    ('Remote Location', 'Off-site Work Location'),
+    ('Mt Cook sliplanes and helicopters', 'MT Cook')
 ON CONFLICT (name) DO NOTHING;
 
 -- 2. Create contractor course completions table
