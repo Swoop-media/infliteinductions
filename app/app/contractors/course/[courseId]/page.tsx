@@ -3,8 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import ContractorCoursePlayer from "./_components/ContractorCoursePlayer";
 
 interface ContractorCoursePageProps {
-  params: { courseId: string };
-  searchParams: { registrationId?: string };
+  params: Promise<{ courseId: string }>;
+  searchParams: Promise<{ registrationId?: string }>;
 }
 
 export default async function ContractorCoursePage({
@@ -12,8 +12,8 @@ export default async function ContractorCoursePage({
   searchParams,
 }: ContractorCoursePageProps) {
   const supabase = await createSupabaseServer();
-  const { courseId } = params;
-  const { registrationId } = searchParams;
+  const { courseId } = await params;
+  const { registrationId } = await searchParams;
 
   // Verify registration exists
   if (!registrationId) {

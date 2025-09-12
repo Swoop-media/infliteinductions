@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import ContractorModuleRenderer from "./ContractorModuleRenderer";
 
 interface Course {
   id: string;
@@ -208,11 +209,11 @@ export default function ContractorCoursePlayer({
             <p className="text-gray-600 mb-4">{currentModule.description}</p>
           )}
           
-          {/* Placeholder content - in a real implementation, this would render based on module type */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <p className="text-sm text-gray-600 mb-2">Module Type: {currentModule.type}</p>
-            <p>This is placeholder content for the training module. In a real implementation, this would show the actual course content based on the module type and configuration.</p>
-          </div>
+          <ContractorModuleRenderer
+            module={currentModule}
+            onComplete={handleModuleComplete}
+            isCompleted={completedModules.has(currentModule.id)}
+          />
         </div>
       </div>
 
@@ -227,15 +228,6 @@ export default function ContractorCoursePlayer({
         </button>
 
         <div className="flex gap-3">
-          {!completedModules.has(currentModule.id) && (
-            <button
-              onClick={handleModuleComplete}
-              className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700"
-            >
-              Complete Module
-            </button>
-          )}
-
           {allModulesCompleted ? (
             <button
               onClick={handleCourseComplete}
@@ -247,7 +239,7 @@ export default function ContractorCoursePlayer({
           ) : (
             <button
               onClick={handleNextModule}
-              disabled={isLastModule}
+              disabled={isLastModule || !completedModules.has(currentModule.id)}
               className="px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next Module
