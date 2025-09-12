@@ -60,7 +60,7 @@ async function loadModule(moduleId: string) {
   const supabase = await createSupabaseServer();
 
   const canAccess =
-    (await hasRole("Course creators")) ||
+    (await hasRole("Course Creators")) ||
     (await hasRole("Senior management")) ||
     (await hasRole("Admin"));
   if (!canAccess) redirect("/app/home?banner=not_authorised");

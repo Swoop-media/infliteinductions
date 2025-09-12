@@ -13,7 +13,7 @@ async function makeURL(path: string): Promise<URL> {
 }
 
 export async function POST(req: Request) {
-  const isCreator = await hasRole("Course creators");
+  const isCreator = await hasRole("Course Creators");
   const isManager = await hasRole("Senior management");
   const isAdmin = await hasRole("Admin");
   

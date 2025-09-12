@@ -18,7 +18,7 @@ async function createCourseAction(formData: FormData) {
 
   // Guard inside action too
   const canAccess =
-    (await hasRole("Course creators")) ||
+    (await hasRole("Course Creators")) ||
     (await hasRole("Senior management")) ||
     (await hasRole("Admin"));
   if (!canAccess) {
@@ -54,7 +54,7 @@ async function createCourseAction(formData: FormData) {
 export default async function NewCoursePage() {
   // Guard: only creators/SM/admin
   const canAccess =
-    (await hasRole("Course creators")) ||
+    (await hasRole("Course Creators")) ||
     (await hasRole("Senior management")) ||
     (await hasRole("Admin"));
   if (!canAccess) {

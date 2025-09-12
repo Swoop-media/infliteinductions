@@ -13,10 +13,10 @@ async function makeURL(path: string): Promise<URL> {
 }
 
 export async function POST(req: Request) {
-  // AuthZ: Admin, Course creators, or Senior management
+  // AuthZ: Admin, Course Creators, or Senior management
   const allowed =
     (await hasRole("Admin")) ||
-    (await hasRole("Course creators")) ||
+    (await hasRole("Course Creators")) ||
     (await hasRole("Senior management"));
   const back = await makeURL("/app/creator");
   back.searchParams.set("tab", "authorisations");

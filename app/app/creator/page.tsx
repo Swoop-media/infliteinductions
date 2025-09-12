@@ -142,7 +142,7 @@ export default async function CreatorHome({
 }) {
   // Guard: redirect unauthorized users to Home with banner
   const canAccess =
-    (await hasRole("Course creators")) ||
+    (await hasRole("Course Creators")) ||
     (await hasRole("Senior management")) ||
     (await hasRole("Admin"));
   if (!canAccess) {

@@ -45,7 +45,7 @@ async function createNewAuthorisation(formData: FormData) {
 export default async function NewAuthorisationPage() {
   // Allow only creators/managers/admins
   const allowed =
-    (await hasRole("Course creators")) ||
+    (await hasRole("Course Creators")) ||
     (await hasRole("Senior management")) ||
     (await hasRole("Admin"));
   if (!allowed) redirect("/app/home");

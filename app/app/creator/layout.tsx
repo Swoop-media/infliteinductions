@@ -6,9 +6,9 @@ import { hasRole } from "@/lib/roles";
 import { cn } from "@/lib/utils"; // if you don't have this, replace cn(...) with a plain template string join
 
 export default async function CreatorLayout({ children }: { children: ReactNode }) {
-  // Server-side role guard: only Course creators, Senior management, or Admin
+  // Server-side role guard: only Course Creators, Senior management, or Admin
   const canAccess =
-    (await hasRole("Course creators")) ||
+    (await hasRole("Course Creators")) ||
     (await hasRole("Senior management")) ||
     (await hasRole("Admin"));
 

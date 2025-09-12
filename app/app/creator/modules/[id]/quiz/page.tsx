@@ -80,7 +80,7 @@ async function loadModuleAndEnsureQuiz(moduleId: string) {
 
   // Role guard
   const canAccess =
-    (await hasRole("Course creators")) ||
+    (await hasRole("Course Creators")) ||
     (await hasRole("Senior management")) ||
     (await hasRole("Admin"));
   if (!canAccess) redirect("/app?error=not_authorised");
