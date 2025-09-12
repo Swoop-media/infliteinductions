@@ -164,36 +164,101 @@ async function duplicateCourseAction(formData: FormData) {
 
       // If this is a quiz module, copy quiz data
       if (originalModule.type === 'digital_assessment_quiz') {
-        // Copy quiz settings
-        const { data: originalQuiz, error: quizError } = await supabase
+        // Find original quiz settings with fallback logic
+        let originalQuiz: any = null;
+        
+        // 1) Try by module_id first
+        let quizQuery = await supabase
           .from('quizzes')
           .select('*')
           .eq('module_id', originalModule.id)
           .single();
-
-        if (!quizError && originalQuiz) {
-          const { data: newQuiz, error: newQuizError } = await supabase
+        
+        if (!quizQuery.error && quizQuery.data) {
+          originalQuiz = quizQuery.data;
+        } else {
+          // 2) Try by course_id (legacy fallback - get latest)
+          quizQuery = await supabase
             .from('quizzes')
-            .insert({
-              course_id: newCourse.id,
-              module_id: newModule.id,
-              pass_mark: originalQuiz.pass_mark,
-              max_attempts: originalQuiz.max_attempts,
-              shuffle: originalQuiz.shuffle,
-              show_feedback: originalQuiz.show_feedback
-            })
-            .select('id')
+            .select('*')
+            .eq('course_id', originalModule.course_id)
+            .order('created_at', { ascending: false })
+            .limit(1)
             .single();
+          
+          if (!quizQuery.error && quizQuery.data) {
+            originalQuiz = quizQuery.data;
+          }
+        }
 
-          if (!newQuizError) {
-            // Copy quiz questions
-            const { data: originalQuestions, error: questionsError } = await supabase
-              .from('quiz_questions')
-              .select('*')
-              .eq('quiz_id', originalQuiz.id)
-              .order('order_index', { ascending: true });
+        // Always create a new quiz for quiz modules (with defaults if no original found)
+        const quizSettings = originalQuiz ? {
+          pass_mark: originalQuiz.pass_mark,
+          max_attempts: originalQuiz.max_attempts,
+          shuffle: originalQuiz.shuffle,
+          show_feedback: originalQuiz.show_feedback,
+          time_limit_seconds: originalQuiz.time_limit_seconds
+        } : {
+          pass_mark: 80,
+          max_attempts: 3,
+          shuffle: true,
+          show_feedback: true,
+          time_limit_seconds: null
+        };
 
-            if (!questionsError && originalQuestions?.length > 0) {
+        const { data: newQuiz, error: newQuizError } = await supabase
+          .from('quizzes')
+          .insert({
+            course_id: newCourse.id,
+            module_id: newModule.id,
+            ...quizSettings
+          })
+          .select('id')
+          .single();
+
+        if (!newQuizError && newQuiz) {
+            // Copy quiz questions - use fallback logic to find questions by quiz_id, module_id, or course_id
+            let originalQuestions: any[] = [];
+            
+            // 1) Try by quiz_id first (preferred) - only if originalQuiz exists
+            let questionsQuery;
+            if (originalQuiz) {
+              questionsQuery = await supabase
+                .from('quiz_questions')
+                .select('*')
+                .eq('quiz_id', originalQuiz.id)
+                .order('order_index', { ascending: true });
+            } else {
+              questionsQuery = { error: 'No original quiz', data: [] };
+            }
+            
+            if (!questionsQuery.error && questionsQuery.data?.length > 0) {
+              originalQuestions = questionsQuery.data;
+            } else {
+              // 2) Try by module_id (fallback)
+              questionsQuery = await supabase
+                .from('quiz_questions')
+                .select('*')
+                .eq('module_id', originalModule.id)
+                .order('order_index', { ascending: true });
+              
+              if (!questionsQuery.error && questionsQuery.data?.length > 0) {
+                originalQuestions = questionsQuery.data;
+              } else {
+                // 3) Try by course_id (legacy fallback)
+                questionsQuery = await supabase
+                  .from('quiz_questions')
+                  .select('*')
+                  .eq('course_id', originalModule.course_id)
+                  .order('order_index', { ascending: true });
+                
+                if (!questionsQuery.error && questionsQuery.data?.length > 0) {
+                  originalQuestions = questionsQuery.data;
+                }
+              }
+            }
+
+            if (originalQuestions?.length > 0) {
               for (const originalQuestion of originalQuestions) {
                 const { data: newQuestion, error: questionError } = await supabase
                   .from('quiz_questions')
@@ -234,7 +299,6 @@ async function duplicateCourseAction(formData: FormData) {
           }
         }
       }
-    }
 
     // Revalidate and redirect to the new course editor
     revalidatePath("/app/creator");
