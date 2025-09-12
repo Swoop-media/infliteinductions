@@ -120,21 +120,29 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
 
   // Get available courses for assignment (published courses not already assigned to this user)
   const assignedCourseIds = (allCourseAssignments || []).map(a => a.courses?.id).filter(Boolean);
-  const { data: availableCourses } = await supabase
+  let availableCoursesQuery = supabase
     .from("courses")
     .select("id, title, status")
-    .eq("status", "published")
-    .not("id", "in", assignedCourseIds.length > 0 ? `(${assignedCourseIds.join(',')})` : "()")
-    .order("title");
+    .eq("status", "published");
+  
+  if (assignedCourseIds.length > 0) {
+    availableCoursesQuery = availableCoursesQuery.not("id", "in", `(${assignedCourseIds.map(id => `"${id}"`).join(',')})`);
+  }
+  
+  const { data: availableCourses } = await availableCoursesQuery.order("title");
 
   // Get available authorizations for assignment (active auths not already assigned to this user)
   const assignedAuthIds = (allAuthAssignments || []).map(a => a.authorisation_id).filter(Boolean);
-  const { data: availableAuthorizations } = await supabase
+  let availableAuthsQuery = supabase
     .from("authorisations")
     .select("id, title, status")
-    .eq("status", "active")
-    .not("id", "in", assignedAuthIds.length > 0 ? `(${assignedAuthIds.join(',')})` : "()")
-    .order("title");
+    .eq("status", "active");
+    
+  if (assignedAuthIds.length > 0) {
+    availableAuthsQuery = availableAuthsQuery.not("id", "in", `(${assignedAuthIds.map(id => `"${id}"`).join(',')})`);
+  }
+  
+  const { data: availableAuthorizations } = await availableAuthsQuery.order("title");
 
   // Get uploaded documents
   const { data: uploadedDocuments } = await supabase
