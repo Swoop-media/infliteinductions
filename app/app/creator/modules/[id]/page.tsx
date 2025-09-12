@@ -296,6 +296,12 @@ async function uploadFileBlock(formData: FormData) {
 
   if (!moduleId || !blockId || !file) throw new Error("Missing fields");
 
+  // Check file size (limit to 50MB for documents)
+  const maxSize = 50 * 1024 * 1024; // 50MB in bytes
+  if (file.size > maxSize) {
+    throw new Error(`File size (${(file.size / 1024 / 1024).toFixed(1)}MB) exceeds the 50MB limit. Please use a smaller file.`);
+  }
+
   // Block PowerPoint files
   const fileName = file.name.toLowerCase();
   if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) {

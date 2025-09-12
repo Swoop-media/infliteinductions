@@ -2,6 +2,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from "@/lib/supabase/server";
 
+// Configure the API route to handle larger files
+export const runtime = 'nodejs';
+export const maxDuration = 30;
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServer();
@@ -18,6 +22,22 @@ export async function POST(request: NextRequest) {
     
     if (!file || !moduleId) {
       return NextResponse.json({ error: 'Missing file or module ID' }, { status: 400 });
+    }
+
+    // Check file size (limit to 10MB for documents)
+    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+    if (file.size > maxSize) {
+      return NextResponse.json({ 
+        error: `File size (${(file.size / 1024 / 1024).toFixed(1)}MB) exceeds the 10MB limit. Please use a smaller file.` 
+      }, { status: 413 });
+    }
+
+    // Block PowerPoint files
+    const fileName = file.name.toLowerCase();
+    if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) {
+      return NextResponse.json({ 
+        error: 'PowerPoint files are not supported. Please convert to PDF before uploading.' 
+      }, { status: 400 });
     }
 
     // Generate unique filename
