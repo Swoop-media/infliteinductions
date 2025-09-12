@@ -47,12 +47,28 @@ export default async function ContractorCoursePage({
     notFound();
   }
 
-  // Get course modules
-  const { data: modules, error: modulesError } = await supabase
+  // Get course modules with proper ordering
+  const { data: rawModules, error: modulesError } = await supabase
     .from("course_modules")
     .select("*")
-    .eq("course_id", courseId)
-    .order("order_index", { ascending: true });
+    .eq("course_id", courseId);
+
+  // Sort modules using the same logic as the main learning platform
+  const TYPE_ORDER_FOR_COURSE = [
+    "digital_training",
+    "digital_assessment_quiz", 
+    "onsite_training",
+    "onsite_assessment",
+  ] as const;
+
+  const modules = (rawModules ?? []).slice().sort((a: any, b: any) => {
+    const ta = TYPE_ORDER_FOR_COURSE.indexOf(a.type);
+    const tb = TYPE_ORDER_FOR_COURSE.indexOf(b.type);
+    if (ta !== tb) return ta - tb;
+    const oa = a.order_index ?? 0;
+    const ob = b.order_index ?? 0;
+    return oa === ob ? String(a.id).localeCompare(String(b.id)) : oa - ob;
+  });
 
   if (modulesError) {
     console.error("Error fetching modules:", modulesError);
