@@ -94,6 +94,20 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
     .eq("role", "trainee")
     .order("assigned_at", { ascending: false });
 
+  // Get onsite trainer and assessor assignments
+  const { data: onsiteAssignments } = await supabase
+    .from("course_assignments")
+    .select(`
+      id,
+      assignment_status,
+      assigned_at,
+      role,
+      courses!course_assignments_course_id_fkey(id, title, status)
+    `)
+    .eq("user_id", userId)
+    .in("role", ["trainer", "assessor"])
+    .order("assigned_at", { ascending: false });
+
   // Get completed courses for backwards compatibility
   const completedCourses = allCourseAssignments?.filter(assignment => 
     assignment.assignment_status === "completed" && assignment.completed_at
@@ -285,6 +299,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
     uploadedDocuments: uploadedDocuments || [],
     allCourseAssignments: allCourseAssignments || [],
     allAuthAssignments: allAuthAssignments || [],
+    onsiteAssignments: onsiteAssignments || [],
     availableCourses: availableCourses || [],
     availableAuthorizations: availableAuthorizations || []
   };
