@@ -31,6 +31,7 @@ export default function ContractorRegistrationForm({
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    company: "",
     siteId: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -51,6 +52,7 @@ export default function ContractorRegistrationForm({
           courseId: course.id,
           contractorName: formData.name,
           contractorEmail: formData.email,
+          contractorCompany: formData.company,
           siteId: formData.siteId,
         }),
       });
@@ -136,6 +138,22 @@ export default function ContractorRegistrationForm({
           </div>
 
           <div>
+            <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
+              Company *
+            </label>
+            <input
+              type="text"
+              id="company"
+              name="company"
+              value={formData.company}
+              onChange={handleChange}
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Enter your company name"
+            />
+          </div>
+
+          <div>
             <label htmlFor="siteId" className="block text-sm font-medium text-gray-700 mb-1">
               Work Site *
             </label>
@@ -172,7 +190,7 @@ export default function ContractorRegistrationForm({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !formData.name || !formData.email || !formData.siteId}
+              disabled={isSubmitting || !formData.name || !formData.email || !formData.company || !formData.siteId}
               className="flex-1 px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-300"
             >
               {isSubmitting ? "Starting..." : "Begin Course"}

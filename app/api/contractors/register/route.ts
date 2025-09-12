@@ -4,10 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServer();
-    const { courseId, contractorName, contractorEmail, siteId } = await request.json();
+    const { courseId, contractorName, contractorEmail, contractorCompany, siteId } = await request.json();
 
     // Validate required fields
-    if (!courseId || !contractorName || !contractorEmail || !siteId) {
+    if (!courseId || !contractorName || !contractorEmail || !contractorCompany || !siteId) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
         course_id: courseId,
         contractor_name: contractorName,
         contractor_email: contractorEmail,
+        contractor_company: contractorCompany,
         site_id: siteId,
         started_at: new Date().toISOString(),
         progress_data: {}

@@ -4,6 +4,7 @@ interface Completion {
   id: string;
   contractor_name: string;
   contractor_email: string;
+  contractor_company?: string;
   completed_at: string;
   courses: { title: string };
   sites: { name: string };
@@ -73,6 +74,14 @@ export default function CompletedTab({ completions }: CompletedTabProps) {
                         </svg>
                         <span>{completion.contractor_email}</span>
                       </div>
+                      {completion.contractor_company && (
+                        <div className="flex items-center">
+                          <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1" />
+                          </svg>
+                          <span>{completion.contractor_company}</span>
+                        </div>
+                      )}
                       <div className="flex items-center">
                         <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a4 4 0 118 0v4m-4 7V9a4 4 0 118 0v1" />
