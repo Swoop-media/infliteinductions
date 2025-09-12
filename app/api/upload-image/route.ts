@@ -33,8 +33,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Block PowerPoint files
-    const fileName = file.name.toLowerCase();
-    if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) {
+    const originalFileName = file.name.toLowerCase();
+    if (originalFileName.endsWith('.ppt') || originalFileName.endsWith('.pptx')) {
       return NextResponse.json({ 
         error: 'PowerPoint files are not supported. Please convert to PDF before uploading.' 
       }, { status: 400 });
