@@ -374,6 +374,7 @@ export default async function EditUserPage({
     uploadedDocuments, 
     allCourseAssignments, 
     allAuthAssignments, 
+    onsiteAssignments,
     availableCourses, 
     availableAuthorizations 
   } = await loadUserAssignmentsAndAvailable(resolvedParams.id);
@@ -469,6 +470,74 @@ export default async function EditUserPage({
               </Link>
             </div>
           </form>
+          
+          {/* Onsite Training Assignments */}
+          <div className="rounded-lg border bg-white p-4">
+            <h2 className="text-lg font-medium mb-4">Onsite Training Assignments</h2>
+            {onsiteAssignments.length === 0 ? (
+              <p className="text-sm text-gray-500">No onsite assignments found.</p>
+            ) : (
+              <div className="space-y-3">
+                {onsiteAssignments.filter(assignment => assignment.role === 'trainer').length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Onsite Trainer For:</h3>
+                    <div className="space-y-2">
+                      {onsiteAssignments
+                        .filter(assignment => assignment.role === 'trainer')
+                        .map(assignment => (
+                          <div key={assignment.id} className="flex items-center justify-between py-2 px-3 bg-blue-50 rounded-md">
+                            <div>
+                              <span className="text-sm font-medium text-blue-900">
+                                {assignment.courses?.title || 'Unknown Course'}
+                              </span>
+                              <span className="text-xs text-blue-700 ml-2">
+                                (Assigned: {assignment.assigned_at ? new Date(assignment.assigned_at).toLocaleDateString() : 'N/A'})
+                              </span>
+                            </div>
+                            <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                              assignment.assignment_status === 'completed' 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-blue-100 text-blue-700'
+                            }`}>
+                              {assignment.assignment_status || 'assigned'}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+                
+                {onsiteAssignments.filter(assignment => assignment.role === 'assessor').length > 0 && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-700 mb-2">Onsite Assessor For:</h3>
+                    <div className="space-y-2">
+                      {onsiteAssignments
+                        .filter(assignment => assignment.role === 'assessor')
+                        .map(assignment => (
+                          <div key={assignment.id} className="flex items-center justify-between py-2 px-3 bg-purple-50 rounded-md">
+                            <div>
+                              <span className="text-sm font-medium text-purple-900">
+                                {assignment.courses?.title || 'Unknown Course'}
+                              </span>
+                              <span className="text-xs text-purple-700 ml-2">
+                                (Assigned: {assignment.assigned_at ? new Date(assignment.assigned_at).toLocaleDateString() : 'N/A'})
+                              </span>
+                            </div>
+                            <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                              assignment.assignment_status === 'completed' 
+                                ? 'bg-green-100 text-green-700' 
+                                : 'bg-purple-100 text-purple-700'
+                            }`}>
+                              {assignment.assignment_status || 'assigned'}
+                            </span>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Right Column - Assignment Management & Completed Items */}
