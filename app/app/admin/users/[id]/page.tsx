@@ -76,21 +76,65 @@ type CompletedAuthorization = {
   status: 'current' | 'expiring_soon' | 'expired' | 'no_expiry';
 };
 
-async function loadUserCompletedItems(userId: string) {
+async function loadUserAssignmentsAndAvailable(userId: string) {
   const supabase = await createSupabaseServer();
 
-  // Get completed courses with due dates
-  const { data: completedCourses } = await supabase
+  // Get all course assignments (both completed and in-progress)
+  const { data: allCourseAssignments } = await supabase
     .from("course_assignments")
     .select(`
       id,
+      assignment_status,
+      assigned_at,
       completed_at,
-      courses!course_assignments_course_id_fkey(title, valid_for_days)
+      role,
+      courses!course_assignments_course_id_fkey(id, title, valid_for_days, status)
     `)
     .eq("user_id", userId)
-    .eq("assignment_status", "completed")
-    .not("completed_at", "is", null)
-    .order("completed_at", { ascending: false });
+    .eq("role", "trainee")
+    .order("assigned_at", { ascending: false });
+
+  // Get completed courses for backwards compatibility
+  const completedCourses = allCourseAssignments?.filter(assignment => 
+    assignment.assignment_status === "completed" && assignment.completed_at
+  ) || [];
+
+  // Get all authorization assignments (both completed and in-progress) 
+  const { data: allAuthAssignments, error: authError } = await supabase
+    .from("authorisation_assignments")
+    .select(`
+      id,
+      authorisation_id,
+      assignment_status,
+      assigned_at,
+      completed_at,
+      authorisations!inner(
+        id,
+        title,
+        status,
+        valid_for_days
+      )
+    `)
+    .eq("user_id", userId)
+    .order("assigned_at", { ascending: false });
+
+  // Get available courses for assignment (published courses not already assigned to this user)
+  const assignedCourseIds = (allCourseAssignments || []).map(a => a.courses?.id).filter(Boolean);
+  const { data: availableCourses } = await supabase
+    .from("courses")
+    .select("id, title, status")
+    .eq("status", "published")
+    .not("id", "in", assignedCourseIds.length > 0 ? `(${assignedCourseIds.join(',')})` : "()")
+    .order("title");
+
+  // Get available authorizations for assignment (active auths not already assigned to this user)
+  const assignedAuthIds = (allAuthAssignments || []).map(a => a.authorisation_id).filter(Boolean);
+  const { data: availableAuthorizations } = await supabase
+    .from("authorisations")
+    .select("id, title, status")
+    .eq("status", "active")
+    .not("id", "in", assignedAuthIds.length > 0 ? `(${assignedAuthIds.join(',')})` : "()")
+    .order("title");
 
   // Get uploaded documents
   const { data: uploadedDocuments } = await supabase
@@ -107,23 +151,7 @@ async function loadUserCompletedItems(userId: string) {
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  // Fetch authorization assignments - using exact same pattern as MyProfile
-  const { data: allAuthAssignments, error: authError } = await supabase
-    .from("authorisation_assignments")
-    .select(`
-      id,
-      authorisation_id,
-      assignment_status,
-      completed_at,
-      authorisations!inner(
-        id,
-        title,
-        status,
-        valid_for_days
-      )
-    `)
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+  // Remove the old duplicate auth assignments query since we have it above
 
   console.log('Debug - All auth assignments:', allAuthAssignments);
 
@@ -246,7 +274,15 @@ async function loadUserCompletedItems(userId: string) {
     };
   });
 
-  return { processedCourses, processedAuthorizations, uploadedDocuments: uploadedDocuments || [] };
+  return { 
+    processedCourses, 
+    processedAuthorizations, 
+    uploadedDocuments: uploadedDocuments || [],
+    allCourseAssignments: allCourseAssignments || [],
+    allAuthAssignments: allAuthAssignments || [],
+    availableCourses: availableCourses || [],
+    availableAuthorizations: availableAuthorizations || []
+  };
 }
 
 function getStatusColor(status: string) {
@@ -312,7 +348,15 @@ export default async function EditUserPage({
     );
   }
 
-  const { processedCourses, processedAuthorizations, uploadedDocuments } = await loadUserCompletedItems(resolvedParams.id);
+  const { 
+    processedCourses, 
+    processedAuthorizations, 
+    uploadedDocuments, 
+    allCourseAssignments, 
+    allAuthAssignments, 
+    availableCourses, 
+    availableAuthorizations 
+  } = await loadUserAssignmentsAndAvailable(resolvedParams.id);
 
   return (
     <div className="space-y-6 p-6">
