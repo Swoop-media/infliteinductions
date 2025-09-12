@@ -240,7 +240,11 @@ async function duplicateCourseAction(formData: FormData) {
     revalidatePath("/app/creator");
     redirect(`/app/creator/courses/${newCourse.id}?notice=course_duplicated`);
 
-  } catch (error) {
+  } catch (error: any) {
+    // Allow Next.js redirects to bubble up normally
+    if (error?.digest?.startsWith('NEXT_REDIRECT')) {
+      throw error;
+    }
     console.error('Error during course duplication:', error);
     redirect("/app/creator?error=duplication_failed");
   }
