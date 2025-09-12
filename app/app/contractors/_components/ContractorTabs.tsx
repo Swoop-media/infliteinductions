@@ -37,10 +37,11 @@ interface ContractorTabsProps {
   courses: Course[];
   sites: Site[];
   completions: Completion[];
+  initialTab?: string;
 }
 
-export default function ContractorTabs({ courses, sites, completions }: ContractorTabsProps) {
-  const [activeTab, setActiveTab] = useState("courses");
+export default function ContractorTabs({ courses, sites, completions, initialTab = "courses" }: ContractorTabsProps) {
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   return (
     <div>

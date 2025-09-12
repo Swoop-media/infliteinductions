@@ -1,7 +1,12 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
 import ContractorTabs from "./_components/ContractorTabs";
 
-export default async function ContractorsPage() {
+interface ContractorsPageProps {
+  searchParams: Promise<{ tab?: string }>;
+}
+
+export default async function ContractorsPage({ searchParams }: ContractorsPageProps) {
+  const { tab } = await searchParams;
   const supabase = await createSupabaseServer();
 
   // Fetch courses marked as available for external contractors
@@ -57,6 +62,7 @@ export default async function ContractorsPage() {
         courses={contractorCourses} 
         sites={sites || []} 
         completions={completions || []}
+        initialTab={tab || "courses"}
       />
     </div>
   );
