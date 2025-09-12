@@ -105,7 +105,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
       courses!course_assignments_course_id_fkey(id, title, status)
     `)
     .eq("user_id", userId)
-    .in("role", ["trainer", "assessor"])
+    .in("role", ["onsite_trainer", "onsite_assessor"])
     .order("assigned_at", { ascending: false });
 
   // Get completed courses for backwards compatibility
@@ -478,12 +478,12 @@ export default async function EditUserPage({
               <p className="text-sm text-gray-500">No onsite assignments found.</p>
             ) : (
               <div className="space-y-3">
-                {onsiteAssignments.filter(assignment => assignment.role === 'trainer').length > 0 && (
+                {onsiteAssignments.filter(assignment => assignment.role === 'onsite_trainer').length > 0 && (
                   <div>
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Onsite Trainer For:</h3>
                     <div className="space-y-2">
                       {onsiteAssignments
-                        .filter(assignment => assignment.role === 'trainer')
+                        .filter(assignment => assignment.role === 'onsite_trainer')
                         .map(assignment => (
                           <div key={assignment.id} className="flex items-center justify-between py-2 px-3 bg-blue-50 rounded-md">
                             <div>
@@ -507,12 +507,12 @@ export default async function EditUserPage({
                   </div>
                 )}
                 
-                {onsiteAssignments.filter(assignment => assignment.role === 'assessor').length > 0 && (
+                {onsiteAssignments.filter(assignment => assignment.role === 'onsite_assessor').length > 0 && (
                   <div>
                     <h3 className="text-sm font-medium text-gray-700 mb-2">Onsite Assessor For:</h3>
                     <div className="space-y-2">
                       {onsiteAssignments
-                        .filter(assignment => assignment.role === 'assessor')
+                        .filter(assignment => assignment.role === 'onsite_assessor')
                         .map(assignment => (
                           <div key={assignment.id} className="flex items-center justify-between py-2 px-3 bg-purple-50 rounded-md">
                             <div>
