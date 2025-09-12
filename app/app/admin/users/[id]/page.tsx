@@ -106,7 +106,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
       id,
       authorisation_id,
       assignment_status,
-      assigned_at,
+      created_at,
       completed_at,
       authorisations!inner(
         id,
@@ -116,7 +116,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
       )
     `)
     .eq("user_id", userId)
-    .order("assigned_at", { ascending: false });
+    .order("created_at", { ascending: false });
 
   // Get available courses for assignment (published courses not already assigned to this user)
   const assignedCourseIds = (allCourseAssignments || []).map(a => a.courses?.id).filter(Boolean);
@@ -161,7 +161,6 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
 
   // Remove the old duplicate auth assignments query since we have it above
 
-  console.log('Debug - All auth assignments:', allAuthAssignments);
 
   if (authError) {
     console.error('Authorization assignments error:', authError);
@@ -209,14 +208,12 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
   );
 
   // Debug logging
-  console.log("Debug - Auth with courses:", authWithCourses);
 
   // Filter completed authorizations - ensure we're checking the right status
   const completedAuthWithCourses = authWithCourses?.filter(auth => 
     auth.assignment_status === "completed" && auth.completed_at
   ) || [];
 
-  console.log("Debug - Completed auth with courses:", completedAuthWithCourses);
 
   // Process courses
   const processedCourses: CompletedCourse[] = (completedCourses || []).map((course: any) => {
@@ -484,7 +481,7 @@ export default async function EditUserPage({
                           {assignment.courses?.title || 'Unknown Course'}
                         </td>
                         <td className="px-3 py-2 text-sm text-gray-500">
-                          {assignment.assigned_at ? new Date(assignment.assigned_at).toLocaleDateString() : 'N/A'}
+                          {assignment.created_at ? new Date(assignment.created_at).toLocaleDateString() : 'N/A'}
                         </td>
                         <td className="px-3 py-2 text-sm">
                           <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
@@ -534,7 +531,7 @@ export default async function EditUserPage({
                           {assignment.authorisations?.title || 'Unknown Authorization'}
                         </td>
                         <td className="px-3 py-2 text-sm text-gray-500">
-                          {assignment.assigned_at ? new Date(assignment.assigned_at).toLocaleDateString() : 'N/A'}
+                          {assignment.created_at ? new Date(assignment.created_at).toLocaleDateString() : 'N/A'}
                         </td>
                         <td className="px-3 py-2 text-sm">
                           <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
