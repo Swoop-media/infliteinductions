@@ -5,6 +5,7 @@ import { useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import SimpleVideoPlayer from "./SimpleVideoPlayer";
 import SharePointVideoEmbed from "./SharePointVideoEmbed";
+import OnsiteRequirementsPreview from "./OnsiteRequirementsPreview";
 
 /** Data shapes coming from your pages */
 type Module = {
@@ -276,21 +277,21 @@ function PageView({ page, courseId }: { page: Page; courseId?: string }) {
 
   if (pageKind === "onsite_training") {
     return (
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold">Onsite Training: {module.title}</h3>
-        <p className="text-sm text-gray-600">
-          In learner mode, show schedules/venue and trainer notes if applicable.
-        </p>
-      </div>
+      <OnsiteRequirementsPreview 
+        moduleId={module.id}
+        moduleTitle={module.title}
+        moduleType="onsite_training"
+      />
     );
   }
 
   if (pageKind === "onsite_assessment") {
     return (
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold">Onsite Assessment: {module.title}</h3>
-        <p className="text-sm text-gray-600">Assessed in person. Show instructions/prereqs here.</p>
-      </div>
+      <OnsiteRequirementsPreview 
+        moduleId={module.id}
+        moduleTitle={module.title}
+        moduleType="onsite_assessment"
+      />
     );
   }
 

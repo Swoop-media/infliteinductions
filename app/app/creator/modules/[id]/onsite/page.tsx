@@ -409,7 +409,7 @@ export default async function OnsiteModulePage(props: {
           </div>
           <div className="flex items-center space-x-3">
             <Link
-              href={`/app/learn/modules/${mod.id}?preview=1`}
+              href={`/app/learn/courses/${mod.course_id}?module=${mod.id}&preview=1`}
               className="rounded-lg border border-blue-300 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 transition-colors"
               target="_blank"
               rel="noopener noreferrer"
