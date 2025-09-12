@@ -3,7 +3,6 @@
 
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { Underline } from '@tiptap/extension-underline';
 import { TextStyle } from '@tiptap/extension-text-style';
 import { Color } from '@tiptap/extension-color';
 import { Image } from '@tiptap/extension-image';
@@ -36,7 +35,6 @@ export default function RichTextEditor({
           levels: [1, 2, 3],
         },
       }),
-      Underline,
       TextStyle,
       Color,
       Image.configure({
