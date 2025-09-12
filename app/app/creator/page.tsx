@@ -77,36 +77,173 @@ async function duplicateCourseAction(formData: FormData) {
     redirect("/app/creator?error=no_course_id");
   }
 
-  // Fetch the original course
-  const { data: originalCourse, error: courseError } = await supabase
-    .from('courses')
-    .select('title')
-    .eq('id', originalCourseId)
-    .single();
+  try {
+    // Fetch the original course with all details
+    const { data: originalCourse, error: courseError } = await supabase
+      .from('courses')
+      .select('*')
+      .eq('id', originalCourseId)
+      .single();
 
-  if (courseError || !originalCourse) {
-    redirect("/app/creator?error=course_not_found");
+    if (courseError || !originalCourse) {
+      redirect("/app/creator?error=course_not_found");
+    }
+
+    // Create the new course with all original properties
+    const newCourseTitle = `Copy of ${originalCourse.title}`;
+    const { data: newCourse, error: newCourseError } = await supabase
+      .from('courses')
+      .insert({
+        title: newCourseTitle,
+        description: originalCourse.description,
+        status: 'draft',
+        valid_for_days: originalCourse.valid_for_days,
+        retake_reminder_days: originalCourse.retake_reminder_days,
+        notification_lead_days: originalCourse.notification_lead_days,
+        department: originalCourse.department,
+        tags: originalCourse.tags,
+        external_contractors: originalCourse.external_contractors,
+        created_by: user.id
+      })
+      .select('id')
+      .single();
+
+    if (newCourseError) {
+      redirect("/app/creator?error=failed_to_create_course");
+    }
+
+    // Get all modules from the original course
+    const { data: originalModules, error: modulesError } = await supabase
+      .from('course_modules')
+      .select('*')
+      .eq('course_id', originalCourseId)
+      .order('type', { ascending: true })
+      .order('order_index', { ascending: true });
+
+    if (modulesError) {
+      console.error('Error fetching original modules:', modulesError);
+      redirect("/app/creator?error=failed_to_fetch_modules");
+    }
+
+    // Copy each module and its content
+    for (const originalModule of originalModules || []) {
+      // Create new module
+      const { data: newModule, error: moduleError } = await supabase
+        .from('course_modules')
+        .insert({
+          course_id: newCourse.id,
+          type: originalModule.type,
+          title: originalModule.title,
+          order_index: originalModule.order_index
+        })
+        .select('id')
+        .single();
+
+      if (moduleError) {
+        console.error('Error creating new module:', moduleError);
+        continue;
+      }
+
+      // Copy module content blocks
+      const { data: originalBlocks, error: blocksError } = await supabase
+        .from('module_content_blocks')
+        .select('*')
+        .eq('module_id', originalModule.id)
+        .order('order_index', { ascending: true });
+
+      if (!blocksError && originalBlocks?.length > 0) {
+        const newBlocks = originalBlocks.map(block => ({
+          module_id: newModule.id,
+          kind: block.kind,
+          data: block.data,
+          order_index: block.order_index
+        }));
+
+        await supabase.from('module_content_blocks').insert(newBlocks);
+      }
+
+      // If this is a quiz module, copy quiz data
+      if (originalModule.type === 'digital_assessment_quiz') {
+        // Copy quiz settings
+        const { data: originalQuiz, error: quizError } = await supabase
+          .from('quizzes')
+          .select('*')
+          .eq('module_id', originalModule.id)
+          .single();
+
+        if (!quizError && originalQuiz) {
+          const { data: newQuiz, error: newQuizError } = await supabase
+            .from('quizzes')
+            .insert({
+              course_id: newCourse.id,
+              module_id: newModule.id,
+              pass_mark: originalQuiz.pass_mark,
+              max_attempts: originalQuiz.max_attempts,
+              shuffle: originalQuiz.shuffle,
+              show_feedback: originalQuiz.show_feedback
+            })
+            .select('id')
+            .single();
+
+          if (!newQuizError) {
+            // Copy quiz questions
+            const { data: originalQuestions, error: questionsError } = await supabase
+              .from('quiz_questions')
+              .select('*')
+              .eq('quiz_id', originalQuiz.id)
+              .order('order_index', { ascending: true });
+
+            if (!questionsError && originalQuestions?.length > 0) {
+              for (const originalQuestion of originalQuestions) {
+                const { data: newQuestion, error: questionError } = await supabase
+                  .from('quiz_questions')
+                  .insert({
+                    quiz_id: newQuiz.id,
+                    module_id: newModule.id,
+                    course_id: newCourse.id,
+                    type: originalQuestion.type,
+                    question: originalQuestion.question,
+                    explanation: originalQuestion.explanation,
+                    points: originalQuestion.points,
+                    order_index: originalQuestion.order_index
+                  })
+                  .select('id')
+                  .single();
+
+                if (!questionError) {
+                  // Copy quiz options for this question
+                  const { data: originalOptions, error: optionsError } = await supabase
+                    .from('quiz_options')
+                    .select('*')
+                    .eq('question_id', originalQuestion.id)
+                    .order('order_index', { ascending: true });
+
+                  if (!optionsError && originalOptions?.length > 0) {
+                    const newOptions = originalOptions.map(option => ({
+                      question_id: newQuestion.id,
+                      text: option.text,
+                      correct: option.correct,
+                      order_index: option.order_index
+                    }));
+
+                    await supabase.from('quiz_options').insert(newOptions);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Revalidate and redirect to the new course editor
+    revalidatePath("/app/creator");
+    redirect(`/app/creator/courses/${newCourse.id}?notice=course_duplicated`);
+
+  } catch (error) {
+    console.error('Error during course duplication:', error);
+    redirect("/app/creator?error=duplication_failed");
   }
-
-  // Create the new course - exactly like the existing course creation
-  const newCourseTitle = `Copy of ${originalCourse.title}`;
-  const { data: newCourse, error: newCourseError } = await supabase
-    .from('courses')
-    .insert({
-      title: newCourseTitle,
-      status: 'draft',
-      created_by: user.id
-    })
-    .select('id')
-    .single();
-
-  if (newCourseError) {
-    redirect("/app/creator?error=failed_to_create_course");
-  }
-
-  // Revalidate and redirect
-  revalidatePath("/app/creator");
-  redirect("/app/creator?ok=course_duplicated");
 }
 
 function FlashBanner({ ok, error }: { ok?: string | null; error?: string | null }) {
