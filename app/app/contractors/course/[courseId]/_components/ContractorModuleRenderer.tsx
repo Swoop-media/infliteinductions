@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
 
 interface Module {
   id: string;
@@ -136,14 +137,11 @@ export default function ContractorModuleRenderer({
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h4 className="font-medium text-gray-900 mb-2">🎥 Video Content</h4>
               {data.url ? (
-                <div className="aspect-video">
-                  <iframe
-                    src={toEmbedUrl(data.url)}
-                    title={data.title || "Video"}
-                    className="w-full h-full rounded"
-                    allowFullScreen
-                  />
-                </div>
+                <SimpleVideoPlayer
+                  url={data.url}
+                  courseId={module.course_id}
+                  title={data.title || "Course Video"}
+                />
               ) : (
                 <p className="text-gray-600">Video URL not available</p>
               )}
@@ -184,31 +182,6 @@ export default function ContractorModuleRenderer({
     }
   };
 
-  const toEmbedUrl = (raw: string) => {
-    try {
-      const u = new URL(raw);
-      const host = u.hostname.replace(/^www\./, "");
-      // YouTube
-      if (host === "youtube.com" || host === "m.youtube.com") {
-        if (u.pathname === "/watch") {
-          const v = u.searchParams.get("v");
-          if (v) return `https://www.youtube.com/embed/${v}`;
-        }
-      }
-      if (host === "youtu.be") {
-        const id = u.pathname.slice(1).split("/")[0];
-        if (id) return `https://www.youtube.com/embed/${id}`;
-      }
-      // Vimeo
-      if (host === "vimeo.com") {
-        const id = u.pathname.split("/").filter(Boolean)[0];
-        if (id) return `https://player.vimeo.com/video/${id}`;
-      }
-      return raw;
-    } catch {
-      return raw;
-    }
-  };
 
   const handleAnswer = (answer: any) => {
     const currentQuestion = quizData.questions[currentQuestionIndex];
