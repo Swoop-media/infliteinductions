@@ -429,6 +429,9 @@ async function updateCourseDetails(formData: FormData) {
       ? []
       : Array.from(new Set(tagsCsv.split(",").map((t) => t.trim()).filter(Boolean)));
 
+  // NEW: external contractors checkbox
+  const externalContractors = formData.get("external_contractors") === "on";
+
   const updatePayload: Record<string, any> = {};
   if (title.length > 0) updatePayload.title = title;
   updatePayload.description = description;
@@ -443,6 +446,7 @@ async function updateCourseDetails(formData: FormData) {
   // NEW fields
   updatePayload.department = department;
   updatePayload.tags = tags;
+  updatePayload.external_contractors = externalContractors;
 
   const { error } = await supabase.from("courses").update(updatePayload).eq("id", courseId);
   if (error) throw new Error(`Save failed: ${error.message}`);
@@ -920,6 +924,23 @@ function DetailsTab({
             placeholder="e.g. safety, refresher, induction"
           />
           <div className="text-xs text-gray-500">Comma-separated. Used later for search & filtering.</div>
+        </div>
+
+        {/* External Contractors */}
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="external_contractors"
+            name="external_contractors"
+            defaultChecked={course?.external_contractors || false}
+            className="h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <label htmlFor="external_contractors" className="text-sm font-medium text-gray-900">
+            Use for external contractors
+          </label>
+        </div>
+        <div className="text-xs text-gray-500 -mt-2 ml-7">
+          This course will be available to external contractors via the Contractors portal.
         </div>
 
         {hasValidFor && (
