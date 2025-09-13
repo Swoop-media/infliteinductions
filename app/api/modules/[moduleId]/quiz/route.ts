@@ -26,8 +26,6 @@ export async function GET(
 
     // If no quiz record exists, create a default settings object
     if (!quiz) {
-      console.log("No quiz record found, using default settings");
-      
       // Try to get course_id from the module
       const { data: moduleData } = await supabase
         .from("modules")
