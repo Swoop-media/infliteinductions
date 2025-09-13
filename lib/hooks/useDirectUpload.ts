@@ -1,6 +1,7 @@
 // Hook for direct file upload to Supabase storage using signed URLs
 // This bypasses Cloud Run's 32MB limit by uploading directly to storage
 import { useState, useCallback } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 interface UploadOptions {
   moduleId: string;
@@ -59,19 +60,21 @@ export function useDirectUpload() {
         throw new Error(errorData.error || 'Failed to get upload URL');
       }
 
-      const { uploadUrl, path: storagePath } = await signedUrlResponse.json();
+      const { uploadUrl, path: storagePath, token } = await signedUrlResponse.json();
 
-      // Step 2: Upload file directly to Supabase storage
-      const uploadResponse = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: file,
-        headers: {
-          'Content-Type': file.type,
-        },
-      });
+      // Step 2: Upload file directly to Supabase storage using the token
+      // Create a temporary Supabase client for the upload
+      const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
 
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload file to storage');
+      const { error: uploadError } = await supabase.storage
+        .from('course-files')
+        .uploadToSignedUrl(storagePath, token, file);
+
+      if (uploadError) {
+        throw new Error(`Failed to upload file to storage: ${uploadError.message}`);
       }
 
       onProgress?.(50);

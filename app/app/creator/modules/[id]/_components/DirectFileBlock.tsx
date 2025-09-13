@@ -24,23 +24,93 @@ export default function DirectFileBlock({
   const [displayName, setDisplayName] = useState(currentFile?.display || '');
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const handleUploadComplete = (result: { url?: string; path: string }) => {
-    setUploading(false);
-    setUploadSuccess(true);
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
     setUploadError(null);
-    onFileUpload?.();
-    
-    // Refresh the page to show the updated file
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
+    setUploadSuccess(false);
+    if (!displayName) {
+      setDisplayName(file.name);
+    }
   };
 
-  const handleUploadError = (error: string) => {
-    setUploading(false);
-    setUploadError(error);
-    setUploadSuccess(false);
+  const handleSaveReplace = async () => {
+    if (!selectedFile) return;
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      // Step 1: Get signed URL for upload
+      const signedUrlResponse = await fetch('/api/upload-signed-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileName: selectedFile.name,
+          fileSize: selectedFile.size,
+          contentType: selectedFile.type,
+          moduleId,
+          uploadType: 'file',
+        }),
+      });
+
+      if (!signedUrlResponse.ok) {
+        const errorData = await signedUrlResponse.json();
+        throw new Error(errorData.error || 'Failed to get upload URL');
+      }
+
+      const { uploadUrl, path: storagePath, token } = await signedUrlResponse.json();
+
+      // Step 2: Upload file directly to Supabase storage
+      const response = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: selectedFile,
+        headers: {
+          'Content-Type': selectedFile.type,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to upload file to storage');
+      }
+
+      // Step 3: Complete the upload (update database)
+      const completeResponse = await fetch('/api/upload-complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          moduleId,
+          blockId,
+          storagePath,
+          displayName: displayName || selectedFile.name,
+          uploadType: 'file',
+        }),
+      });
+
+      if (!completeResponse.ok) {
+        const errorData = await completeResponse.json();
+        throw new Error(errorData.error || 'Failed to complete upload');
+      }
+
+      setUploadSuccess(true);
+      setSelectedFile(null);
+      onFileUpload?.();
+      
+      // Refresh the page to show the updated file
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      setUploadError(errorMessage);
+    } finally {
+      setUploading(false);
+    }
   };
 
   const handleClearFile = async () => {
@@ -101,18 +171,66 @@ export default function DirectFileBlock({
           />
         </label>
 
-        {/* File uploader */}
-        <DirectFileUploader
-          moduleId={moduleId}
-          blockId={blockId}
-          uploadType="file"
-          maxSizeMB={100}
-          displayName={displayName}
-          accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,image/*,video/*"
-          onUploadComplete={handleUploadComplete}
-          onUploadError={handleUploadError}
-          className="w-full"
-        />
+        {/* File selector */}
+        <div className="space-y-2">
+          <label className="grid gap-1">
+            <span className="text-xs text-gray-600">Choose file</span>
+            <input
+              type="file"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  // Check file size (max 100MB)
+                  if (file.size > 100 * 1024 * 1024) {
+                    setUploadError('File size exceeds 100MB limit. Please use a smaller file.');
+                    return;
+                  }
+                  
+                  // Block PowerPoint files
+                  const fileName = file.name.toLowerCase();
+                  if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) {
+                    setUploadError('PowerPoint files are not supported. Please convert to PDF before uploading.');
+                    return;
+                  }
+                  
+                  handleFileSelect(file);
+                }
+              }}
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,image/*,video/*"
+              className="text-sm"
+            />
+          </label>
+          
+          {selectedFile && (
+            <div className="text-sm text-green-600 bg-green-50 border border-green-200 rounded-md p-2">
+              📄 Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(1)}MB)
+            </div>
+          )}
+          
+          {/* Save/Replace Button */}
+          {selectedFile && (
+            <button
+              onClick={handleSaveReplace}
+              disabled={uploading || !displayName.trim()}
+              className={`rounded-md px-4 py-2 text-sm font-medium ${
+                uploading || !displayName.trim()
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
+            >
+              {uploading ? (
+                <>
+                  <span className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></span>
+                  Uploading...
+                </>
+              ) : currentFile?.storage_path ? (
+                'Replace File'
+              ) : (
+                'Save File'
+              )}
+            </button>
+          )}
+        </div>
 
         {/* Status messages */}
         {uploadError && (
