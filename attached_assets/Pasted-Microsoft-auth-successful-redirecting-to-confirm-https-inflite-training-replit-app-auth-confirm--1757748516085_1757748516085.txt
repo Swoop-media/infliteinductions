@@ -1,0 +1,153 @@
+Microsoft auth successful, redirecting to confirm: https://inflite-training.replit.app/auth/confirm?email=henry.morgan%40inflite.nz&password=396248f7-8875-465e-8fea-fd3bc3a3b0ff&next=%2Fapp%2Fhome
+2025-09-13 17:18:11.18
+0a109bc7
+User
+📝 Processing issue report...
+2025-09-13 17:18:11.18
+0a109bc7
+User
+👤 Getting user details for: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+2025-09-13 17:18:11.87
+0a109bc7
+User
+📤 Sending Teams message...
+2025-09-13 17:18:11.87
+0a109bc7
+User
+📧 Sending Teams message to user ID: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+2025-09-13 17:18:11.87
+0a109bc7
+User
+📤 Attempting to send Teams message to user ID: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+2025-09-13 17:18:11.87
+0a109bc7
+User
+📝 Message preview: 🐛 **Issue Report**
+2025-09-13 17:18:11.87
+0a109bc7
+User
+**URL/Page:** https://inflite-training.replit.app/app/home
+2025-09-13 17:18:11.87
+0a109bc7
+User
+**Issue Description:**
+2025-09-13 17:18:11.87
+0a109bc7
+User
+test after redeploy
+2025-09-13 17:18:11.87
+0a109bc7
+User
+**Context Information:**
+2025-09-13 17:18:11.87
+0a109bc7
+User
+• U...
+2025-09-13 17:18:11.87
+0a109bc7
+User
+🌐 Using base URL: https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev
+2025-09-13 17:18:11.87
+0a109bc7
+User
+📦 Request body: {
+2025-09-13 17:18:11.87
+0a109bc7
+User
+userId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10',
+2025-09-13 17:18:11.87
+0a109bc7
+User
+message: '🐛 **Issue Report**\n' +
+2025-09-13 17:18:11.87
+0a109bc7
+User
+'**URL/Page:** https://inflite-training.replit.app/app/home\n' +
+2025-09-13 17:18:11.87
+0a109bc7
+User
+'**Issue Description:*...'
+2025-09-13 17:18:11.87
+0a109bc7
+User
+}
+2025-09-13 17:18:12.03
+0a109bc7
+User
+📊 Bot endpoint response status: 503
+2025-09-13 17:18:12.03
+0a109bc7
+User
+❌ Bot endpoint failed, couldn't parse error response: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+2025-09-13 17:18:12.03
+0a109bc7
+User
+at JSON.parse (<anonymous>)
+2025-09-13 17:18:12.03
+0a109bc7
+User
+at async w (.next/server/app/api/report-issue/route.js:1:4687)
+2025-09-13 17:18:12.03
+0a109bc7
+User
+at async x (.next/server/app/api/report-issue/route.js:1:6813)
+2025-09-13 17:18:12.03
+0a109bc7
+User
+📄 Raw error response: No response text
+2025-09-13 17:18:12.03
+0a109bc7
+User
+⚠️ Bot endpoint failed with status: 503
+2025-09-13 17:18:12.03
+0a109bc7
+User
+⚠️ Error details: { error: 'No response text' }
+2025-09-13 17:18:12.03
+0a109bc7
+User
+⚠️ Bot endpoint failed, trying fallback approach...
+2025-09-13 17:18:12.03
+0a109bc7
+User
+📧 Issue report for user 1b44c8f5-95aa-4f8c-8110-8f36106b4d10 : 🐛 **Issue Report**
+2025-09-13 17:18:12.03
+0a109bc7
+User
+**URL/Page:** https://inflite-training.replit.app/app/home
+2025-09-13 17:18:12.03
+0a109bc7
+User
+**Issue Description:**
+2025-09-13 17:18:12.03
+0a109bc7
+User
+test after redeploy
+2025-09-13 17:18:12.03
+0a109bc7
+User
+**Context Information:**
+2025-09-13 17:18:12.03
+0a109bc7
+User
+• User ID: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+2025-09-13 17:18:12.03
+0a109bc7
+User
+• Pag...
+2025-09-13 17:18:12.03
+0a109bc7
+User
+✅ Issue report processed for user Henry Morgan, Teams sent: false
+2025-09-13 17:18:12.71
+0a109bc7
+User
+📊 Issue report logged to database
+2025-09-13 18:39:16.90
+0a109bc7
+System
+system: received signal terminated
+2025-09-13 18:48:13.27
+0a109bc7
+System
+starting up user application
