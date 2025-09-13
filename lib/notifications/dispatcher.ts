@@ -277,6 +277,13 @@ export async function notifyUser(
 
   // 2) Teams DM (best-effort)
   if (!opts?.skipTeams) {
+    // ✅ Feature flag: Disable course publishing Teams notifications
+    const DISABLE_COURSE_PUBLISH_NOTIFICATIONS = process.env.DISABLE_COURSE_PUBLISH_NOTIFICATIONS === 'true';
+    if (type === 'course_published' && DISABLE_COURSE_PUBLISH_NOTIFICATIONS) {
+      console.log('🔕 Course publishing Teams notifications are disabled via feature flag');
+      return;
+    }
+
     const text = formatTeamsText(type, payloadWithEvent, payloadWithEvent?.title);
     console.log(`🚀 Attempting to send Teams DM to user ${recipientId} for notification type: ${type}`);
 

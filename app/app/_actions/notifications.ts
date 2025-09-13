@@ -332,8 +332,13 @@ export async function createNotification(input: NotificationInput) {
 
   // 2) Best-effort Teams DM (non-blocking; never deletes/updates existing notifications)
   if (n.sendTeams) {
-    try {
-      await trySendTeamsDM(n.recipientUserId, teamsTextFor(n));
+    // ✅ Feature flag: Disable course publishing Teams notifications
+    const DISABLE_COURSE_PUBLISH_NOTIFICATIONS = process.env.DISABLE_COURSE_PUBLISH_NOTIFICATIONS === 'true';
+    if (n.type === 'course_published' && DISABLE_COURSE_PUBLISH_NOTIFICATIONS) {
+      console.log('🔕 Course publishing Teams notifications are disabled via feature flag');
+    } else {
+      try {
+        await trySendTeamsDM(n.recipientUserId, teamsTextFor(n));
 
       // Also try direct API call if the above module approach fails
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -347,8 +352,9 @@ export async function createNotification(input: NotificationInput) {
       }).catch(() => {
         // Ignore API call failures too
       });
-    } catch {
-      // intentionally ignored; in-app is the source of truth
+      } catch {
+        // intentionally ignored; in-app is the source of truth
+      }
     }
   }
 
