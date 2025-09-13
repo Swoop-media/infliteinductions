@@ -203,9 +203,16 @@ export default function ContractorModuleRenderer({
     let correct = 0;
     quizData.questions.forEach(q => {
       const userAnswer = answers[q.id];
-      if (q.type === "multiple_choice" || q.type === "true_false") {
+      if (q.type === "mcq" || q.type === "multiple_choice" || q.type === "true_false") {
         const correctOption = q.options?.find(opt => opt.correct);
         if (userAnswer === correctOption?.id) correct++;
+      } else if (q.type === "multi") {
+        const correctOptions = q.options?.filter(opt => opt.correct).map(opt => opt.id) || [];
+        const userAnswers = Array.isArray(userAnswer) ? userAnswer : [];
+        if (correctOptions.length === userAnswers.length && 
+            correctOptions.every(id => userAnswers.includes(id))) {
+          correct++;
+        }
       }
     });
     
@@ -218,6 +225,7 @@ export default function ContractorModuleRenderer({
     const userAnswer = answers[question.id];
 
     switch (question.type) {
+      case "mcq":
       case "multiple_choice":
         return (
           <div className="space-y-3">
@@ -231,6 +239,35 @@ export default function ContractorModuleRenderer({
                     value={option.id}
                     checked={userAnswer === option.id}
                     onChange={() => handleAnswer(option.id)}
+                    className="h-4 w-4 text-blue-600"
+                  />
+                  <span className="text-gray-900">{option.text}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        );
+
+      case "multi":
+        return (
+          <div className="space-y-3">
+            <h3 className="text-lg font-medium">{question.question}</h3>
+            <div className="space-y-2">
+              {question.options?.map(option => (
+                <label key={option.id} className="flex items-center space-x-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name={`question-${question.id}`}
+                    value={option.id}
+                    checked={Array.isArray(userAnswer) ? userAnswer.includes(option.id) : false}
+                    onChange={(e) => {
+                      const currentAnswers = Array.isArray(userAnswer) ? userAnswer : [];
+                      if (e.target.checked) {
+                        handleAnswer([...currentAnswers, option.id]);
+                      } else {
+                        handleAnswer(currentAnswers.filter(id => id !== option.id));
+                      }
+                    }}
                     className="h-4 w-4 text-blue-600"
                   />
                   <span className="text-gray-900">{option.text}</span>
@@ -262,6 +299,7 @@ export default function ContractorModuleRenderer({
           </div>
         );
 
+      case "short_text":
       case "short_answer":
         return (
           <div className="space-y-3">

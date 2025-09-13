@@ -63,6 +63,16 @@ export async function GET(
     // Fallback: If no questions found via quiz_id, try direct module_id
     if (!questions || questions.length === 0) {
       console.log("No questions found via quiz_id, trying module_id fallback");
+      console.log("Looking for questions with module_id:", moduleId);
+      
+      // First test without the join to see if questions exist
+      const { data: testQuestions, error: testError } = await supabase
+        .from("quiz_questions")
+        .select("*")
+        .eq("module_id", moduleId);
+      
+      console.log("Test query (no join) found:", testQuestions?.length || 0, "questions");
+      
       const { data: moduleQuestions, error: moduleQuestionsError } = await supabase
         .from("quiz_questions")
         .select(`
@@ -74,9 +84,12 @@ export async function GET(
 
       if (moduleQuestionsError) {
         console.error("Error fetching questions by module_id:", moduleQuestionsError);
-      } else if (moduleQuestions && moduleQuestions.length > 0) {
-        console.log(`Found ${moduleQuestions.length} questions via module_id fallback`);
-        questions = moduleQuestions;
+      } else {
+        console.log(`Module questions result (with join):`, moduleQuestions?.length || 0, "questions found");
+        if (moduleQuestions && moduleQuestions.length > 0) {
+          console.log(`Found ${moduleQuestions.length} questions via module_id fallback`);
+          questions = moduleQuestions;
+        }
       }
     }
 
