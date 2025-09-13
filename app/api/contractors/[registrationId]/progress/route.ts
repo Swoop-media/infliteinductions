@@ -3,11 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { registrationId: string } }
+  { params }: { params: Promise<{ registrationId: string }> }
 ) {
   try {
     const supabase = await createSupabaseServer();
-    const { registrationId } = params;
+    const { registrationId } = await params;
     const { completed_modules } = await request.json();
 
     if (!Array.isArray(completed_modules)) {
