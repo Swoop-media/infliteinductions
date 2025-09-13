@@ -10,7 +10,7 @@ export async function GET(
 
   try {
     // Get quiz settings
-    const { data: quiz, error: quizError } = await supabase
+    let { data: quiz, error: quizError } = await supabase
       .from("quizzes")
       .select("*")
       .eq("module_id", moduleId)
@@ -24,15 +24,30 @@ export async function GET(
       );
     }
 
+    // If no quiz record exists, create a default settings object
     if (!quiz) {
-      return NextResponse.json(
-        { error: "Quiz not found" },
-        { status: 404 }
-      );
+      console.log("No quiz record found, using default settings");
+      
+      // Try to get course_id from the module
+      const { data: moduleData } = await supabase
+        .from("modules")
+        .select("course_id")
+        .eq("id", moduleId)
+        .single();
+      
+      quiz = {
+        id: moduleId, // Use module_id as fallback quiz id
+        module_id: moduleId,
+        course_id: moduleData?.course_id,
+        pass_mark: 70,
+        max_attempts: 3,
+        shuffle: false,
+        show_feedback: true
+      };
     }
 
-    // Get quiz questions with options
-    const { data: questions, error: questionsError } = await supabase
+    // Get quiz questions with options - try quiz_id first
+    let { data: questions, error: questionsError } = await supabase
       .from("quiz_questions")
       .select(`
         *,
@@ -42,11 +57,51 @@ export async function GET(
       .order("order_index", { ascending: true });
 
     if (questionsError) {
-      console.error("Error fetching questions:", questionsError);
-      return NextResponse.json(
-        { error: "Failed to fetch questions" },
-        { status: 500 }
-      );
+      console.error("Error fetching questions by quiz_id:", questionsError);
+    }
+
+    // Fallback: If no questions found via quiz_id, try direct module_id
+    if (!questions || questions.length === 0) {
+      console.log("No questions found via quiz_id, trying module_id fallback");
+      const { data: moduleQuestions, error: moduleQuestionsError } = await supabase
+        .from("quiz_questions")
+        .select(`
+          *,
+          options:quiz_options(*)
+        `)
+        .eq("module_id", moduleId)
+        .order("order_index", { ascending: true });
+
+      if (moduleQuestionsError) {
+        console.error("Error fetching questions by module_id:", moduleQuestionsError);
+      } else if (moduleQuestions && moduleQuestions.length > 0) {
+        console.log(`Found ${moduleQuestions.length} questions via module_id fallback`);
+        questions = moduleQuestions;
+      }
+    }
+
+    // Additional fallback: Try fetching by course_id from the quiz's course
+    if ((!questions || questions.length === 0) && quiz.course_id) {
+      console.log("No questions found via module_id, trying course_id fallback");
+      const { data: courseQuestions, error: courseQuestionsError } = await supabase
+        .from("quiz_questions")
+        .select(`
+          *,
+          options:quiz_options(*)
+        `)
+        .eq("course_id", quiz.course_id)
+        .order("order_index", { ascending: true });
+
+      if (courseQuestionsError) {
+        console.error("Error fetching questions by course_id:", courseQuestionsError);
+      } else if (courseQuestions && courseQuestions.length > 0) {
+        console.log(`Found ${courseQuestions.length} questions via course_id fallback`);
+        questions = courseQuestions;
+      }
+    }
+
+    if (!questions) {
+      questions = [];
     }
 
     // Sort options by order_index
