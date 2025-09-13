@@ -5,7 +5,7 @@ const nextConfig: NextConfig & { allowedDevOrigins?: string[] } = {
   experimental: {
     serverActions: {
       // bump the default 1 MB limit so file uploads via Server Actions work
-      bodySizeLimit: "64mb", // adjust as needed: '10mb' | '64mb' | '200mb' ...
+      bodySizeLimit: "128mb", // increased limit for larger file uploads
       // allowedOrigins: ['http://localhost:3000'], // only if posting from other origins
     },
   },
