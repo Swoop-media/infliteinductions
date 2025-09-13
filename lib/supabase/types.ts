@@ -73,6 +73,26 @@ export interface Database {
           [key: string]: any;
         };
       };
+      contractor_registrations: {
+        Row: {
+          id: string;
+          course_id?: string;
+          contractor_name: string;
+          contractor_email: string;
+          contractor_company?: string;
+          completed_modules?: any;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+          [key: string]: any;
+        };
+        Insert: {
+          [key: string]: any;
+        };
+        Update: {
+          [key: string]: any;
+        };
+      };
     };
     Views: {
       [_ in never]: never;

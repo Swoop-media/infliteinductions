@@ -18,14 +18,12 @@ export async function PATCH(
     }
 
     // Update progress data
-    const { error } = await supabase
-      .from("contractor_course_completions")
+    const { error } = await (supabase as any)
+      .from("contractor_registrations")
       .update({
-        progress_data: {
-          completed_modules,
-          last_updated: new Date().toISOString(),
-        },
-      } as any)
+        completed_modules: completed_modules,
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", registrationId);
 
     if (error) {

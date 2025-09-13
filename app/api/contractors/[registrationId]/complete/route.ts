@@ -1,23 +1,23 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { registrationId: string } }
+  { params }: { params: Promise<{ registrationId: string }> }
 ) {
   try {
     const supabase = await createSupabaseServer();
-    const { registrationId } = params;
+    const { registrationId } = await params;
     const { final_score } = await request.json();
 
     // Update completion record
-    const { error } = await supabase
-      .from("contractor_course_completions")
+    const { error } = await (supabase as any)
+      .from("contractor_registrations")
       .update({
-        completed_at: new Date().toISOString(),
-        final_score: final_score || null,
-        certificate_issued: false, // Will be handled separately if needed
-      } as any)
+        status: "completed",
+        updated_at: new Date().toISOString(),
+      })
       .eq("id", registrationId);
 
     if (error) {
