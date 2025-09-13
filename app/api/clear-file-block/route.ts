@@ -26,9 +26,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Insufficient permissions. Creator role required.' }, { status: 403 });
     }
 
-    const { moduleId, blockId, storagePath, displayName, uploadType = 'file' } = await request.json();
+    const { moduleId, blockId } = await request.json();
     
-    if (!moduleId || !storagePath) {
+    if (!moduleId || !blockId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -51,55 +51,47 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You do not have permission to modify this course' }, { status: 403 });
     }
 
-    // If blockId is provided, verify it belongs to this module
-    if (blockId) {
-      const { data: blockData, error: blockError } = await supabase
-        .from("module_content_blocks")
-        .select("id, module_id")
-        .eq("id", blockId)
-        .eq("module_id", moduleId)
-        .maybeSingle();
-        
-      if (blockError || !blockData) {
-        return NextResponse.json({ error: 'Block not found or does not belong to this module' }, { status: 404 });
+    // Verify that the block belongs to this module and get current file info
+    const { data: blockData, error: blockError } = await supabase
+      .from("module_content_blocks")
+      .select("id, module_id, data")
+      .eq("id", blockId)
+      .eq("module_id", moduleId)
+      .maybeSingle();
+      
+    if (blockError || !blockData) {
+      return NextResponse.json({ error: 'Block not found or does not belong to this module' }, { status: 404 });
+    }
+
+    // Extract old path from the validated block data
+    const oldPath: string | null = blockData?.data?.storage_path ?? null;
+
+    // Clear the file reference in database
+    const { error } = await supabase
+      .from("module_content_blocks")
+      .update({ data: { storage_path: null, display: "" } })
+      .eq("id", blockId);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Remove the file from storage if it exists
+    if (oldPath) {
+      try {
+        await supabase.storage.from("course-files").remove([oldPath]);
+      } catch (storageError) {
+        // Log error but don't fail the request
+        console.warn('Failed to remove file from storage:', storageError);
       }
     }
 
-    if (uploadType === 'file' && blockId) {
-      // This is for file block uploads - update the module content block
-      const { error: updateError } = await supabase
-        .from("module_content_blocks")
-        .update({ data: { storage_path: storagePath, display: displayName || 'Uploaded file' } })
-        .eq("id", blockId);
-
-      if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 500 });
-      }
-
-      // Revalidate the module page
-      revalidatePath(`/app/creator/modules/${moduleId}`);
-    }
-
-    // For images, we need to return a signed URL for display
-    if (uploadType === 'image') {
-      const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-        .from('course-files')
-        .createSignedUrl(storagePath, 365 * 24 * 60 * 60); // 1 year in seconds
-
-      if (signedUrlError || !signedUrlData) {
-        return NextResponse.json({ error: 'Failed to create signed URL for display' }, { status: 500 });
-      }
-
-      return NextResponse.json({ 
-        success: true,
-        url: signedUrlData.signedUrl,
-        path: storagePath 
-      });
-    }
+    // Revalidate the module page
+    revalidatePath(`/app/creator/modules/${moduleId}`);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Upload completion error:', error);
-    return NextResponse.json({ error: 'Failed to complete upload' }, { status: 500 });
+    console.error('Clear file block error:', error);
+    return NextResponse.json({ error: 'Failed to clear file' }, { status: 500 });
   }
 }

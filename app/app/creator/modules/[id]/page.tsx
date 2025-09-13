@@ -7,6 +7,7 @@ import { hasRole } from "@/lib/roles";
 import RichTextBlock from "./_components/RichTextBlock";
 import VideoPlayer from '@/components/VideoPlayer';
 import { ModuleType, BlockKind } from "@/lib/types/module";
+import DirectFileBlock from "./_components/DirectFileBlock";
 
 export const dynamic = "force-dynamic";
 
@@ -585,52 +586,15 @@ export default async function ModuleEditorPage(props: {
                     )}
 
                     {b.kind === "file" && (
-                      <div className="space-y-2">
-                        {url ? (
-                          <div className="text-sm">
-                            Current file:{" "}
-                            <a className="underline break-all" href={url} target="_blank">
-                              {b.data?.display || "Download"}
-                            </a>
-                          </div>
-                        ) : (
-                          <div className="text-sm text-gray-500">No file uploaded.</div>
-                        )}
-
-                        <div className="space-y-2">
-                          <form action={uploadFileBlock} className="flex flex-wrap items-end gap-2">
-                            <input type="hidden" name="module_id" value={mod.id} />
-                            <input type="hidden" name="block_id" value={b.id} />
-                            <label className="grid gap-1">
-                              <span className="text-xs text-gray-600">Display name</span>
-                              <input
-                                name="display"
-                                defaultValue={String(b.data?.display ?? "")}
-                                className="rounded-md border px-3 py-2 text-sm w-72"
-                                placeholder="Shown to learners"
-                              />
-                            </label>
-                            <label className="grid gap-1">
-                              <span className="text-xs text-gray-600">Choose file</span>
-                              <input 
-                                type="file" 
-                                name="file" 
-                                className="text-sm" 
-                                accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,image/*,video/*"
-                              />
-                              <span className="text-xs text-red-600">⚠️ PowerPoint files not supported - convert to PDF</span>
-                            </label>
-                            <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Upload / Replace</button>
-                          </form>
-                          {b.data?.storage_path && (
-                            <form action={clearFileBlock}>
-                              <input type="hidden" name="module_id" value={mod.id} />
-                              <input type="hidden" name="block_id" value={b.id} />
-                              <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Remove</button>
-                            </form>
-                          )}
-                        </div>
-                      </div>
+                      <DirectFileBlock
+                        moduleId={mod.id}
+                        blockId={b.id}
+                        currentFile={{
+                          url: url,
+                          display: b.data?.display,
+                          storage_path: b.data?.storage_path,
+                        }}
+                      />
                     )}
 
                     {b.kind === "request_document" && (

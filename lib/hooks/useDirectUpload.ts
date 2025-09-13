@@ -6,6 +6,7 @@ interface UploadOptions {
   moduleId: string;
   blockId?: string;
   uploadType?: 'file' | 'image';
+  displayName?: string;
   onProgress?: (progress: number) => void;
   onSuccess?: (result: { url?: string; path: string }) => void;
   onError?: (error: string) => void;
@@ -28,6 +29,7 @@ export function useDirectUpload() {
       moduleId,
       blockId,
       uploadType = 'file',
+      displayName,
       onProgress,
       onSuccess,
       onError
@@ -85,7 +87,7 @@ export function useDirectUpload() {
           moduleId,
           blockId,
           storagePath,
-          displayName: file.name,
+          displayName: displayName || file.name,
           uploadType,
         }),
       });

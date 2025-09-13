@@ -9,6 +9,7 @@ interface DirectFileUploaderProps {
   uploadType?: 'file' | 'image';
   accept?: string;
   maxSizeMB?: number;
+  displayName?: string;
   onUploadComplete?: (result: { url?: string; path: string }) => void;
   onUploadError?: (error: string) => void;
   className?: string;
@@ -21,6 +22,7 @@ export default function DirectFileUploader({
   uploadType = 'file',
   accept,
   maxSizeMB = 100,
+  displayName,
   onUploadComplete,
   onUploadError,
   className = '',
@@ -55,6 +57,7 @@ export default function DirectFileUploader({
         moduleId,
         blockId,
         uploadType,
+        displayName,
         onProgress: (progress) => {
           // Progress is handled by the hook
         },
