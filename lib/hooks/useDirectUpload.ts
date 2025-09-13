@@ -62,19 +62,19 @@ export function useDirectUpload() {
 
       const { uploadUrl, path: storagePath, token } = await signedUrlResponse.json();
 
-      // Step 2: Upload file directly to Supabase storage using the token
-      // Create a temporary Supabase client for the upload
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      // Step 2: Upload file directly to the signed URL using fetch
+      const uploadResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: file,
+        headers: {
+          'Content-Type': file.type,
+          'Content-Length': file.size.toString(),
+        },
+      });
 
-      const { error: uploadError } = await supabase.storage
-        .from('course-files')
-        .uploadToSignedUrl(storagePath, token, file);
-
-      if (uploadError) {
-        throw new Error(`Failed to upload file to storage: ${uploadError.message}`);
+      if (!uploadResponse.ok) {
+        const errorText = await uploadResponse.text();
+        throw new Error(`Failed to upload file to storage: ${uploadResponse.status} ${uploadResponse.statusText} - ${errorText}`);
       }
 
       onProgress?.(50);
