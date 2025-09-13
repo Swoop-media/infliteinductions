@@ -88,7 +88,23 @@ export default function ContractorModuleRenderer({
         const response = await fetch(`/api/modules/${module.id}/quiz`);
         if (response.ok) {
           const data = await response.json();
-          setQuizData(data);
+          console.log("Quiz data received:", data);
+          // Ensure we have the correct structure
+          if (data.questions && data.settings) {
+            setQuizData({
+              settings: data.settings,
+              questions: data.questions
+            });
+          } else if (data.questions) {
+            // Fallback if only questions are present
+            setQuizData({
+              questions: data.questions,
+              settings: data.settings || undefined
+            });
+          } else {
+            console.error("Unexpected quiz data structure:", data);
+            setQuizData({ questions: [] });
+          }
         }
       }
     } catch (error) {
@@ -223,13 +239,22 @@ export default function ContractorModuleRenderer({
 
   const renderQuizQuestion = (question: QuizQuestion) => {
     const userAnswer = answers[question.id];
+    
+    // Debug logging
+    console.log("Rendering question:", {
+      id: question.id,
+      type: question.type,
+      questionText: question.question,
+      optionsCount: question.options?.length,
+      firstOption: question.options?.[0]
+    });
 
     switch (question.type) {
       case "mcq":
       case "multiple_choice":
         return (
           <div className="space-y-3">
-            <h3 className="text-lg font-medium">{question.question}</h3>
+            <h3 className="text-lg font-medium">{question.question || "[Missing question text]"}</h3>
             <div className="space-y-2">
               {question.options?.map(option => (
                 <label key={option.id} className="flex items-center space-x-3 cursor-pointer">
@@ -241,7 +266,7 @@ export default function ContractorModuleRenderer({
                     onChange={() => handleAnswer(option.id)}
                     className="h-4 w-4 text-blue-600"
                   />
-                  <span className="text-gray-900">{option.text}</span>
+                  <span className="text-gray-900">{option.text || "[Missing option text]"}</span>
                 </label>
               ))}
             </div>
@@ -270,7 +295,7 @@ export default function ContractorModuleRenderer({
                     }}
                     className="h-4 w-4 text-blue-600"
                   />
-                  <span className="text-gray-900">{option.text}</span>
+                  <span className="text-gray-900">{option.text || "[Missing option text]"}</span>
                 </label>
               ))}
             </div>
@@ -292,7 +317,7 @@ export default function ContractorModuleRenderer({
                     onChange={() => handleAnswer(option.id)}
                     className="h-4 w-4 text-blue-600"
                   />
-                  <span className="text-gray-900">{option.text}</span>
+                  <span className="text-gray-900">{option.text || "[Missing option text]"}</span>
                 </label>
               ))}
             </div>

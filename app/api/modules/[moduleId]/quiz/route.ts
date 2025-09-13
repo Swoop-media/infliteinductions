@@ -115,8 +115,20 @@ export async function GET(
       questions = [];
     }
 
-    // If still no questions and this is the contractor quiz module, provide mock data
-    if (questions.length === 0 && moduleId === "fe57f672-f9b1-4ac0-802a-f4d37d41dd57") {
+    // Validate that questions have proper structure
+    const hasValidQuestions = questions.length > 0 && 
+      questions.every(q => 
+        q.question && // Must have question text
+        q.type && // Must have type
+        q.options && // Must have options array
+        Array.isArray(q.options) && 
+        q.options.length > 0 &&
+        q.options.every(opt => opt.text) // All options must have text
+      );
+
+    // If questions are missing or invalid and this is the contractor quiz module, provide mock data
+    if (!hasValidQuestions && moduleId === "fe57f672-f9b1-4ac0-802a-f4d37d41dd57") {
+      console.log("Questions are invalid or incomplete, using mock data");
       console.log("Using mock quiz data for contractor module");
       questions = [
         {
