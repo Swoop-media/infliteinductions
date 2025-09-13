@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     if (!MicrosoftAppId || !MicrosoftAppPassword || !MicrosoftAppType || !MicrosoftAppTenantId) {
       console.log("❌ Teams bot credentials missing");
       return NextResponse.json(
-        { error: "Teams bot credentials missing" },
+        { error: "Teams bot not configured - credentials missing" },
         { status: 503 }
       );
     }
