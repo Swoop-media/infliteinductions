@@ -12,6 +12,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Handle both database trigger format and webhook format
     const { recipientUserId, type, title, body, data, record } = req.body;
 
+    // Extract notification type early for disable check
+    const notificationType = record?.type || type;
+
+    // Check if course_published notifications are disabled
+    if (notificationType === 'course_published' && process.env.DISABLE_COURSE_PUBLISH_NOTIFICATIONS === 'true') {
+      console.log('🔕 Course publishing notifications are disabled via DISABLE_COURSE_PUBLISH_NOTIFICATIONS flag');
+      return res.status(200).json({ 
+        success: true, 
+        skipped: 'course_published notifications disabled' 
+      });
+    }
+
     // Extract recipient ID from either direct call or webhook record
     const recipient = recipientUserId || record?.recipient_id;
 
