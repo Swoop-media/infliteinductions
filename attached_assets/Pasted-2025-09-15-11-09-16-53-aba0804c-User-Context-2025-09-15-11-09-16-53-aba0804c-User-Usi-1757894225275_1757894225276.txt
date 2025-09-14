@@ -1,0 +1,127 @@
+2025-09-15 11:09:16.53
+aba0804c
+User
+**Context...
+2025-09-15 11:09:16.53
+aba0804c
+User
+🌐 Using base URL: https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev
+2025-09-15 11:09:16.53
+aba0804c
+User
+📦 Request body: {
+2025-09-15 11:09:16.53
+aba0804c
+User
+userId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10',
+2025-09-15 11:09:16.53
+aba0804c
+User
+message: '🐛 **Issue Report**\n' +
+2025-09-15 11:09:16.53
+aba0804c
+User
+'**URL/Page:** https://inflite-training.replit.app/app/creator\n' +
+2025-09-15 11:09:16.53
+aba0804c
+User
+'**Issue Descriptio...'
+2025-09-15 11:09:16.53
+aba0804c
+User
+}
+2025-09-15 11:09:16.69
+aba0804c
+User
+📊 Bot endpoint response status: 503
+2025-09-15 11:09:16.70
+aba0804c
+User
+❌ Bot endpoint failed, couldn't parse error response: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+2025-09-15 11:09:16.70
+aba0804c
+User
+at JSON.parse (<anonymous>)
+2025-09-15 11:09:16.70
+aba0804c
+User
+at async w (.next/server/app/api/report-issue/route.js:1:4687)
+2025-09-15 11:09:16.70
+aba0804c
+User
+at async x (.next/server/app/api/report-issue/route.js:1:6813)
+2025-09-15 11:09:16.70
+aba0804c
+User
+📄 Raw error response: No response text
+2025-09-15 11:09:16.70
+aba0804c
+User
+⚠️ Bot endpoint failed with status: 503
+2025-09-15 11:09:16.70
+aba0804c
+User
+⚠️ Error details: { error: 'No response text' }
+2025-09-15 11:09:16.70
+aba0804c
+User
+⚠️ Bot endpoint failed, trying fallback approach...
+2025-09-15 11:09:16.70
+aba0804c
+User
+📧 Issue report for user 1b44c8f5-95aa-4f8c-8110-8f36106b4d10 : 🐛 **Issue Report**
+2025-09-15 11:09:16.70
+aba0804c
+User
+**URL/Page:** https://inflite-training.replit.app/app/creator
+2025-09-15 11:09:16.70
+aba0804c
+User
+**Issue Description:**
+2025-09-15 11:09:16.70
+aba0804c
+User
+add in more filter published/draft
+2025-09-15 11:09:16.70
+aba0804c
+User
+2025-09-15 11:09:16.70
+aba0804c
+User
+**Context Information:**
+2025-09-15 11:09:16.70
+aba0804c
+User
+• User ID: 1b44c8f5-95aa-4f8c-8110...
+2025-09-15 11:09:16.70
+aba0804c
+User
+✅ Issue report processed for user Henry Morgan, Teams sent: false
+2025-09-15 11:09:17.34
+aba0804c
+User
+📊 Issue report logged to database
+2025-09-15 11:53:36.65
+aba0804c
+User
+📝 Processing issue report...
+2025-09-15 11:53:36.66
+aba0804c
+User
+👤 Getting user details for: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+2025-09-15 11:53:37.37
+aba0804c
+User
+📤 Sending Teams message...
+2025-09-15 11:53:37.37
+aba0804c
+User
+📧 Sending Teams message to user ID: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+2025-09-15 11:53:37.37
+aba0804c
+User
+📤 Attempting to send Teams message to user ID: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+2025-09-15 11:53:37.37
+aba0804c
+User
+📝 Message preview: 🐛 **Issue Report**
