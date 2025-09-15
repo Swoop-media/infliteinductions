@@ -41,8 +41,8 @@ export async function POST(req: Request) {
       user_id,
       authorisation_id,
       created_by: user.id,
-      assignment_status: "assigned",
-      assigned_at: new Date().toISOString()
+      assignment_status: "assigned"
+      // Note: No assigned_at column in authorisation_assignments table, using created_at instead
     }));
 
     const { error: assignError } = await supabase
