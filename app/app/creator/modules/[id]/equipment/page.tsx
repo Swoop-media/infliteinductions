@@ -161,10 +161,12 @@ export default async function EquipmentManagementPage({
   params,
   searchParams
 }: {
-  params: { id: string };
-  searchParams: { notice?: string };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ notice?: string }>;
 }) {
-  const { module, equipment } = await loadModuleAndEquipment(params.id);
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const { module, equipment } = await loadModuleAndEquipment(resolvedParams.id);
 
   return (
     <div className="p-6 space-y-6">
@@ -185,12 +187,12 @@ export default async function EquipmentManagementPage({
       </div>
 
       {/* Notice */}
-      {searchParams.notice && (
+      {resolvedSearchParams.notice && (
         <div className="rounded-md border border-green-200 bg-green-50 p-3">
           <p className="text-sm text-green-800">
-            {searchParams.notice === "equipment_created" && "Equipment requirement created successfully"}
-            {searchParams.notice === "equipment_updated" && "Equipment requirement updated successfully"}
-            {searchParams.notice === "equipment_deleted" && "Equipment requirement deleted successfully"}
+            {resolvedSearchParams.notice === "equipment_created" && "Equipment requirement created successfully"}
+            {resolvedSearchParams.notice === "equipment_updated" && "Equipment requirement updated successfully"}
+            {resolvedSearchParams.notice === "equipment_deleted" && "Equipment requirement deleted successfully"}
           </p>
         </div>
       )}
@@ -295,11 +297,6 @@ export default async function EquipmentManagementPage({
                       <button 
                         type="submit"
                         className="text-red-600 hover:text-red-800 text-sm"
-                        onClick={(e) => {
-                          if (!confirm(`Delete "${eq.equipment_name}"? This cannot be undone.`)) {
-                            e.preventDefault();
-                          }
-                        }}
                       >
                         Delete
                       </button>
