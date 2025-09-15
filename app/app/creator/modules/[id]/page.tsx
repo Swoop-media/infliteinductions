@@ -42,6 +42,7 @@ function iconFor(kind: BlockKind) {
     case "video_embed": return "🎬";
     case "request_document": return "📄";
     case "quiz_questions": return "❓";
+    case "equipment_form": return "🔧";
     default: return "•";
   }
 }
@@ -89,6 +90,17 @@ async function loadBlocks(moduleId: string) {
   return (data ?? []) as BlockRow[];
 }
 
+async function getEquipmentCount(courseId: string) {
+  "use server";
+  const supabase = await createSupabaseServer();
+  const { count, error } = await supabase
+    .from("equipment_templates")
+    .select("*", { count: "exact", head: true })
+    .eq("course_id", courseId);
+  if (error) return 0;
+  return count || 0;
+}
+
 /** Actions: create / delete / move / update blocks */
 async function createBlock(formData: FormData) {
   "use server";
@@ -115,6 +127,7 @@ async function createBlock(formData: FormData) {
     kind === "file" ? { storage_path: null, display: "" } :
     kind === "request_document" ? { label: "Please upload the requested document.", require_expiry: false } :
     kind === "quiz_questions" ? { questions: [] } : // Default for quiz questions
+    kind === "equipment_form" ? { title: "Equipment Information", equipment_templates: [] } :
     {};
 
   const { error } = await supabase
@@ -458,6 +471,7 @@ export default async function ModuleEditorPage(props: {
                 <option value="video_embed">🎬 Video</option>
                 <option value="link">🔗 Link</option>
                 <option value="request_document">📤 Request upload from trainee</option>
+                <option value="equipment_form">🔧 Equipment form</option>
               </select>
               <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">+ Add</button>
             </form>
@@ -479,6 +493,7 @@ export default async function ModuleEditorPage(props: {
               blocks.map(async (b) => {
                 const isFile = b.kind === "file";
                 const url = isFile ? await signedUrl(b.data?.storage_path ?? null) : null;
+                const equipmentCount = b.kind === "equipment_form" ? await getEquipmentCount(mod.course_id) : 0;
                 return (
                   <li key={b.id} className="p-4 space-y-3">
                     {/* Title + actions */}
@@ -628,6 +643,31 @@ export default async function ModuleEditorPage(props: {
                         <h3 className="text-md font-semibold mb-2">Quiz Questions</h3>
                         {/* Placeholder for quiz question editor */}
                         <p className="text-sm text-gray-500">Quiz editor will go here.</p>
+                      </div>
+                    )}
+
+                    {b.kind === "equipment_form" && (
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-md font-semibold">Equipment Requirements</h3>
+                          <Link 
+                            href={`/app/creator/modules/${mod.id}/equipment`}
+                            className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                          >
+                            Manage Equipment
+                          </Link>
+                        </div>
+                        <div className="rounded-lg border p-4 bg-gray-50">
+                          <p className="text-sm text-gray-600 mb-2">
+                            {b.data?.title || "Equipment Information"}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Equipment templates: {equipmentCount} configured
+                          </p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Trainees will be prompted to provide details about their equipment during training.
+                          </p>
+                        </div>
                       </div>
                     )}
                   </li>

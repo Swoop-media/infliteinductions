@@ -16,4 +16,5 @@ export type BlockKind =
   | "video_embed" 
   | "file" 
   | "request_document" 
-  | "quiz_questions";
+  | "quiz_questions"
+  | "equipment_form";
