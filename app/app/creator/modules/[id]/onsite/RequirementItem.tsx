@@ -84,6 +84,7 @@ export default function RequirementItem({
                 <option value="text">Text</option>
                 <option value="date">Date</option>
                 <option value="rating">Rating</option>
+                <option value="file">File Upload</option>
               </select>
             </div>
 
