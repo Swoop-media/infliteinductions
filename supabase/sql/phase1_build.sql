@@ -238,7 +238,7 @@ where r.id = m.id;
 create table if not exists public.module_content_blocks (
   id uuid primary key default gen_random_uuid(),
   module_id uuid not null references public.course_modules(id) on delete cascade,
-  kind text not null check (kind in ('rich_text','file','video_embed','link')),
+  kind text not null check (kind in ('rich_text','file','video_embed','link','request_document','quiz_questions','equipment_form')),
   data jsonb not null,
   order_index int not null default 0,
   created_at timestamptz not null default now()
