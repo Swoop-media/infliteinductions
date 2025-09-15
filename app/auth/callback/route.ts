@@ -40,29 +40,12 @@ export async function GET(req: NextRequest) {
     // Use admin client to manage users
     const supabase = supabaseAdmin();
 
-    // Check if user already exists
+    // Check if user already exists - try to create first and handle duplicate gracefully
     let userId: string;
-    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    let existingUser = false;
 
-    // Find user by email
-    const existingAuthUser = users?.find((u: any) => u.email === email);
-
-    if (existingAuthUser) {
-      // User exists, use their ID
-      userId = existingAuthUser.id;
-
-      // Update user metadata to include Microsoft ID if not already set
-      const currentMetadata = existingAuthUser.user_metadata || {};
-      if (!currentMetadata.microsoft_id) {
-        await supabase.auth.admin.updateUserById(userId, {
-          user_metadata: {
-            ...currentMetadata,
-            microsoft_id: homeAccountId,
-          },
-        });
-      }
-    } else {
-      // Create new user without email confirmation
+    try {
+      // Try to create new user first
       const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
         email,
         email_confirm: true, // Skip email verification for Microsoft SSO
@@ -73,10 +56,59 @@ export async function GET(req: NextRequest) {
       });
 
       if (authError) {
-        throw authError;
+        // If user already exists, find them
+        if (authError.message?.includes('already been registered') || authError.message?.includes('email_exists')) {
+          console.log(`User with email ${email} already exists, finding existing user...`);
+          existingUser = true;
+          
+          // Search for existing user by email with pagination
+          let page = 1;
+          let foundUser = null;
+          
+          while (!foundUser && page <= 10) { // Limit to 10 pages to prevent infinite loops
+            const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({
+              page,
+              perPage: 1000
+            });
+            
+            if (listError) {
+              throw listError;
+            }
+            
+            foundUser = users?.find((u: any) => u.email === email);
+            
+            if (!foundUser && users && users.length === 1000) {
+              page++;
+            } else {
+              break;
+            }
+          }
+          
+          if (!foundUser) {
+            throw new Error(`User with email ${email} exists but could not be found`);
+          }
+          
+          userId = foundUser.id;
+          
+          // Update user metadata to include Microsoft ID if not already set
+          const currentMetadata = foundUser.user_metadata || {};
+          if (!currentMetadata.microsoft_id) {
+            await supabase.auth.admin.updateUserById(userId, {
+              user_metadata: {
+                ...currentMetadata,
+                microsoft_id: homeAccountId,
+              },
+            });
+          }
+        } else {
+          throw authError;
+        }
+      } else {
+        // New user created successfully
+        userId = authUser.user.id;
       }
-
-      userId = authUser.user.id;
+    } catch (createError) {
+      throw createError;
     }
 
     if (!userId) {

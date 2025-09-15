@@ -1,0 +1,172 @@
+2025-09-15 14:03:28.62
+aba0804c
+User
+}
+2025-09-15 14:03:28.62
+aba0804c
+User
+]
+2025-09-15 14:03:29.27
+aba0804c
+User
+Authorization assignments: []
+2025-09-15 14:03:29.27
+aba0804c
+User
+All course assignments: [
+2025-09-15 14:03:29.27
+aba0804c
+User
+{
+2025-09-15 14:03:29.27
+aba0804c
+User
+id: '5e99e8ed-897c-485f-84ca-4d369ef466b9',
+2025-09-15 14:03:29.27
+aba0804c
+User
+course_id: 'bdc908f2-0346-4678-9b96-ba76a6dc591b',
+2025-09-15 14:03:29.27
+aba0804c
+User
+assignment_status: 'assigned',
+2025-09-15 14:03:29.27
+aba0804c
+User
+completed_at: null,
+2025-09-15 14:03:29.27
+aba0804c
+User
+courses: {
+2025-09-15 14:03:29.27
+aba0804c
+User
+id: 'bdc908f2-0346-4678-9b96-ba76a6dc591b',
+2025-09-15 14:03:29.27
+aba0804c
+User
+title: 'Sigma passenger Harnessing and Briefing',
+2025-09-15 14:03:29.27
+aba0804c
+User
+status: 'published'
+2025-09-15 14:03:29.27
+aba0804c
+User
+}
+2025-09-15 14:03:29.27
+aba0804c
+User
+}
+2025-09-15 14:03:29.27
+aba0804c
+User
+]
+2025-09-15 14:03:29.27
+aba0804c
+User
+Authorization with courses: []
+2025-09-15 14:03:29.27
+aba0804c
+User
+In progress courses: [
+2025-09-15 14:03:29.27
+aba0804c
+User
+{
+2025-09-15 14:03:29.27
+aba0804c
+User
+id: '5e99e8ed-897c-485f-84ca-4d369ef466b9',
+2025-09-15 14:03:29.27
+aba0804c
+User
+course_id: 'bdc908f2-0346-4678-9b96-ba76a6dc591b',
+2025-09-15 14:03:29.27
+aba0804c
+User
+assignment_status: 'assigned',
+2025-09-15 14:03:29.27
+aba0804c
+User
+completed_at: null,
+2025-09-15 14:03:29.27
+aba0804c
+User
+courses: {
+2025-09-15 14:03:29.27
+aba0804c
+User
+id: 'bdc908f2-0346-4678-9b96-ba76a6dc591b',
+2025-09-15 14:03:29.27
+aba0804c
+User
+title: 'Sigma passenger Harnessing and Briefing',
+2025-09-15 14:03:29.27
+aba0804c
+User
+status: 'published'
+2025-09-15 14:03:29.27
+aba0804c
+User
+}
+2025-09-15 14:03:29.27
+aba0804c
+User
+}
+2025-09-15 14:03:29.27
+aba0804c
+User
+]
+2025-09-15 14:03:29.27
+aba0804c
+User
+Completed courses: []
+2025-09-15 14:03:29.27
+aba0804c
+User
+In progress auth: []
+2025-09-15 14:03:29.27
+aba0804c
+User
+Completed auth: []
+2025-09-15 14:12:29.37
+aba0804c
+User
+Microsoft auth callback error: Error [AuthApiError]: A user with this email address has already been registered
+2025-09-15 14:12:29.37
+aba0804c
+User
+at bd (.next/server/chunks/3008.js:21:29611)
+2025-09-15 14:12:29.37
+aba0804c
+User
+at async bf (.next/server/chunks/3008.js:21:30585)
+2025-09-15 14:12:29.37
+aba0804c
+User
+at async be (.next/server/chunks/3008.js:21:29995)
+2025-09-15 14:12:29.37
+aba0804c
+User
+at async bo.createUser (.next/server/chunks/3008.js:21:33273)
+2025-09-15 14:12:29.37
+aba0804c
+User
+at async x (.next/server/app/auth/callback/route.js:1:1491)
+2025-09-15 14:12:29.37
+aba0804c
+User
+at async k (.next/server/app/auth/callback/route.js:1:5274) {
+2025-09-15 14:12:29.37
+aba0804c
+User
+__isAuthError: true,
+2025-09-15 14:12:29.37
+aba0804c
+User
+status: 422,
+2025-09-15 14:12:29.37
+aba0804c
+User
+code: 'email_exists'
