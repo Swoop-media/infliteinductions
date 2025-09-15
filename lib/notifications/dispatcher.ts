@@ -2,6 +2,7 @@
 // lib/notifications/dispatcher.ts
 import { createClient } from "@supabase/supabase-js";
 import { sendTeamsDMToAppUser } from "@/lib/teams/send";
+import { toAbsoluteUrl } from "@/lib/utils/url";
 
 function supabaseAdmin() {
   const url =
@@ -40,7 +41,9 @@ function formatTeamsText(
   const title = payload?.title || fallbackTitle || "Notification";
   const learner = payload?.learnerName || payload?.learner_email || "";
   const course = payload?.courseTitle || payload?.course_title || payload?.course_name || "";
-  const url = payload?.url as string | undefined;
+  // Normalize URL to absolute production URL for Teams messages
+  const rawUrl = payload?.url as string | undefined;
+  const url = rawUrl ? toAbsoluteUrl(rawUrl) : undefined;
 
   switch (type) {
     case "enrolment_request":
