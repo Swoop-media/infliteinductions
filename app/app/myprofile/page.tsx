@@ -6,6 +6,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import TestMessageButton from "./TestMessageButton";
+import CollapsibleSection from "./_components/CollapsibleSection";
 
 
 /* ---------------- Types ---------------- */
@@ -329,40 +330,38 @@ export default async function MyProfilePage() {
           </section>
 
           {/* In Progress Courses */}
-          <section className="space-y-3 rounded-xl border bg-white p-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">In Progress Courses</h2>
-              <Pill tone="blue">{inProgressCourses.length}</Pill>
-            </div>
-
-            <div className="space-y-3">
-              {inProgressCourses.length === 0 ? (
-                <p className="text-sm text-gray-500">
-                  No individual courses in progress. Visit <Link href="/app/courses" className="underline">Courses</Link> to enrol.
-                </p>
-              ) : (
-                inProgressCourses.map((assignment: any) => {
-                  const course = assignment.courses;
-                  return (
-                    <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
-                      <div>
-                        <h3 className="font-medium">{course.title}</h3>
-                        <p className="text-sm text-gray-600 capitalize">
-                          {assignment.assignment_status.replace('_', ' ')}
-                        </p>
-                      </div>
-                      <Link
-                        href={`/app/learn/courses/${course.id}`}
-                        className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-                      >
-                        Continue
-                      </Link>
+          <CollapsibleSection
+            title="In Progress Courses"
+            count={inProgressCourses.length}
+            defaultCollapsed={true}
+            pillTone="blue"
+          >
+            {inProgressCourses.length === 0 ? (
+              <p className="text-sm text-gray-500">
+                No individual courses in progress. Visit <Link href="/app/courses" className="underline">Courses</Link> to enrol.
+              </p>
+            ) : (
+              inProgressCourses.map((assignment: any) => {
+                const course = assignment.courses;
+                return (
+                  <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <h3 className="font-medium">{course.title}</h3>
+                      <p className="text-sm text-gray-600 capitalize">
+                        {assignment.assignment_status.replace('_', ' ')}
+                      </p>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </section>
+                    <Link
+                      href={`/app/learn/courses/${course.id}`}
+                      className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+                    >
+                      Continue
+                    </Link>
+                  </div>
+                );
+              })
+            )}
+          </CollapsibleSection>
         </div>
 
         {/* Right Column: Completed */}
@@ -424,41 +423,39 @@ export default async function MyProfilePage() {
           </section>
 
           {/* Completed Courses */}
-          <section className="space-y-3 rounded-xl border bg-white p-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Completed Courses</h2>
-              <Pill tone="green">{completedCourses.length}</Pill>
-            </div>
-
-            <div className="space-y-3">
-              {completedCourses.length === 0 ? (
-                <p className="text-sm text-gray-500">No completed individual courses yet.</p>
-              ) : (
-                completedCourses.map((assignment: any) => {
-                  const course = assignment.courses;
-                  return (
-                    <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
-                      <div>
-                        <h3 className="font-medium">{course?.title ?? "Untitled"}</h3>
-                        <p className="text-sm text-gray-600">
-                          Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Pill tone="green">Completed</Pill>
-                        <Link
-                          href={`/app/learn/courses/${course?.id}`}
-                          className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
-                        >
-                          View
-                        </Link>
-                      </div>
+          <CollapsibleSection
+            title="Completed Courses"
+            count={completedCourses.length}
+            defaultCollapsed={true}
+            pillTone="green"
+          >
+            {completedCourses.length === 0 ? (
+              <p className="text-sm text-gray-500">No completed individual courses yet.</p>
+            ) : (
+              completedCourses.map((assignment: any) => {
+                const course = assignment.courses;
+                return (
+                  <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <h3 className="font-medium">{course?.title ?? "Untitled"}</h3>
+                      <p className="text-sm text-gray-600">
+                        Completed {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : 'Recently'}
+                      </p>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </section>
+                    <div className="flex items-center gap-2">
+                      <Pill tone="green">Completed</Pill>
+                      <Link
+                        href={`/app/learn/courses/${course?.id}`}
+                        className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
+                      >
+                        View
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </CollapsibleSection>
         </div>
       </div>
 
