@@ -2,6 +2,7 @@
 // app/app/layout.tsx
 import Link from "next/link";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { hasRole } from "@/lib/roles";
 import NotificationsBell from "./_components/NotificationsBell";
 import SignOutButton from "./_components/SignOutButton";
 import ReportIssueButton from "./_components/ReportIssueButton"; // Assuming ReportIssueButton is in this path
@@ -28,6 +29,18 @@ export default async function AppSectionLayout({
     // ignore
   }
 
+  // Check if user has General role or Admin role for Authorisations button
+  let showAuthorisationsButton = false;
+  if (user) {
+    try {
+      const hasGeneral = await hasRole("General");
+      const hasAdmin = await hasRole("Admin");
+      showAuthorisationsButton = hasGeneral || hasAdmin;
+    } catch {
+      // ignore role check errors
+    }
+  }
+
   return (
     <div className="min-h-screen">
       <header className="border-b bg-white">
@@ -38,6 +51,14 @@ export default async function AppSectionLayout({
             <Link href="/app/creator">Creator</Link>
             <Link href="/app/train-assess">Train/Assess</Link>
             <Link href="/app/admin">Admin</Link>
+            {showAuthorisationsButton && (
+              <Link 
+                href="/app/authorisations" 
+                className="rounded-md bg-green-600 px-3 py-1 text-white hover:bg-green-700"
+              >
+                Authorisations
+              </Link>
+            )}
           </nav>
 
           <nav className="flex items-center gap-2">
