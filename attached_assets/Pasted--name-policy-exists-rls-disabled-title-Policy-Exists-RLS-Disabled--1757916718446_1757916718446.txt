@@ -1,0 +1,110 @@
+[
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.course_modules\\` has RLS policies but RLS is not enabled on the table. Policies include {\"course_modules delete\",\"course_modules insert\",\"course_modules manage\",\"course_modules read\",\"course_modules update\",modules_create_priv,modules_delete_admin,modules_read_all,modules_rw,modules_update_priv}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "course_modules",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_course_modules"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.courses\\` has RLS policies but RLS is not enabled on the table. Policies include {c_select_all_auth,\"courses insert\",\"courses read\",\"courses update\",courses_create,courses_delete_admin,courses_insert,courses_read,courses_read_all,courses_update}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "courses",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_courses"
+  },
+  {
+    "name": "policy_exists_rls_disabled",
+    "title": "Policy Exists RLS Disabled",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) policies have been created, but RLS has not been enabled for the underlying table.",
+    "detail": "Table \\`public.module_content_blocks\\` has RLS policies but RLS is not enabled on the table. Policies include {\"module_content_blocks delete\",\"module_content_blocks insert\",\"module_content_blocks read\",\"module_content_blocks update\"}.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0007_policy_exists_rls_disabled",
+    "metadata": {
+      "name": "module_content_blocks",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "policy_exists_rls_disabled_public_module_content_blocks"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.courses\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "courses",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_courses"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.module_content_blocks\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "module_content_blocks",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_module_content_blocks"
+  },
+  {
+    "name": "rls_disabled_in_public",
+    "title": "RLS Disabled in Public",
+    "level": "ERROR",
+    "facing": "EXTERNAL",
+    "categories": [
+      "SECURITY"
+    ],
+    "description": "Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST",
+    "detail": "Table \\`public.course_modules\\` is public, but RLS has not been enabled.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public",
+    "metadata": {
+      "name": "course_modules",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "rls_disabled_in_public_public_course_modules"
+  }
+]
