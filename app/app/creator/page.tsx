@@ -7,6 +7,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import DeleteAuthorisationButton from "./_components/DeleteAuthorisationButton";
 import FilteredCourseList from "./_components/FilteredCourseList";
+import FilteredAuthorisationList from "./_components/FilteredAuthorisationList";
 
 type CourseRow = {
   id: string;
@@ -24,6 +25,7 @@ type AuthzRow = {
   status: "draft" | "active" | "archived";
   updated_at: string;
   created_at: string;
+  department: string | null;
 };
 
 function Badge({
@@ -370,7 +372,7 @@ export default async function CreatorHome({
         .limit(100),
       supabase
         .from("authorisations")
-        .select("id,title,status,updated_at,created_at")
+        .select("id,title,status,updated_at,created_at,department")
         .order("updated_at", { ascending: false })
         .limit(25),
     ]);
@@ -405,59 +407,7 @@ export default async function CreatorHome({
           duplicateCourseAction={duplicateCourseAction}
         />
       ) : (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Authorisations</h2>
-            <Link
-              href="/app/creator/authorisations/new"
-              className="rounded-md bg-black px-3 py-2 text-sm font-medium text-white hover:opacity-90"
-            >
-              + Create Authorisation
-            </Link>
-          </div>
-
-          {authzs.length === 0 ? (
-            <div className="rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
-              No authorisations yet. Click <span className="font-medium">Create Authorisation</span> to add one.
-            </div>
-          ) : (
-            <ul className="divide-y rounded-md border">
-              {authzs.map((a) => (
-                <li key={a.id} className="flex items-center justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/app/creator/authorisations/${a.id}`}
-                        className="truncate text-sm font-medium hover:underline"
-                      >
-                        {a.title || "Untitled"}
-                      </Link>
-                      <Badge tone={statusTone(a.status)}>{a.status}</Badge>
-                    </div>
-                    <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-                      Updated {new Date(a.updated_at || a.created_at).toISOString().replace('T', ' ').slice(0, 19)}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-2">
-                    <Link
-                      href={`/app/creator/authorisations/${a.id}`}
-                      className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
-                    >
-                      Edit
-                    </Link>
-                    <DeleteAuthorisationButton authId={a.id} title={a.title ?? undefined} />
-                    <Link
-                      href={`/app/creator/authorisations/${a.id}?tab=assignments`}
-                      className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50"
-                    >
-                      Assign
-                    </Link>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <FilteredAuthorisationList authorisations={authzs} />
       )}
     </div>
   );
