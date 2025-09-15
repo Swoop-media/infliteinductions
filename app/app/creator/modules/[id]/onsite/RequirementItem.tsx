@@ -49,6 +49,11 @@ export default function RequirementItem({
           try {
             await updateRequirementAction(formData);
           } catch (error) {
+            // Don't catch redirect errors from Next.js server actions
+            if (error && typeof error === 'object' && 'digest' in error) {
+              // This is a Next.js redirect error, let it bubble up
+              throw error;
+            }
             console.error("Update failed:", error);
             if (error instanceof Error && error.message.includes("Server Action")) {
               window.location.reload();
@@ -192,6 +197,11 @@ export default function RequirementItem({
             try {
               await deleteRequirementAction(formData);
             } catch (error) {
+              // Don't catch redirect errors from Next.js server actions
+              if (error && typeof error === 'object' && 'digest' in error) {
+                // This is a Next.js redirect error, let it bubble up
+                throw error;
+              }
               console.error("Delete failed:", error);
               if (error instanceof Error && error.message.includes("Server Action")) {
                 window.location.reload();

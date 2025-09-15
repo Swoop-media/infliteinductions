@@ -81,6 +81,11 @@ export default function SortableRequirements({
     try {
       await reorderRequirementsAction(formData);
     } catch (error) {
+      // Don't catch redirect errors from Next.js server actions
+      if (error && typeof error === 'object' && 'digest' in error) {
+        // This is a Next.js redirect error, let it bubble up
+        throw error;
+      }
       console.error("Failed to reorder requirements:", error);
       
       // Check if it's a server action error (common after hot reloads)
