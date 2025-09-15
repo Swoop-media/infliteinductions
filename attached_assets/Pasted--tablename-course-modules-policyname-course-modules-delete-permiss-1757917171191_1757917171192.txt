@@ -1,0 +1,218 @@
+[
+  {
+    "tablename": "course_modules",
+    "policyname": "course_modules delete",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_modules.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))",
+    "with_check": null
+  },
+  {
+    "tablename": "course_modules",
+    "policyname": "course_modules insert",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_modules.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))"
+  },
+  {
+    "tablename": "course_modules",
+    "policyname": "course_modules manage",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "ALL",
+    "qual": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_modules.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text) OR app_has_role(auth.uid(), 'Course creators'::text)))))",
+    "with_check": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_modules.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text) OR app_has_role(auth.uid(), 'Course creators'::text)))))"
+  },
+  {
+    "tablename": "course_modules",
+    "policyname": "course_modules read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_modules.course_id) AND (((c.status)::text = 'published'::text) OR (c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))",
+    "with_check": null
+  },
+  {
+    "tablename": "course_modules",
+    "policyname": "course_modules update",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "UPDATE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_modules.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))",
+    "with_check": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_modules.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))"
+  },
+  {
+    "tablename": "course_modules",
+    "policyname": "modules_create_priv",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(is_creator() OR is_admin())"
+  },
+  {
+    "tablename": "course_modules",
+    "policyname": "modules_delete_admin",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "is_admin()",
+    "with_check": null
+  },
+  {
+    "tablename": "course_modules",
+    "policyname": "modules_read_all",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "tablename": "course_modules",
+    "policyname": "modules_rw",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "ALL",
+    "qual": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_modules.course_id) AND (((c.creator_id = auth.uid()) AND (c.status = 'draft'::course_status)) OR has_role(auth.uid(), 'Senior management'::text) OR has_role(auth.uid(), 'Admin'::text)))))",
+    "with_check": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_modules.course_id) AND (((c.creator_id = auth.uid()) AND (c.status = 'draft'::course_status)) OR has_role(auth.uid(), 'Senior management'::text) OR has_role(auth.uid(), 'Admin'::text)))))"
+  },
+  {
+    "tablename": "course_modules",
+    "policyname": "modules_update_priv",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "UPDATE",
+    "qual": "(is_creator() OR is_admin())",
+    "with_check": null
+  },
+  {
+    "tablename": "courses",
+    "policyname": "c_select_all_auth",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "true",
+    "with_check": null
+  },
+  {
+    "tablename": "courses",
+    "policyname": "courses insert",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "((created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text))"
+  },
+  {
+    "tablename": "courses",
+    "policyname": "courses read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((status = 'published'::course_status) OR (created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text))",
+    "with_check": null
+  },
+  {
+    "tablename": "courses",
+    "policyname": "courses update",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "UPDATE",
+    "qual": "((created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text))",
+    "with_check": "((created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text))"
+  },
+  {
+    "tablename": "courses",
+    "policyname": "courses_create",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(is_creator() OR is_senior_mgmt() OR is_admin())"
+  },
+  {
+    "tablename": "courses",
+    "policyname": "courses_delete_admin",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "DELETE",
+    "qual": "is_admin()",
+    "with_check": null
+  },
+  {
+    "tablename": "courses",
+    "policyname": "courses_insert",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(has_role(auth.uid(), 'Course creators'::text) OR has_role(auth.uid(), 'Senior management'::text) OR has_role(auth.uid(), 'Admin'::text))"
+  },
+  {
+    "tablename": "courses",
+    "policyname": "courses_read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "((status = 'published'::course_status) OR (creator_id = auth.uid()) OR has_role(auth.uid(), 'Admin'::text) OR has_role(auth.uid(), 'Senior management'::text) OR has_role(auth.uid(), 'Course creators'::text))",
+    "with_check": null
+  },
+  {
+    "tablename": "courses",
+    "policyname": "courses_read_all",
+    "permissive": "PERMISSIVE",
+    "roles": "{public}",
+    "cmd": "SELECT",
+    "qual": "((active = true) OR is_admin())",
+    "with_check": null
+  },
+  {
+    "tablename": "courses",
+    "policyname": "courses_update",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "UPDATE",
+    "qual": "(((creator_id = auth.uid()) AND (status = 'draft'::course_status)) OR has_role(auth.uid(), 'Senior management'::text) OR has_role(auth.uid(), 'Admin'::text))",
+    "with_check": "(((creator_id = auth.uid()) AND (status = 'draft'::course_status)) OR has_role(auth.uid(), 'Senior management'::text) OR has_role(auth.uid(), 'Admin'::text))"
+  },
+  {
+    "tablename": "module_content_blocks",
+    "policyname": "module_content_blocks delete",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "DELETE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM (course_modules m\n     JOIN courses c ON ((c.id = m.course_id)))\n  WHERE ((m.id = module_content_blocks.module_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))",
+    "with_check": null
+  },
+  {
+    "tablename": "module_content_blocks",
+    "policyname": "module_content_blocks insert",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "INSERT",
+    "qual": null,
+    "with_check": "(EXISTS ( SELECT 1\n   FROM (course_modules m\n     JOIN courses c ON ((c.id = m.course_id)))\n  WHERE ((m.id = module_content_blocks.module_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))"
+  },
+  {
+    "tablename": "module_content_blocks",
+    "policyname": "module_content_blocks read",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "SELECT",
+    "qual": "(EXISTS ( SELECT 1\n   FROM (course_modules m\n     JOIN courses c ON ((c.id = m.course_id)))\n  WHERE ((m.id = module_content_blocks.module_id) AND (((c.status)::text = 'published'::text) OR (c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))",
+    "with_check": null
+  },
+  {
+    "tablename": "module_content_blocks",
+    "policyname": "module_content_blocks update",
+    "permissive": "PERMISSIVE",
+    "roles": "{authenticated}",
+    "cmd": "UPDATE",
+    "qual": "(EXISTS ( SELECT 1\n   FROM (course_modules m\n     JOIN courses c ON ((c.id = m.course_id)))\n  WHERE ((m.id = module_content_blocks.module_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))",
+    "with_check": "(EXISTS ( SELECT 1\n   FROM (course_modules m\n     JOIN courses c ON ((c.id = m.course_id)))\n  WHERE ((m.id = module_content_blocks.module_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))"
+  }
+]
