@@ -73,7 +73,8 @@ export async function POST(
       .from("course_assignments")
       .update({ 
         assignment_status: 'completed',
-        completed_at: new Date().toISOString()
+        completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .eq("id", assignmentId);
 
