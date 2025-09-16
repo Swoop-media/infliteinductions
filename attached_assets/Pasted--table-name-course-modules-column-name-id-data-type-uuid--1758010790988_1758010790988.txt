@@ -1,0 +1,177 @@
+[
+  {
+    "table_name": "course_modules",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "course_modules",
+    "column_name": "course_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "course_modules",
+    "column_name": "stage",
+    "data_type": "USER-DEFINED"
+  },
+  {
+    "table_name": "course_modules",
+    "column_name": "title",
+    "data_type": "text"
+  },
+  {
+    "table_name": "course_modules",
+    "column_name": "content",
+    "data_type": "text"
+  },
+  {
+    "table_name": "course_modules",
+    "column_name": "position",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "course_modules",
+    "column_name": "type",
+    "data_type": "text"
+  },
+  {
+    "table_name": "course_modules",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "course_modules",
+    "column_name": "order_index",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "course_modules",
+    "column_name": "config",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "title",
+    "data_type": "text"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "content",
+    "data_type": "text"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "files",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "videos",
+    "data_type": "jsonb"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "created_by",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "created_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "updated_at",
+    "data_type": "timestamp with time zone"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "active",
+    "data_type": "boolean"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "summary",
+    "data_type": "text"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "content_md",
+    "data_type": "text"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "status",
+    "data_type": "USER-DEFINED"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "creator_id",
+    "data_type": "uuid"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "validity_months",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "expiry_fixed_date",
+    "data_type": "date"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "retake_lead_days",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "tags",
+    "data_type": "ARRAY"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "valid_until",
+    "data_type": "date"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "retake_reminder_days",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "notification_lead_days",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "description",
+    "data_type": "text"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "valid_for_months",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "department",
+    "data_type": "text"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "valid_for_days",
+    "data_type": "integer"
+  },
+  {
+    "table_name": "courses",
+    "column_name": "external_contractors",
+    "data_type": "boolean"
+  }
+]
