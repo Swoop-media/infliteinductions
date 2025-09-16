@@ -6,6 +6,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import CompleteModuleButton from './CompleteModuleButton';
 import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
 import DocumentUploadBlock from './DocumentUploadBlock';
+import EquipmentFormBlock from '@/components/EquipmentFormBlock';
 import { ModuleType, BlockKind } from "@/lib/types/module";
 
 /**
@@ -1138,7 +1139,16 @@ export default async function LearnerCoursePage(props: {
                                 existingDocument={userDocuments?.find(doc => doc.block_id === block.id) || null}
                               />
                             )}
-                          {block.kind !== 'video_embed' && block.kind !== 'request_document' && <BlockView block={block} />}
+                          {block.kind === "equipment_form" && (
+                            <div key={block.id} className="mb-6">
+                              <EquipmentFormBlock
+                                courseId={courseId}
+                                blockData={block.data}
+                                preview={preview}
+                              />
+                            </div>
+                          )}
+                          {block.kind !== 'video_embed' && block.kind !== 'request_document' && block.kind !== 'equipment_form' && <BlockView block={block} />}
                         </div>
                       ))
                     )}
