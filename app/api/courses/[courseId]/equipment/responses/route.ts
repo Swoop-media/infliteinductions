@@ -79,10 +79,12 @@ export async function GET(
 // POST - Save a trainee equipment response
 export async function POST(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const { courseId } = await params;
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
 
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -97,21 +99,60 @@ export async function POST(
       return NextResponse.json({ error: 'Equipment ID is required' }, { status: 400 });
     }
 
-    // Verify equipment belongs to this course (fail-closed)
+    // Verify equipment belongs to this course (using same source as GET route)
     try {
-      const equipmentResponse = await fetch(`${request.nextUrl.origin}/api/courses/${params.courseId}/equipment`);
-      if (!equipmentResponse.ok) {
-        console.error('Equipment API failed:', equipmentResponse.status);
-        return NextResponse.json({ error: 'Failed to validate equipment' }, { status: 502 });
+      // Fetch equipment from module content blocks (same as GET route)
+      const { data: equipmentBlocks, error: equipmentError } = await supabase
+        .from("module_content_blocks")
+        .select(`
+          *,
+          course_modules!inner (
+            course_id
+          )
+        `)
+        .eq("kind", "equipment_form")
+        .eq("course_modules.course_id", courseId);
+      
+      if (equipmentError) {
+        console.error('Equipment validation error:', equipmentError);
+        return NextResponse.json({ error: 'Failed to validate equipment' }, { status: 500 });
       }
-      const equipmentList = await equipmentResponse.json();
-      const equipmentExists = equipmentList.some((eq: any) => eq.id === equipment_id);
+      
+      // Extract equipment IDs using same logic as GET route
+      const validEquipmentIds: string[] = [];
+      equipmentBlocks?.forEach((block: any) => {
+        if (block.data && Array.isArray(block.data.equipment)) {
+          block.data.equipment.forEach((item: any, index: number) => {
+            let stableId = item.id;
+            if (!stableId) {
+              const nameKey = (item.equipment_name || item.name || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+              stableId = `${block.id}_${nameKey}` || `${block.id}_item_${index}`;
+            }
+            validEquipmentIds.push(stableId);
+          });
+        }
+        
+        // Also check legacy format
+        if (block.data) {
+          const fields = block.data.fields || block.data.items || [];
+          fields.forEach((field: any, index: number) => {
+            if (field.type === 'equipment' || field.equipment_name) {
+              const nameKey = (field.equipment_name || field.name || field.label || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+              const stableId = field.id || `${block.id}_${nameKey}` || `${block.id}_field_${index}`;
+              validEquipmentIds.push(stableId);
+            }
+          });
+        }
+      });
+      
+      const equipmentExists = validEquipmentIds.includes(equipment_id);
       if (!equipmentExists) {
+        console.log('Equipment validation failed. Valid IDs:', validEquipmentIds, 'Requested ID:', equipment_id);
         return NextResponse.json({ error: 'Equipment not found for this course' }, { status: 400 });
       }
     } catch (error) {
       console.error('Equipment validation error:', error);
-      return NextResponse.json({ error: 'Failed to validate equipment' }, { status: 502 });
+      return NextResponse.json({ error: 'Failed to validate equipment' }, { status: 500 });
     }
 
     // Upsert the response (insert or update if exists)
@@ -119,7 +160,7 @@ export async function POST(
       .from('trainee_equipment_responses')
       .upsert({
         user_id: user.id,
-        course_id: params.courseId,
+        course_id: courseId,
         equipment_id: equipment_id,
         response_text: response_text || '',
         updated_at: new Date().toISOString()
