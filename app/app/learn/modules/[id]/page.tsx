@@ -390,6 +390,14 @@ export default async function LearnerModulePage(props: {
                   </div>
                 )}
 
+                {block.kind === "equipment_form" && (
+                  <EquipmentFormBlock
+                    courseId={course.id}
+                    blockData={block.data}
+                    preview={preview}
+                  />
+                )}
+
                 {block.kind === "file" && (
                   <div>
                     {block.data?.storage_path ? (

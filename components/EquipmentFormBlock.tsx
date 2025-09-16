@@ -26,6 +26,7 @@ export default function EquipmentFormBlock({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("🔧 EquipmentFormBlock mounted with courseId:", courseId);
     loadEquipmentRequirements();
   }, [courseId]);
 
