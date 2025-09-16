@@ -29,22 +29,53 @@ export default function EquipmentFormBlock({
 }: EquipmentFormBlockProps) {
   const [equipment, setEquipment] = useState<EquipmentRequirement[]>([]);
   const [responses, setResponses] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
+  const [equipmentLoading, setEquipmentLoading] = useState(true);
+  const [responsesLoading, setResponsesLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(true); // Will be set properly after data loads
   const [userExpanded, setUserExpanded] = useState(false);
+  const [hasInitialized, setHasInitialized] = useState(false);
   const previousCompleted = useRef(false);
+  const currentCourseId = useRef(courseId);
 
   useEffect(() => {
+    // Reset state when course changes
+    if (currentCourseId.current !== courseId) {
+      setHasInitialized(false);
+      setUserExpanded(false);
+      previousCompleted.current = false;
+      setIsExpanded(true);
+      currentCourseId.current = courseId;
+    }
+    
     loadEquipmentRequirements();
     if (!preview) {
       loadTraineeResponses();
+    } else {
+      setResponsesLoading(false); // No need to load responses in preview mode
     }
   }, [courseId, preview]);
 
-  // Auto-collapse form only on transition from incomplete to complete (not while user is editing)
+  // Initialize form state after both equipment and responses are loaded
   useEffect(() => {
-    if (!preview && equipment.length > 0) {
+    const bothLoaded = !equipmentLoading && !responsesLoading;
+    
+    if (!preview && bothLoaded && equipment.length > 0 && !hasInitialized) {
+      const requiredItems = equipment.filter(item => item.required);
+      const completedRequired = requiredItems.filter(item => responses[item.id]?.trim()).length;
+      const isFormCompleted = requiredItems.length > 0 && completedRequired === requiredItems.length;
+      
+      // Initialize form state based on whether responses exist
+      if (isFormCompleted) {
+        setIsExpanded(false); // Start collapsed if already completed
+      } else {
+        setIsExpanded(true);  // Start expanded if incomplete
+      }
+      
+      previousCompleted.current = isFormCompleted;
+      setHasInitialized(true);
+    } else if (!preview && bothLoaded && equipment.length > 0 && hasInitialized) {
+      // Handle transitions after initialization
       const requiredItems = equipment.filter(item => item.required);
       const completedRequired = requiredItems.filter(item => responses[item.id]?.trim()).length;
       const isFormCompleted = requiredItems.length > 0 && completedRequired === requiredItems.length;
@@ -61,9 +92,10 @@ export default function EquipmentFormBlock({
       
       previousCompleted.current = isFormCompleted;
     }
-  }, [equipment, responses, preview, userExpanded]);
+  }, [equipment, responses, preview, userExpanded, hasInitialized, equipmentLoading, responsesLoading]);
 
   const loadEquipmentRequirements = async () => {
+    setEquipmentLoading(true);
     try {
       const response = await fetch(`/api/courses/${courseId}/equipment`);
       if (response.ok) {
@@ -73,11 +105,12 @@ export default function EquipmentFormBlock({
     } catch (error) {
       console.error("Error loading equipment requirements:", error);
     } finally {
-      setLoading(false);
+      setEquipmentLoading(false);
     }
   };
 
   const loadTraineeResponses = async () => {
+    setResponsesLoading(true);
     try {
       const response = await fetch(`/api/courses/${courseId}/equipment/responses`);
       if (response.ok) {
@@ -90,6 +123,8 @@ export default function EquipmentFormBlock({
       }
     } catch (error) {
       console.error("Error loading trainee responses:", error);
+    } finally {
+      setResponsesLoading(false);
     }
   };
 
@@ -117,6 +152,9 @@ export default function EquipmentFormBlock({
     }
   };
 
+  // Don't render until both data loads AND initialization is complete (prevents flash)
+  const loading = equipmentLoading || responsesLoading || (!preview && equipment.length > 0 && !hasInitialized);
+  
   if (loading) {
     return (
       <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
@@ -152,7 +190,7 @@ export default function EquipmentFormBlock({
                 {blockData?.title || "Equipment Requirements"}
               </h3>
               <p className="text-sm text-green-600">
-                All equipment details completed ({completedRequired}/{requiredItems.length})
+                Equipment information submitted ({completedRequired}/{requiredItems.length} items)
               </p>
             </div>
           </div>
@@ -164,7 +202,7 @@ export default function EquipmentFormBlock({
               }}
               className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
             >
-              Update Equipment
+              Review & Update Equipment
             </button>
           </div>
         </div>
