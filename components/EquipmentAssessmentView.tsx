@@ -85,7 +85,7 @@ export default function EquipmentAssessmentView({
     try {
       // Fetch the latest responses for this trainee
       const { data, error } = await supabaseBrowser
-        .from('equipment_responses')
+        .from('trainee_equipment_responses')
         .select('*')
         .eq('course_id', courseId)
         .eq('user_id', traineeId)
@@ -131,15 +131,18 @@ export default function EquipmentAssessmentView({
   async function handleSave(itemId: string) {
     setSaving(true);
     try {
-      // Create a new response with assessor's edits
+      // Update the existing response with assessor's edits
       const { error } = await supabaseBrowser
-        .from('equipment_responses')
-        .insert({
+        .from('trainee_equipment_responses')
+        .upsert({
           course_id: courseId,
           user_id: traineeId,
           equipment_id: itemId,
           ...editValues,
-          assessor_edited: true
+          assessor_edited: true,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'course_id,user_id,equipment_id'
         });
 
       if (error) {
