@@ -1,0 +1,91 @@
+react-dom-client.development.js:25581 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+page.tsx?2:35  Server  Current user: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+page.tsx?3:41  Server  Trainer course IDs: Array(12)
+page.tsx?4:55  Server  Trainee assignments query error: null
+page.tsx?5:56  Server  Trainee assignments found: 7
+page.tsx?6:57  Server  Trainee assignments data: Array(7)
+page.tsx?8:119  Server  Final pending training items: 0
+page.tsx?9:120  Server  Final pending assessment items: 2
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 2454ms
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 818ms
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 927ms
+page.tsx?2:35  Server  Current user: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+page.tsx?3:41  Server  Trainer course IDs: Array(12)
+page.tsx?4:55  Server  Trainee assignments query error: null
+page.tsx?5:56  Server  Trainee assignments found: 7
+page.tsx?6:57  Server  Trainee assignments data: Array(7)
+page.tsx?8:119  Server  Final pending training items: 0
+page.tsx?9:120  Server  Final pending assessment items: 2
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 600ms
+report-hmr-latency.ts:26 [Fast Refresh] done in 713ms
+page.tsx?2:35  Server  Current user: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+page.tsx?3:41  Server  Trainer course IDs: Array(12)
+page.tsx?4:55  Server  Trainee assignments query error: null
+page.tsx?5:56  Server  Trainee assignments found: 7
+page.tsx?6:57  Server  Trainee assignments data: Array(7)
+page.tsx?8:119  Server  Final pending training items: 0
+page.tsx?9:120  Server  Final pending assessment items: 2
+page.tsx?2:35  Server  Current user: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+page.tsx?3:41  Server  Trainer course IDs: Array(12)
+page.tsx?4:55  Server  Trainee assignments query error: null
+page.tsx?5:56  Server  Trainee assignments found: 7
+page.tsx?6:57  Server  Trainee assignments data: Array(7)
+page.tsx?8:119  Server  Final pending training items: 0
+page.tsx?9:120  Server  Final pending assessment items: 2
+/app/notifications/list:1   Failed to load resource: the server responded with a status of 502 (Bad Gateway)
+page.tsx:78  Server  Course page params: Object
+page.tsx:92  Server  ✅ Assignment ID found: 5026ee3f-18e9-4a27-ba08-2c98cf57f287
+page.tsx:101  Server  Course query result: Object
+page.tsx:128  Server  Assignment query result: Object
+page.tsx:140  Server  ✅ Assignment found: 5026ee3f-18e9-4a27-ba08-2c98cf57f287
+page.tsx:150  Server  Trainer assignments query result: Object
+page.tsx:158  Server  ✅ Trainer assignments verified: Array(2)
+page.tsx:169  Server  ✅ User has required role 'onsite_assessor' for session type 'assessment'
+page.tsx:78  Server  Course page params: Object
+page.tsx:92  Server  ✅ Assignment ID found: 5026ee3f-18e9-4a27-ba08-2c98cf57f287
+page.tsx:101  Server  Course query result: Object
+page.tsx:128  Server  Assignment query result: Object
+page.tsx:140  Server  ✅ Assignment found: 5026ee3f-18e9-4a27-ba08-2c98cf57f287
+page.tsx:150  Server  Trainer assignments query result: Object
+page.tsx:158  Server  ✅ Trainer assignments verified: Array(2)
+page.tsx:169  Server  ✅ User has required role 'onsite_assessor' for session type 'assessment'
+page.tsx:78  Server  Course page params: Object
+page.tsx:92  Server  ✅ Assignment ID found: 5026ee3f-18e9-4a27-ba08-2c98cf57f287
+page.tsx:101  Server  Course query result: Object
+page.tsx:128  Server  Assignment query result: Object
+page.tsx:140  Server  ✅ Assignment found: 5026ee3f-18e9-4a27-ba08-2c98cf57f287
+page.tsx:150  Server  Trainer assignments query result: Object
+page.tsx:158  Server  ✅ Trainer assignments verified: Array(2)
+page.tsx:169  Server  ✅ User has required role 'onsite_assessor' for session type 'assessment'
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+CompleteCourseButton.tsx:35   POST https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/api/courses/adceacac-dac5-4c1d-8d47-3a0f2df8b3b7/complete 500 (Internal Server Error)
+handleCompleteCourse @ CompleteCourseButton.tsx:35
+executeDispatch @ react-dom-client.development.js:16921
+runWithFiberInDEV @ react-dom-client.development.js:872
+processDispatchQueue @ react-dom-client.development.js:16971
+eval @ react-dom-client.development.js:17572
+batchedUpdates$1 @ react-dom-client.development.js:3312
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17125
+dispatchEvent @ react-dom-client.development.js:21308
+dispatchDiscreteEvent @ react-dom-client.development.js:21276
+CompleteCourseButton.tsx:57  Failed to complete course: 
+error @ intercept-console-error.js:62
+handleCompleteCourse @ CompleteCourseButton.tsx:57
+await in handleCompleteCourse
+executeDispatch @ react-dom-client.development.js:16921
+runWithFiberInDEV @ react-dom-client.development.js:872
+processDispatchQueue @ react-dom-client.development.js:16971
+eval @ react-dom-client.development.js:17572
+batchedUpdates$1 @ react-dom-client.development.js:3312
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17125
+dispatchEvent @ react-dom-client.development.js:21308
+dispatchDiscreteEvent @ react-dom-client.development.js:21276
