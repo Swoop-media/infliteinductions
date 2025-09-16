@@ -93,6 +93,52 @@ export interface Database {
           [key: string]: any;
         };
       };
+      assignment_progress: {
+        Row: {
+          id: string;
+          assignment_id: string;
+          module_id: string;
+          completed_at?: string;
+          created_at?: string;
+          [key: string]: any;
+        };
+        Insert: {
+          assignment_id: string;
+          module_id: string;
+          completed_at?: string;
+          [key: string]: any;
+        };
+        Update: {
+          [key: string]: any;
+        };
+      };
+      course_assignments: {
+        Row: {
+          id: string;
+          course_id: string;
+          user_id: string;
+          role: string;
+          assigned_by: string;
+          assigned_at: string;
+          assignment_status?: string;
+          completed_at?: string;
+          updated_at: string;
+          [key: string]: any;
+        };
+        Insert: {
+          course_id: string;
+          user_id: string;
+          role: string;
+          assigned_by: string;
+          assigned_at?: string;
+          assignment_status?: string;
+          completed_at?: string;
+          [key: string]: any;
+        };
+        Update: {
+          [key: string]: any;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
