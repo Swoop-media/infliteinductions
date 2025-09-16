@@ -1,0 +1,51 @@
+react-dom-client.development.js:25581 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+page.tsx?2:79  Server  Course page params: Object
+page.tsx?3:94  Server  ✅ Assignment ID found: 74784a12-f37e-40af-9e2b-04a05dc9104a
+page.tsx?4:97  Server  Course query result: Object
+page.tsx?6:113  Server  Assignment query result: Object
+page.tsx?7:128  Server  ✅ Assignment found: 74784a12-f37e-40af-9e2b-04a05dc9104a
+page.tsx?8:134  Server  Trainer assignments query result: Object
+page.tsx?9:143  Server  ✅ Trainer assignments verified: Array(2)
+page.tsx?10:151  Server  ✅ User has required role 'onsite_assessor' for session type 'assessment'
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 802ms
+page.tsx?2:79  Server  Course page params: Object
+page.tsx?3:94  Server  ✅ Assignment ID found: 74784a12-f37e-40af-9e2b-04a05dc9104a
+page.tsx?4:97  Server  Course query result: Object
+page.tsx?6:113  Server  Assignment query result: Object
+page.tsx?7:128  Server  ✅ Assignment found: 74784a12-f37e-40af-9e2b-04a05dc9104a
+page.tsx?8:134  Server  Trainer assignments query result: Object
+page.tsx?9:143  Server  ✅ Trainer assignments verified: Array(2)
+page.tsx?10:151  Server  ✅ User has required role 'onsite_assessor' for session type 'assessment'
+report-hmr-latency.ts:26 [Fast Refresh] done in 1683ms
+renzfiptfymtmfmnmhny.supabase.co/rest/v1/equipment_assessments:1   Failed to load resource: the server responded with a status of 409 ()
+intercept-console-error.js:62  Error approving assessment: Object
+error @ intercept-console-error.js:62
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+fetch.js:23   POST https://renzfiptfymtmfmnmhny.supabase.co/rest/v1/equipment_assessments 409 (Conflict)
+eval @ fetch.js:23
+eval @ fetch.js:44
+fulfilled @ fetch.js:4
+Promise.then
+step @ fetch.js:6
+eval @ fetch.js:7
+__awaiter @ fetch.js:3
+eval @ fetch.js:34
+then @ PostgrestBuilder.js:66
+EquipmentAssessmentView.tsx:194  Error approving assessment: {code: '23503', details: 'Key is not present in table "equipment_submissions".', hint: null, message: 'insert or update on table "equipment_assessments" …uipment_assessments_equipment_submission_id_fkey"'}
+error @ intercept-console-error.js:62
+handleApprove @ EquipmentAssessmentView.tsx:194
+await in handleApprove
+executeDispatch @ react-dom-client.development.js:16921
+runWithFiberInDEV @ react-dom-client.development.js:872
+processDispatchQueue @ react-dom-client.development.js:16971
+eval @ react-dom-client.development.js:17572
+batchedUpdates$1 @ react-dom-client.development.js:3312
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17125
+dispatchEvent @ react-dom-client.development.js:21308
+dispatchDiscreteEvent @ react-dom-client.development.js:21276

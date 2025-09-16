@@ -78,15 +78,16 @@ export default function EquipmentAssessmentView({
 
   async function fetchAssessmentStatus() {
     try {
-      // Check if there's an assessment for this module
+      // Check if there's an assessment for this course and trainee
       const { data, error } = await supabaseBrowser
         .from('equipment_assessments')
-        .select('assessment_result, assessed_at, assessor_id')
-        .eq('module_id', moduleId)
+        .select('status, assessed_at, assessor_id')
+        .eq('course_id', courseId)
+        .eq('trainee_id', traineeId)
         .maybeSingle();
       
       if (!error && data) {
-        setAssessmentStatus(data.assessment_result === 'pass' ? 'approved' : 'pending');
+        setAssessmentStatus(data.status === 'approved' ? 'approved' : 'pending');
       }
     } catch (err) {
       console.error('Error fetching assessment status:', err);
@@ -171,22 +172,14 @@ export default function EquipmentAssessmentView({
       const { data: { user } } = await supabaseBrowser.auth.getUser();
       if (!user) return;
 
-      // Create assessment record with the existing table structure
-      // Since we don't have equipment_submission_id, we'll create a simplified record
+      // Create assessment record with the correct table structure
       const { error } = await supabaseBrowser
         .from('equipment_assessments')
         .insert({
-          id: crypto.randomUUID(),
-          equipment_submission_id: crypto.randomUUID(), // Generate a placeholder ID since this field is required
-          module_id: moduleId,
+          course_id: courseId,
+          trainee_id: traineeId,
           assessor_id: user.id,
-          assessment_result: 'pass',
-          assessment_details: {
-            course_id: courseId,
-            trainee_id: traineeId,
-            equipment_count: equipmentResponses.length,
-            approved: true
-          },
+          status: 'approved',
           assessed_at: new Date().toISOString()
         });
 
