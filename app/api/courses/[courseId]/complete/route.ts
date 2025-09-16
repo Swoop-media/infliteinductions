@@ -73,7 +73,7 @@ export async function POST(
     const { error: updateError } = await supabase
       .from("course_assignments")
       .update({ 
-        status: 'completed',
+        assignment_status: 'completed',
         completed_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
