@@ -6,9 +6,10 @@ import { Database } from '@/lib/types/database';
 // GET - Load assessor confirmations for equipment
 export async function GET(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
+    const { courseId } = await params;
     const supabase = createRouteHandlerClient<Database>({ cookies });
     const { searchParams } = new URL(request.url);
     const traineeId = searchParams.get('trainee_id');
@@ -23,7 +24,7 @@ export async function GET(
     const { data: enrolment, error: enrolmentError } = await supabase
       .from('course_assignments')
       .select('role')
-      .eq('course_id', params.courseId)
+      .eq('course_id', courseId)
       .eq('user_id', user.id)
       .in('role', ['trainer', 'assessor', 'onsite_trainer', 'onsite_assessor'])
       .single();
@@ -35,7 +36,7 @@ export async function GET(
     let query = supabase
       .from('assessor_equipment_confirmations')
       .select('*')
-      .eq('course_id', params.courseId)
+      .eq('course_id', courseId)
       .eq('user_id', user.id);
 
     // Filter by trainee if specified
@@ -60,9 +61,10 @@ export async function GET(
 // POST - Save an assessor equipment confirmation
 export async function POST(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
+    const { courseId } = await params;
     const supabase = createRouteHandlerClient<Database>({ cookies });
 
     // Get current user (assessor)
@@ -75,7 +77,7 @@ export async function POST(
     const { data: enrolment, error: enrolmentError } = await supabase
       .from('course_assignments')
       .select('role')
-      .eq('course_id', params.courseId)
+      .eq('course_id', courseId)
       .eq('user_id', user.id)
       .in('role', ['trainer', 'assessor', 'onsite_trainer', 'onsite_assessor'])
       .single();
@@ -95,7 +97,7 @@ export async function POST(
     const { data: traineeEnrolment, error: traineeError } = await supabase
       .from('course_assignments')
       .select('role')
-      .eq('course_id', params.courseId)
+      .eq('course_id', courseId)
       .eq('user_id', trainee_id)
       .eq('role', 'trainee')
       .single();
@@ -106,7 +108,7 @@ export async function POST(
 
     // Verify equipment belongs to this course (fail-closed)
     try {
-      const equipmentResponse = await fetch(`${request.nextUrl.origin}/api/courses/${params.courseId}/equipment`);
+      const equipmentResponse = await fetch(`${request.nextUrl.origin}/api/courses/${courseId}/equipment`);
       if (!equipmentResponse.ok) {
         console.error('Equipment API failed:', equipmentResponse.status);
         return NextResponse.json({ error: 'Failed to validate equipment' }, { status: 502 });
@@ -127,7 +129,7 @@ export async function POST(
       .upsert({
         user_id: user.id,
         trainee_id: trainee_id,
-        course_id: params.courseId,
+        course_id: courseId,
         equipment_id: equipment_id,
         confirmed: confirmed || false,
         assessor_notes: assessor_notes || '',
