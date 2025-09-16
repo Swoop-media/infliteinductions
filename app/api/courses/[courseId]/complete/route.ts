@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { Database } from "@/lib/supabase/types";
 
 export async function POST(
   request: NextRequest,
@@ -48,14 +49,19 @@ export async function POST(
     }
 
     // Mark all modules as completed first
-    const { data: modules } = await supabase
+    const { data: modules, error: modulesError } = await supabase
       .from("course_modules")
       .select("id")
       .eq("course_id", courseId);
 
+    if (modulesError) {
+      console.error("Error fetching modules:", modulesError);
+      return NextResponse.json({ error: "Failed to fetch course modules" }, { status: 500 });
+    }
+
     if (modules && modules.length > 0) {
       // Mark all modules as completed in assignment_progress
-      const progressEntries = modules.map(module => ({
+      const progressEntries = modules.map((module: Database['public']['Tables']['course_modules']['Row']) => ({
         assignment_id: assignmentId,
         module_id: module.id,
         completed_at: new Date().toISOString()
