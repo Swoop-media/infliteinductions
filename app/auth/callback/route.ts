@@ -61,41 +61,61 @@ export async function GET(req: NextRequest) {
           console.log(`User with email ${email} already exists, finding existing user...`);
           existingUser = true;
           
-          // Try direct user lookup by email first (more efficient)
-          const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+          // Search for existing user by email with pagination - more thorough approach
+          let page = 1;
+          let foundUser = null;
+          const maxPages = 20; // Increased from 10 to handle larger user bases
           
-          if (listError) {
-            throw listError;
+          while (!foundUser && page <= maxPages) {
+            const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({
+              page,
+              perPage: 1000
+            });
+            
+            if (listError) {
+              console.error(`Error listing users on page ${page}:`, listError);
+              throw listError;
+            }
+            
+            // Case-insensitive email search
+            foundUser = users?.find((u: any) => 
+              u.email?.toLowerCase() === email.toLowerCase()
+            );
+            
+            console.log(`Page ${page}: Found ${users?.length || 0} users, target user found: ${!!foundUser}`);
+            
+            if (!foundUser && users && users.length === 1000) {
+              page++;
+            } else {
+              break;
+            }
           }
           
-          // Look for user with exact email match (case insensitive)
-          const foundUser = users?.find((u: any) => 
-            u.email?.toLowerCase() === email.toLowerCase()
-          );
-          
           if (!foundUser) {
-            // If still not found, try to create the user again (maybe it was soft-deleted)
-            console.log(`Attempting to create user again for ${email}...`);
-            const { data: retryAuthUser, error: retryError } = await supabase.auth.admin.createUser({
+            // Create a manual user record with temp password - different approach
+            console.log(`Creating manual user for ${email} with temp password...`);
+            const tempPassword = crypto.randomUUID() + crypto.randomUUID();
+            
+            const { data: manualUser, error: manualError } = await supabase.auth.admin.createUser({
               email,
+              password: tempPassword,
               email_confirm: true,
               user_metadata: {
                 name: name || email.split("@")[0],
                 microsoft_id: homeAccountId,
+                created_via: 'microsoft_sso'
               },
             });
             
-            if (retryError) {
-              throw new Error(`User exists in auth system but cannot be accessed or recreated: ${retryError.message}`);
+            if (manualError) {
+              throw new Error(`Could not create or find user: ${manualError.message}`);
             }
             
-            userId = retryAuthUser.user.id;
+            userId = manualUser.user.id;
           } else {
             userId = foundUser.id;
-          }
-          
-          // Update user metadata to include Microsoft ID if not already set (only if foundUser exists)
-          if (foundUser) {
+            
+            // Update user metadata to include Microsoft ID if not already set
             const currentMetadata = foundUser.user_metadata || {};
             if (!currentMetadata.microsoft_id) {
               await supabase.auth.admin.updateUserById(userId, {
