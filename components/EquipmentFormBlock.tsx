@@ -26,18 +26,24 @@ export default function EquipmentFormBlock({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("🔧 EquipmentFormBlock rendered with:", { courseId, blockData, preview });
     loadEquipmentRequirements();
   }, [courseId]);
 
   const loadEquipmentRequirements = async () => {
     try {
+      console.log("🔧 Fetching equipment for courseId:", courseId);
       const response = await fetch(`/api/courses/${courseId}/equipment`);
+      console.log("🔧 Equipment API response:", response.status, response.ok);
       if (response.ok) {
         const data = await response.json();
+        console.log("🔧 Equipment data received:", data);
         setEquipment(data || []);
+      } else {
+        console.error("🔧 Equipment API failed:", response.status, await response.text());
       }
     } catch (error) {
-      console.error("Error loading equipment requirements:", error);
+      console.error("🔧 Error loading equipment requirements:", error);
     } finally {
       setLoading(false);
     }
