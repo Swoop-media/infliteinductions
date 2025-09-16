@@ -12,8 +12,8 @@ NEXT_TELEMETRY_DISABLED = "1"
 
 [deployment]
 build = ["npm", "run", "build"]
-run = ["npm", "run", "start"]
-deploymentTarget = "autoscale"
+run = ["sh", "-c", "npm run start"]
+deploymentTarget = "vm"
 
 [[ports]]
 localPort = 5000
