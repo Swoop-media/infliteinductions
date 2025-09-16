@@ -61,44 +61,50 @@ export async function GET(req: NextRequest) {
           console.log(`User with email ${email} already exists, finding existing user...`);
           existingUser = true;
           
-          // Search for existing user by email with pagination
-          let page = 1;
-          let foundUser = null;
+          // Try direct user lookup by email first (more efficient)
+          const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
           
-          while (!foundUser && page <= 10) { // Limit to 10 pages to prevent infinite loops
-            const { data: { users }, error: listError } = await supabase.auth.admin.listUsers({
-              page,
-              perPage: 1000
-            });
-            
-            if (listError) {
-              throw listError;
-            }
-            
-            foundUser = users?.find((u: any) => u.email === email);
-            
-            if (!foundUser && users && users.length === 1000) {
-              page++;
-            } else {
-              break;
-            }
+          if (listError) {
+            throw listError;
           }
+          
+          // Look for user with exact email match (case insensitive)
+          const foundUser = users?.find((u: any) => 
+            u.email?.toLowerCase() === email.toLowerCase()
+          );
           
           if (!foundUser) {
-            throw new Error(`User with email ${email} exists but could not be found`);
-          }
-          
-          userId = foundUser.id;
-          
-          // Update user metadata to include Microsoft ID if not already set
-          const currentMetadata = foundUser.user_metadata || {};
-          if (!currentMetadata.microsoft_id) {
-            await supabase.auth.admin.updateUserById(userId, {
+            // If still not found, try to create the user again (maybe it was soft-deleted)
+            console.log(`Attempting to create user again for ${email}...`);
+            const { data: retryAuthUser, error: retryError } = await supabase.auth.admin.createUser({
+              email,
+              email_confirm: true,
               user_metadata: {
-                ...currentMetadata,
+                name: name || email.split("@")[0],
                 microsoft_id: homeAccountId,
               },
             });
+            
+            if (retryError) {
+              throw new Error(`User exists in auth system but cannot be accessed or recreated: ${retryError.message}`);
+            }
+            
+            userId = retryAuthUser.user.id;
+          } else {
+            userId = foundUser.id;
+          }
+          
+          // Update user metadata to include Microsoft ID if not already set (only if foundUser exists)
+          if (foundUser) {
+            const currentMetadata = foundUser.user_metadata || {};
+            if (!currentMetadata.microsoft_id) {
+              await supabase.auth.admin.updateUserById(userId, {
+                user_metadata: {
+                  ...currentMetadata,
+                  microsoft_id: homeAccountId,
+                },
+              });
+            }
           }
         } else {
           throw authError;
