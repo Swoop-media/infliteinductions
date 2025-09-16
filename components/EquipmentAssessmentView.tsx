@@ -6,17 +6,11 @@ import { Check, X, Save, Edit2, CheckCircle } from 'lucide-react';
 
 interface EquipmentItem {
   id: string;
-  name: string;
-  brand?: string | null;
-  model?: string | null;
-  serial?: string | null;
-  color?: string | null;
-  size?: string | null;
-  container_brand?: string | null;
-  container_model?: string | null;
-  container_serial?: string | null;
-  container_size?: string | null;
+  equipment_id: string;
+  response_text: string;
   response_date: string;
+  updated_at?: string;
+  assessor_edited?: boolean;
 }
 
 interface EquipmentAssessmentViewProps {
@@ -35,6 +29,7 @@ export default function EquipmentAssessmentView({
   onApprove 
 }: EquipmentAssessmentViewProps) {
   const [equipmentResponses, setEquipmentResponses] = useState<EquipmentItem[]>([]);
+  const [equipmentInfo, setEquipmentInfo] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValues, setEditValues] = useState<any>({});
@@ -43,10 +38,27 @@ export default function EquipmentAssessmentView({
   const [traineeInfo, setTraineeInfo] = useState<{ full_name: string; email: string } | null>(null);
 
   useEffect(() => {
+    fetchEquipmentInfo();
     fetchEquipmentResponses();
     fetchTraineeInfo();
     fetchAssessmentStatus();
   }, [courseId, traineeId, moduleId]);
+
+  async function fetchEquipmentInfo() {
+    try {
+      const response = await fetch(`/api/courses/${courseId}/equipment`);
+      if (response.ok) {
+        const data = await response.json();
+        const infoMap: Record<string, any> = {};
+        data.forEach((item: any) => {
+          infoMap[item.id] = item;
+        });
+        setEquipmentInfo(infoMap);
+      }
+    } catch (err) {
+      console.error('Error fetching equipment info:', err);
+    }
+  }
 
   async function fetchTraineeInfo() {
     try {
@@ -115,20 +127,11 @@ export default function EquipmentAssessmentView({
   async function handleEdit(item: EquipmentItem) {
     setEditingId(item.id);
     setEditValues({
-      name: item.name,
-      brand: item.brand || '',
-      model: item.model || '',
-      serial: item.serial || '',
-      color: item.color || '',
-      size: item.size || '',
-      container_brand: item.container_brand || '',
-      container_model: item.container_model || '',
-      container_serial: item.container_serial || '',
-      container_size: item.container_size || ''
+      response_text: item.response_text || ''
     });
   }
 
-  async function handleSave(itemId: string) {
+  async function handleSave(item: EquipmentItem) {
     setSaving(true);
     try {
       // Update the existing response with assessor's edits
@@ -137,8 +140,8 @@ export default function EquipmentAssessmentView({
         .upsert({
           course_id: courseId,
           user_id: traineeId,
-          equipment_id: itemId,
-          ...editValues,
+          equipment_id: item.equipment_id,
+          response_text: editValues.response_text,
           assessor_edited: true,
           updated_at: new Date().toISOString()
         }, {
@@ -247,65 +250,22 @@ export default function EquipmentAssessmentView({
               {editingId === item.id ? (
                 // Edit Mode
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Name</label>
-                      <input
-                        type="text"
-                        value={editValues.name}
-                        onChange={(e) => setEditValues({...editValues, name: e.target.value})}
-                        className="w-full px-3 py-2 border rounded-md"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Brand</label>
-                      <input
-                        type="text"
-                        value={editValues.brand}
-                        onChange={(e) => setEditValues({...editValues, brand: e.target.value})}
-                        className="w-full px-3 py-2 border rounded-md"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Model</label>
-                      <input
-                        type="text"
-                        value={editValues.model}
-                        onChange={(e) => setEditValues({...editValues, model: e.target.value})}
-                        className="w-full px-3 py-2 border rounded-md"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-1">Serial</label>
-                      <input
-                        type="text"
-                        value={editValues.serial}
-                        onChange={(e) => setEditValues({...editValues, serial: e.target.value})}
-                        className="w-full px-3 py-2 border rounded-md"
-                      />
-                    </div>
-                    {editValues.container_brand !== undefined && (
-                      <>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">Container Brand</label>
-                          <input
-                            type="text"
-                            value={editValues.container_brand}
-                            onChange={(e) => setEditValues({...editValues, container_brand: e.target.value})}
-                            className="w-full px-3 py-2 border rounded-md"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium mb-1">Container Model</label>
-                          <input
-                            type="text"
-                            value={editValues.container_model}
-                            onChange={(e) => setEditValues({...editValues, container_model: e.target.value})}
-                            className="w-full px-3 py-2 border rounded-md"
-                          />
-                        </div>
-                      </>
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">
+                      {equipmentInfo[item.equipment_id]?.equipment_name || item.equipment_id}
+                    </h3>
+                    {equipmentInfo[item.equipment_id]?.description && (
+                      <p className="text-sm text-gray-600 mb-4">
+                        {equipmentInfo[item.equipment_id].description}
+                      </p>
                     )}
+                    <label className="block text-sm font-medium mb-1">Equipment Details</label>
+                    <textarea
+                      value={editValues.response_text}
+                      onChange={(e) => setEditValues({...editValues, response_text: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-md min-h-[100px]"
+                      placeholder="Enter equipment details..."
+                    />
                   </div>
                   <div className="flex justify-end space-x-2">
                     <button
@@ -316,7 +276,7 @@ export default function EquipmentAssessmentView({
                       Cancel
                     </button>
                     <button
-                      onClick={() => handleSave(item.id)}
+                      onClick={() => handleSave(item)}
                       className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
                       disabled={saving}
                     >
@@ -329,7 +289,16 @@ export default function EquipmentAssessmentView({
                 // View Mode
                 <div>
                   <div className="flex justify-between items-start mb-4">
-                    <h3 className="font-semibold text-lg">{item.name}</h3>
+                    <div>
+                      <h3 className="font-semibold text-lg">
+                        {equipmentInfo[item.equipment_id]?.equipment_name || item.equipment_id}
+                      </h3>
+                      {equipmentInfo[item.equipment_id]?.description && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          {equipmentInfo[item.equipment_id].description}
+                        </p>
+                      )}
+                    </div>
                     {canEdit && assessmentStatus !== 'approved' && (
                       <button
                         onClick={() => handleEdit(item)}
@@ -340,56 +309,18 @@ export default function EquipmentAssessmentView({
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                    {item.brand && (
-                      <div>
-                        <span className="font-medium text-gray-600">Brand:</span> {item.brand}
-                      </div>
-                    )}
-                    {item.model && (
-                      <div>
-                        <span className="font-medium text-gray-600">Model:</span> {item.model}
-                      </div>
-                    )}
-                    {item.serial && (
-                      <div>
-                        <span className="font-medium text-gray-600">Serial:</span> {item.serial}
-                      </div>
-                    )}
-                    {item.color && (
-                      <div>
-                        <span className="font-medium text-gray-600">Color:</span> {item.color}
-                      </div>
-                    )}
-                    {item.size && (
-                      <div>
-                        <span className="font-medium text-gray-600">Size:</span> {item.size}
-                      </div>
-                    )}
-                    {item.container_brand && (
-                      <div>
-                        <span className="font-medium text-gray-600">Container Brand:</span> {item.container_brand}
-                      </div>
-                    )}
-                    {item.container_model && (
-                      <div>
-                        <span className="font-medium text-gray-600">Container Model:</span> {item.container_model}
-                      </div>
-                    )}
-                    {item.container_serial && (
-                      <div>
-                        <span className="font-medium text-gray-600">Container Serial:</span> {item.container_serial}
-                      </div>
-                    )}
-                    {item.container_size && (
-                      <div>
-                        <span className="font-medium text-gray-600">Container Size:</span> {item.container_size}
-                      </div>
-                    )}
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Trainee Response:</p>
+                    <p className="text-gray-900 whitespace-pre-wrap">
+                      {item.response_text || <span className="text-gray-400 italic">No response provided</span>}
+                    </p>
                   </div>
                   
-                  <div className="mt-3 text-xs text-gray-500">
-                    Submitted: {new Date(item.response_date).toLocaleDateString()}
+                  <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+                    <div>Submitted: {new Date(item.response_date).toLocaleDateString()}</div>
+                    {item.assessor_edited && (
+                      <div className="text-blue-600 font-medium">✓ Edited by Assessor</div>
+                    )}
                   </div>
                 </div>
               )}
