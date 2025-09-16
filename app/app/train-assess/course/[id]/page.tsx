@@ -363,6 +363,7 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
                       <div className="p-4 border-t">
                         <EquipmentAssessmentView
                           courseId={courseId}
+                          moduleId={module.id}
                           traineeId={assignment.user_id}
                           canEdit={!isCompleted}
                         />
