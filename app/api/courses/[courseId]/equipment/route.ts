@@ -16,8 +16,6 @@ export async function GET(
     const supabase = await createSupabaseServer();
     
     // Fetch equipment requirements from module content blocks
-    console.log('🔍 Fetching equipment for course:', courseId);
-    
     const { data: equipmentBlocks, error } = await supabase
       .from("module_content_blocks")
       .select(`
@@ -31,11 +29,8 @@ export async function GET(
       .eq("course_modules.course_id", courseId)
       .order("order_index", { ascending: true });
     
-    console.log('📊 Equipment blocks found:', equipmentBlocks?.length || 0);
-    console.log('📋 Equipment blocks data:', JSON.stringify(equipmentBlocks, null, 2));
-    
     if (error) {
-      console.error("❌ Error fetching equipment blocks:", error);
+      console.error("Error fetching equipment blocks:", error);
       return NextResponse.json({ error: "Failed to fetch equipment" }, { status: 500 });
     }
     
@@ -43,19 +38,16 @@ export async function GET(
     const equipment: any[] = [];
     equipmentBlocks?.forEach((block: any) => {
       if (block.data) {
-        console.log(`🔧 Processing block ${block.id}, data:`, JSON.stringify(block.data, null, 2));
-        
         // Check multiple possible locations for equipment data
         const equipmentSources = [
           block.data.equipment,           // Original expected format
-          block.data.equipment_templates, // Actual format found in logs
+          block.data.equipment_templates, // Most common format
           block.data.items,              // Alternative format
           block.data.fields              // Another alternative
         ];
         
-        equipmentSources.forEach((source, sourceIndex) => {
+        equipmentSources.forEach((source) => {
           if (Array.isArray(source)) {
-            console.log(`📦 Found equipment source ${sourceIndex} with ${source.length} items`);
             source.forEach((item: any, index: number) => {
               // Generate stable ID that doesn't change with reordering
               let stableId = item.id;
@@ -64,12 +56,6 @@ export async function GET(
                 const nameKey = (item.equipment_name || item.name || item.label || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
                 stableId = `${block.id}_${nameKey}` || `${block.id}_item_${index}`;
               }
-              
-              console.log(`⚙️ Processing equipment item:`, {
-                id: stableId,
-                name: item.equipment_name || item.name || item.label,
-                required: item.required
-              });
               
               equipment.push({
                 id: stableId,
@@ -86,7 +72,6 @@ export async function GET(
         
         // Also check if the block itself contains equipment properties directly
         if (block.data.equipment_name || block.data.name) {
-          console.log(`🔨 Found direct equipment in block data`);
           const nameKey = (block.data.equipment_name || block.data.name || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
           const stableId = block.data.id || `${block.id}_${nameKey}` || `${block.id}_direct`;
           
@@ -103,19 +88,6 @@ export async function GET(
       }
     });
 
-    console.log('🎯 Final equipment array:', equipment.length, 'items');
-    console.log('📝 Equipment details:', JSON.stringify(equipment, null, 2));
-    
-    // If still no equipment found, let's try to understand the data structure better
-    if (equipment.length === 0) {
-      console.log('🚨 No equipment found! Let me analyze the block data structure:');
-      equipmentBlocks?.forEach((block, i) => {
-        console.log(`Block ${i + 1} (${block.id}):`);  
-        console.log('- Data keys:', Object.keys(block.data || {}));
-        console.log('- Full data:', JSON.stringify(block.data, null, 2));
-      });
-    }
-    
     return NextResponse.json(equipment || []);
   } catch (error) {
     console.error("API Error:", error);

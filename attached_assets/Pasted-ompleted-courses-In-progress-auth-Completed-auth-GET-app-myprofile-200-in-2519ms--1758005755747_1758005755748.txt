@@ -1,0 +1,128 @@
+ompleted courses: []
+In progress auth: []
+Completed auth: []
+ GET /app/myprofile 200 in 2519ms
+ ✓ Compiled /app/learn/courses/[id] in 419ms (762 modules)
+ GET /app/learn/courses/adceacac-dac5-4c1d-8d47-3a0f2df8b3b7 200 in 3373ms
+ ✓ Compiled /api/courses/[courseId]/equipment/responses in 267ms (764 modules)
+ ✓ Compiled in 0ms (766 modules)
+ ✓ Compiled in 0ms (766 modules)
+ ✓ Compiled in 1ms (766 modules)
+🔍 Fetching equipment for course: adceacac-dac5-4c1d-8d47-3a0f2df8b3b7
+ GET / 200 in 1595ms
+📊 Equipment blocks found: 2
+📋 Equipment blocks data: [
+  {
+    "id": "0c5108c5-12ef-4344-bd8a-2d1f195a2783",
+    "module_id": "b5b9ba9b-cd61-4c1c-bd8b-4f07f1233d5f",
+    "kind": "equipment_form",
+    "data": {
+      "title": "Equipment Requirements",
+      "description": "Please review the required equipment for this training module"
+    },
+    "order_index": 0,
+    "created_at": "2025-09-16T00:13:56.094862+00:00",
+    "course_modules": {
+      "title": "Tandem master equipment Assessment",
+      "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7"
+    }
+  },
+  {
+    "id": "79c7083c-272e-4952-8756-b737739cbc57",
+    "module_id": "5393bea8-94d8-436e-8ca5-3de1aa471e9c",
+    "kind": "equipment_form",
+    "data": {
+      "title": "Equipment Information",
+      "equipment_templates": []
+    },
+    "order_index": 1,
+    "created_at": "2025-09-15T23:46:51.492608+00:00",
+    "course_modules": {
+      "title": "List your equipment",
+      "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7"
+    }
+  }
+]
+🔧 Processing block 0c5108c5-12ef-4344-bd8a-2d1f195a2783, data: {
+  "title": "Equipment Requirements",
+  "description": "Please review the required equipment for this training module"
+}
+🔧 Processing block 79c7083c-272e-4952-8756-b737739cbc57, data: {
+  "title": "Equipment Information",
+  "equipment_templates": []
+}
+📦 Found equipment source 1 with 0 items
+🎯 Final equipment array: 0 items
+📝 Equipment details: []
+🚨 No equipment found! Let me analyze the block data structure:
+Block 1 (0c5108c5-12ef-4344-bd8a-2d1f195a2783):
+- Data keys: [ 'title', 'description' ]
+- Full data: {
+  "title": "Equipment Requirements",
+  "description": "Please review the required equipment for this training module"
+}
+Block 2 (79c7083c-272e-4952-8756-b737739cbc57):
+- Data keys: [ 'title', 'equipment_templates' ]
+- Full data: {
+  "title": "Equipment Information",
+  "equipment_templates": []
+}
+ GET /api/courses/adceacac-dac5-4c1d-8d47-3a0f2df8b3b7/equipment 200 in 2340ms
+🔍 Fetching equipment for course: adceacac-dac5-4c1d-8d47-3a0f2df8b3b7
+ GET /api/courses/adceacac-dac5-4c1d-8d47-3a0f2df8b3b7/equipment/responses 200 in 2706ms
+📊 Equipment blocks found: 2
+📋 Equipment blocks data: [
+  {
+    "id": "0c5108c5-12ef-4344-bd8a-2d1f195a2783",
+    "module_id": "b5b9ba9b-cd61-4c1c-bd8b-4f07f1233d5f",
+    "kind": "equipment_form",
+    "data": {
+      "title": "Equipment Requirements",
+      "description": "Please review the required equipment for this training module"
+    },
+    "order_index": 0,
+    "created_at": "2025-09-16T00:13:56.094862+00:00",
+    "course_modules": {
+      "title": "Tandem master equipment Assessment",
+      "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7"
+    }
+  },
+  {
+    "id": "79c7083c-272e-4952-8756-b737739cbc57",
+    "module_id": "5393bea8-94d8-436e-8ca5-3de1aa471e9c",
+    "kind": "equipment_form",
+    "data": {
+      "title": "Equipment Information",
+      "equipment_templates": []
+    },
+    "order_index": 1,
+    "created_at": "2025-09-15T23:46:51.492608+00:00",
+    "course_modules": {
+      "title": "List your equipment",
+      "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7"
+    }
+  }
+]
+🔧 Processing block 0c5108c5-12ef-4344-bd8a-2d1f195a2783, data: {
+  "title": "Equipment Requirements",
+  "description": "Please review the required equipment for this training module"
+}
+🔧 Processing block 79c7083c-272e-4952-8756-b737739cbc57, data: {
+  "title": "Equipment Information",
+  "equipment_templates": []
+}
+📦 Found equipment source 1 with 0 items
+🎯 Final equipment array: 0 items
+📝 Equipment details: []
+🚨 No equipment found! Let me analyze the block data structure:
+Block 1 (0c5108c5-12ef-4344-bd8a-2d1f195a2783):
+- Data keys: [ 'title', 'description' ]
+- Full data: {
+  "title": "Equipment Requirements",
+  "description": "Please review the required equipment for this training module"
+}
+Block 2 (79c7083c-272e-4952-8756-b737739cbc57):
+- Data keys: [ 'title', 'equipment_templates' ]
+- Full data: {
+  "title": "Equipment Information",
+  "equipment_templates": []
