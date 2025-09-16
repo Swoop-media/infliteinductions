@@ -6,10 +6,12 @@ import { Database } from '@/lib/types/database';
 // GET - Load trainee equipment responses for a course
 export async function GET(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const { courseId } = await params;
+    const cookieStore = await cookies();
+    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
     const { searchParams } = new URL(request.url);
     const traineeId = searchParams.get('trainee_id');
 
@@ -25,7 +27,7 @@ export async function GET(
       const { data: enrolment, error: enrolmentError } = await supabase
         .from('course_assignments')
         .select('role')
-        .eq('course_id', params.courseId)
+        .eq('course_id', courseId)
         .eq('user_id', user.id)
         .in('role', ['trainer', 'assessor', 'onsite_trainer', 'onsite_assessor'])
         .single();
@@ -35,24 +37,39 @@ export async function GET(
       }
     }
 
-    // Get trainee responses
-    let query = supabase
-      .from('trainee_equipment_responses')
-      .select('*')
-      .eq('course_id', params.courseId);
+    // Get trainee responses - fallback to empty array if table doesn't exist
+    try {
+      let query = supabase
+        .from('trainee_equipment_responses')
+        .select('*')
+        .eq('course_id', courseId);
 
-    // Load responses for specified trainee (assessor view) or current user (trainee view)
-    const targetUserId = traineeId || user.id;
-    query = query.eq('user_id', targetUserId);
+      // Load responses for specified trainee (assessor view) or current user (trainee view)
+      const targetUserId = traineeId || user.id;
+      query = query.eq('user_id', targetUserId);
 
-    const { data: responses, error } = await query;
+      const { data: responses, error } = await query;
+      
+      if (error && error.code === 'PGRST205') {
+        // Table doesn't exist yet, return empty array
+        return NextResponse.json([]);
+      }
+      
+      if (error) {
+        throw error;
+      }
 
-    if (error) {
-      console.error('Database error:', error);
+      return NextResponse.json(responses || []);
+    } catch (dbError: any) {
+      console.error('Database error:', dbError);
+      // If table doesn't exist, return empty array instead of error
+      if (dbError.code === 'PGRST205') {
+        return NextResponse.json([]);
+      }
       return NextResponse.json({ error: 'Failed to load responses' }, { status: 500 });
     }
 
-    return NextResponse.json(responses || []);
+    // This is handled above in the try-catch block
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

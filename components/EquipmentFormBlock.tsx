@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface EquipmentRequirement {
   id: string;
@@ -31,6 +31,9 @@ export default function EquipmentFormBlock({
   const [responses, setResponses] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [userExpanded, setUserExpanded] = useState(false);
+  const previousCompleted = useRef(false);
 
   useEffect(() => {
     loadEquipmentRequirements();
@@ -38,6 +41,27 @@ export default function EquipmentFormBlock({
       loadTraineeResponses();
     }
   }, [courseId, preview]);
+
+  // Auto-collapse form only on transition from incomplete to complete (not while user is editing)
+  useEffect(() => {
+    if (!preview && equipment.length > 0) {
+      const requiredItems = equipment.filter(item => item.required);
+      const completedRequired = requiredItems.filter(item => responses[item.id]?.trim()).length;
+      const isFormCompleted = requiredItems.length > 0 && completedRequired === requiredItems.length;
+      
+      // Only collapse on transition from incomplete→complete, and not if user manually expanded
+      if (isFormCompleted && !previousCompleted.current && !userExpanded) {
+        setIsExpanded(false);
+      }
+      
+      // Reset userExpanded flag if form becomes incomplete
+      if (!isFormCompleted && userExpanded) {
+        setUserExpanded(false);
+      }
+      
+      previousCompleted.current = isFormCompleted;
+    }
+  }, [equipment, responses, preview, userExpanded]);
 
   const loadEquipmentRequirements = async () => {
     try {
@@ -95,43 +119,84 @@ export default function EquipmentFormBlock({
 
   if (loading) {
     return (
-      <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+      <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
             🔧
           </div>
-          <h3 className="text-lg font-semibold text-orange-900">Equipment Requirements</h3>
+          <h3 className="text-lg font-semibold text-slate-900">Equipment Requirements</h3>
         </div>
-        <p className="text-orange-700">Loading equipment requirements...</p>
+        <p className="text-slate-700">Loading equipment requirements...</p>
+      </div>
+    );
+  }
+
+  // Check if form is completed (all required items have responses)
+  const requiredItems = equipment.filter(item => item.required);
+  const completedRequired = requiredItems.filter(item => responses[item.id]?.trim()).length;
+  const isFormCompleted = requiredItems.length > 0 && completedRequired === requiredItems.length;
+
+  // If form is completed and not in preview mode, show collapsed view by default
+  const shouldShowCollapsed = isFormCompleted && !preview && !isExpanded;
+
+  if (shouldShowCollapsed) {
+    return (
+      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+              ✅
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-green-900">
+                {blockData?.title || "Equipment Requirements"}
+              </h3>
+              <p className="text-sm text-green-600">
+                All equipment details completed ({completedRequired}/{requiredItems.length})
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                setIsExpanded(true);
+                setUserExpanded(true);
+              }}
+              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
+            >
+              Update Equipment
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
+    <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
       <div className="flex items-center gap-3 mb-4">
-        <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+        <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center">
           🔧
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-orange-900">
+          <h3 className="text-lg font-semibold text-slate-900">
             {blockData?.title || "Equipment Requirements"}
           </h3>
           {preview && (
-            <p className="text-xs text-orange-600">Preview Mode - Equipment requirements below</p>
+            <p className="text-xs text-slate-600">Preview Mode - Equipment requirements below</p>
           )}
         </div>
       </div>
 
       {equipment.length === 0 ? (
         <div className="text-center py-6">
-          <div className="text-orange-400 text-4xl mb-2">📋</div>
-          <p className="text-orange-700 font-medium">No Equipment Requirements</p>
-          <p className="text-orange-600 text-sm">No equipment has been specified for this training.</p>
+          <div className="text-slate-400 text-4xl mb-2">📋</div>
+          <p className="text-slate-700 font-medium">No Equipment Requirements</p>
+          <p className="text-slate-600 text-sm">No equipment has been specified for this training.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          <p className="text-orange-700 text-sm">
+          <p className="text-slate-700 text-sm">
             Please ensure you have the following equipment before starting:
           </p>
           
@@ -139,7 +204,7 @@ export default function EquipmentFormBlock({
             {equipment
               .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
               .map((item) => (
-                <div key={item.id} className="bg-white rounded-md border border-orange-100 p-4">
+                <div key={item.id} className="bg-white rounded-md border border-slate-100 p-4">
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
@@ -160,7 +225,7 @@ export default function EquipmentFormBlock({
                       )}
                     </div>
                     <div className="text-2xl">
-                      {responses[item.id] ? "✅" : (item.required ? "❗" : "➡️")}
+                      {responses[item.id] ? "✅" : (item.required ? "⏳" : "📝")}
                     </div>
                   </div>
                   
@@ -174,7 +239,7 @@ export default function EquipmentFormBlock({
                         onChange={(e) => handleResponseChange(item.id, e.target.value)}
                         onBlur={() => saveResponse(item.id)}
                         placeholder={item.description ? `${item.description}` : `Describe your ${item.equipment_name.toLowerCase()}...`}
-                        className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         rows={3}
                         disabled={saving}
                       />
@@ -188,12 +253,12 @@ export default function EquipmentFormBlock({
           </div>
 
           {!preview && (
-            <div className="bg-white rounded-md border border-orange-100 p-4 mt-4">
-              <div className="flex items-center gap-2 text-orange-700">
+            <div className="bg-white rounded-md border border-slate-100 p-4 mt-4">
+              <div className="flex items-center gap-2 text-slate-700">
                 <div className="w-5 h-5">ℹ️</div>
                 <p className="text-sm font-medium">Equipment Information Completed?</p>
               </div>
-              <p className="text-orange-600 text-sm mt-1">
+              <p className="text-slate-600 text-sm mt-1">
                 Please fill in details for all required equipment items above. Your responses are automatically saved as you type.
               </p>
               {equipment.filter(item => item.required).length > 0 && (
