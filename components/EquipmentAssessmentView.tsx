@@ -19,6 +19,7 @@ interface EquipmentAssessmentViewProps {
   traineeId: string;
   canEdit: boolean;
   onApprove?: () => void;
+  onComplete?: () => void;
 }
 
 export default function EquipmentAssessmentView({ 
@@ -26,7 +27,8 @@ export default function EquipmentAssessmentView({
   moduleId,
   traineeId, 
   canEdit,
-  onApprove 
+  onApprove,
+  onComplete 
 }: EquipmentAssessmentViewProps) {
   const [equipmentResponses, setEquipmentResponses] = useState<EquipmentItem[]>([]);
   const [equipmentInfo, setEquipmentInfo] = useState<Record<string, any>>({});
@@ -343,6 +345,24 @@ export default function EquipmentAssessmentView({
             <CheckCircle className="w-5 h-5 mr-2" />
             {saving ? 'Processing...' : 'Approve Equipment Assessment'}
           </button>
+        </div>
+      )}
+      
+      {/* Complete Module Button - shows after equipment is approved */}
+      {assessmentStatus === 'approved' && onComplete && canEdit && (
+        <div className="bg-white rounded-lg border p-6 mt-4">
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">
+              Equipment assessment has been approved. Click below to mark this assessment module as complete.
+            </p>
+            <button 
+              onClick={onComplete} 
+              className="w-full px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center justify-center font-medium"
+            >
+              <CheckCircle className="w-5 h-5 mr-2" />
+              Complete Assessment Module
+            </button>
+          </div>
         </div>
       )}
     </div>

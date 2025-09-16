@@ -367,6 +367,24 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
                           moduleId={module.id}
                           traineeId={assignment.user_id}
                           canEdit={!isCompleted}
+                          onComplete={async () => {
+                            'use server';
+                            const supabase = await createSupabaseServer();
+                            const { error } = await supabase
+                              .from("assignment_progress")
+                              .upsert({
+                                assignment_id: assignmentId,
+                                module_id: module.id,
+                                completed_at: new Date().toISOString()
+                              }, {
+                                onConflict: "assignment_id,module_id"
+                              });
+                            if (error) {
+                              console.error("Error marking module complete:", error);
+                            }
+                            // Force page refresh to update progress
+                            redirect(`/app/train-assess/course/${courseId}?trainee=${assignmentId}&type=${sessionType}`);
+                          }}
                         />
                       </div>
                     )}
