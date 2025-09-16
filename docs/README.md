@@ -27,7 +27,7 @@ Create .env.local with:
 NEXT_PUBLIC_SUPABASE_URL=https://YOUR-PROJECT.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=YOUR_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
-NEXT_PUBLIC_SITE_URL=https://your-replit-url.replit.dev
+NEXT_PUBLIC_SITE_URL=https://training.inflite.nz
 
 # Microsoft Authentication (required)
 MICROSOFT_APP_ID=your-app-id

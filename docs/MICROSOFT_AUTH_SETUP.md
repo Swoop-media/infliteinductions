@@ -18,12 +18,12 @@ This guide covers setting up Microsoft Single Sign-On (SSO) authentication for t
 3. Configure:
    - **Name**: `INFLITE LMS`
    - **Supported account types**: `Accounts in this organizational directory only (Single tenant)`
-   - **Redirect URI**: `Web` → `https://your-replit-url.replit.dev/auth/callback`
+   - **Redirect URI**: `Web` → `https://training.inflite.nz/auth/callback`
 
 ### 2. Configure Authentication
 
 1. Go to **Authentication** in your app registration
-2. Add redirect URI: `https://your-replit-url.replit.dev/auth/callback`
+2. Add redirect URI: `https://training.inflite.nz/auth/callback`
 3. Under **Implicit grant and hybrid flows**, enable:
    - ✅ **Access tokens**
    - ✅ **ID tokens**
@@ -100,7 +100,7 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS microsoft_id TEXT;
 ### Common Issues
 
 **"Invalid redirect URI"**
-- Ensure redirect URI in Azure matches exactly: `https://your-replit-url.replit.dev/auth/callback`
+- Ensure redirect URI in Azure matches exactly: `https://training.inflite.nz/auth/callback`
 - Check that your Replit URL is correct in `NEXT_PUBLIC_SITE_URL`
 
 **"User cannot access application"**
