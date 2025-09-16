@@ -101,51 +101,58 @@ export async function POST(
 
     // Verify equipment belongs to this course (using same source as GET route)
     try {
-      // Fetch equipment from module content blocks (same as GET route)
-      const { data: equipmentBlocks, error: equipmentError } = await supabase
-        .from("module_content_blocks")
-        .select(`
-          *,
-          course_modules!inner (
-            course_id
-          )
-        `)
-        .eq("kind", "equipment_form")
-        .eq("course_modules.course_id", courseId);
+      // Fetch equipment using the SAME logic as the GET /equipment route
+      // First try equipment_templates table
+      let { data: equipment, error } = await supabase
+        .from("equipment_templates")
+        .select("*")
+        .eq("course_id", courseId);
       
-      if (equipmentError) {
-        console.error('Equipment validation error:', equipmentError);
-        return NextResponse.json({ error: 'Failed to validate equipment' }, { status: 500 });
-      }
-      
-      // Extract equipment IDs using same logic as GET route
-      const validEquipmentIds: string[] = [];
-      equipmentBlocks?.forEach((block: any) => {
-        if (block.data && Array.isArray(block.data.equipment)) {
-          block.data.equipment.forEach((item: any, index: number) => {
-            let stableId = item.id;
-            if (!stableId) {
-              const nameKey = (item.equipment_name || item.name || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
-              stableId = `${block.id}_${nameKey}` || `${block.id}_item_${index}`;
-            }
-            validEquipmentIds.push(stableId);
-          });
+      // If equipment_templates doesn't exist or is empty, check module_content_blocks
+      if (error?.code === '42P01' || !equipment?.length) {
+        const { data: blocks, error: blocksError } = await supabase
+          .from("module_content_blocks")
+          .select(`
+            *,
+            course_modules!inner (
+              course_id
+            )
+          `)
+          .eq("kind", "equipment_form")
+          .eq("course_modules.course_id", courseId);
+        
+        if (blocksError) {
+          console.error('Equipment validation error:', blocksError);
+          return NextResponse.json({ error: 'Failed to validate equipment' }, { status: 500 });
         }
         
-        // Also check legacy format
-        if (block.data) {
-          const fields = block.data.fields || block.data.items || [];
-          fields.forEach((field: any, index: number) => {
-            if (field.type === 'equipment' || field.equipment_name) {
-              const nameKey = (field.equipment_name || field.name || field.label || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
-              const stableId = field.id || `${block.id}_${nameKey}` || `${block.id}_field_${index}`;
-              validEquipmentIds.push(stableId);
+        // Extract equipment from blocks or use mock data (same as GET route)
+        equipment = [];
+        
+        // If no real data, use the same mock equipment as GET route
+        if (!blocks?.length || !blocks.some(b => b.data?.equipment_templates?.length)) {
+          equipment = [
+            { id: "visual_altimeter_1", equipment_name: "Visual Altimeter" },
+            { id: "audible_altimeter_1", equipment_name: "Audible Altimeter" },
+            { id: "helmet_1", equipment_name: "Helmet" },
+            { id: "jumpsuit_1", equipment_name: "Jumpsuit" },
+            { id: "instructor_cam_1", equipment_name: "Instructor cam glove" },
+            { id: "visual_altimeter_2", equipment_name: "Visual Altimeter" }
+          ];
+        } else {
+          // Extract from blocks if they have equipment_templates
+          blocks?.forEach((block: any) => {
+            if (block.data?.equipment_templates && Array.isArray(block.data.equipment_templates)) {
+              equipment.push(...block.data.equipment_templates);
             }
           });
         }
-      });
+      }
       
+      // Check if the equipment_id is valid
+      const validEquipmentIds = equipment.map((item: any) => item.id);
       const equipmentExists = validEquipmentIds.includes(equipment_id);
+      
       if (!equipmentExists) {
         console.log('Equipment validation failed. Valid IDs:', validEquipmentIds, 'Requested ID:', equipment_id);
         return NextResponse.json({ error: 'Equipment not found for this course' }, { status: 400 });
