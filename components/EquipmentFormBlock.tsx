@@ -35,6 +35,7 @@ export default function EquipmentFormBlock({
   const [isExpanded, setIsExpanded] = useState(true); // Will be set properly after data loads
   const [userExpanded, setUserExpanded] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [userSubmitted, setUserSubmitted] = useState(false); // Track explicit submission
   const previousCompleted = useRef(false);
   const currentCourseId = useRef(courseId);
 
@@ -43,6 +44,7 @@ export default function EquipmentFormBlock({
     if (currentCourseId.current !== courseId) {
       setHasInitialized(false);
       setUserExpanded(false);
+      setUserSubmitted(false);
       previousCompleted.current = false;
       setIsExpanded(true);
       currentCourseId.current = courseId;
@@ -65,9 +67,10 @@ export default function EquipmentFormBlock({
       const completedRequired = requiredItems.filter(item => responses[item.id]?.trim()).length;
       const isFormCompleted = requiredItems.length > 0 && completedRequired === requiredItems.length;
       
-      // Initialize form state based on whether responses exist
+      // Initialize form state - check if user has already submitted
       if (isFormCompleted) {
-        setIsExpanded(false); // Start collapsed if already completed
+        setUserSubmitted(true); // Mark as submitted if already completed
+        setIsExpanded(false); // Start collapsed if already completed and submitted
       } else {
         setIsExpanded(true);  // Start expanded if incomplete
       }
@@ -75,14 +78,15 @@ export default function EquipmentFormBlock({
       previousCompleted.current = isFormCompleted;
       setHasInitialized(true);
     } else if (!preview && bothLoaded && equipment.length > 0 && hasInitialized) {
-      // Handle transitions after initialization
+      // Handle transitions after initialization - but don't auto-collapse
       const requiredItems = equipment.filter(item => item.required);
       const completedRequired = requiredItems.filter(item => responses[item.id]?.trim()).length;
       const isFormCompleted = requiredItems.length > 0 && completedRequired === requiredItems.length;
       
-      // Only collapse on transition from incomplete→complete, and not if user manually expanded
-      if (isFormCompleted && !previousCompleted.current && !userExpanded) {
-        setIsExpanded(false);
+      // Only reset userSubmitted if form becomes incomplete
+      if (!isFormCompleted && userSubmitted) {
+        setUserSubmitted(false);
+        setIsExpanded(true); // Re-expand if form becomes incomplete
       }
       
       // Reset userExpanded flag if form becomes incomplete
@@ -147,6 +151,38 @@ export default function EquipmentFormBlock({
       });
     } catch (error) {
       console.error("Error saving response:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const submitEquipmentForm = async () => {
+    if (preview) return;
+    
+    setSaving(true);
+    try {
+      // Save all responses to ensure they're up to date
+      const savePromises = equipment
+        .filter(item => responses[item.id]?.trim())
+        .map(item => 
+          fetch(`/api/courses/${courseId}/equipment/responses`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              equipment_id: item.id,
+              response_text: responses[item.id] || ''
+            })
+          })
+        );
+      
+      await Promise.all(savePromises);
+      
+      // Mark as submitted and collapse the form
+      setUserSubmitted(true);
+      setIsExpanded(false);
+      
+    } catch (error) {
+      console.error("Error submitting equipment form:", error);
     } finally {
       setSaving(false);
     }
@@ -292,18 +328,41 @@ export default function EquipmentFormBlock({
 
           {!preview && (
             <div className="bg-white rounded-md border border-slate-100 p-4 mt-4">
-              <div className="flex items-center gap-2 text-slate-700">
-                <div className="w-5 h-5">ℹ️</div>
-                <p className="text-sm font-medium">Equipment Information Completed?</p>
-              </div>
-              <p className="text-slate-600 text-sm mt-1">
-                Please fill in details for all required equipment items above. Your responses are automatically saved as you type.
-              </p>
-              {equipment.filter(item => item.required).length > 0 && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600">
-                    Required items completed: {equipment.filter(item => item.required && responses[item.id]?.trim()).length} of {equipment.filter(item => item.required).length}
+              {isFormCompleted && !userSubmitted ? (
+                // Show submit button when form is completed but not submitted
+                <div className="text-center">
+                  <div className="flex items-center justify-center gap-2 text-slate-700 mb-3">
+                    <div className="w-5 h-5">✅</div>
+                    <p className="text-sm font-medium">Ready to Submit Equipment Information</p>
+                  </div>
+                  <p className="text-slate-600 text-sm mb-4">
+                    All required equipment details have been filled. Click submit to finalize your equipment information.
                   </p>
+                  <button
+                    onClick={submitEquipmentForm}
+                    disabled={saving}
+                    className="px-6 py-2 bg-green-600 text-white font-medium rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {saving ? "Submitting..." : "Submit Equipment"}
+                  </button>
+                </div>
+              ) : (
+                // Show progress when form is incomplete
+                <div>
+                  <div className="flex items-center gap-2 text-slate-700">
+                    <div className="w-5 h-5">ℹ️</div>
+                    <p className="text-sm font-medium">Equipment Information Progress</p>
+                  </div>
+                  <p className="text-slate-600 text-sm mt-1">
+                    Please fill in details for all required equipment items above. Your responses are automatically saved as you type.
+                  </p>
+                  {equipment.filter(item => item.required).length > 0 && (
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-600">
+                        Required items completed: {equipment.filter(item => item.required && responses[item.id]?.trim()).length} of {equipment.filter(item => item.required).length}
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
