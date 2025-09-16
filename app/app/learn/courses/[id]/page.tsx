@@ -1139,7 +1139,7 @@ export default async function LearnerCoursePage(props: {
                                 existingDocument={userDocuments?.find(doc => doc.block_id === block.id) || null}
                               />
                             )}
-                          {block.kind === "equipment_form" && (
+                          {block.kind === "equipment_form" && currentModule?.type !== 'onsite_assessment' && (
                             <div key={block.id} className="mb-6">
                               <EquipmentFormBlock
                                 courseId={courseId}
