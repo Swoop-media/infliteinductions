@@ -172,20 +172,30 @@ export default function EquipmentAssessmentView({
       const { data: { user } } = await supabaseBrowser.auth.getUser();
       if (!user) return;
 
-      // Create assessment record with the correct table structure
-      const { error } = await supabaseBrowser
+      // Upsert assessment record (insert or update if exists)
+      const { data, error } = await supabaseBrowser
         .from('equipment_assessments')
-        .insert({
+        .upsert({
           course_id: courseId,
           trainee_id: traineeId,
           assessor_id: user.id,
           status: 'approved',
           assessed_at: new Date().toISOString()
-        });
+        }, {
+          onConflict: 'course_id,trainee_id'
+        })
+        .select()
+        .single();
 
       if (error) {
         console.error('Error approving assessment:', error);
-        alert('Failed to approve assessment');
+        console.error('Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        alert(`Failed to approve assessment: ${error.message || 'Unknown error'}`);
       } else {
         setAssessmentStatus('approved');
         if (onApprove) onApprove();
