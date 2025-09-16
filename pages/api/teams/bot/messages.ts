@@ -24,12 +24,9 @@ function supabaseAdmin() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-// Lazy getter for bot adapter to avoid blocking startup
-function getBotAdapter() {
-  // Import the lazy adapter from our shared module
-  const { getAdapter } = require("../../../lib/teams/botAdapter");
-  return getAdapter();
-}
+// Note: This endpoint uses direct HTTP calls to Teams instead of the Bot Framework adapter
+// to avoid expensive initialization during startup. The adapter is available in lib/teams/botAdapter.ts
+// if needed for other Bot Framework features in the future.
 
 // ---- minimal bot logic to smoke-test replies ----
 async function botLogic(context: TurnContext) {
