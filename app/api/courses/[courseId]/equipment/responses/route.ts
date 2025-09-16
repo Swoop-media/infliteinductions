@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { Database } from '@/lib/types/database';
+import { Database } from '@/lib/supabase/types';
 
 // GET - Load trainee equipment responses for a course
 export async function GET(
@@ -10,8 +10,7 @@ export async function GET(
 ) {
   try {
     const { courseId } = await params;
-    const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
+    const supabase = createRouteHandlerClient<Database>({ cookies });
     const { searchParams } = new URL(request.url);
     const traineeId = searchParams.get('trainee_id');
 
@@ -83,8 +82,7 @@ export async function POST(
 ) {
   try {
     const { courseId } = await params;
-    const cookieStore = await cookies();
-    const supabase = createRouteHandlerClient<Database>({ cookies: () => cookieStore });
+    const supabase = createRouteHandlerClient<Database>({ cookies });
 
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -143,7 +141,7 @@ export async function POST(
           // Extract from blocks if they have equipment_templates
           blocks?.forEach((block: any) => {
             if (block.data?.equipment_templates && Array.isArray(block.data.equipment_templates)) {
-              equipment.push(...block.data.equipment_templates);
+              equipment!.push(...block.data.equipment_templates);
             }
           });
         }

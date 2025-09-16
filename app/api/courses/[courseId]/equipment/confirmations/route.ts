@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { Database } from '@/lib/types/database';
+import { Database } from '@/lib/supabase/types';
 
 // GET - Load assessor confirmations for equipment
 export async function GET(
