@@ -7,10 +7,11 @@ import VideoPlayer from '@/components/VideoPlayer';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import QuizQuestionsBlock from './QuizQuestionsBlock';
+import EquipmentFormBlock from '@/components/EquipmentFormBlock';
 
 export const dynamic = "force-dynamic";
 
-type BlockKind = "rich_text" | "link" | "video_embed" | "file" | "request_document";
+type BlockKind = "rich_text" | "link" | "video_embed" | "file" | "request_document" | "equipment_form";
 
 function escapeHtml(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
@@ -169,6 +170,18 @@ async function BlockView({ block }: { block: any }) {
   if (kind === "request_document") {
     const prompt = String(data.label ?? "Please upload the requested document in the course view.");
     return <p className="text-sm text-gray-700">{prompt}</p>;
+  }
+
+  if (kind === "equipment_form") {
+    return (
+      <div className="rounded-md border border-orange-200 bg-orange-50 p-4">
+        <h4 className="mb-2 font-medium text-orange-900">🔧 Equipment Requirements</h4>
+        <p className="text-sm text-orange-800">{data.title || "Equipment Information"}</p>
+        <p className="mt-2 text-xs text-orange-700">
+          (Full equipment requirements are shown in the course player.)
+        </p>
+      </div>
+    );
   }
 
   return null;
@@ -421,6 +434,14 @@ export default async function LearnerModulePage(props: {
                     label={block.data?.label || "Please upload the requested document."}
                     requireExpiry={!!block.data?.require_expiry}
                     currentUserId={user.id}
+                  />
+                )}
+
+                {block.kind === "equipment_form" && (
+                  <EquipmentFormBlock
+                    courseId={course.id}
+                    blockData={block.data}
+                    preview={preview}
                   />
                 )}
               </div>

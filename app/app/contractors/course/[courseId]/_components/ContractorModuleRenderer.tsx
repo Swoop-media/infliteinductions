@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
+import EquipmentFormBlock from "@/components/EquipmentFormBlock";
 
 interface Module {
   id: string;
@@ -168,6 +169,17 @@ export default function ContractorModuleRenderer({
                 <p className="text-green-700">File not available</p>
               )}
             </div>
+          </div>
+        );
+
+      case "equipment_form":
+        return (
+          <div key={block.id} className="mb-6">
+            <EquipmentFormBlock
+              courseId={module.course_id}
+              blockData={data}
+              preview={false}
+            />
           </div>
         );
 
