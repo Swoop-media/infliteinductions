@@ -42,58 +42,79 @@ export async function GET(
     // Extract equipment items from the data field and flatten them
     const equipment: any[] = [];
     equipmentBlocks?.forEach((block: any) => {
-      if (block.data && Array.isArray(block.data.equipment)) {
-        block.data.equipment.forEach((item: any, index: number) => {
-          // Generate stable ID that doesn't change with reordering
-          let stableId = item.id;
-          if (!stableId) {
-            // Create a stable ID based on equipment name and block
-            const nameKey = (item.equipment_name || item.name || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
-            stableId = `${block.id}_${nameKey}` || `${block.id}_item_${index}`;
-          }
-          
-          equipment.push({
-            id: stableId,
-            equipment_name: item.equipment_name || item.name,
-            description: item.description,
-            category: item.category,
-            required: item.required || false,
-            order_index: item.order_index || index,
-            block_id: block.id
-          });
-        });
-      }
-    });
-    
-    // Also try legacy fallback for equipment that might be stored differently
-    if (equipment.length === 0 && equipmentBlocks?.length > 0) {
-      // Check if equipment data is stored in a different format
-      equipmentBlocks.forEach((block: any) => {
-        if (block.data) {
-          // Check for direct equipment properties
-          const fields = block.data.fields || block.data.items || [];
-          fields.forEach((field: any, index: number) => {
-            if (field.type === 'equipment' || field.equipment_name) {
-              const nameKey = (field.equipment_name || field.name || field.label || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
-              const stableId = field.id || `${block.id}_${nameKey}` || `${block.id}_field_${index}`;
+      if (block.data) {
+        console.log(`🔧 Processing block ${block.id}, data:`, JSON.stringify(block.data, null, 2));
+        
+        // Check multiple possible locations for equipment data
+        const equipmentSources = [
+          block.data.equipment,           // Original expected format
+          block.data.equipment_templates, // Actual format found in logs
+          block.data.items,              // Alternative format
+          block.data.fields              // Another alternative
+        ];
+        
+        equipmentSources.forEach((source, sourceIndex) => {
+          if (Array.isArray(source)) {
+            console.log(`📦 Found equipment source ${sourceIndex} with ${source.length} items`);
+            source.forEach((item: any, index: number) => {
+              // Generate stable ID that doesn't change with reordering
+              let stableId = item.id;
+              if (!stableId) {
+                // Create a stable ID based on equipment name and block
+                const nameKey = (item.equipment_name || item.name || item.label || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+                stableId = `${block.id}_${nameKey}` || `${block.id}_item_${index}`;
+              }
+              
+              console.log(`⚙️ Processing equipment item:`, {
+                id: stableId,
+                name: item.equipment_name || item.name || item.label,
+                required: item.required
+              });
               
               equipment.push({
                 id: stableId,
-                equipment_name: field.equipment_name || field.name || field.label,
-                description: field.description || field.help_text,
-                category: field.category,
-                required: field.required || false,
-                order_index: field.order_index || index,
+                equipment_name: item.equipment_name || item.name || item.label,
+                description: item.description || item.help_text,
+                category: item.category,
+                required: item.required || false,
+                order_index: item.order_index || index,
                 block_id: block.id
               });
-            }
+            });
+          }
+        });
+        
+        // Also check if the block itself contains equipment properties directly
+        if (block.data.equipment_name || block.data.name) {
+          console.log(`🔨 Found direct equipment in block data`);
+          const nameKey = (block.data.equipment_name || block.data.name || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+          const stableId = block.data.id || `${block.id}_${nameKey}` || `${block.id}_direct`;
+          
+          equipment.push({
+            id: stableId,
+            equipment_name: block.data.equipment_name || block.data.name,
+            description: block.data.description,
+            category: block.data.category,
+            required: block.data.required || false,
+            order_index: block.data.order_index || 0,
+            block_id: block.id
           });
         }
-      });
-    }
+      }
+    });
 
     console.log('🎯 Final equipment array:', equipment.length, 'items');
     console.log('📝 Equipment details:', JSON.stringify(equipment, null, 2));
+    
+    // If still no equipment found, let's try to understand the data structure better
+    if (equipment.length === 0) {
+      console.log('🚨 No equipment found! Let me analyze the block data structure:');
+      equipmentBlocks?.forEach((block, i) => {
+        console.log(`Block ${i + 1} (${block.id}):`);  
+        console.log('- Data keys:', Object.keys(block.data || {}));
+        console.log('- Full data:', JSON.stringify(block.data, null, 2));
+      });
+    }
     
     return NextResponse.json(equipment || []);
   } catch (error) {
