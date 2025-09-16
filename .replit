@@ -11,7 +11,7 @@ packages = ["freetype", "lcms2", "libimagequant", "libjpeg", "libtiff", "libwebp
 NEXT_TELEMETRY_DISABLED = "1"
 
 [deployment]
-build = ["npm", "run"]
+build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
 deploymentTarget = "autoscale"
 
