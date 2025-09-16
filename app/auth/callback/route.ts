@@ -108,7 +108,8 @@ export async function GET(req: NextRequest) {
             });
             
             if (manualError) {
-              throw new Error(`Could not create or find user: ${manualError.message}`);
+              console.error('User creation error:', manualError);
+              throw new Error('Could not create or find user');
             }
             
             userId = manualUser.user.id;
