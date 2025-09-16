@@ -1,6 +1,6 @@
 // pages/api/teams/bot/messages.ts
 import type { NextApiRequest, NextApiResponse } from "next";
-import { TurnContext, ConfigurationServiceClientCredentialFactory, ConfigurationBotFrameworkAuthentication, CloudAdapter } from "botbuilder";
+import { TurnContext } from "botbuilder";
 import { createClient } from "@supabase/supabase-js";
 
 export const config = {
@@ -24,43 +24,12 @@ function supabaseAdmin() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-// Re-enable authentication with correct SingleTenant configuration
-const settings = {
-  MicrosoftAppType,
-  MicrosoftAppId,
-  MicrosoftAppPassword,
-  MicrosoftAppTenantId,
-
-  // Use botframework.com tenant for token acquisition (this is correct for bots)
-  ToChannelFromBotLoginUrl: "https://login.microsoftonline.com/botframework.com/oauth2/v2.0/token",
-  ToChannelFromBotOAuthScope: "https://api.botframework.com/.default",
-
-  // Accept tokens from Bot Framework AND your tenant
-  ValidTokenIssuers: [
-    "https://api.botframework.com",
-    "https://sts.windows.net/72f988bf-86f1-41af-91ab-2d7cd011db47/", // Microsoft tenant
-    "https://login.microsoftonline.com/72f988bf-86f1-41af-91ab-2d7cd011db47/v2.0", // Microsoft tenant
-    `https://sts.windows.net/${MicrosoftAppTenantId}/`, // Your tenant
-    `https://login.microsoftonline.com/${MicrosoftAppTenantId}/v2.0`, // Your tenant
-  ],
-
-  AuthenticationDisabled: true,
-};
-
-const creds = new ConfigurationServiceClientCredentialFactory({
-  MicrosoftAppId,
-  MicrosoftAppPassword,
-  MicrosoftAppTenantId,
-});
-
-const auth = new ConfigurationBotFrameworkAuthentication(settings as any, creds);
-const adapter = new CloudAdapter(auth);
-
-// Helpful: if a turn throws, you still see a reply + logs
-adapter.onTurnError = async (context, error) => {
-  console.error("Bot unhandled error:", error);
-  try { await context.sendActivity("Sorry — something went wrong handling that message."); } catch {}
-};
+// Lazy getter for bot adapter to avoid blocking startup
+function getBotAdapter() {
+  // Import the lazy adapter from our shared module
+  const { getAdapter } = require("../../../lib/teams/botAdapter");
+  return getAdapter();
+}
 
 // ---- minimal bot logic to smoke-test replies ----
 async function botLogic(context: TurnContext) {
