@@ -1,0 +1,55 @@
+react-dom-client.development.js:25581 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 3029ms
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 1978ms
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 356ms
+report-hmr-latency.ts:26 [Fast Refresh] done in 870ms
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 775ms
+page.tsx:30  Server  Current user: 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+page.tsx:39  Server  Trainer course IDs: Array(12)
+page.tsx:61  Server  Trainee assignments query error: null
+page.tsx:62  Server  Trainee assignments found: 7
+page.tsx:63  Server  Trainee assignments data: Array(7)
+page.tsx:156  Server  Final pending training items: 0
+page.tsx:157  Server  Final pending assessment items: 2
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 1524ms
+page.tsx:78  Server  Course page params: Object
+page.tsx:92  Server  ✅ Assignment ID found: 51b28237-c4ea-4b0f-b82f-8b864e4500bd
+page.tsx:101  Server  Course query result: Object
+page.tsx:128  Server  Assignment query result: Object
+page.tsx:140  Server  ✅ Assignment found: 51b28237-c4ea-4b0f-b82f-8b864e4500bd
+page.tsx:150  Server  Trainer assignments query result: Object
+page.tsx:158  Server  ✅ Trainer assignments verified: Array(2)
+page.tsx?139:171  Server  ✅ User has required role 'onsite_assessor' for session type 'assessment'
+page.tsx:78  Server  Course page params: Object
+page.tsx:92  Server  ✅ Assignment ID found: 51b28237-c4ea-4b0f-b82f-8b864e4500bd
+page.tsx:101  Server  Course query result: Object
+page.tsx:128  Server  Assignment query result: Object
+page.tsx:140  Server  ✅ Assignment found: 51b28237-c4ea-4b0f-b82f-8b864e4500bd
+page.tsx:150  Server  Trainer assignments query result: Object
+page.tsx:158  Server  ✅ Trainer assignments verified: Array(2)
+page.tsx?139:171  Server  ✅ User has required role 'onsite_assessor' for session type 'assessment'
+page.tsx:78  Server  Course page params: Object
+page.tsx:92  Server  ✅ Assignment ID found: 51b28237-c4ea-4b0f-b82f-8b864e4500bd
+page.tsx:101  Server  Course query result: Object
+page.tsx:128  Server  Assignment query result: Object
+page.tsx:140  Server  ✅ Assignment found: 51b28237-c4ea-4b0f-b82f-8b864e4500bd
+page.tsx:150  Server  Trainer assignments query result: Object
+page.tsx:158  Server  ✅ Trainer assignments verified: Array(2)
+page.tsx?139:171  Server  ✅ User has required role 'onsite_assessor' for session type 'assessment'
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 904ms
+/api/courses/adceacac-dac5-4c1d-8d47-3a0f2df8b3b7/complete:1   Failed to load resource: the server responded with a status of 403 (Forbidden)
+intercept-console-error.js:62  Failed to complete course: Error: Not authorized to complete this course
+    at handleCompleteCourse (CompleteCourseButton.tsx:48:15)
+error @ intercept-console-error.js:62
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again

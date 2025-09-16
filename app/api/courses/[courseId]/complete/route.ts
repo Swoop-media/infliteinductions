@@ -22,16 +22,15 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify the user is an assessor for this course
-    const { data: assessorRole } = await supabase
+    // Verify the user is an assessor for this course (user may have multiple roles)
+    const { data: assessorRoles } = await supabase
       .from("course_assignments")
       .select("role")
       .eq("user_id", user.id)
       .eq("course_id", courseId)
-      .in("role", ["onsite_assessor", "onsite_trainer", "trainer", "assessor"])
-      .single();
+      .in("role", ["onsite_assessor", "onsite_trainer", "trainer", "assessor"]);
 
-    if (!assessorRole) {
+    if (!assessorRoles || assessorRoles.length === 0) {
       return NextResponse.json({ error: "Not authorized to complete this course" }, { status: 403 });
     }
 
