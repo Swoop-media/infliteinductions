@@ -108,7 +108,7 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   // Get trainee assignment (without profile for now)
   const { data: assignment, error: assignmentError } = await supabase
     .from("course_assignments")
-    .select("id, user_id, course_id, status")
+    .select("id, user_id, course_id, assignment_status")
     .eq("id", assignmentId)
     .eq("course_id", courseId)
     .eq("role", "trainee")
@@ -418,7 +418,7 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
               {sessionType === 'training' && ' They are now ready for onsite assessment.'}
             </p>
             <div className="flex gap-3 mt-4">
-              {sessionType === 'assessment' && assignment.status !== 'completed' && (
+              {sessionType === 'assessment' && assignment.assignment_status !== 'completed' && (
                 <CompleteCourseButton 
                   courseId={courseId}
                   assignmentId={assignmentId}
@@ -431,7 +431,7 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
                 </Button>
               </Link>
             </div>
-            {assignment.status === 'completed' && (
+            {assignment.assignment_status === 'completed' && (
               <div className="mt-4 p-3 bg-green-100 rounded-lg">
                 <p className="text-sm text-green-800 font-medium">
                   ✅ Course marked as completed
