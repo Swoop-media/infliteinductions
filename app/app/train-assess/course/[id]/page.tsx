@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import { CheckCircle, Circle, User, BookOpen, ClipboardCheck, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import InteractiveRequirements from "./InteractiveRequirements";
+import EquipmentAssessmentView from "@/components/EquipmentAssessmentView";
 
 async function saveRequirementResponses(moduleId: string, assignmentId: string, responses: Record<string, any>) {
   "use server";
@@ -170,7 +171,7 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   const moduleType = sessionType === 'training' ? 'onsite_training' : 'onsite_assessment';
   const { data: modules } = await supabase
     .from("course_modules")
-    .select("*")
+    .select("*, include_equipment_assessment")
     .eq("course_id", courseId)
     .eq("type", moduleType)
     .order("order_index");
@@ -357,8 +358,19 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
                       />
                     )}
 
+                    {/* Equipment Assessment Section - Only show for assessment modules with equipment assessment enabled */}
+                    {sessionType === 'assessment' && module.include_equipment_assessment && (
+                      <div className="p-4 border-t">
+                        <EquipmentAssessmentView
+                          courseId={courseId}
+                          traineeId={assignment.user_id}
+                          canEdit={!isCompleted}
+                        />
+                      </div>
+                    )}
+
                     {/* No Requirements Message */}
-                    {moduleRequirements.length === 0 && !isCompleted && (
+                    {moduleRequirements.length === 0 && !isCompleted && !module.include_equipment_assessment && (
                       <div className="p-4 text-center text-muted-foreground">
                         <p className="text-sm">No specific requirements configured for this module.</p>
                         <p className="text-xs mt-1">Use the "Complete Training" button when finished.</p>

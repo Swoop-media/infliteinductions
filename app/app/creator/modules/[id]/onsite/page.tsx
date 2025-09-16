@@ -67,7 +67,7 @@ async function loadData(moduleId: string) {
   // Module
   const { data: mod, error: modErr } = await supabase
     .from("course_modules")
-    .select("id, course_id, type, title, created_at")
+    .select("id, course_id, type, title, created_at, include_equipment_assessment")
     .eq("id", moduleId)
     .maybeSingle();
 
@@ -78,6 +78,7 @@ async function loadData(moduleId: string) {
       trainerReqs: [] as Requirement[],
       assessorReqs: [] as Requirement[],
       nextFor: { trainer: 0, assessor: 0 } as { trainer: number; assessor: number },
+      hasEquipmentModule: false,
       err: modErr?.message ?? "Module not found",
     };
   }
@@ -89,9 +90,25 @@ async function loadData(moduleId: string) {
       trainerReqs: [],
       assessorReqs: [],
       nextFor: { trainer: 0, assessor: 0 },
+      hasEquipmentModule: false,
       err: "This page is only for onsite modules.",
     };
   }
+
+  // Check if this course has equipment modules
+  const { data: equipmentModules } = await supabase
+    .from("module_content_blocks")
+    .select("id, module_id")
+    .eq("kind", "equipment_form")
+    .in("module_id", 
+      await supabase
+        .from("course_modules")
+        .select("id")
+        .eq("course_id", mod.course_id)
+        .then(result => result.data?.map(m => m.id) || [])
+    );
+  
+  const hasEquipmentModule = equipmentModules && equipmentModules.length > 0;
 
   // Learners (trainees) assigned to this course
   const { data: traineeIdsRows, error: trErr } = await supabase
@@ -101,7 +118,7 @@ async function loadData(moduleId: string) {
     .eq("role", "trainee");
 
   if (trErr) {
-    return { mod, learners: [], trainerReqs: [], assessorReqs: [], nextFor: { trainer: 0, assessor: 0 }, err: trErr.message };
+    return { mod, learners: [], trainerReqs: [], assessorReqs: [], nextFor: { trainer: 0, assessor: 0 }, hasEquipmentModule, err: trErr.message };
   }
 
   const traineeIds = (traineeIdsRows ?? []).map((r) => r.user_id);
@@ -113,7 +130,7 @@ async function loadData(moduleId: string) {
       .in("id", traineeIds);
 
     if (pErr) {
-      return { mod, learners: [], trainerReqs: [], assessorReqs: [], nextFor: { trainer: 0, assessor: 0 }, err: pErr.message };
+      return { mod, learners: [], trainerReqs: [], assessorReqs: [], nextFor: { trainer: 0, assessor: 0 }, hasEquipmentModule, err: pErr.message };
     }
     learners = (profs ?? []).sort((a, b) =>
       (a.full_name ?? "").localeCompare(b.full_name ?? "", undefined, { sensitivity: "base" })
@@ -129,34 +146,30 @@ async function loadData(moduleId: string) {
     .order("created_at", { ascending: true });
 
   if (rErr) {
-    return { mod, learners, trainerReqs: [], assessorReqs: [], nextFor: { trainer: 0, assessor: 0 }, err: rErr.message };
+    return { mod, learners, trainerReqs: [], assessorReqs: [], nextFor: { trainer: 0, assessor: 0 }, hasEquipmentModule, err: rErr.message };
   }
 
-  const all = (reqs ?? []) as Requirement[];
-  const trainerReqs = all.filter((r) => r.role === "onsite_trainer" || r.role === "trainer");
-  const assessorReqs = all.filter((r) => r.role === "onsite_assessor" || r.role === "assessor");
+  const trainerReqs = (reqs ?? []).filter((r) => r.role === "onsite_trainer" || r.role === "trainer");
+  const assessorReqs = (reqs ?? []).filter((r) => r.role === "onsite_assessor" || r.role === "assessor");
 
-  // Compute "next order index" suggestion for each role
-  const nextFor = { trainer: 0, assessor: 0 };
-  for (const r of all) {
-    const key = (r.role === "onsite_assessor" || r.role === "assessor") ? "assessor" : "trainer";
-    const oi = r.order_index ?? 0;
-    if (oi >= nextFor[key]) nextFor[key] = oi + 1;
-  }
+  // Next order_index for each role
+  const maxTrainer = Math.max(...trainerReqs.map((r) => r.order_index ?? 0), -1);
+  const maxAssessor = Math.max(...assessorReqs.map((r) => r.order_index ?? 0), -1);
+  const nextFor = {
+    trainer: maxTrainer + 1,
+    assessor: maxAssessor + 1,
+  };
 
-  return { mod, learners, trainerReqs, assessorReqs, nextFor, err: null as string | null };
+  return { mod, learners, trainerReqs, assessorReqs, nextFor, hasEquipmentModule, err: null };
 }
 
-// -----------------------------
-// Actions
-// -----------------------------
+/** Save module title */
 async function saveTitleAction(formData: FormData) {
   "use server";
   const supabase = await createSupabaseServer();
 
   const moduleId = String(formData.get("module_id") || "");
-  const title = String(formData.get("title") || "").trim().slice(0, 200);
-  if (!moduleId) throw new Error("Missing module_id");
+  const title = String(formData.get("title") || "");
 
   const { error } = await supabase
     .from("course_modules")
@@ -167,6 +180,25 @@ async function saveTitleAction(formData: FormData) {
 
   revalidatePath(`/app/creator/modules/${moduleId}/onsite`);
   redirect(`/app/creator/modules/${moduleId}/onsite?ok=title_saved`);
+}
+
+/** Toggle equipment assessment */
+async function toggleEquipmentAssessmentAction(formData: FormData) {
+  "use server";
+  const supabase = await createSupabaseServer();
+
+  const moduleId = String(formData.get("module_id") || "");
+  const includeEquipment = formData.get("include_equipment") === "on";
+
+  const { error } = await supabase
+    .from("course_modules")
+    .update({ include_equipment_assessment: includeEquipment })
+    .eq("id", moduleId);
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/app/creator/modules/${moduleId}/onsite`);
+  redirect(`/app/creator/modules/${moduleId}/onsite?ok=equipment_assessment_updated`);
 }
 
 /** Add requirement, auto-choosing order_index per (module_id, role) if blank or collides */
@@ -239,35 +271,27 @@ async function addRequirementAction(formData: FormData) {
     help_text: helpText || null,
   });
 
-  if (error) {
-    // make the frequent unique error friendly
-    if (error.code === "23505") {
-      throw new Error("That order slot is already used. We placed it at the end for you. Try again.");
-    }
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   revalidatePath(`/app/creator/modules/${moduleId}/onsite`);
   redirect(`/app/creator/modules/${moduleId}/onsite?ok=requirement_saved`);
 }
 
-/** Update existing requirement */
+/** Update a requirement (retaining order_index so no collision) */
 async function updateRequirementAction(formData: FormData) {
   "use server";
   const supabase = await createSupabaseServer();
 
   const requirementId = String(formData.get("requirement_id") || "");
-  const moduleId = String(formData.get("module_id") || "");
   const label = String(formData.get("label") || "").trim();
   const fieldType = String(formData.get("field_type") || "checkbox");
   const optionsRaw = String(formData.get("options") || "").trim();
   const required = String(formData.get("required") || "yes").toLowerCase() === "yes";
-  const orderRaw = String(formData.get("order_index") || "").trim();
   const helpText = String(formData.get("help_text") || "").trim();
+  const moduleId = String(formData.get("module_id") || "");
 
-  if (!requirementId || !moduleId || !label) throw new Error("Missing fields");
+  if (!requirementId || !label) throw new Error("Missing fields");
 
-  // Parse options
   let options: any = [];
   if (optionsRaw.length > 0) {
     try {
@@ -278,23 +302,15 @@ async function updateRequirementAction(formData: FormData) {
     }
   }
 
-  // Build update object - only include order_index if a valid value is provided
-  const updateData: any = {
-    label,
-    field_type: fieldType,
-    options,
-    required,
-    help_text: helpText || null,
-  };
-
-  // Only update order_index if a valid number is provided
-  if (orderRaw !== "" && Number.isFinite(Number(orderRaw))) {
-    updateData.order_index = Number(orderRaw);
-  }
-
   const { error } = await supabase
     .from("onsite_requirements")
-    .update(updateData)
+    .update({
+      label,
+      field_type: fieldType,
+      options,
+      required,
+      help_text: helpText || null,
+    })
     .eq("id", requirementId);
 
   if (error) throw new Error(error.message);
@@ -310,8 +326,6 @@ async function deleteRequirementAction(formData: FormData) {
 
   const requirementId = String(formData.get("requirement_id") || "");
   const moduleId = String(formData.get("module_id") || "");
-
-  if (!requirementId || !moduleId) throw new Error("Missing fields");
 
   const { error } = await supabase
     .from("onsite_requirements")
@@ -378,7 +392,7 @@ export default async function OnsiteModulePage(props: {
   const ok = firstParam(sp, "ok");
   const errParam = firstParam(sp, "error");
 
-  const { mod, learners, trainerReqs, assessorReqs, nextFor, err } = await loadData(moduleId);
+  const { mod, learners, trainerReqs, assessorReqs, nextFor, hasEquipmentModule, err } = await loadData(moduleId);
 
   if (err || !mod) {
     return (
@@ -437,6 +451,7 @@ export default async function OnsiteModulePage(props: {
               {ok === "requirement_updated" && "Requirement updated successfully."}
               {ok === "requirement_deleted" && "Requirement deleted successfully."}
               {ok === "requirements_reordered" && "Requirements reordered successfully."}
+              {ok === "equipment_assessment_updated" && "Equipment assessment setting updated successfully."}
             </div>
           </div>
         )}
@@ -474,6 +489,40 @@ export default async function OnsiteModulePage(props: {
           </form>
           <p className="text-xs text-gray-500 mt-2">ID: {mod.id}</p>
         </div>
+
+        {/* Equipment Assessment Option - Only show for onsite_assessment modules when equipment modules exist */}
+        {mod.type === "onsite_assessment" && hasEquipmentModule && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Equipment Assessment</h2>
+            <form action={toggleEquipmentAssessmentAction} className="space-y-4">
+              <input type="hidden" name="module_id" value={mod.id} />
+              
+              <div className="flex items-start">
+                <div className="flex items-center h-5">
+                  <input
+                    id="include_equipment"
+                    name="include_equipment"
+                    type="checkbox"
+                    defaultChecked={mod.include_equipment_assessment}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                </div>
+                <div className="ml-3">
+                  <label htmlFor="include_equipment" className="font-medium text-gray-700 cursor-pointer">
+                    Include Equipment Assessment
+                  </label>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Allow assessors to review and approve trainee equipment submissions during this assessment.
+                  </p>
+                </div>
+              </div>
+              
+              <button className="rounded-lg bg-green-600 px-4 py-2 text-white font-medium hover:bg-green-700 transition-colors">
+                Update Setting
+              </button>
+            </form>
+          </div>
+        )}
 
         {/* Main content area */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -573,6 +622,14 @@ export default async function OnsiteModulePage(props: {
               <p className="text-gray-600">Requirements</p>
               <p className="text-2xl font-bold text-blue-600">{trainerReqs.length}</p>
             </div>
+            {mod.type === "onsite_assessment" && hasEquipmentModule && (
+              <div className="bg-white rounded-lg p-3">
+                <p className="text-gray-600">Equipment Assessment</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {mod.include_equipment_assessment ? "Enabled" : "Disabled"}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
