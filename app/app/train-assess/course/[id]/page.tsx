@@ -10,6 +10,7 @@ import { CheckCircle, Circle, User, BookOpen, ClipboardCheck, ArrowLeft } from "
 import Link from "next/link";
 import InteractiveRequirements from "./InteractiveRequirements";
 import EquipmentAssessmentView from "@/components/EquipmentAssessmentView";
+import CompleteCourseButton from "./CompleteCourseButton";
 
 async function saveRequirementResponses(moduleId: string, assignmentId: string, responses: Record<string, any>) {
   "use server";
@@ -107,7 +108,7 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   // Get trainee assignment (without profile for now)
   const { data: assignment, error: assignmentError } = await supabase
     .from("course_assignments")
-    .select("id, user_id, course_id")
+    .select("id, user_id, course_id, status")
     .eq("id", assignmentId)
     .eq("course_id", courseId)
     .eq("role", "trainee")
@@ -389,16 +390,36 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
       {progressPercentage === 100 && (
         <Card className="border-green-200 bg-green-50">
           <CardHeader>
-            <CardTitle className="text-green-800">Session Complete!</CardTitle>
+            <CardTitle className="text-green-800">
+              {sessionType === 'assessment' ? 'Assessment Complete!' : 'Training Complete!'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-green-700">
               {traineeName} has successfully completed all {sessionType} modules for "{course.title}".
               {sessionType === 'training' && ' They are now ready for onsite assessment.'}
             </p>
-            <Link href="/app/train-assess" className="mt-4 inline-block">
-              <Button>Return to Train & Assess Dashboard</Button>
-            </Link>
+            <div className="flex gap-3 mt-4">
+              {sessionType === 'assessment' && assignment.status !== 'completed' && (
+                <CompleteCourseButton 
+                  courseId={courseId}
+                  assignmentId={assignmentId}
+                  traineeName={traineeName}
+                />
+              )}
+              <Link href="/app/train-assess">
+                <Button variant={sessionType === 'assessment' ? 'outline' : 'default'}>
+                  Return to Train & Assess Dashboard
+                </Button>
+              </Link>
+            </div>
+            {assignment.status === 'completed' && (
+              <div className="mt-4 p-3 bg-green-100 rounded-lg">
+                <p className="text-sm text-green-800 font-medium">
+                  ✅ Course marked as completed
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
