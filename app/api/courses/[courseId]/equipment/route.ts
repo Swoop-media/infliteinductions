@@ -16,6 +16,8 @@ export async function GET(
     const supabase = await createSupabaseServer();
     
     // Fetch equipment requirements from module content blocks
+    console.log('🔍 Fetching equipment for course:', courseId);
+    
     const { data: equipmentBlocks, error } = await supabase
       .from("module_content_blocks")
       .select(`
@@ -29,8 +31,11 @@ export async function GET(
       .eq("course_modules.course_id", courseId)
       .order("order_index", { ascending: true });
     
+    console.log('📊 Equipment blocks found:', equipmentBlocks?.length || 0);
+    console.log('📋 Equipment blocks data:', JSON.stringify(equipmentBlocks, null, 2));
+    
     if (error) {
-      console.error("Error fetching equipment blocks:", error);
+      console.error("❌ Error fetching equipment blocks:", error);
       return NextResponse.json({ error: "Failed to fetch equipment" }, { status: 500 });
     }
     
@@ -87,6 +92,9 @@ export async function GET(
       });
     }
 
+    console.log('🎯 Final equipment array:', equipment.length, 'items');
+    console.log('📝 Equipment details:', JSON.stringify(equipment, null, 2));
+    
     return NextResponse.json(equipment || []);
   } catch (error) {
     console.error("API Error:", error);
