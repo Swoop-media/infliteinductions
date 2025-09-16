@@ -11,6 +11,11 @@ interface EquipmentRequirement {
   order_index: number;
 }
 
+interface TraineeResponse {
+  equipment_id: string;
+  response_text: string;
+}
+
 interface EquipmentFormBlockProps {
   courseId: string;
   blockData: any;
@@ -23,11 +28,16 @@ export default function EquipmentFormBlock({
   preview = false 
 }: EquipmentFormBlockProps) {
   const [equipment, setEquipment] = useState<EquipmentRequirement[]>([]);
+  const [responses, setResponses] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadEquipmentRequirements();
-  }, [courseId]);
+    if (!preview) {
+      loadTraineeResponses();
+    }
+  }, [courseId, preview]);
 
   const loadEquipmentRequirements = async () => {
     try {
@@ -40,6 +50,46 @@ export default function EquipmentFormBlock({
       console.error("Error loading equipment requirements:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadTraineeResponses = async () => {
+    try {
+      const response = await fetch(`/api/courses/${courseId}/equipment/responses`);
+      if (response.ok) {
+        const data = await response.json();
+        const responseMap: Record<string, string> = {};
+        data.forEach((resp: any) => {
+          responseMap[resp.equipment_id] = resp.response_text || '';
+        });
+        setResponses(responseMap);
+      }
+    } catch (error) {
+      console.error("Error loading trainee responses:", error);
+    }
+  };
+
+  const handleResponseChange = (equipmentId: string, value: string) => {
+    setResponses(prev => ({ ...prev, [equipmentId]: value }));
+  };
+
+  const saveResponse = async (equipmentId: string) => {
+    if (preview) return;
+    
+    setSaving(true);
+    try {
+      await fetch(`/api/courses/${courseId}/equipment/responses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          equipment_id: equipmentId,
+          response_text: responses[equipmentId] || ''
+        })
+      });
+    } catch (error) {
+      console.error("Error saving response:", error);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -85,12 +135,12 @@ export default function EquipmentFormBlock({
             Please ensure you have the following equipment before starting:
           </p>
           
-          <div className="space-y-3">
+          <div className="space-y-4">
             {equipment
               .sort((a, b) => (a.order_index || 0) - (b.order_index || 0))
               .map((item) => (
                 <div key={item.id} className="bg-white rounded-md border border-orange-100 p-4">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <h4 className="font-medium text-gray-900">{item.equipment_name}</h4>
@@ -106,13 +156,33 @@ export default function EquipmentFormBlock({
                         )}
                       </div>
                       {item.description && (
-                        <p className="text-gray-600 text-sm">{item.description}</p>
+                        <p className="text-gray-600 text-sm mb-2">{item.description}</p>
                       )}
                     </div>
                     <div className="text-2xl">
-                      {item.required ? "✅" : "➡️"}
+                      {responses[item.id] ? "✅" : (item.required ? "❗" : "➡️")}
                     </div>
                   </div>
+                  
+                  {!preview && (
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Provide details about your {item.equipment_name.toLowerCase()}:
+                      </label>
+                      <textarea
+                        value={responses[item.id] || ''}
+                        onChange={(e) => handleResponseChange(item.id, e.target.value)}
+                        onBlur={() => saveResponse(item.id)}
+                        placeholder={item.description ? `${item.description}` : `Describe your ${item.equipment_name.toLowerCase()}...`}
+                        className="w-full p-3 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        rows={3}
+                        disabled={saving}
+                      />
+                      {saving && (
+                        <p className="text-xs text-gray-500">Saving...</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
           </div>
@@ -121,11 +191,18 @@ export default function EquipmentFormBlock({
             <div className="bg-white rounded-md border border-orange-100 p-4 mt-4">
               <div className="flex items-center gap-2 text-orange-700">
                 <div className="w-5 h-5">ℹ️</div>
-                <p className="text-sm font-medium">Ready to proceed?</p>
+                <p className="text-sm font-medium">Equipment Information Completed?</p>
               </div>
               <p className="text-orange-600 text-sm mt-1">
-                Make sure you have all required equipment before continuing with the training.
+                Please fill in details for all required equipment items above. Your responses are automatically saved as you type.
               </p>
+              {equipment.filter(item => item.required).length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-600">
+                    Required items completed: {equipment.filter(item => item.required && responses[item.id]?.trim()).length} of {equipment.filter(item => item.required).length}
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
