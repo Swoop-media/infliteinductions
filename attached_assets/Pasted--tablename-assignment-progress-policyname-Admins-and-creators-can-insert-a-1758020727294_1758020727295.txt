@@ -1,0 +1,87 @@
+[
+  {
+    "tablename": "assignment_progress",
+    "policyname": "Admins and creators can insert all assignment progress",
+    "cmd": "INSERT"
+  },
+  {
+    "tablename": "assignment_progress",
+    "policyname": "Admins and creators can update all assignment progress",
+    "cmd": "UPDATE"
+  },
+  {
+    "tablename": "assignment_progress",
+    "policyname": "Admins and creators can view all assignment progress",
+    "cmd": "SELECT"
+  },
+  {
+    "tablename": "assignment_progress",
+    "policyname": "Users can insert their own assignment progress",
+    "cmd": "INSERT"
+  },
+  {
+    "tablename": "assignment_progress",
+    "policyname": "Users can update their own assignment progress",
+    "cmd": "UPDATE"
+  },
+  {
+    "tablename": "assignment_progress",
+    "policyname": "Users can view their own assignment progress",
+    "cmd": "SELECT"
+  },
+  {
+    "tablename": "course_assignments",
+    "policyname": "ca_read_manage_course",
+    "cmd": "SELECT"
+  },
+  {
+    "tablename": "course_assignments",
+    "policyname": "ca_read_own",
+    "cmd": "SELECT"
+  },
+  {
+    "tablename": "course_assignments",
+    "policyname": "ca_write_manage_course",
+    "cmd": "ALL"
+  },
+  {
+    "tablename": "course_assignments",
+    "policyname": "course_assignments delete",
+    "cmd": "DELETE"
+  },
+  {
+    "tablename": "course_assignments",
+    "policyname": "course_assignments insert",
+    "cmd": "INSERT"
+  },
+  {
+    "tablename": "course_assignments",
+    "policyname": "course_assignments read",
+    "cmd": "SELECT"
+  },
+  {
+    "tablename": "course_assignments",
+    "policyname": "course_assignments update",
+    "cmd": "UPDATE"
+  },
+  {
+    "tablename": "course_assignments",
+    "policyname": "course_assignments_delete",
+    "cmd": "DELETE"
+  },
+  {
+    "tablename": "course_assignments",
+    "policyname": "course_assignments_insert",
+    "cmd": "INSERT"
+  },
+  {
+    "tablename": "course_assignments",
+    "policyname": "course_assignments_select",
+    "cmd": "SELECT"
+  },
+  {
+    "tablename": "course_assignments",
+    "policyname": "course_assignments_update",
+    "cmd": "UPDATE"
+  }
+]
