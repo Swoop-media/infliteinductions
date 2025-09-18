@@ -158,8 +158,10 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   console.log("✅ Trainer assignments verified:", userRoles);
 
   // Check if user has the right role for this session type
-  const requiredRole = sessionType === 'training' ? 'onsite_trainer' : 'onsite_assessor';
-  const hasRequiredRole = userRoles.includes(requiredRole);
+  const requiredRole = sessionType === 'training' ? 'trainer' : 'assessor';
+  const hasRequiredRole = sessionType === 'training' 
+    ? userRoles.includes('onsite_trainer')
+    : userRoles.includes('onsite_assessor');
   
   if (!hasRequiredRole) {
     console.log(`❌ User doesn't have required role '${requiredRole}' for session type '${sessionType}'`);

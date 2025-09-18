@@ -217,8 +217,8 @@ async function addRequirementAction(formData: FormData) {
 
   if (!moduleId || !label) throw new Error("Missing fields");
 
-  // Normalise role to DB convention
-  const role = roleRaw === "assessor" || roleRaw === "onsite_assessor" ? "onsite_assessor" : "onsite_trainer";
+  // Normalise role to DB convention - use simpler names that match the filtering logic
+  const role = roleRaw === "assessor" || roleRaw === "onsite_assessor" ? "assessor" : "trainer";
 
   // options NOT NULL -> always an array
   let options: any = [];
