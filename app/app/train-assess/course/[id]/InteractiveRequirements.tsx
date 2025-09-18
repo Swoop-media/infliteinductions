@@ -251,6 +251,43 @@ export default function InteractiveRequirements({
           </div>
         );
 
+      case 'pass_fail':
+        return (
+          <div className="mt-3">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => updateResponse(req.id, 'pass')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  responses[req.id] === 'pass'
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Pass ✓
+              </button>
+              <button
+                type="button"
+                onClick={() => updateResponse(req.id, 'fail')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  responses[req.id] === 'fail'
+                    ? 'bg-red-600 text-white' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Fail ✗
+              </button>
+              {responses[req.id] && (
+                <span className={`text-sm font-medium ${
+                  responses[req.id] === 'pass' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {responses[req.id] === 'pass' ? 'Pass selected' : 'Fail selected'}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="mt-3">
@@ -285,6 +322,7 @@ export default function InteractiveRequirements({
     .every(req => {
       const response = responses[req.id];
       if (req.field_type === 'checkbox') return response === true;
+      if (req.field_type === 'pass_fail') return response === 'pass' || response === 'fail';
       return response !== undefined && response !== null && response !== '';
     });
 

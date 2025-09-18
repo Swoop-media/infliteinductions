@@ -549,6 +549,7 @@ export default async function OnsiteModulePage(props: {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Field Type</label>
                 <select name="field_type" defaultValue="checkbox" className="w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20 transition-colors">
                   <option value="checkbox">Checkbox</option>
+                  <option value="pass_fail">Pass/Fail</option>
                   <option value="select">Select</option>
                   <option value="text">Text</option>
                   <option value="date">Date</option>

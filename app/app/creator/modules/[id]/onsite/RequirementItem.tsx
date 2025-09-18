@@ -80,6 +80,7 @@ export default function RequirementItem({
               <label className="block text-sm font-medium text-gray-700 mb-1">Field type</label>
               <select name="field_type" defaultValue={r.field_type || "checkbox"} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:ring-opacity-20">
                 <option value="checkbox">Checkbox</option>
+                <option value="pass_fail">Pass/Fail</option>
                 <option value="select">Select</option>
                 <option value="text">Text</option>
                 <option value="date">Date</option>
