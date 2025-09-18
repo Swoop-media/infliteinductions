@@ -29,11 +29,15 @@ export async function sendTeamsDMToAppUser(appUserId: string, text: string) {
     name: profile?.full_name
   });
   
-  const { data, error } = await sb
+  // Handle potential duplicate Teams links by getting the most recent one
+  const { data: links, error } = await sb
     .from("teams_links")
-    .select("conversation_ref, teams_user_id, aad_object_id, user_id")
+    .select("conversation_ref, teams_user_id, aad_object_id, user_id, created_at")
     .eq("user_id", appUserId)
-    .maybeSingle();
+    .order("created_at", { ascending: false })
+    .limit(1);
+  
+  const data = links?.[0] || null;
 
   console.log("📋 Teams link lookup result:", { 
     found: !!data, 
