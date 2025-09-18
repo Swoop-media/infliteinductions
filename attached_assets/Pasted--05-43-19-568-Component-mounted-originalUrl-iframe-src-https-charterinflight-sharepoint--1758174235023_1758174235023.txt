@@ -1,0 +1,24 @@
+[05:43:19.568] Component mounted | {"originalUrl":"<iframe src=\"https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=8d5ef6b7-a0e4-4c9f-a6da-3c682b396606&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create\" width=\"640\" height=\"360\" frameborder=\"0\" scrolling=\"no\" allowfullscreen title=\"INFLITE Driver Training - Vehicle Prestart Checks (1).mp4\"></iframe>","extractedUrl":"https://charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_layouts/15/embed.aspx?UniqueId=8d5ef6b7-a0e4-4c9f-a6da-3c682b396606&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create","courseId":"4a25c12d-fc4f-4eae-8053-e1b0bff5d27e"}
+[05:43:19.574] Starting authentication check
+[05:43:19.574] Parsed SharePoint URL | {"hostname":"charterinflight.sharepoint.com","pathname":"/sites/INFLITEHeliAOC/_layouts/15/embed.aspx","search":"?UniqueId=8d5ef6b7-a0e4-4c9f-a6da-3c682b396606&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create"}
+[05:43:19.574] LocalStorage auth check | {"authKey":"sharepoint_auth_4a25c12d-fc4f-4eae-8053-e1b0bff5d27e","storedAuth":null,"isAlreadyAuthed":false}
+[05:43:19.574] SharePoint authentication required - will auto-trigger
+[05:43:20.586] Auto-triggering inline authentication
+[05:43:20.586] Starting inline SharePoint authentication flow
+[05:43:20.586] SharePoint domain extracted | {"sharePointDomain":"charterinflight.sharepoint.com"}
+[05:43:20.586] Attempting inline authentication using iframe approach
+[05:43:20.591] Starting authentication check
+[05:43:20.591] Parsed SharePoint URL | {"hostname":"charterinflight.sharepoint.com","pathname":"/sites/INFLITEHeliAOC/_layouts/15/embed.aspx","search":"?UniqueId=8d5ef6b7-a0e4-4c9f-a6da-3c682b396606&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create"}
+[05:43:20.591] LocalStorage auth check | {"authKey":"sharepoint_auth_4a25c12d-fc4f-4eae-8053-e1b0bff5d27e","storedAuth":null,"isAlreadyAuthed":false}
+[05:43:20.591] SharePoint authentication required - will auto-trigger
+[05:43:21.243] Direct fetch attempt completed
+[05:43:21.243] Creating authentication iframe | {"authUrl":"https://charterinflight.sharepoint.com/_layouts/15/authenticate.aspx?Source=https%3A%2F%2Fcharterinflight.sharepoint.com%2Fsites%2FINFLITEHeliAOC%2F_layouts%2F15%2Fembed.aspx%3FUniqueId%3D8d5ef6b7-a0e4-4c9f-a6da-3c682b396606%26embed%3D%257B%2522ust%2522%253Atrue%252C%2522hv%2522%253A%2522CopyEmbedCode%2522%257D%26referrer%3DStreamWebApp%26referrerScenario%3DEmbedDialog.Create"}
+[05:43:23.258] Authentication check 1/30
+[05:43:24.262] Authentication appears successful
+[05:43:24.262] Auth status saved to localStorage
+[05:43:24.267] Starting authentication check
+[05:43:24.267] Parsed SharePoint URL | {"hostname":"charterinflight.sharepoint.com","pathname":"/sites/INFLITEHeliAOC/_layouts/15/embed.aspx","search":"?UniqueId=8d5ef6b7-a0e4-4c9f-a6da-3c682b396606&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create"}
+[05:43:24.267] LocalStorage auth check | {"authKey":"sharepoint_auth_4a25c12d-fc4f-4eae-8053-e1b0bff5d27e","storedAuth":"true","isAlreadyAuthed":true}
+[05:43:24.268] User already authenticated for this course
+[05:43:24.558] SharePoint iframe loaded successfully
+[05:43:29.078] SharePoint iframe loaded successfully
