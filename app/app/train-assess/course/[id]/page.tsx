@@ -54,7 +54,6 @@ async function saveRequirementResponses(moduleId: string, assignmentId: string, 
     }
   }
 
-  console.log("Successfully saved requirement responses:", responseEntries);
 }
 
 interface CoursePlayerProps {
@@ -75,21 +74,17 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   const assignmentId = resolvedSearchParams.trainee;
   const sessionType = resolvedSearchParams.type || 'training';
   
-  console.log("Course page params:", { courseId, assignmentId, sessionType });
   
   // Get current user
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
-    console.log("❌ No user found, redirecting to login");
     redirect("/auth/login");
   }
 
   if (!assignmentId) {
-    console.log("❌ No assignmentId provided, redirecting to train-assess");
     redirect("/app/train-assess");
   }
 
-  console.log("✅ Assignment ID found:", assignmentId);
 
   // Get course info
   const { data: course, error: courseError } = await supabase
@@ -98,10 +93,8 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("id", courseId)
     .single();
 
-  console.log("Course query result:", { course, courseError });
 
   if (!course) {
-    console.log("❌ No course found, redirecting to train-assess");
     redirect("/app/train-assess");
   }
 
@@ -125,19 +118,11 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     profile = profileData;
   }
 
-  console.log("Assignment query result:", { assignment, assignmentError });
-  
-  if (assignmentError) {
-    console.log("❌ Assignment query error details:", assignmentError);
-  }
 
   if (!assignment) {
-    console.log("❌ No assignment found, redirecting to train-assess");
-    console.log("Query params used:", { assignmentId, courseId });
     redirect("/app/train-assess");
   }
 
-  console.log("✅ Assignment found:", assignment.id);
 
   // Verify trainer/assessor has access to this course (can have multiple roles)
   const { data: trainerAssignments, error: trainerError } = await supabase
@@ -147,26 +132,21 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("course_id", courseId)
     .in("role", ["onsite_trainer", "onsite_assessor"]);
 
-  console.log("Trainer assignments query result:", { trainerAssignments, trainerError });
 
   if (!trainerAssignments || trainerAssignments.length === 0) {
-    console.log("❌ No trainer/assessor assignment found, redirecting to train-assess");
     redirect("/app/train-assess");
   }
 
   const userRoles = trainerAssignments.map(a => a.role);
-  console.log("✅ Trainer assignments verified:", userRoles);
 
   // Check if user has the right role for this session type
   const requiredRole = sessionType === 'training' ? 'onsite_trainer' : 'onsite_assessor';
   const hasRequiredRole = userRoles.includes(requiredRole);
   
   if (!hasRequiredRole) {
-    console.log(`❌ User doesn't have required role '${requiredRole}' for session type '${sessionType}'`);
     redirect("/app/train-assess");
   }
 
-  console.log(`✅ User has required role '${requiredRole}' for session type '${sessionType}'`);
 
   // Get course modules
   const moduleType = sessionType === 'training' ? 'onsite_training' : 'onsite_assessment';
@@ -214,6 +194,29 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   const totalModules = modules?.length || 0;
   const completedModules = modules?.filter(m => completedModuleIds.has(m.id)).length || 0;
   const progressPercentage = totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
+
+  // Check if any pass_fail requirements have "fail" responses
+  let hasFailedRequirements = false;
+  if (sessionType === 'assessment' && user) {
+    const { data: failResponses } = await supabase
+      .from("requirement_responses")
+      .select("response_value, requirement_id")
+      .eq("assignment_id", assignmentId)
+      .eq("trainer_id", user.id)
+      .eq("response_value", "fail");
+    
+    if (failResponses && failResponses.length > 0) {
+      // Check if these are actually pass_fail type requirements
+      const failedReqIds = failResponses.map(r => r.requirement_id);
+      const { data: requirements } = await supabase
+        .from("onsite_requirements")
+        .select("id, field_type")
+        .in("id", failedReqIds)
+        .eq("field_type", "pass_fail");
+      
+      hasFailedRequirements = requirements && requirements.length > 0;
+    }
+  }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -419,19 +422,31 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
               {traineeName} has successfully completed all {sessionType} modules for "{course.title}".
               {sessionType === 'training' && ' They are now ready for onsite assessment.'}
             </p>
-            <div className="flex gap-3 mt-4">
-              {sessionType === 'assessment' && assignment.assignment_status !== 'completed' && (
-                <CompleteCourseButton 
-                  courseId={courseId}
-                  assignmentId={assignmentId}
-                  traineeName={traineeName}
-                />
+            <div className="flex flex-col gap-3 mt-4">
+              {sessionType === 'assessment' && hasFailedRequirements && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-700 font-medium">
+                    ⚠️ Cannot complete course: Some requirements are marked as "Fail"
+                  </p>
+                  <p className="text-red-600 text-sm mt-1">
+                    Please review and update the failed requirements above before completing the course.
+                  </p>
+                </div>
               )}
-              <Link href="/app/train-assess">
-                <Button variant={sessionType === 'assessment' ? 'outline' : 'default'}>
-                  Return to Train & Assess Dashboard
-                </Button>
-              </Link>
+              <div className="flex gap-3">
+                {sessionType === 'assessment' && assignment.assignment_status !== 'completed' && !hasFailedRequirements && (
+                  <CompleteCourseButton 
+                    courseId={courseId}
+                    assignmentId={assignmentId}
+                    traineeName={traineeName}
+                  />
+                )}
+                <Link href="/app/train-assess">
+                  <Button variant={sessionType === 'assessment' ? 'outline' : 'default'}>
+                    Return to Train & Assess Dashboard
+                  </Button>
+                </Link>
+              </div>
             </div>
             {assignment.assignment_status === 'completed' && (
               <div className="mt-4 p-3 bg-green-100 rounded-lg">
