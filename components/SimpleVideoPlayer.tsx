@@ -124,19 +124,43 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
   };
 
   const handleSignIn = () => {
-    // Open SharePoint in new window for authentication
-    const authWindow = window.open(embedUrl, '_blank', 'width=800,height=600');
-    
-    // Check if auth window closed and retry
-    const checkInterval = setInterval(() => {
-      if (authWindow && authWindow.closed) {
+    // Extract SharePoint domain from the video URL
+    try {
+      const videoUrl = new URL(embedUrl);
+      const sharePointDomain = videoUrl.hostname;
+      
+      // Open SharePoint authentication in a popup window
+      // Use the root domain for authentication, not the specific video URL
+      const authUrl = `https://${sharePointDomain}/_layouts/15/SignOut.aspx?wa=wsignin1.0`;
+      const authWindow = window.open(authUrl, 'sharepoint_auth', 'width=600,height=700,menubar=no,toolbar=no');
+      
+      // Monitor when the popup closes
+      const checkInterval = setInterval(() => {
+        if (authWindow && authWindow.closed) {
+          clearInterval(checkInterval);
+          
+          // After authentication popup closes, retry loading the video
+          // The authentication cookies should now be set
+          setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            setNeedsAuth(false);
+            setIsLoading(true);
+          }, 500);
+        }
+      }, 500);
+      
+      // Timeout after 2 minutes if window still open
+      setTimeout(() => {
         clearInterval(checkInterval);
-        // User closed the window, retry loading the video
-        setRetryCount(prev => prev + 1);
-        setNeedsAuth(false);
-        setIsLoading(true);
-      }
-    }, 1000);
+        if (authWindow && !authWindow.closed) {
+          authWindow.close();
+        }
+      }, 120000);
+    } catch (err) {
+      console.error('Error during SharePoint authentication:', err);
+      // Fallback to opening video in new tab
+      openInNewTab();
+    }
   };
 
   if (error) {
@@ -184,9 +208,9 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Sign in to Microsoft 365</h3>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Sign in to view video</h3>
           <p className="text-sm text-gray-600 mb-4">
-            This video is hosted on SharePoint. Please sign in to your Microsoft 365 account to view it.
+            This video requires Microsoft 365 authentication. Click below to sign in, then the video will play here automatically.
           </p>
           <div className="space-y-2">
             <button
@@ -204,13 +228,13 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
             </button>
             <button
               onClick={openInNewTab}
-              className="w-full px-4 py-2 bg-gray-600 text-white rounded-md text-sm hover:bg-gray-700 transition-colors"
+              className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm hover:bg-gray-50 transition-colors"
             >
-              Open Video in New Tab
+              Open in separate window instead
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-3">
-            After signing in, the video will load automatically.
+            A sign-in window will open. Once you've signed in, close it and the video will load here.
           </p>
         </div>
       </div>
@@ -254,6 +278,7 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
       </div>
 
       <iframe
+        key={retryCount}
         src={embedUrl}
         className="h-full w-full border-0"
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
