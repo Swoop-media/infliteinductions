@@ -149,8 +149,14 @@ async function loadData(moduleId: string) {
     return { mod, learners, trainerReqs: [], assessorReqs: [], nextFor: { trainer: 0, assessor: 0 }, hasEquipmentModule, err: rErr.message };
   }
 
-  const trainerReqs = (reqs ?? []).filter((r) => r.role === "onsite_trainer" || r.role === "trainer");
-  const assessorReqs = (reqs ?? []).filter((r) => r.role === "onsite_assessor" || r.role === "assessor");
+  // For assessment modules, also include "trainer" role for backward compatibility
+  // (some old requirements were saved as "trainer" even for assessment modules)
+  const trainerReqs = mod.type === "onsite_training" 
+    ? (reqs ?? []).filter((r) => r.role === "onsite_trainer" || r.role === "trainer")
+    : [];
+  const assessorReqs = mod.type === "onsite_assessment"
+    ? (reqs ?? []).filter((r) => r.role === "onsite_assessor" || r.role === "assessor" || r.role === "trainer" || r.role === "onsite_trainer")
+    : [];
 
   // Next order_index for each role
   const maxTrainer = Math.max(...trainerReqs.map((r) => r.order_index ?? 0), -1);
@@ -217,8 +223,8 @@ async function addRequirementAction(formData: FormData) {
 
   if (!moduleId || !label) throw new Error("Missing fields");
 
-  // Normalise role to DB convention
-  const role = roleRaw === "assessor" || roleRaw === "onsite_assessor" ? "onsite_assessor" : "onsite_trainer";
+  // Use 'trainer' or 'assessor' for consistency with existing data
+  const role = roleRaw === "assessor" || roleRaw === "onsite_assessor" ? "assessor" : "trainer";
 
   // options NOT NULL -> always an array
   let options: any = [];
