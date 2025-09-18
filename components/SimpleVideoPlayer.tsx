@@ -74,6 +74,7 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [needsAuth, setNeedsAuth] = useState(false);
   
   const { type, embedUrl } = normalizeVideoUrl(url);
 
@@ -81,18 +82,30 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
     // Reset states when URL changes
     setIsLoading(true);
     setError(null);
+    setNeedsAuth(false);
     
-    // Set a timeout for loading state
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 3000);
-    
-    return () => clearTimeout(timer);
-  }, [url, retryCount]);
+    // For SharePoint videos, check if we need authentication
+    if (type === 'sharepoint') {
+      // Give it a bit more time to load for SharePoint
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+        // If still loading after timeout, likely needs auth
+        setNeedsAuth(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    } else {
+      // Regular timeout for other video types
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [url, retryCount, type]);
 
   const handleIframeLoad = () => {
     setIsLoading(false);
     setError(null);
+    setNeedsAuth(false);
   };
 
   const handleIframeError = () => {
@@ -108,6 +121,22 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
 
   const openInNewTab = () => {
     window.open(embedUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleSignIn = () => {
+    // Open SharePoint in new window for authentication
+    const authWindow = window.open(embedUrl, '_blank', 'width=800,height=600');
+    
+    // Check if auth window closed and retry
+    const checkInterval = setInterval(() => {
+      if (authWindow && authWindow.closed) {
+        clearInterval(checkInterval);
+        // User closed the window, retry loading the video
+        setRetryCount(prev => prev + 1);
+        setNeedsAuth(false);
+        setIsLoading(true);
+      }
+    }, 1000);
   };
 
   if (error) {
@@ -145,6 +174,49 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
     );
   }
 
+  // Show sign-in prompt for SharePoint videos that need authentication
+  if (type === 'sharepoint' && needsAuth && !isLoading) {
+    return (
+      <div className="aspect-video w-full overflow-hidden rounded-md border flex items-center justify-center bg-gray-50">
+        <div className="text-center p-6 max-w-md">
+          <div className="mb-4">
+            <svg className="mx-auto h-16 w-16 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Sign in to Microsoft 365</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            This video is hosted on SharePoint. Please sign in to your Microsoft 365 account to view it.
+          </p>
+          <div className="space-y-2">
+            <button
+              onClick={handleSignIn}
+              className="w-full px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#f3f3f3" d="M0 0h23v23H0z"/>
+                <path fill="#f35325" d="M1 1h10v10H1z"/>
+                <path fill="#81bc06" d="M12 1h10v10H12z"/>
+                <path fill="#05a6f0" d="M1 12h10v10H1z"/>
+                <path fill="#ffba08" d="M12 12h10v10H12z"/>
+              </svg>
+              Sign in with Microsoft
+            </button>
+            <button
+              onClick={openInNewTab}
+              className="w-full px-4 py-2 bg-gray-600 text-white rounded-md text-sm hover:bg-gray-700 transition-colors"
+            >
+              Open Video in New Tab
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-3">
+            After signing in, the video will load automatically.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="aspect-video w-full overflow-hidden rounded-md border relative bg-black">
       {isLoading && (
@@ -154,7 +226,7 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
             <p className="text-sm">Loading video...</p>
             {type === 'sharepoint' && (
               <p className="text-xs mt-1 opacity-75">
-                SharePoint authentication may be required
+                Connecting to SharePoint...
               </p>
             )}
           </div>
