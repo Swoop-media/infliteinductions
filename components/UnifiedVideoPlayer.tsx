@@ -213,8 +213,15 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
   // Open in new tab
   const openInNewTab = useCallback(() => {
     const urlToOpen = extractUrl(videoUrl);
+    const source = detectVideoSource(urlToOpen);
+    
+    // For SharePoint/Stream, set authentication flag when opening in new tab
+    if (source === "sharepoint" || source === "stream") {
+      setHasAuthenticatedInPopup(true);
+    }
+    
     window.open(urlToOpen, "_blank", "noopener,noreferrer");
-  }, [videoUrl, extractUrl]);
+  }, [videoUrl, extractUrl, detectVideoSource]);
 
   const videoSource = useMemo(() => detectVideoSource(embedUrl), [embedUrl, detectVideoSource]);
 
@@ -234,28 +241,31 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
                 </div>
 
                 <div className="flex space-x-2">
-                  {(videoSource === "sharepoint" || videoSource === "stream") && !hasAuthenticatedInPopup ? (
+                  {/* Always show Open in New Tab button */}
+                  <Button
+                    onClick={openInNewTab}
+                    variant="default"
+                    size="sm"
+                    className="flex items-center space-x-2"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    <span>Open in New Tab</span>
+                  </Button>
+                  
+                  {/* SharePoint-specific authentication button */}
+                  {(videoSource === "sharepoint" || videoSource === "stream") && !hasAuthenticatedInPopup && (
                     <Button
                       onClick={authenticateSharePointInPopup}
-                      variant="default"
+                      variant="outline"
                       size="sm"
                       className="flex items-center space-x-2"
                     >
                       <ExternalLink className="w-4 h-4" />
                       <span>Sign In to SharePoint</span>
                     </Button>
-                  ) : (
-                    <Button
-                      onClick={openInNewTab}
-                      variant="default"
-                      size="sm"
-                      className="flex items-center space-x-2"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      <span>Open in New Tab</span>
-                    </Button>
                   )}
                   
+                  {/* Retry button for SharePoint/Stream */}
                   {(videoSource === "sharepoint" || videoSource === "stream") && (
                     <Button
                       onClick={handleRetry}
@@ -308,12 +318,25 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
         )}
       </div>
 
-      {/* Optional: Show current video source for debugging */}
-      {process.env.NODE_ENV === "development" && (
-        <div className="mt-2 text-xs text-gray-500">
-          Video source: {videoSource} | Authenticated: {hasAuthenticatedInPopup ? "Yes" : "No"}
-        </div>
-      )}
+      {/* Always visible action bar */}
+      <div className="mt-2 flex items-center justify-between">
+        <Button
+          onClick={openInNewTab}
+          variant="outline"
+          size="sm"
+          className="flex items-center space-x-2"
+        >
+          <ExternalLink className="w-4 h-4" />
+          <span>Open in New Tab</span>
+        </Button>
+        
+        {/* Optional: Show current video source for debugging */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="text-xs text-gray-500">
+            Video source: {videoSource} | Authenticated: {hasAuthenticatedInPopup ? "Yes" : "No"}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
