@@ -182,12 +182,11 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   
   let requirementsByModule: Record<string, any[]> = {};
   if (moduleIds.length > 0) {
-    // Requirements in database have role='trainer' regardless of session type
     const { data: requirements } = await supabase
       .from("onsite_requirements")
       .select("*")
       .in("module_id", moduleIds)
-      .eq("role", "trainer")
+      .eq("role", requiredRole)
       .order("order_index");
     
     // Group requirements by module
