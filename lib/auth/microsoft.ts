@@ -17,15 +17,6 @@ export const msalInstance = new ConfidentialClientApplication(msalConfig);
 // in the route handlers to support both development and production environments
 
 export const AUTH_CODE_URL_PARAMETERS = {
-  scopes: [
-    "openid", 
-    "profile", 
-    "email", 
-    "User.Read",
-    "Files.Read",
-    "Files.Read.All",
-    "Sites.Read.All",
-    "offline_access"
-  ],
+  scopes: ["openid", "profile", "email", "User.Read"],
   // redirectUri will be added dynamically in the route handlers
 };

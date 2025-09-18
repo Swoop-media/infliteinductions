@@ -24,16 +24,7 @@ export async function GET(req: NextRequest) {
     // Exchange code for tokens
     const tokenRequest = {
       code,
-      scopes: [
-        "openid", 
-        "profile", 
-        "email", 
-        "User.Read",
-        "Files.Read",
-        "Files.Read.All",
-        "Sites.Read.All",
-        "offline_access"
-      ],
+      scopes: ["openid", "profile", "email", "User.Read"],
       redirectUri: `${siteUrl}/auth/callback`,
     };
 

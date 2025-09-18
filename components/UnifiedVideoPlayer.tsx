@@ -19,7 +19,8 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
-  const [useProxy, setUseProxy] = useState(false);
+  const [hasAuthenticatedInPopup, setHasAuthenticatedInPopup] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
 
   // Extract URL from iframe HTML if provided
   const extractUrl = useCallback((input: string): string => {
@@ -127,35 +128,19 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
     }
   }, [extractUrl]);
 
-  // Handle SharePoint authentication and get authenticated URL
-  const getAuthenticatedSharePointUrl = useCallback(async (url: string): Promise<string> => {
-    try {
-      const response = await fetch("/api/video-auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, courseId })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Failed to authenticate" }));
-        throw new Error(errorData.error || "Authentication failed");
-      }
-
-      const data = await response.json();
-      if (data.embedUrl) {
-        return data.embedUrl;
-      } else if (data.proxyUrl) {
-        // Use proxy URL for authenticated access
-        setUseProxy(true);
-        return data.proxyUrl;
-      } else {
-        throw new Error("No authenticated URL received");
-      }
-    } catch (error: any) {
-      console.error("SharePoint authentication error:", error);
-      throw error;
-    }
-  }, [courseId]);
+  // Handle SharePoint authentication by opening in popup
+  const authenticateSharePointInPopup = useCallback(() => {
+    const cleanUrl = extractUrl(videoUrl);
+    
+    // Open SharePoint video in new tab for authentication
+    const authWindow = window.open(cleanUrl, "_blank", "noopener,noreferrer");
+    
+    // Set a flag that user has attempted authentication
+    setHasAuthenticatedInPopup(true);
+    
+    // Show instructions for the user
+    setError("SharePoint video opened in new tab. After signing in and viewing the video there, return here and click 'Retry' to load it.");
+  }, [videoUrl, extractUrl]);
 
   // Main initialization effect
   useEffect(() => {
@@ -169,14 +154,21 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
 
         let finalUrl = normalizeVideoUrl(cleanUrl);
 
-        // Handle SharePoint/Stream authentication
+        // Handle SharePoint/Stream - add cache buster and parent parameter
         if (videoSource === "sharepoint" || videoSource === "stream") {
-          try {
-            finalUrl = await getAuthenticatedSharePointUrl(finalUrl);
-          } catch (authError: any) {
-            console.warn("Authentication attempt failed, trying direct embed:", authError);
-            // Fall back to direct embed, user might already be authenticated
+          const url = new URL(finalUrl);
+          
+          // Add parent parameter for SharePoint embed
+          if (typeof window !== "undefined") {
+            url.searchParams.set("parent", window.location.origin);
           }
+          
+          // Add cache buster if retrying after authentication
+          if (hasAuthenticatedInPopup) {
+            url.searchParams.set("_t", Date.now().toString());
+          }
+          
+          finalUrl = url.toString();
         }
 
         setEmbedUrl(finalUrl);
@@ -189,7 +181,7 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
     };
 
     initializeVideo();
-  }, [videoUrl, retryCount, extractUrl, detectVideoSource, normalizeVideoUrl, getAuthenticatedSharePointUrl]);
+  }, [videoUrl, retryCount, extractUrl, detectVideoSource, normalizeVideoUrl, hasAuthenticatedInPopup]);
 
   // Handle iframe load events
   const handleIframeLoad = useCallback(() => {
@@ -200,18 +192,22 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
   const handleIframeError = useCallback(() => {
     const videoSource = detectVideoSource(embedUrl);
     
-    if (videoSource === "sharepoint" || videoSource === "stream") {
-      setError("Video requires authentication. Click 'Open in New Tab' to sign in, then return here and click 'Retry'.");
+    if ((videoSource === "sharepoint" || videoSource === "stream") && !hasAuthenticatedInPopup) {
+      setError("SharePoint/Stream video requires authentication. Click 'Sign In' to authenticate.");
+    } else if (videoSource === "sharepoint" || videoSource === "stream") {
+      setError("Still having trouble loading the video. Try clicking 'Open in New Tab' and ensure you're signed in.");
     } else {
       setError("Failed to load video. The video might be private or the URL might be incorrect.");
     }
     setIsLoading(false);
-  }, [embedUrl, detectVideoSource]);
+  }, [embedUrl, detectVideoSource, hasAuthenticatedInPopup]);
 
   // Retry loading
   const handleRetry = useCallback(() => {
     setRetryCount((prev) => prev + 1);
+    setIframeKey((prev) => prev + 1); // Force iframe reload
     setError(null);
+    setIsLoading(true);
   }, []);
 
   // Open in new tab
@@ -238,15 +234,27 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
                 </div>
 
                 <div className="flex space-x-2">
-                  <Button
-                    onClick={openInNewTab}
-                    variant="default"
-                    size="sm"
-                    className="flex items-center space-x-2"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                    <span>Open in New Tab</span>
-                  </Button>
+                  {(videoSource === "sharepoint" || videoSource === "stream") && !hasAuthenticatedInPopup ? (
+                    <Button
+                      onClick={authenticateSharePointInPopup}
+                      variant="default"
+                      size="sm"
+                      className="flex items-center space-x-2"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Sign In to SharePoint</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={openInNewTab}
+                      variant="default"
+                      size="sm"
+                      className="flex items-center space-x-2"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      <span>Open in New Tab</span>
+                    </Button>
+                  )}
                   
                   {(videoSource === "sharepoint" || videoSource === "stream") && (
                     <Button
@@ -287,6 +295,7 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
             )}
             
             <iframe
+              key={iframeKey}
               src={embedUrl}
               className="absolute inset-0 w-full h-full"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
@@ -302,7 +311,7 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
       {/* Optional: Show current video source for debugging */}
       {process.env.NODE_ENV === "development" && (
         <div className="mt-2 text-xs text-gray-500">
-          Video source: {videoSource} | Proxy: {useProxy ? "Yes" : "No"}
+          Video source: {videoSource} | Authenticated: {hasAuthenticatedInPopup ? "Yes" : "No"}
         </div>
       )}
     </div>
