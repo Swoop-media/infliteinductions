@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface SharePointVideoEmbedProps {
   url: string;
@@ -9,20 +9,15 @@ interface SharePointVideoEmbedProps {
 }
 
 export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoEmbedProps) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [isMounted, setIsMounted] = useState(false);
-  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
-  const [authAttempted, setAuthAttempted] = useState(false);
+  const [hasAuthenticatedInTab, setHasAuthenticatedInTab] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
+  const [showInstructions, setShowInstructions] = useState(true);
   const [debugLogs, setDebugLogs] = useState<string[]>([]);
   const [showDebugLogs, setShowDebugLogs] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const authCheckTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
-  // Extract URL from iframe if needed
+  // Extract URL from iframe HTML if needed
   const extractUrl = (input: string): string => {
-    // Check if input is an iframe HTML string
     if (input.includes('<iframe')) {
       const srcMatch = input.match(/src=["']([^"']+)["']/);
       if (srcMatch) {
@@ -32,10 +27,40 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
     return input;
   };
 
-  // Use the extracted URL throughout the component
-  const videoUrl = extractUrl(url);
+  // Fix the SharePoint embed URL to include proper parent parameter
+  const getProperEmbedUrl = useCallback((inputUrl: string): string => {
+    try {
+      const extractedUrl = extractUrl(inputUrl);
+      const url = new URL(extractedUrl);
+      
+      // Ensure we're using the embed endpoint
+      if (!url.pathname.includes('/_layouts/15/embed.aspx')) {
+        // If it's not already an embed URL, we can't fix it here
+        // Just return the original URL
+        return extractedUrl;
+      }
+      
+      // Get the current site's origin
+      const currentOrigin = typeof window !== 'undefined' ? window.location.origin : '';
+      
+      // Update or add the parent parameter
+      if (currentOrigin) {
+        url.searchParams.set('parent', currentOrigin);
+      }
+      
+      // Add a cache buster to force reload after authentication
+      url.searchParams.set('_t', Date.now().toString());
+      
+      return url.toString();
+    } catch (e) {
+      console.error('Error processing SharePoint URL:', e);
+      return extractUrl(inputUrl);
+    }
+  }, []);
 
-  // Debug logging function
+  const embedUrl = getProperEmbedUrl(url);
+
+  // Debug logging
   const addDebugLog = useCallback((message: string, data?: any) => {
     const timestamp = new Date().toISOString().substring(11, 23);
     const logMessage = `[${timestamp}] ${message}`;
@@ -44,336 +69,196 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
   }, []);
 
   useEffect(() => {
-    setIsMounted(true);
-    addDebugLog('Component mounted', { originalUrl: url, extractedUrl: videoUrl, courseId });
-  }, [courseId, url, videoUrl, addDebugLog]);
+    addDebugLog('SharePoint Video Component Initialized', {
+      originalUrl: url,
+      embedUrl: embedUrl,
+      hasParentParam: embedUrl.includes('parent='),
+      courseId: courseId
+    });
+  }, [url, embedUrl, courseId, addDebugLog]);
 
-  const handleAuthenticate = useCallback(async () => {
+  // Handle authentication in new tab
+  const handleAuthenticateInNewTab = useCallback(() => {
     if (typeof window === 'undefined') return;
-
-    try {
-      setIsLoading(true);
-      setAuthError(null);
-      setAuthAttempted(true);
-
-      addDebugLog('Starting inline SharePoint authentication flow');
-
-      // Get the SharePoint domain from the video URL
-      const sharePointUrl = new URL(videoUrl);
-      const sharePointDomain = sharePointUrl.hostname;
-      addDebugLog('SharePoint domain extracted', { sharePointDomain });
-
-      // Try multiple authentication approaches for better compatibility
-      addDebugLog('Attempting inline authentication using iframe approach');
-      
-      // First try: Direct URL access with credentials include
-      try {
-        const response = await fetch(videoUrl, {
-          method: 'GET',
-          credentials: 'include',
-          mode: 'no-cors'
-        });
-        addDebugLog('Direct fetch attempt completed');
-      } catch (e: any) {
-        addDebugLog('Direct fetch failed, continuing with iframe approach', { error: e.message });
-      }
-
-      // Second try: Create authentication iframe
-      const authUrl = `https://${sharePointDomain}/_layouts/15/authenticate.aspx?Source=${encodeURIComponent(videoUrl)}`;
-      addDebugLog('Creating authentication iframe', { authUrl });
-
-      // Create a hidden iframe for authentication
-      const authIframe = document.createElement('iframe');
-      authIframe.style.display = 'none';
-      authIframe.src = authUrl;
-      authIframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-forms allow-top-navigation');
-      document.body.appendChild(authIframe);
-
-      // Set up authentication check
-      let authCompleted = false;
-      let checkCount = 0;
-      const maxChecks = 30; // 30 seconds max
-
-      const checkAuth = async () => {
-        checkCount++;
-        addDebugLog(`Authentication check ${checkCount}/${maxChecks}`);
-
-        try {
-          // Test if we can access the video now
-          const testIframe = document.createElement('iframe');
-          testIframe.style.display = 'none';
-          testIframe.src = videoUrl;
-          document.body.appendChild(testIframe);
-
-          // Wait a bit for the iframe to load
-          await new Promise(resolve => setTimeout(resolve, 1000));
-
-          // If we've reached here without errors, assume auth worked
-          document.body.removeChild(testIframe);
-          document.body.removeChild(authIframe);
-
-          if (!authCompleted) {
-            authCompleted = true;
-            addDebugLog('Authentication appears successful');
-
-            // Mark as authenticated and show the video
-            const authKey = `sharepoint_auth_${courseId}`;
-            try {
-              localStorage.setItem(authKey, 'true');
-              addDebugLog('Auth status saved to localStorage');
-            } catch (e: any) {
-              addDebugLog('Failed to save auth to localStorage', { error: e.message });
-            }
-
-            setIsAuthenticated(true);
-            setShowAuthPrompt(false);
-            setIsLoading(false);
-            setAuthError(null);
-          }
-        } catch (e: any) {
-          addDebugLog('Auth check failed', { error: e.message, attempt: checkCount });
-          
-          if (checkCount >= maxChecks) {
-            // Cleanup and try direct approach
-            try {
-              document.body.removeChild(authIframe);
-            } catch {}
-            
-            addDebugLog('Max auth attempts reached, trying direct access');
-            // Try direct access - sometimes SharePoint just works
-            const authKey = `sharepoint_auth_${courseId}`;
-            try {
-              localStorage.setItem(authKey, 'true');
-            } catch (e: any) {
-              addDebugLog('Failed to save auth on timeout', { error: e.message });
-            }
-            setIsAuthenticated(true);
-            setShowAuthPrompt(false);
-            setIsLoading(false);
-            setAuthError(null);
-          } else {
-            // Try again in 1 second
-            setTimeout(checkAuth, 1000);
-          }
-        }
-      };
-
-      // Start checking after a short delay
-      setTimeout(checkAuth, 2000);
-
-    } catch (e: any) {
-      const errorMsg = `Error in handleAuthenticate: ${e.message}`;
-      addDebugLog('handleAuthenticate error', { error: errorMsg });
-      setAuthError('Authentication failed. Please try opening the video in a new tab.');
-      setIsLoading(false);
-    }
-  }, [videoUrl, courseId, addDebugLog]);
-
-  useEffect(() => {
-    if (!isMounted || typeof window === 'undefined') return;
-
-    addDebugLog('Starting authentication check');
-
-    // Parse SharePoint URL for debugging
-    try {
-      const parsedUrl = new URL(videoUrl);
-      addDebugLog('Parsed SharePoint URL', {
-        hostname: parsedUrl.hostname,
-        pathname: parsedUrl.pathname,
-        search: parsedUrl.search
-      });
-    } catch (e: any) {
-      addDebugLog('Error parsing SharePoint URL', { error: e.message });
-    }
-
-    // Check if user is already authenticated for this course's SharePoint
-    const authKey = `sharepoint_auth_${courseId}`;
-    let isAlreadyAuthed = false;
-
-    try {
-      const storedAuth = localStorage.getItem(authKey);
-      isAlreadyAuthed = storedAuth === 'true';
-      addDebugLog('LocalStorage auth check', {
-        authKey,
-        storedAuth,
-        isAlreadyAuthed
-      });
-    } catch (e: any) {
-      addDebugLog('LocalStorage not available', { error: e.message });
-    }
-
-    if (isAlreadyAuthed) {
-      addDebugLog('User already authenticated for this course');
-      setIsAuthenticated(true);
-      setIsLoading(false);
-      setShowAuthPrompt(false);
-    } else {
-      addDebugLog('SharePoint authentication required - will auto-trigger');
-      setShowAuthPrompt(true);
-      setIsLoading(false);
-
-      // Auto-trigger authentication after a short delay to improve UX
-      setTimeout(() => {
-        if (!isAuthenticated && !authAttempted) {
-          addDebugLog('Auto-triggering inline authentication');
-          handleAuthenticate();
-        }
-      }, 1000);
-    }
-
-    const timeoutId = authCheckTimeoutRef.current;
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [courseId, isMounted, videoUrl, isAuthenticated, authAttempted, handleAuthenticate, addDebugLog]);
-
-  const handleIframeLoad = () => {
-    addDebugLog('SharePoint iframe loaded successfully');
+    
+    setIsLoading(true);
+    addDebugLog('Opening SharePoint authentication in new tab');
+    
+    // Open the video URL in a new tab for authentication
+    const authWindow = window.open(embedUrl, '_blank');
+    
+    // Show instructions for user
+    setShowInstructions(true);
     setIsLoading(false);
-  };
+    
+    // Give user time to authenticate, then they can click "I've Signed In"
+    addDebugLog('Waiting for user to complete authentication in new tab');
+  }, [embedUrl, addDebugLog]);
 
-  const clearAuthAndRetry = () => {
-    addDebugLog('Clearing authentication and retrying');
-    const authKey = `sharepoint_auth_${courseId}`;
-    try {
-      localStorage.removeItem(authKey);
-      addDebugLog('Auth cleared from localStorage');
-    } catch (e: any) {
-      addDebugLog('Failed to clear auth from localStorage', { error: e.message });
-    }
-    setIsAuthenticated(false);
-    setAuthAttempted(false);
-    setAuthError(null);
-    setShowAuthPrompt(true);
-  };
+  // User confirms they've authenticated
+  const handleAuthenticationComplete = useCallback(() => {
+    addDebugLog('User confirmed authentication complete, reloading iframe');
+    setHasAuthenticatedInTab(true);
+    setShowInstructions(false);
+    // Force iframe reload with new timestamp
+    setIframeKey(prev => prev + 1);
+  }, [addDebugLog]);
+
+  // Retry with fresh URL
+  const handleRetry = useCallback(() => {
+    addDebugLog('Retrying with fresh embed URL');
+    setIframeKey(prev => prev + 1);
+    setHasAuthenticatedInTab(false);
+    setShowInstructions(true);
+  }, [addDebugLog]);
+
+  const handleIframeLoad = useCallback(() => {
+    addDebugLog('SharePoint iframe loaded');
+    setIsLoading(false);
+  }, [addDebugLog]);
 
   const toggleDebugLogs = () => {
     setShowDebugLogs(!showDebugLogs);
   };
 
-  if (!isMounted) {
-    return <div className="flex justify-center p-8">Loading SharePoint video...</div>;
-  }
+  // Check for third-party cookie blocking
+  useEffect(() => {
+    if (typeof window !== 'undefined' && navigator.userAgent.includes('Chrome')) {
+      // Chrome is blocking third-party cookies by default
+      addDebugLog('Note: Chrome blocks third-party cookies by default which may prevent SharePoint authentication in iframes');
+    }
+  }, [addDebugLog]);
 
-  if (showAuthPrompt && !isAuthenticated) {
-    return (
-      <div className="rounded-lg border p-6 bg-blue-50">
-        <div className="space-y-4">
-          <div>
-            <h3 className="font-medium text-blue-900">SharePoint Authentication Required</h3>
-            <p className="text-sm text-blue-700 mt-1">
-              This video is hosted on SharePoint and requires authentication to view.
-            </p>
-          </div>
-
-          {authError && (
-            <div className="text-red-600 text-sm bg-red-50 p-3 rounded border">
-              <strong>Error:</strong> {authError}
+  return (
+    <div className="space-y-4">
+      {/* Instructions for first-time authentication */}
+      {showInstructions && !hasAuthenticatedInTab && (
+        <div className="rounded-lg border p-6 bg-blue-50">
+          <div className="space-y-4">
+            <div>
+              <h3 className="font-medium text-blue-900">SharePoint Video - Authentication Required</h3>
+              <p className="text-sm text-blue-700 mt-1">
+                To view this SharePoint video, you need to authenticate with your Microsoft 365 account.
+              </p>
             </div>
-          )}
 
-          <div className="flex gap-2">
-            <button
-              onClick={handleAuthenticate}
-              disabled={isLoading}
-              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-              {isLoading ? 'Authenticating...' : 'Sign In Inline'}
-            </button>
-            {authAttempted && (
-              <button
-                onClick={clearAuthAndRetry}
-                className="border border-gray-300 px-4 py-2 rounded hover:bg-gray-50"
-              >
-                Try Again
-              </button>
-            )}
-            <a
-              href={videoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="border border-blue-300 px-4 py-2 rounded hover:bg-blue-50 text-blue-600 text-sm"
-            >
-              Open in New Tab
-            </a>
-          </div>
+            <div className="space-y-3">
+              <div className="bg-white p-4 rounded border border-blue-200">
+                <p className="text-sm font-medium mb-2">Steps to view the video:</p>
+                <ol className="text-sm space-y-1 ml-4">
+                  <li>1. Click "Open SharePoint Login" below</li>
+                  <li>2. Sign in with your Microsoft 365 credentials in the new tab</li>
+                  <li>3. Once signed in, close that tab and return here</li>
+                  <li>4. Click "I've Signed In" to load the video</li>
+                </ol>
+              </div>
 
-          {isLoading && (
-            <div className="bg-blue-100 p-3 rounded border border-blue-200">
-              <div className="flex items-center gap-2">
-                <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                <span className="text-sm text-blue-700">Authenticating with SharePoint...</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAuthenticateInNewTab}
+                  disabled={isLoading}
+                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                >
+                  Open SharePoint Login
+                </button>
+                
+                <button
+                  onClick={handleAuthenticationComplete}
+                  className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                >
+                  I've Signed In
+                </button>
+                
+                <a
+                  href={embedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="border border-gray-300 px-4 py-2 rounded hover:bg-gray-50 inline-flex items-center"
+                >
+                  Open Video Directly →
+                </a>
+              </div>
+
+              <div className="text-xs text-gray-600 bg-yellow-50 p-3 rounded border border-yellow-200">
+                <strong>Note:</strong> If the video doesn't load after signing in, your browser may be blocking third-party cookies. 
+                Try enabling cookies for *.sharepoint.com or use "Open Video Directly" to view in SharePoint.
               </div>
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
-          <div className="pt-2">
+      {/* Video iframe (shown after authentication or when trying) */}
+      {(hasAuthenticatedInTab || !showInstructions) && (
+        <div className="relative w-full">
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded">
+              <div className="text-sm text-gray-600">Loading SharePoint video...</div>
+            </div>
+          )}
+          
+          <iframe
+            key={iframeKey}
+            src={embedUrl}
+            className="w-full aspect-video rounded border"
+            allow="autoplay; fullscreen"
+            allowFullScreen
+            onLoad={handleIframeLoad}
+            title="SharePoint Video"
+          />
+          
+          <div className="mt-2 flex justify-between items-center">
+            <div className="flex gap-2">
+              <button
+                onClick={handleRetry}
+                className="text-sm text-gray-600 hover:text-gray-800"
+              >
+                ↻ Retry Loading
+              </button>
+              {hasAuthenticatedInTab && (
+                <button
+                  onClick={() => {
+                    setHasAuthenticatedInTab(false);
+                    setShowInstructions(true);
+                  }}
+                  className="text-sm text-gray-600 hover:text-gray-800"
+                >
+                  Re-authenticate
+                </button>
+              )}
+            </div>
             <button
               onClick={toggleDebugLogs}
               className="text-xs text-gray-500 hover:text-gray-700"
             >
-              {showDebugLogs ? 'Hide' : 'Show'} Debug Logs
+              {showDebugLogs ? 'Hide' : 'Show'} Debug Info
             </button>
           </div>
 
-          {showDebugLogs && (
-            <div className="mt-4 p-3 bg-gray-100 rounded text-xs font-mono space-y-1 max-h-60 overflow-y-auto">
-              {debugLogs.map((log, index) => (
-                <div key={index}>{log}</div>
-              ))}
+          {/* Warning about potential issues */}
+          {hasAuthenticatedInTab && (
+            <div className="mt-3 text-xs text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+              If you see a sign-in page instead of the video, click "Open Video Directly" to view in SharePoint, 
+              or check that third-party cookies are enabled for *.sharepoint.com
             </div>
           )}
         </div>
-      </div>
-    );
-  }
+      )}
 
-  if (isAuthenticated) {
-    return (
-      <div className="relative w-full">
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gray-100 rounded">
-            <div className="text-sm text-gray-600">Loading SharePoint video...</div>
-          </div>
-        )}
-        <iframe
-          ref={iframeRef}
-          src={videoUrl}
-          className="w-full aspect-video rounded border"
-          allow="autoplay; fullscreen"
-          onLoad={handleIframeLoad}
-          title="SharePoint Video"
-        />
-        <div className="mt-2 flex justify-between items-center">
-          <button
-            onClick={clearAuthAndRetry}
-            className="text-xs text-gray-500 hover:text-gray-700"
-          >
-            Re-authenticate
-          </button>
-          <button
-            onClick={toggleDebugLogs}
-            className="text-xs text-gray-500 hover:text-gray-700"
-          >
-            {showDebugLogs ? 'Hide' : 'Show'} Debug
-          </button>
+      {/* Debug logs */}
+      {showDebugLogs && (
+        <div className="mt-2 p-3 bg-gray-100 rounded text-xs font-mono space-y-1 max-h-60 overflow-y-auto">
+          <div className="font-bold">Debug Information:</div>
+          <div>Original URL: {url.substring(0, 100)}...</div>
+          <div>Embed URL: {embedUrl.substring(0, 150)}...</div>
+          <div>Has Parent Param: {embedUrl.includes('parent=') ? 'Yes' : 'No'}</div>
+          <div>Authenticated: {hasAuthenticatedInTab ? 'Yes' : 'No'}</div>
+          <div className="mt-2 font-bold">Logs:</div>
+          {debugLogs.map((log, index) => (
+            <div key={index}>{log}</div>
+          ))}
         </div>
-        {showDebugLogs && (
-          <div className="mt-2 p-2 bg-gray-100 rounded text-xs font-mono space-y-1 max-h-40 overflow-y-auto">
-            {debugLogs.map((log, index) => (
-              <div key={index}>{log}</div>
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex justify-center p-8">
-      <div className="text-gray-600">Preparing SharePoint video...</div>
+      )}
     </div>
   );
 }
