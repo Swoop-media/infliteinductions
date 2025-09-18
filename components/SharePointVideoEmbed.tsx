@@ -20,6 +20,21 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const authCheckTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
+  // Extract URL from iframe if needed
+  const extractUrl = (input: string): string => {
+    // Check if input is an iframe HTML string
+    if (input.includes('<iframe')) {
+      const srcMatch = input.match(/src=["']([^"']+)["']/);
+      if (srcMatch) {
+        return srcMatch[1];
+      }
+    }
+    return input;
+  };
+
+  // Use the extracted URL throughout the component
+  const videoUrl = extractUrl(url);
+
   // Debug logging function
   const addDebugLog = useCallback((message: string, data?: any) => {
     const timestamp = new Date().toISOString().substring(11, 23);
@@ -30,8 +45,8 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
 
   useEffect(() => {
     setIsMounted(true);
-    addDebugLog('Component mounted', { url, courseId });
-  }, [courseId, url, addDebugLog]);
+    addDebugLog('Component mounted', { originalUrl: url, extractedUrl: videoUrl, courseId });
+  }, [courseId, url, videoUrl, addDebugLog]);
 
   const handleAuthenticate = useCallback(async () => {
     if (typeof window === 'undefined') return;
@@ -44,7 +59,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
       addDebugLog('Starting inline SharePoint authentication flow');
 
       // Get the SharePoint domain from the video URL
-      const sharePointUrl = new URL(url);
+      const sharePointUrl = new URL(videoUrl);
       const sharePointDomain = sharePointUrl.hostname;
       addDebugLog('SharePoint domain extracted', { sharePointDomain });
 
@@ -53,7 +68,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
       
       // First try: Direct URL access with credentials include
       try {
-        const response = await fetch(url, {
+        const response = await fetch(videoUrl, {
           method: 'GET',
           credentials: 'include',
           mode: 'no-cors'
@@ -64,7 +79,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
       }
 
       // Second try: Create authentication iframe
-      const authUrl = `https://${sharePointDomain}/_layouts/15/authenticate.aspx?Source=${encodeURIComponent(url)}`;
+      const authUrl = `https://${sharePointDomain}/_layouts/15/authenticate.aspx?Source=${encodeURIComponent(videoUrl)}`;
       addDebugLog('Creating authentication iframe', { authUrl });
 
       // Create a hidden iframe for authentication
@@ -87,7 +102,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
           // Test if we can access the video now
           const testIframe = document.createElement('iframe');
           testIframe.style.display = 'none';
-          testIframe.src = url;
+          testIframe.src = videoUrl;
           document.body.appendChild(testIframe);
 
           // Wait a bit for the iframe to load
@@ -152,7 +167,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
       setAuthError('Authentication failed. Please try opening the video in a new tab.');
       setIsLoading(false);
     }
-  }, [url, courseId, addDebugLog]);
+  }, [videoUrl, courseId, addDebugLog]);
 
   useEffect(() => {
     if (!isMounted || typeof window === 'undefined') return;
@@ -161,7 +176,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
 
     // Parse SharePoint URL for debugging
     try {
-      const parsedUrl = new URL(url);
+      const parsedUrl = new URL(videoUrl);
       addDebugLog('Parsed SharePoint URL', {
         hostname: parsedUrl.hostname,
         pathname: parsedUrl.pathname,
@@ -212,7 +227,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
         clearTimeout(timeoutId);
       }
     };
-  }, [courseId, isMounted, url, isAuthenticated, authAttempted, handleAuthenticate, addDebugLog]);
+  }, [courseId, isMounted, videoUrl, isAuthenticated, authAttempted, handleAuthenticate, addDebugLog]);
 
   const handleIframeLoad = () => {
     addDebugLog('SharePoint iframe loaded successfully');
@@ -276,7 +291,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
               </button>
             )}
             <a
-              href={url}
+              href={videoUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="border border-blue-300 px-4 py-2 rounded hover:bg-blue-50 text-blue-600 text-sm"
@@ -325,7 +340,7 @@ export default function SharePointVideoEmbed({ url, courseId }: SharePointVideoE
         )}
         <iframe
           ref={iframeRef}
-          src={url}
+          src={videoUrl}
           className="w-full aspect-video rounded border"
           allow="autoplay; fullscreen"
           onLoad={handleIframeLoad}
