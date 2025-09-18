@@ -48,18 +48,21 @@ function normalizeVideoUrl(url: string): { type: 'youtube' | 'vimeo' | 'sharepoi
 
     // SharePoint - handle both direct links and embed URLs
     if (hostname.includes('.sharepoint.com')) {
-      // If it's already an embed URL, use it directly
-      if (url.includes('_layouts/15/embed.aspx')) {
+      // If it's already an embed URL with embed=1, use it directly
+      if (url.includes('_layouts/15/embed.aspx') || url.includes('embed=1')) {
         return { type: 'sharepoint', embedUrl: url };
       }
       
-      // For direct SharePoint file links, try to construct embed URL
-      if (url.includes(':v:/') || url.includes('/_layouts/')) {
-        return { type: 'sharepoint', embedUrl: url };
+      // For direct SharePoint video file links, convert to embed format
+      if (url.includes(':v:/')) {
+        // Try to convert to embed URL by adding embed parameter
+        const embedUrl = url.includes('?') ? `${url}&embed=1` : `${url}?embed=1`;
+        return { type: 'sharepoint', embedUrl: embedUrl };
       }
       
-      // For folder links, use direct URL
-      return { type: 'sharepoint', embedUrl: url };
+      // For other SharePoint links, try adding embed parameter
+      const embedUrl = url.includes('?') ? `${url}&embed=1` : `${url}?embed=1`;
+      return { type: 'sharepoint', embedUrl: embedUrl };
     }
 
     // Direct video files or other embed URLs
@@ -73,6 +76,7 @@ function normalizeVideoUrl(url: string): { type: 'youtube' | 'vimeo' | 'sharepoi
 export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoPlayerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [authAttempted, setAuthAttempted] = useState(false);
   
   const { type, embedUrl } = normalizeVideoUrl(url);
 
@@ -92,6 +96,10 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
   const handleIframeLoad = () => {
     setIsLoading(false);
     setError(null);
+    // If SharePoint and still showing auth, user needs to authenticate
+    if (type === 'sharepoint' && !authAttempted) {
+      setAuthAttempted(true);
+    }
   };
 
   const handleIframeError = () => {
@@ -111,7 +119,22 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
   };
 
   const openInNewTab = () => {
-    window.open(embedUrl, '_blank', 'noopener,noreferrer');
+    if (type === 'sharepoint') {
+      // Open SharePoint video in new tab for authentication
+      const authWindow = window.open(embedUrl, '_blank');
+      // Listen for when user comes back to retry
+      window.addEventListener('focus', () => {
+        setTimeout(() => {
+          // Retry loading the video after user returns
+          const iframe = document.querySelector('iframe');
+          if (iframe) {
+            iframe.src = iframe.src;
+          }
+        }, 1000);
+      }, { once: true });
+    } else {
+      window.open(embedUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   if (error) {
@@ -141,7 +164,7 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
           </div>
           {type === 'sharepoint' && (
             <p className="text-xs text-gray-500 mt-3">
-              SharePoint videos require Microsoft 365 authentication. The video will prompt you to sign in.
+              SharePoint videos require Microsoft 365 authentication. Click "Open in New Tab" to authenticate first.
             </p>
           )}
         </div>
@@ -185,6 +208,19 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
           </button>
         )}
       </div>
+
+      {/* Control buttons overlay */}
+      {type === 'sharepoint' && (
+        <div className="absolute top-2 right-2 z-20 flex gap-2">
+          <button
+            onClick={openInNewTab}
+            className="bg-black bg-opacity-50 hover:bg-opacity-75 text-white px-3 py-1 rounded text-xs transition-all"
+            title="Open in new tab to authenticate"
+          >
+            Sign in → Open here
+          </button>
+        </div>
+      )}
 
       {/* SharePoint videos need special handling */}
       {type === 'sharepoint' ? (
