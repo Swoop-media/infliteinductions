@@ -99,6 +99,16 @@ export async function POST(
       console.log("RPC function not available or failed:", rpcError);
     }
 
+    // Check if authorization should be marked as pending_approval
+    try {
+      await supabase.rpc("check_authorization_completion", {
+        p_user_id: assignment.user_id,
+        p_course_id: courseId
+      });
+    } catch (authCheckError) {
+      console.log("Authorization completion check:", authCheckError);
+    }
+
     return NextResponse.json({ 
       success: true, 
       message: "Course completed successfully" 
