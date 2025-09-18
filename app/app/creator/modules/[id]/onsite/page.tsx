@@ -531,7 +531,7 @@ export default async function OnsiteModulePage(props: {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Add New Requirement</h2>
             <form action={addRequirementAction} className="space-y-4">
               <input type="hidden" name="module_id" value={mod.id} />
-              <input type="hidden" name="role" value="trainer" />
+              <input type="hidden" name="role" value={mod.type === "onsite_assessment" ? "assessor" : "trainer"} />
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
