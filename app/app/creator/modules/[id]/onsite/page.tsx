@@ -510,10 +510,10 @@ export default async function OnsiteModulePage(props: {
           <p className="text-xs text-gray-500 mt-2">ID: {mod.id}</p>
         </div>
 
-        {/* Equipment Assessment Option - Only show for onsite_assessment modules when equipment modules exist */}
+        {/* Form Assessment Option - Only show for onsite_assessment modules when equipment modules exist */}
         {mod.type === "onsite_assessment" && hasEquipmentModule && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Equipment Assessment</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Form Assessment</h2>
             <form action={toggleEquipmentAssessmentAction} className="space-y-4">
               <input type="hidden" name="module_id" value={mod.id} />
               
@@ -529,10 +529,10 @@ export default async function OnsiteModulePage(props: {
                 </div>
                 <div className="ml-3">
                   <label htmlFor="include_equipment" className="font-medium text-gray-700 cursor-pointer">
-                    Include Equipment Assessment
+                    Include Form Assessment
                   </label>
                   <p className="text-sm text-gray-500 mt-1">
-                    Allow assessors to review and approve trainee equipment submissions during this assessment.
+                    Allow assessors to review and approve trainee form submissions during this assessment.
                   </p>
                 </div>
               </div>

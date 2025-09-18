@@ -471,7 +471,7 @@ export default async function ModuleEditorPage(props: {
                 <option value="video_embed">🎬 Video</option>
                 <option value="link">🔗 Link</option>
                 <option value="request_document">📤 Request upload from trainee</option>
-                <option value="equipment_form">🔧 Equipment form</option>
+                <option value="equipment_form">🔧 Form</option>
               </select>
               <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">+ Add</button>
             </form>
@@ -649,23 +649,23 @@ export default async function ModuleEditorPage(props: {
                     {b.kind === "equipment_form" && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                          <h3 className="text-md font-semibold">Equipment Requirements</h3>
+                          <h3 className="text-md font-semibold">Form Requirements</h3>
                           <Link 
                             href={`/app/creator/modules/${mod.id}/equipment`}
                             className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
                           >
-                            Manage Equipment
+                            Manage Forms
                           </Link>
                         </div>
                         <div className="rounded-lg border p-4 bg-gray-50">
                           <p className="text-sm text-gray-600 mb-2">
-                            {b.data?.title || "Equipment Information"}
+                            {b.data?.title || "Form Information"}
                           </p>
                           <p className="text-xs text-gray-500">
-                            Equipment templates: {equipmentCount} configured
+                            Form templates: {equipmentCount} configured
                           </p>
                           <p className="text-xs text-gray-500 mt-2">
-                            Trainees will be prompted to provide details about their equipment during training.
+                            Trainees will be prompted to provide details in their forms during training.
                           </p>
                         </div>
                       </div>
