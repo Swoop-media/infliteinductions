@@ -82,6 +82,11 @@ export async function POST(request: NextRequest) {
         .eq("authorisation_id", authId);
 
       const courseIds = allAuthCourses?.map(ac => ac.course_id) || [];
+      
+      console.log(`Checking authorization ${authId}:`, {
+        totalCourses: courseIds.length,
+        courses: courseIds
+      });
 
       // Check if all courses are completed
       const { data: completedCourses } = await supabase
@@ -93,25 +98,43 @@ export async function POST(request: NextRequest) {
         .in("course_id", courseIds);
 
       const allCompleted = completedCourses?.length === courseIds.length && courseIds.length > 0;
+      
+      console.log(`Authorization ${authId} completion status:`, {
+        totalRequired: courseIds.length,
+        totalCompleted: completedCourses?.length || 0,
+        allCompleted,
+        completedCourseIds: completedCourses?.map(c => c.course_id) || []
+      });
 
       if (allCompleted) {
-        // Update authorization status to pending_approval
-        const { error: updateError } = await supabase
+        // First check if there's an existing authorization assignment
+        const { data: existingAuth, error: checkError } = await supabase
           .from("authorisation_assignments")
-          .update({
-            assignment_status: 'pending_approval',
-            completed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
+          .select("id, assignment_status")
           .eq("user_id", userId)
           .eq("authorisation_id", authId)
           .eq("role", "trainee")
-          .not("assignment_status", "in", "(completed,pending_approval)");
+          .single();
 
-        if (updateError) {
-          console.error("Error updating authorization status:", updateError);
+        if (existingAuth && existingAuth.assignment_status !== 'completed' && existingAuth.assignment_status !== 'pending_approval') {
+          // Update authorization status to pending_approval
+          const { data: updateData, error: updateError } = await supabase
+            .from("authorisation_assignments")
+            .update({
+              assignment_status: 'pending_approval',
+              completed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", existingAuth.id)
+            .select();
+
+          if (updateError) {
+            console.error("Error updating authorization status:", updateError);
+          } else {
+            console.log(`Authorization ${authId} updated to pending_approval for user ${userId}`, updateData);
+          }
         } else {
-          console.log(`Authorization ${authId} updated to pending_approval for user ${userId}`);
+          console.log(`Authorization already in status: ${existingAuth?.assignment_status}`);
         }
       }
     }
