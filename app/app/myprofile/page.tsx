@@ -51,7 +51,7 @@ async function loadMyProfileAndLearning() {
     .eq("id", user.id)
     .maybeSingle();
 
-  // Fetch all course assignments for this user
+  // Fetch all course assignments for this user as trainee
   const { data: allAssignments, error: assignmentError } = await supabase
     .from("course_assignments")
     .select(`
@@ -68,6 +68,25 @@ async function loadMyProfileAndLearning() {
     .eq("user_id", user.id)
     .eq("role", "trainee")
     .order("created_at", { ascending: false });
+  
+  // Fetch onsite trainer and assessor assignments
+  const { data: onsiteAssignments } = await supabase
+    .from("course_assignments")
+    .select(`
+      id,
+      course_id,
+      assignment_status,
+      assigned_at,
+      role,
+      courses!course_assignments_course_id_fkey(
+        id,
+        title,
+        status
+      )
+    `)
+    .eq("user_id", user.id)
+    .in("role", ["onsite_trainer", "onsite_assessor"])
+    .order("assigned_at", { ascending: false });
 
   if (assignmentError) {
     console.error('Assignment fetch error:', assignmentError);
@@ -166,7 +185,8 @@ async function loadMyProfileAndLearning() {
     inProgressCourses, 
     completedCourses, 
     inProgressAuth,
-    completedAuth
+    completedAuth,
+    onsiteAssignments: onsiteAssignments || []
   };
 }
 
@@ -193,7 +213,7 @@ function Pill({
 
 /* ---------------- Page ---------------- */
 export default async function MyProfilePage() {
-  const { profile, inProgressCourses, completedCourses, inProgressAuth, completedAuth } = await loadMyProfileAndLearning();
+  const { profile, inProgressCourses, completedCourses, inProgressAuth, completedAuth, onsiteAssignments } = await loadMyProfileAndLearning();
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -458,6 +478,78 @@ export default async function MyProfilePage() {
           </CollapsibleSection>
         </div>
       </div>
+
+      {/* Onsite Training Assignments */}
+      {onsiteAssignments.length > 0 && (
+        <CollapsibleSection
+          title="Onsite Training Assignments"
+          count={onsiteAssignments.length}
+          defaultCollapsed={false}
+          pillTone="blue"
+        >
+          <div className="space-y-4">
+            {/* Onsite Trainer Assignments */}
+            {onsiteAssignments.filter(assignment => assignment.role === 'onsite_trainer').length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Onsite Trainer For:</h3>
+                <div className="space-y-2">
+                  {onsiteAssignments
+                    .filter(assignment => assignment.role === 'onsite_trainer')
+                    .map(assignment => (
+                      <div key={assignment.id} className="flex items-center justify-between py-2 px-3 bg-blue-50 rounded-md">
+                        <div>
+                          <span className="text-sm font-medium text-blue-900">
+                            {assignment.courses?.title || 'Unknown Course'}
+                          </span>
+                          <span className="text-xs text-blue-700 ml-2">
+                            (Assigned: {assignment.assigned_at ? new Date(assignment.assigned_at).toLocaleDateString() : 'N/A'})
+                          </span>
+                        </div>
+                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                          assignment.assignment_status === 'completed' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {assignment.assignment_status || 'assigned'}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Onsite Assessor Assignments */}
+            {onsiteAssignments.filter(assignment => assignment.role === 'onsite_assessor').length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-gray-700 mb-2">Onsite Assessor For:</h3>
+                <div className="space-y-2">
+                  {onsiteAssignments
+                    .filter(assignment => assignment.role === 'onsite_assessor')
+                    .map(assignment => (
+                      <div key={assignment.id} className="flex items-center justify-between py-2 px-3 bg-purple-50 rounded-md">
+                        <div>
+                          <span className="text-sm font-medium text-purple-900">
+                            {assignment.courses?.title || 'Unknown Course'}
+                          </span>
+                          <span className="text-xs text-purple-700 ml-2">
+                            (Assigned: {assignment.assigned_at ? new Date(assignment.assigned_at).toLocaleDateString() : 'N/A'})
+                          </span>
+                        </div>
+                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                          assignment.assignment_status === 'completed' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-purple-100 text-purple-700'
+                        }`}>
+                          {assignment.assignment_status || 'assigned'}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </CollapsibleSection>
+      )}
 
       {/* Teams Integration Section */}
       <div className="rounded-md border bg-white p-4">
