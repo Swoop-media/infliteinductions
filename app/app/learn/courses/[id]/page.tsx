@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import CompleteModuleButton from './CompleteModuleButton';
 import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
+import SharePointVideoEmbed from "@/components/SharePointVideoEmbed";
 import DocumentUploadBlock from './DocumentUploadBlock';
 import EquipmentFormBlock from '@/components/EquipmentFormBlock';
 import { ModuleType, BlockKind } from "@/lib/types/module";
@@ -1125,7 +1126,11 @@ export default async function LearnerCoursePage(props: {
                         <div key={block.id} className="space-y-4">
                           {block.kind === 'video_embed' && (
                             <div key={block.id} className="mb-6">
-                              <SimpleVideoPlayer url={block.data.url ?? ''} courseId={courseId} title="Training Video" />
+                              {(block.data.url ?? '').includes('.sharepoint.com') ? (
+                                <SharePointVideoEmbed url={block.data.url ?? ''} courseId={courseId} />
+                              ) : (
+                                <SimpleVideoPlayer url={block.data.url ?? ''} courseId={courseId} title="Training Video" />
+                              )}
                             </div>
                           )}
                           {block.kind === "request_document" && (

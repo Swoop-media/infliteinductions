@@ -31,7 +31,7 @@ const nextConfig = {
     ];
   },
   // Allow cross-origin requests from development domains
-  allowedDevOrigins: ['http://127.0.0.1:*', 'http://localhost:*', 'https://*.sharepoint.com', 'https://*.replit.dev'],
+  allowedDevOrigins: ['http://127.0.0.1', 'http://localhost:*', 'https://*.sharepoint.com', 'https://*.replit.dev', 'https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev'],
   // Configure webpack to handle SharePoint URLs
   webpack: (config, { isServer }) => {
     if (!isServer) {
