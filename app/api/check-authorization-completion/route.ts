@@ -43,18 +43,77 @@ export async function POST(request: NextRequest) {
 
     console.log("Manually checking authorization completion for:", { userId, courseId });
 
-    // Call the database function to check authorization completion
-    const { data, error } = await supabase.rpc('check_authorization_completion', {
-      p_user_id: userId,
-      p_course_id: courseId
-    });
+    // First check if course is completed
+    const { data: courseAssignment } = await supabase
+      .from("course_assignments")
+      .select("assignment_status")
+      .eq("user_id", userId)
+      .eq("course_id", courseId)
+      .eq("role", "trainee")
+      .single();
 
-    if (error) {
-      console.error("Error calling check_authorization_completion:", error);
-      return NextResponse.json({ 
-        error: "Failed to check authorization completion",
-        details: error.message 
-      }, { status: 500 });
+    if (!courseAssignment || courseAssignment.assignment_status !== 'completed') {
+      return NextResponse.json({
+        error: "Course is not completed yet",
+        details: `Course status: ${courseAssignment?.assignment_status || 'not found'}`
+      }, { status: 400 });
+    }
+
+    // Find all authorizations that include this course
+    const { data: authCourses } = await supabase
+      .from("authorisation_courses")
+      .select("authorisation_id")
+      .eq("course_id", courseId);
+
+    if (!authCourses || authCourses.length === 0) {
+      return NextResponse.json({
+        error: "No authorizations found for this course"
+      }, { status: 404 });
+    }
+
+    // For each authorization, check if all courses are completed
+    for (const authCourse of authCourses) {
+      const authId = authCourse.authorisation_id;
+
+      // Get all courses for this authorization
+      const { data: allAuthCourses } = await supabase
+        .from("authorisation_courses")
+        .select("course_id")
+        .eq("authorisation_id", authId);
+
+      const courseIds = allAuthCourses?.map(ac => ac.course_id) || [];
+
+      // Check if all courses are completed
+      const { data: completedCourses } = await supabase
+        .from("course_assignments")
+        .select("course_id")
+        .eq("user_id", userId)
+        .eq("role", "trainee")
+        .eq("assignment_status", "completed")
+        .in("course_id", courseIds);
+
+      const allCompleted = completedCourses?.length === courseIds.length && courseIds.length > 0;
+
+      if (allCompleted) {
+        // Update authorization status to pending_approval
+        const { error: updateError } = await supabase
+          .from("authorisation_assignments")
+          .update({
+            assignment_status: 'pending_approval',
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq("user_id", userId)
+          .eq("authorisation_id", authId)
+          .eq("role", "trainee")
+          .not("assignment_status", "in", "(completed,pending_approval)");
+
+        if (updateError) {
+          console.error("Error updating authorization status:", updateError);
+        } else {
+          console.log(`Authorization ${authId} updated to pending_approval for user ${userId}`);
+        }
+      }
     }
 
     // Get the updated authorization status
