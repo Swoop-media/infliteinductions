@@ -10,7 +10,7 @@ interface SimpleVideoPlayerProps {
   title?: string;
 }
 
-function normalizeVideoUrl(url: string): { type: 'youtube' | 'vimeo' | 'sharepoint' | 'direct', embedUrl: string } {
+function normalizeVideoUrl(url: string): string {
   try {
     // Handle iframe embed code - extract src
     if (url.includes('<iframe')) {
@@ -27,42 +27,31 @@ function normalizeVideoUrl(url: string): { type: 'youtube' | 'vimeo' | 'sharepoi
     if (hostname === 'youtube.com' || hostname === 'm.youtube.com') {
       if (parsedUrl.pathname === '/watch') {
         const videoId = parsedUrl.searchParams.get('v');
-        if (videoId) return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${videoId}` };
+        if (videoId) return `https://www.youtube.com/embed/${videoId}`;
       }
       if (parsedUrl.pathname.startsWith('/shorts/')) {
         const videoId = parsedUrl.pathname.split('/')[2];
-        if (videoId) return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${videoId}` };
+        if (videoId) return `https://www.youtube.com/embed/${videoId}`;
       }
     }
     
     if (hostname === 'youtu.be') {
       const videoId = parsedUrl.pathname.slice(1).split('/')[0];
-      if (videoId) return { type: 'youtube', embedUrl: `https://www.youtube.com/embed/${videoId}` };
+      if (videoId) return `https://www.youtube.com/embed/${videoId}`;
     }
 
     // Vimeo
     if (hostname === 'vimeo.com') {
       const videoId = parsedUrl.pathname.split('/').filter(Boolean)[0];
-      if (videoId) return { type: 'vimeo', embedUrl: `https://player.vimeo.com/video/${videoId}` };
+      if (videoId) return `https://player.vimeo.com/video/${videoId}`;
     }
 
-    // SharePoint - handle both direct links and embed URLs
-    if (hostname.includes('.sharepoint.com')) {
-      // If it's already an embed URL, use it directly
-      if (url.includes('_layouts/15/embed.aspx')) {
-        return { type: 'sharepoint', embedUrl: url };
-      }
-      
-      // For direct SharePoint file links, use as-is
-      // The authentication from the app login should carry over
-      return { type: 'sharepoint', embedUrl: url };
-    }
-
-    // Direct video files or other embed URLs
-    return { type: 'direct', embedUrl: url };
+    // For SharePoint and all other URLs, return as-is
+    // The user's Microsoft authentication will handle access
+    return url;
     
   } catch {
-    return { type: 'direct', embedUrl: url };
+    return url;
   }
 }
 
@@ -70,7 +59,7 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  const { type, embedUrl } = normalizeVideoUrl(url);
+  const embedUrl = normalizeVideoUrl(url);
 
   useEffect(() => {
     // Reset states when URL changes
@@ -146,11 +135,6 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
           <div className="text-center text-white">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
             <p className="text-sm">Loading video...</p>
-            {type === 'sharepoint' && (
-              <p className="text-xs mt-1 opacity-75">
-                Loading SharePoint video...
-              </p>
-            )}
           </div>
         </div>
       )}
@@ -183,7 +167,6 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
         onLoad={handleIframeLoad}
         onError={handleIframeError}
         title={title || "Course video"}
-        // No sandbox restrictions - allow all for SharePoint compatibility
         referrerPolicy="no-referrer-when-downgrade"
       />
     </div>
