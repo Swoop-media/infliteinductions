@@ -1,0 +1,82 @@
+[
+  {
+    "authorisation_id": "01cfe799-1454-4d8a-9a18-d97a5057de26",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "position": 1,
+    "id": "0491e353-7d1a-4991-8b3f-c543491b0b25",
+    "order_index": 0,
+    "created_at": "2025-09-15 06:04:49.528082+00"
+  },
+  {
+    "authorisation_id": "01cfe799-1454-4d8a-9a18-d97a5057de26",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "position": 1,
+    "id": "0d49a46e-5d39-45df-83d0-5857a948e218",
+    "order_index": 1,
+    "created_at": "2025-09-15 06:04:58.921014+00"
+  },
+  {
+    "authorisation_id": "9be54251-d159-44f5-9f85-cc63595f42fb",
+    "course_id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "position": 1,
+    "id": "eb57f016-5694-4b5b-89c6-93f7645e1e1c",
+    "order_index": 0,
+    "created_at": "2025-09-15 06:32:46.047086+00"
+  },
+  {
+    "authorisation_id": "73f6c18b-54a1-4e18-9449-61aa62f4b2a2",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "position": 1,
+    "id": "78e2295a-39f0-4c05-8c45-2b682e7e623e",
+    "order_index": 0,
+    "created_at": "2025-09-15 21:55:02.272586+00"
+  },
+  {
+    "authorisation_id": "f6516dd2-2506-4e03-8fc2-4ba23f051da5",
+    "course_id": "96191cc2-6519-4665-b1d5-e08707a9139c",
+    "position": 1,
+    "id": "d05aee5a-aca7-46d4-8a7d-a2d9fc9a615d",
+    "order_index": 0,
+    "created_at": "2025-09-16 23:53:27.826615+00"
+  },
+  {
+    "authorisation_id": "f6516dd2-2506-4e03-8fc2-4ba23f051da5",
+    "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7",
+    "position": 1,
+    "id": "35a871aa-b83a-49e9-aaf6-6633de908b61",
+    "order_index": 1,
+    "created_at": "2025-09-16 23:53:35.082569+00"
+  },
+  {
+    "authorisation_id": "f6516dd2-2506-4e03-8fc2-4ba23f051da5",
+    "course_id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "position": 1,
+    "id": "0510be2b-8640-4aad-a9cf-6cf146e09712",
+    "order_index": 2,
+    "created_at": "2025-09-16 23:53:45.48234+00"
+  },
+  {
+    "authorisation_id": "f6516dd2-2506-4e03-8fc2-4ba23f051da5",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "position": 1,
+    "id": "0d53cd69-2205-4224-b6ac-afeb5f145e6a",
+    "order_index": 3,
+    "created_at": "2025-09-16 23:54:32.18418+00"
+  },
+  {
+    "authorisation_id": "f6516dd2-2506-4e03-8fc2-4ba23f051da5",
+    "course_id": "30950fba-e4cd-4fc3-8b72-cb7d27b02565",
+    "position": 1,
+    "id": "ed237cce-bdcb-4c16-b144-c50c8b1f67d5",
+    "order_index": 4,
+    "created_at": "2025-09-17 20:42:53.1211+00"
+  },
+  {
+    "authorisation_id": "a707ba0b-7ba3-4ee0-9937-c85e2b0e66b3",
+    "course_id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "position": 1,
+    "id": "98d59286-f0eb-42d4-8088-bce5c193c409",
+    "order_index": 0,
+    "created_at": "2025-09-18 08:16:41.219463+00"
+  }
+]
