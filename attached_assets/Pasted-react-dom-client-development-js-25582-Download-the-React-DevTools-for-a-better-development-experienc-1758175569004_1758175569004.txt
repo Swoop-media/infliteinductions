@@ -1,0 +1,83 @@
+react-dom-client.development.js:25582 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+use-websocket.js:42 WebSocket connection to 'wss://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/_next/webpack-hmr' failed: 
+eval @ use-websocket.js:42
+page.tsx:75  Server  All course assignments: Array(1)
+page.tsx:95  Server  Authorization assignments: Array(1)
+page.tsx:96  Server  All course assignments: Array(1)
+page.tsx:140  Server  Authorization with courses: Array(1)
+page.tsx?26:sourcemap:114  Server  In progress courses: Array(1)
+page.tsx?27:sourcemap:115  Server  Completed courses: Array(0)
+page.tsx?28:sourcemap:116  Server  In progress auth: Array(1)
+page.tsx?29:sourcemap:117  Server  Completed auth: Array(0)
+SharePointVideoEmbed.tsx:42 [06:05:13.627] Component mounted Object
+SharePointVideoEmbed.tsx:42 [06:05:13.627] Component mounted Object
+SharePointVideoEmbed.tsx:42 [06:05:13.628] Starting authentication check 
+SharePointVideoEmbed.tsx:42 [06:05:13.628] Parsed SharePoint URL Object
+SharePointVideoEmbed.tsx:42 [06:05:13.628] LocalStorage auth check Object
+SharePointVideoEmbed.tsx:42 [06:05:13.628] User already authenticated for this course 
+SharePointVideoEmbed.tsx:42 [06:05:13.630] Starting authentication check 
+SharePointVideoEmbed.tsx:42 [06:05:13.630] Parsed SharePoint URL Object
+SharePointVideoEmbed.tsx:42 [06:05:13.630] LocalStorage auth check Object
+SharePointVideoEmbed.tsx:42 [06:05:13.630] User already authenticated for this course 
+SharePointVideoEmbed.tsx:42 [06:05:14.342] SharePoint iframe loaded successfully 
+SharePointVideoEmbed.tsx:42 [06:05:17.127] SharePoint iframe loaded successfully 
+SharePointVideoEmbed.tsx:42 [06:05:19.720] Clearing authentication and retrying 
+SharePointVideoEmbed.tsx:42 [06:05:19.720] Auth cleared from localStorage 
+SharePointVideoEmbed.tsx:42 [06:05:19.721] Starting authentication check 
+SharePointVideoEmbed.tsx:42 [06:05:19.721] Parsed SharePoint URL Object
+SharePointVideoEmbed.tsx:42 [06:05:19.721] LocalStorage auth check Object
+SharePointVideoEmbed.tsx:42 [06:05:19.721] SharePoint authentication required - will auto-trigger 
+SharePointVideoEmbed.tsx:42 [06:05:20.731] Auto-triggering inline authentication 
+SharePointVideoEmbed.tsx:42 [06:05:20.732] Starting inline SharePoint authentication flow 
+SharePointVideoEmbed.tsx:42 [06:05:20.732] SharePoint domain extracted Object
+SharePointVideoEmbed.tsx:42 [06:05:20.732] Attempting inline authentication using iframe approach 
+SharePointVideoEmbed.tsx:42 [06:05:20.734] Starting authentication check 
+SharePointVideoEmbed.tsx:42 [06:05:20.734] Parsed SharePoint URL Object
+SharePointVideoEmbed.tsx:42 [06:05:20.734] LocalStorage auth check Object
+SharePointVideoEmbed.tsx:42 [06:05:20.734] SharePoint authentication required - will auto-trigger 
+SharePointVideoEmbed.tsx:42 [06:05:21.157] Direct fetch attempt completed 
+SharePointVideoEmbed.tsx:42 [06:05:21.157] Creating authentication iframe Object
+SharePointVideoEmbed.tsx:42 [06:05:23.172] Authentication check 1/30 
+charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/contextinfo:1  Failed to load resource: the server responded with a status of 403 ()
+charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/contextinfo:1  Failed to load resource: the server responded with a status of 403 ()
+charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/web/Language:1  Failed to load resource: the server responded with a status of 403 ()
+charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/contextinfo:1  Failed to load resource: the server responded with a status of 403 ()
+[Report Only] Refused to frame '<URL>' because it violates the following Content Security Policy directive: "frame-src 'self' <URL> <URL> *.cloud.microsoft".
+
+[Report Only] Refused to frame '<URL>' because it violates the following Content Security Policy directive: "frame-src 'self' <URL> <URL> *.cloud.microsoft".
+
+[Report Only] Refused to frame '<URL>' because it violates the following Content Security Policy directive: "frame-src 'self' <URL> <URL> *.cloud.microsoft".
+
+[Report Only] Refused to frame '<URL>' because it violates the following Content Security Policy directive: "frame-src 'self' <URL> <URL> *.cloud.microsoft".
+
+[Report Only] Refused to frame '<URL>' because it violates the following Content Security Policy directive: "frame-src 'self' <URL> <URL> *.cloud.microsoft".
+
+[Report Only] Refused to frame '<URL>' because it violates the following Content Security Policy directive: "frame-src 'self' <URL> <URL> *.cloud.microsoft".
+
+[Report Only] Refused to frame '<URL>' because it violates the following Content Security Policy directive: "frame-src 'self' <URL> <URL> *.cloud.microsoft".
+
+SharePointVideoEmbed.tsx:42 [06:05:24.175] Authentication appears successful 
+SharePointVideoEmbed.tsx:42 [06:05:24.176] Auth status saved to localStorage 
+SharePointVideoEmbed.tsx:42 [06:05:24.179] Starting authentication check 
+SharePointVideoEmbed.tsx:42 [06:05:24.179] Parsed SharePoint URL Object
+SharePointVideoEmbed.tsx:42 [06:05:24.179] LocalStorage auth check Object
+SharePointVideoEmbed.tsx:42 [06:05:24.179] User already authenticated for this course 
+SharePointVideoEmbed.tsx:42 [06:05:24.463] SharePoint iframe loaded successfully 
+charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/contextinfo:1  Failed to load resource: the server responded with a status of 403 ()
+charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/contextinfo:1  Failed to load resource: the server responded with a status of 403 ()
+charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/web/Language:1  Failed to load resource: the server responded with a status of 403 ()
+charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/contextinfo:1  Failed to load resource: the server responded with a status of 403 ()
+mobile.events.data.microsoft.com/OneCollector/1.0/?cors=true&content-type=application/x-json-stream&client-id=NO_AUTH&client-version=1DS-Web-JS-3.2.15&apikey=af7114704a204580909f08c904c5ac6f-57579cfd-1741-4e07-9f63-8f5c227f3b20-6813&upload-time=1758175527713&ext.intweb.msfpc=GUID%3D07d5dc723ede4a9a8881fb3282e7bc64%26HASH%3D07d5%26LV%3D202509%26V%3D4%26LU%3D1758173575741&time-delta-to-apply-millis=use-collector-delta&w=0&NoResponseBody=true:1  Failed to load resource: net::ERR_BLOCKED_BY_CLIENT
+SharePointVideoEmbed.tsx:42 [06:05:28.035] SharePoint iframe loaded successfully 
+loginapp.js:70 Session ID: fc146a05-0a95-4f46-b78d-a9c84e020a82
+loginapp.js:70 Time in UTC:  Thu, 18 Sep 2025 06:05:28 GMT
+loginapp.js:14 The icon "sharepointlogo" was used but not registered. See https://github.com/microsoft/fluentui/wiki/Using-icons for more information.
+v @ loginapp.js:14
+charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/contextinfo:1  Failed to load resource: the server responded with a status of 403 ()
+charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/contextinfo:1  Failed to load resource: the server responded with a status of 403 ()
+charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/web/Language:1  Failed to load resource: the server responded with a status of 403 ()
+charterinflight.sharepoint.com/sites/INFLITEHeliAOC/_api/contextinfo:1  Failed to load resource: the server responded with a status of 403 ()
+loginapp.js:70 Promise with no error callback:3
+(anonymous) @ loginapp.js:70
+loginapp.js:70 Object
+(index):1 Refused to display 'https://login.microsoftonline.com/' in a frame because it set 'X-Frame-Options' to 'deny'.
