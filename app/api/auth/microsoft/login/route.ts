@@ -11,9 +11,11 @@ export async function GET(req: NextRequest) {
     const siteUrl = `${protocol}://${host}`;
     
     // Get the authorization URL with dynamic redirect URI
+    // Force account selection for shared computers
     const authCodeUrlParameters = {
       ...AUTH_CODE_URL_PARAMETERS,
       redirectUri: `${siteUrl}/auth/callback`,
+      prompt: 'select_account', // Forces account picker even with cached sessions
     };
 
     const authUrl = await msalInstance.getAuthCodeUrl(authCodeUrlParameters);

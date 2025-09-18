@@ -19,13 +19,15 @@ export default function SignIn() {
     }
   }, []);
 
-  const handleMicrosoftLogin = async () => {
+  const handleMicrosoftLogin = async (forceNewAccount = false) => {
     setIsLoading(true);
     setError("");
 
     try {
-      // Redirect to Microsoft OAuth
-      const authUrl = `/api/auth/microsoft/login`;
+      // Redirect to Microsoft OAuth with optional prompt parameter
+      const authUrl = forceNewAccount 
+        ? `/api/auth/microsoft/login?prompt=login`
+        : `/api/auth/microsoft/login`;
       window.location.href = authUrl;
     } catch (err) {
       setError("Failed to initiate Microsoft login");
@@ -37,9 +39,9 @@ export default function SignIn() {
     <main className="min-h-screen grid place-items-center p-4">
       <div className="w-full max-w-sm space-y-4 rounded-md border bg-white p-6">
         <div className="text-center">
-          <h1 className="text-lg font-semibold">Welcome</h1>
+          <h1 className="text-lg font-semibold">INFLITE Induction & Training</h1>
           <p className="text-sm text-gray-600 mt-2">
-            Sign in with your Microsoft account to access the learning platform
+            Sign in with your Microsoft account to continue.
           </p>
         </div>
         
@@ -50,7 +52,7 @@ export default function SignIn() {
         )}
 
         <button
-          onClick={handleMicrosoftLogin}
+          onClick={() => handleMicrosoftLogin()}
           disabled={isLoading}
           className="w-full flex items-center justify-center gap-3 rounded-md bg-blue-600 py-3 px-4 text-white hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
@@ -64,11 +66,14 @@ export default function SignIn() {
               <path d="M23 11.97H11.97V23H23V11.97z"/>
             </svg>
           )}
-          {isLoading ? "Signing in..." : "Continue with Microsoft"}
+          {isLoading ? "Signing in..." : "Login with Microsoft"}
         </button>
 
-        <div className="text-xs text-gray-500 text-center">
-          Only users from your organization can access this platform
+        <div className="text-xs text-gray-500 text-center space-y-2">
+          <p>Only users from your organization can access this platform</p>
+          <p className="text-gray-400">
+            On a shared computer? You'll be able to choose your account on the next screen
+          </p>
         </div>
       </div>
     </main>
