@@ -173,9 +173,9 @@ export default async function EquipmentManagementPage({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Equipment Requirements</h1>
+          <h1 className="text-2xl font-bold">Form Requirements</h1>
           <div className="text-xs text-gray-500">
-            Module: {module.title} • Course Equipment Management
+            Module: {module.title} • Course Form Management
           </div>
         </div>
         <Link 
@@ -190,22 +190,22 @@ export default async function EquipmentManagementPage({
       {resolvedSearchParams.notice && (
         <div className="rounded-md border border-green-200 bg-green-50 p-3">
           <p className="text-sm text-green-800">
-            {resolvedSearchParams.notice === "equipment_created" && "Equipment requirement created successfully"}
-            {resolvedSearchParams.notice === "equipment_updated" && "Equipment requirement updated successfully"}
-            {resolvedSearchParams.notice === "equipment_deleted" && "Equipment requirement deleted successfully"}
+            {resolvedSearchParams.notice === "equipment_created" && "Form requirement created successfully"}
+            {resolvedSearchParams.notice === "equipment_updated" && "Form requirement updated successfully"}
+            {resolvedSearchParams.notice === "equipment_deleted" && "Form requirement deleted successfully"}
           </p>
         </div>
       )}
 
       {/* Add New Equipment */}
       <div className="rounded-xl border bg-white p-6">
-        <h2 className="text-lg font-semibold mb-4">Add Equipment Requirement</h2>
+        <h2 className="text-lg font-semibold mb-4">Add Form Requirement</h2>
         <form action={createEquipmentTemplate} className="grid gap-4 sm:grid-cols-2">
           <input type="hidden" name="module_id" value={module.id} />
           <input type="hidden" name="course_id" value={module.course_id} />
           
           <label className="grid gap-1 sm:col-span-2">
-            <span className="text-sm font-medium text-gray-700">Equipment Name *</span>
+            <span className="text-sm font-medium text-gray-700">Form Name *</span>
             <input
               name="equipment_name"
               required
@@ -236,7 +236,7 @@ export default async function EquipmentManagementPage({
               defaultChecked={true}
               className="rounded border-gray-300"
             />
-            <span className="font-medium text-gray-700">Required Equipment</span>
+            <span className="font-medium text-gray-700">Required Form</span>
           </label>
 
           <label className="grid gap-1 sm:col-span-2">
@@ -254,7 +254,7 @@ export default async function EquipmentManagementPage({
               type="submit"
               className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
             >
-              Add Equipment Requirement
+              Add Form Requirement
             </button>
           </div>
         </form>
@@ -262,11 +262,11 @@ export default async function EquipmentManagementPage({
 
       {/* Equipment List */}
       <div className="rounded-xl border bg-white p-6">
-        <h2 className="text-lg font-semibold mb-4">Current Equipment Requirements</h2>
+        <h2 className="text-lg font-semibold mb-4">Current Form Requirements</h2>
         
         {equipment.length === 0 ? (
           <p className="text-sm text-gray-500">
-            No equipment requirements configured yet. Add one above to get started.
+            No form requirements configured yet. Add one above to get started.
           </p>
         ) : (
           <div className="space-y-4">
