@@ -100,13 +100,21 @@ export async function POST(
     }
 
     // Check if authorization should be marked as pending_approval
+    // Try the enhanced function first, then fall back to the original
     try {
-      await supabase.rpc("check_authorization_completion", {
-        p_user_id: assignment.user_id,
-        p_course_id: courseId
+      await supabase.rpc("check_all_user_authorizations", {
+        p_user_id: assignment.user_id
       });
     } catch (authCheckError) {
-      console.log("Authorization completion check:", authCheckError);
+      // Fall back to original function if new one doesn't exist
+      try {
+        await supabase.rpc("check_authorization_completion", {
+          p_user_id: assignment.user_id,
+          p_course_id: courseId
+        });
+      } catch (fallbackError) {
+        console.log("Authorization completion check failed:", fallbackError);
+      }
     }
 
     return NextResponse.json({ 
