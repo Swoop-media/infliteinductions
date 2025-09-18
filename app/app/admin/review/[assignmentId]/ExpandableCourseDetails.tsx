@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, CheckCircle, Circle, FileText, User } from "lucide-react";
+import { ChevronDown, ChevronUp, CheckCircle, Circle, FileText, User, AlertCircle } from "lucide-react";
 
 interface ModuleProgress {
   module_id: string;
@@ -169,28 +169,50 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                           )}
 
                           {/* Onsite Training/Assessment - Show requirements and responses */}
-                          {(module.module_type === "onsite_training" || module.module_type === "onsite_assessment") && module.onsite_responses && module.onsite_responses.length > 0 && (
+                          {(module.module_type === "onsite_training" || module.module_type === "onsite_assessment") && (
                             <div className="space-y-2">
-                              <p className="text-sm font-medium text-gray-700">
-                                {module.module_type === "onsite_training" ? "Training Requirements:" : "Assessment Requirements:"}
-                              </p>
-                              {module.onsite_responses.map((response, idx) => (
-                                <div key={idx} className="bg-gray-50 rounded p-2 text-sm">
-                                  <div className="font-medium text-gray-700">{response.requirement_label}</div>
-                                  <div className="text-gray-600 mt-1">{response.response_text || "No response provided"}</div>
-                                  {response.assessor_name && (
-                                    <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                                      <User className="w-3 h-3" />
-                                      <span>Assessed by {response.assessor_name}</span>
+                              {module.onsite_responses && module.onsite_responses.length > 0 ? (
+                                <>
+                                  <p className="text-sm font-medium text-gray-700">
+                                    {module.module_type === "onsite_training" ? "Training Requirements:" : "Assessment Requirements:"}
+                                  </p>
+                                  {module.onsite_responses.map((response, idx) => (
+                                    <div key={idx} className="bg-gray-50 rounded p-2 text-sm">
+                                      <div className="font-medium text-gray-700">{response.requirement_label}</div>
+                                      <div className="text-gray-600 mt-1">{response.response_text || "No response provided"}</div>
+                                      {response.assessor_name && (
+                                        <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                                          <User className="w-3 h-3" />
+                                          <span>Assessed by {response.assessor_name}</span>
+                                        </div>
+                                      )}
+                                      {response.response_date && (
+                                        <div className="text-xs text-gray-500">
+                                          {new Date(response.response_date).toLocaleDateString()}
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                  {response.response_date && (
-                                    <div className="text-xs text-gray-500">
-                                      {new Date(response.response_date).toLocaleDateString()}
+                                  ))}
+                                </>
+                              ) : module.completed ? (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm">
+                                  <div className="flex items-start gap-2">
+                                    <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5" />
+                                    <div>
+                                      <p className="text-yellow-800 font-medium">
+                                        {module.module_type === "onsite_training" ? "Onsite Training Completed" : "Onsite Assessment Completed"}
+                                      </p>
+                                      <p className="text-yellow-700 text-xs mt-1">
+                                        Module marked as completed but detailed assessment responses are not available in the system.
+                                      </p>
                                     </div>
-                                  )}
+                                  </div>
                                 </div>
-                              ))}
+                              ) : (
+                                <div className="text-sm text-gray-500 italic">
+                                  {module.module_type === "onsite_training" ? "Onsite training not yet completed" : "Onsite assessment not yet completed"}
+                                </div>
+                              )}
                             </div>
                           )}
 
