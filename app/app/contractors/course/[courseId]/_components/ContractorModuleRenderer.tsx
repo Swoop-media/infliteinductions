@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
+import UnifiedVideoPlayer from "@/components/UnifiedVideoPlayer";
 import EquipmentFormBlock from "@/components/EquipmentFormBlock";
 
 interface Module {
@@ -138,8 +138,8 @@ export default function ContractorModuleRenderer({
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h4 className="font-medium text-gray-900 mb-2">🎥 Video Content</h4>
               {data.url ? (
-                <SimpleVideoPlayer
-                  url={data.url}
+                <UnifiedVideoPlayer
+                  videoUrl={data.url}
                   courseId={module.course_id}
                   title={data.title || "Course Video"}
                 />

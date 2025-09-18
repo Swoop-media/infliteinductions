@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
-import VideoPlayer from '@/components/VideoPlayer';
+import UnifiedVideoPlayer from '@/components/UnifiedVideoPlayer';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import QuizQuestionsBlock from './QuizQuestionsBlock';
@@ -88,16 +88,8 @@ async function BlockView({ block }: { block: any }) {
 
   if (kind === "video_embed") {
     const raw = String(data.url ?? "");
-    const url = toEmbedUrl(raw);
-    return url ? (
-      <div className="aspect-video w-full overflow-hidden rounded-md border">
-        <iframe
-          src={url}
-          className="h-full w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
+    return raw ? (
+      <UnifiedVideoPlayer videoUrl={raw} title={data.title || "Course Video"} />
     ) : (
       <p className="text-sm text-gray-500">No video URL provided.</p>
     );
@@ -416,7 +408,7 @@ export default async function LearnerModulePage(props: {
                 )}
 
                 {block.kind === "video_embed" && block.data?.url && (
-                  <VideoPlayer url={block.data.url} onProgress={handleVideoProgress} />
+                  <UnifiedVideoPlayer videoUrl={block.data.url} title={block.data.title || "Course Video"} />
                 )}
 
                 {block.kind === "quiz_questions" && (

@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import RichTextBlock from "./_components/RichTextBlock";
-import VideoPlayer from '@/components/VideoPlayer';
+import UnifiedVideoPlayer from '@/components/UnifiedVideoPlayer';
 import { ModuleType, BlockKind } from "@/lib/types/module";
 import DirectFileBlock from "./_components/DirectFileBlock";
 

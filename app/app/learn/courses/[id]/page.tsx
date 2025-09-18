@@ -4,8 +4,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import CompleteModuleButton from './CompleteModuleButton';
-import SimpleVideoPlayer from "@/components/SimpleVideoPlayer";
-import SharePointVideoEmbed from "@/components/SharePointVideoEmbed";
+import UnifiedVideoPlayer from "@/components/UnifiedVideoPlayer";
 import DocumentUploadBlock from './DocumentUploadBlock';
 import EquipmentFormBlock from '@/components/EquipmentFormBlock';
 import { ModuleType, BlockKind } from "@/lib/types/module";
@@ -114,16 +113,8 @@ async function BlockView({ block }: { block: any }) {
 
   if (kind === "video_embed") {
     const raw = String(data.url ?? "");
-    const url = toEmbedUrl(raw);
-    return url ? (
-      <div className="aspect-video w-full overflow-hidden rounded-md border">
-        <iframe
-          src={url}
-          className="h-full w-full"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
-      </div>
+    return raw ? (
+      <UnifiedVideoPlayer videoUrl={raw} title={data.title || "Course Video"} />
     ) : (
       <p className="text-sm text-gray-500">No video URL provided.</p>
     );
@@ -1127,9 +1118,9 @@ export default async function LearnerCoursePage(props: {
                           {block.kind === 'video_embed' && (
                             <div key={block.id} className="mb-6">
                               {(block.data.url ?? '').includes('.sharepoint.com') ? (
-                                <SharePointVideoEmbed url={block.data.url ?? ''} courseId={courseId} />
+                                <UnifiedVideoPlayer videoUrl={block.data.url ?? ''} courseId={courseId} title={block.data.title || "Training Video"} />
                               ) : (
-                                <SimpleVideoPlayer url={block.data.url ?? ''} courseId={courseId} title="Training Video" />
+                                <UnifiedVideoPlayer videoUrl={block.data.url ?? ''} courseId={courseId} title={block.data.title || "Training Video"} />
                               )}
                             </div>
                           )}

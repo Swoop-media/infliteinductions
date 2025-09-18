@@ -3,8 +3,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import SimpleVideoPlayer from "./SimpleVideoPlayer";
-import SharePointVideoEmbed from "./SharePointVideoEmbed";
+import UnifiedVideoPlayer from "./UnifiedVideoPlayer";
 import OnsiteRequirementsPreview from "./OnsiteRequirementsPreview";
 
 /** Data shapes coming from your pages */
@@ -189,21 +188,8 @@ function VideoEmbed({ data, courseId }: { data: any; courseId?: string }) {
     return <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">Video block missing an embed URL.</div>;
   }
 
-  // Check if this is a SharePoint video that needs special authentication handling
-  try {
-    const url = new URL(src);
-    const hostname = url.hostname.replace(/^www\./, '');
-    
-    if (hostname.includes('.sharepoint.com')) {
-      // Use the specialized SharePoint video embed component for authentication
-      return <SharePointVideoEmbed url={src} courseId={courseId || 'unknown'} />;
-    }
-  } catch (error) {
-    // If URL parsing fails, fall through to SimpleVideoPlayer
-  }
-
-  // For all other video types (YouTube, Vimeo, direct links), use SimpleVideoPlayer
-  return <SimpleVideoPlayer url={src} courseId={courseId} title={title} />;
+  // Use the unified video player that handles all video types including SharePoint
+  return <UnifiedVideoPlayer videoUrl={src} courseId={courseId} title={title} />;
 }
 
 function LinkBlock({ data }: { data: any }) {
