@@ -1,0 +1,71 @@
+react-dom-client.development.js:25581 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+/app/notifications/list:1   Failed to load resource: the server responded with a status of 401 (Unauthorized)
+use-websocket.ts:16  WebSocket connection to 'wss://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/_next/webpack-hmr' failed: 
+eval @ use-websocket.ts:16
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+page.tsx:23   POST https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/api/check-authorization-completion 401 (Unauthorized)
+handleFix @ page.tsx:23
+executeDispatch @ react-dom-client.development.js:16921
+runWithFiberInDEV @ react-dom-client.development.js:872
+processDispatchQueue @ react-dom-client.development.js:16971
+eval @ react-dom-client.development.js:17572
+batchedUpdates$1 @ react-dom-client.development.js:3312
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17125
+dispatchEvent @ react-dom-client.development.js:21308
+dispatchDiscreteEvent @ react-dom-client.development.js:21276
+page.tsx:52  Error: Error: Unauthorized
+    at handleFix (page.tsx:37:15)
+error @ intercept-console-error.js:62
+handleFix @ page.tsx:52
+await in handleFix
+executeDispatch @ react-dom-client.development.js:16921
+runWithFiberInDEV @ react-dom-client.development.js:872
+processDispatchQueue @ react-dom-client.development.js:16971
+eval @ react-dom-client.development.js:17572
+batchedUpdates$1 @ react-dom-client.development.js:3312
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17125
+dispatchEvent @ react-dom-client.development.js:21308
+dispatchDiscreteEvent @ react-dom-client.development.js:21276
+index.js:551   POST https://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/__nextjs_original-stack-frames 403 (Forbidden)
+eval @ index.js:551
+eval @ index.js:551
+ej @ index.js:551
+i @ index.js:551
+eval @ index.js:551
+eval @ index.js:551
+eC @ index.js:551
+eval @ index.js:551
+eval @ index.js:551
+tv @ index.js:551
+i @ index.js:551
+eval @ index.js:551
+eval @ index.js:551
+s @ index.js:551
+eval @ index.js:551
+eval @ index.js:551
+tv @ index.js:551
+i @ index.js:551
+eval @ index.js:551
+eval @ index.js:551
+eval @ index.js:551
+i0 @ index.js:540
+lk @ index.js:540
+lj @ index.js:540
+lk @ index.js:540
+lj @ index.js:540
+lk @ index.js:540
+lj @ index.js:540
+lk @ index.js:540
+lj @ index.js:540
+lk @ index.js:540
+lj @ index.js:540
+lk @ index.js:540
+lj @ index.js:540
+lk @ index.js:540
+sE @ index.js:540
+eval @ index.js:540
+_ @ index.js:540
