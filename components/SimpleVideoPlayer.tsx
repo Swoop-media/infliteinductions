@@ -48,6 +48,13 @@ function normalizeVideoUrl(url: string): { type: 'youtube' | 'vimeo' | 'sharepoi
 
     // SharePoint - handle both direct links and embed URLs
     if (hostname.includes('.sharepoint.com')) {
+      // If it's already an embed URL, use it directly
+      if (url.includes('_layouts/15/embed.aspx')) {
+        return { type: 'sharepoint', embedUrl: url };
+      }
+      
+      // For direct SharePoint file links, use as-is
+      // The authentication from the app login should carry over
       return { type: 'sharepoint', embedUrl: url };
     }
 
@@ -70,19 +77,13 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
     setIsLoading(true);
     setError(null);
     
-    // For SharePoint videos, don't show loading since we'll show a prompt
-    if (type === 'sharepoint') {
-      setIsLoading(false);
-      return;
-    }
-    
-    // Set a timeout for loading state for other videos
+    // Set a timeout for loading state
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 3000);
+    }, 5000);
     
     return () => clearTimeout(timer);
-  }, [url, type]);
+  }, [url]);
 
   const handleIframeLoad = () => {
     setIsLoading(false);
@@ -97,7 +98,7 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
   const handleRetry = () => {
     setError(null);
     setIsLoading(true);
-    // Force reload by updating the timestamp
+    // Force reload
     const iframe = document.querySelector('iframe');
     if (iframe) {
       iframe.src = iframe.src;
@@ -107,58 +108,6 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
   const openInNewTab = () => {
     window.open(embedUrl, '_blank', 'noopener,noreferrer');
   };
-
-  const openSharePointVideo = () => {
-    // Open SharePoint video in a popup window
-    const videoWindow = window.open(embedUrl, 'sharepoint_video', 'width=1200,height=700,toolbar=no,menubar=no');
-    if (videoWindow) {
-      videoWindow.focus();
-    }
-  };
-
-  // Special handling for SharePoint videos - show a user-friendly prompt
-  if (type === 'sharepoint') {
-    return (
-      <div className="aspect-video w-full overflow-hidden rounded-md border flex items-center justify-center bg-gray-50">
-        <div className="text-center p-6 max-w-md">
-          <div className="mb-4">
-            <svg className="mx-auto h-16 w-16 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">SharePoint Video</h3>
-          <p className="text-sm text-gray-600 mb-4">
-            This video is hosted on SharePoint. Click below to watch it in a popup window.
-          </p>
-          <div className="space-y-2">
-            <button
-              onClick={openSharePointVideo}
-              className="w-full px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg">
-                <path fill="#f3f3f3" d="M0 0h23v23H0z"/>
-                <path fill="#f35325" d="M1 1h10v10H1z"/>
-                <path fill="#81bc06" d="M12 1h10v10H12z"/>
-                <path fill="#05a6f0" d="M1 12h10v10H1z"/>
-                <path fill="#ffba08" d="M12 12h10v10H12z"/>
-              </svg>
-              Watch Video
-            </button>
-            <button
-              onClick={openInNewTab}
-              className="w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-md text-sm hover:bg-gray-50 transition-colors"
-            >
-              Open in Full Browser Tab
-            </button>
-          </div>
-          <p className="text-xs text-gray-500 mt-3">
-            Sign in with your Microsoft 365 account if prompted. Close the window when done to continue the course.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -197,6 +146,11 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
           <div className="text-center text-white">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
             <p className="text-sm">Loading video...</p>
+            {type === 'sharepoint' && (
+              <p className="text-xs mt-1 opacity-75">
+                Loading SharePoint video...
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -229,7 +183,7 @@ export default function SimpleVideoPlayer({ url, courseId, title }: SimpleVideoP
         onLoad={handleIframeLoad}
         onError={handleIframeError}
         title={title || "Course video"}
-        sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-top-navigation"
+        // No sandbox restrictions - allow all for SharePoint compatibility
         referrerPolicy="no-referrer-when-downgrade"
       />
     </div>
