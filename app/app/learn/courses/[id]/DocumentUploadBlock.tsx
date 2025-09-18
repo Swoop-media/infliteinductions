@@ -3,6 +3,10 @@
 
 import { useState } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import CameraCaptureUpload from '@/components/CameraCaptureUpload';
+import { hasCamera } from '@/lib/utils/device';
+import { Camera } from 'lucide-react';
+import { validateSelectedFile, getFileSizeLimitText } from '@/lib/utils/fileValidation';
 
 type DocumentUploadBlockProps = {
   moduleId: string;
@@ -33,6 +37,14 @@ export default function DocumentUploadBlock({
   const [expiryDate, setExpiryDate] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showCameraUpload, setShowCameraUpload] = useState(false);
+  const deviceHasCamera = hasCamera();
+
+  const handleFileSelection = (selectedFile: File) => {
+    setFile(selectedFile);
+    setShowCameraUpload(false);
+    setError(null);
+  };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,10 +53,10 @@ export default function DocumentUploadBlock({
       return;
     }
 
-    // Block PowerPoint files
-    const fileName = file.name.toLowerCase();
-    if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) {
-      setError('PowerPoint files are not supported. Please convert to PDF before uploading.');
+    // Use centralized validation
+    const validation = validateSelectedFile(file);
+    if (!validation.valid) {
+      setError(validation.error!);
       return;
     }
 
@@ -91,6 +103,7 @@ export default function DocumentUploadBlock({
       setSuccess('Document uploaded successfully!');
       setFile(null);
       setExpiryDate('');
+      setShowCameraUpload(false);
 
       // Refresh the page to show the uploaded document
       window.location.reload();
@@ -177,16 +190,56 @@ export default function DocumentUploadBlock({
         </div>
       ) : (
         <form onSubmit={handleUpload} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-2">Choose file:</label>
-            <input
-              type="file"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
-              className="w-full text-sm"
-              disabled={uploading}
-              accept="image/*,.pdf,.doc,.docx,.txt"
-            />
-          </div>
+          {showCameraUpload ? (
+            <div className="space-y-2">
+              <CameraCaptureUpload
+                onFileSelect={handleFileSelection}
+                accept="image/*"
+                showPreview={true}
+                className=""
+              />
+              <button
+                type="button"
+                onClick={() => setShowCameraUpload(false)}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                ← Back to file selection
+              </button>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium mb-2">Choose file:</label>
+              <div className="space-y-2">
+                {deviceHasCamera && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCameraUpload(true)}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center justify-center gap-2"
+                  >
+                    <Camera size={16} />
+                    Take Photo
+                  </button>
+                )}
+                <div className="relative">
+                  <input
+                    type="file"
+                    onChange={(e) => handleFileSelection(e.target.files?.[0] || null)}
+                    className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200"
+                    disabled={uploading}
+                    accept="image/*,.pdf,.doc,.docx,.txt"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {getFileSizeLimitText('image/*,.pdf,.doc,.docx,.txt')}
+                </p>
+              </div>
+              {file && (
+                <p className="mt-2 text-xs text-gray-600">
+                  Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)}MB)
+                </p>
+              )}
+            </div>
+          )}
 
           {requireExpiry && (
             <div>

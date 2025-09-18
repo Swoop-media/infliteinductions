@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { useDirectUpload } from '@/lib/hooks/useDirectUpload';
+import CameraCaptureUpload from '@/components/CameraCaptureUpload';
+import { hasCamera } from '@/lib/utils/device';
+import { validateSelectedFile, getFileSizeLimitText, isFileTypeAllowed } from '@/lib/utils/fileValidation';
 
 interface DirectFileUploaderProps {
   moduleId: string;
@@ -30,25 +33,31 @@ export default function DirectFileUploader({
 }: DirectFileUploaderProps) {
   const { uploadFile, uploading, progress } = useDirectUpload();
   const [dragActive, setDragActive] = useState(false);
+  const [showCameraUpload, setShowCameraUpload] = useState(false);
+  const deviceHasCamera = hasCamera();
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const file = files[0];
+    handleFileUpload(file);
+  };
 
-    // Check file size
-    const maxSize = maxSizeMB * 1024 * 1024;
-    if (file.size > maxSize) {
-      const error = `File size (${(file.size / 1024 / 1024).toFixed(1)}MB) exceeds the ${maxSizeMB}MB limit.`;
-      onUploadError?.(error);
+  const handleFileUpload = async (file: File) => {
+    const effectiveAccept = accept || (uploadType === 'image' ? 'image/*' : 'image/*,application/pdf,.doc,.docx,.txt');
+    
+    // Check if file type is allowed
+    if (!isFileTypeAllowed(file, effectiveAccept)) {
+      const allowedTypes = uploadType === 'image' ? 'images' : 'images, PDFs, and documents';
+      onUploadError?.(`File type not allowed. Please select ${allowedTypes}.`);
       return;
     }
-
-    // Block PowerPoint files
-    const fileName = file.name.toLowerCase();
-    if (fileName.endsWith('.ppt') || fileName.endsWith('.pptx')) {
-      const error = 'PowerPoint files are not supported. Please convert to PDF before uploading.';
-      onUploadError?.(error);
+    
+    // Use centralized validation with consistent limits
+    const validation = validateSelectedFile(file);
+    
+    if (!validation.valid) {
+      onUploadError?.(validation.error!);
       return;
     }
 
@@ -63,6 +72,7 @@ export default function DirectFileUploader({
         },
         onSuccess: (result) => {
           onUploadComplete?.(result);
+          setShowCameraUpload(false);
         },
         onError: (error) => {
           onUploadError?.(error);
@@ -124,6 +134,26 @@ export default function DirectFileUploader({
     );
   }
 
+  // Show camera upload interface if enabled
+  if (showCameraUpload) {
+    return (
+      <div className="space-y-2">
+        <CameraCaptureUpload
+          onFileSelect={handleFileUpload}
+          accept={accept || (uploadType === 'image' ? 'image/*' : 'image/*,application/pdf,.doc,.docx,.txt')}
+          className={className}
+          showPreview={true}
+        />
+        <button
+          onClick={() => setShowCameraUpload(false)}
+          className="text-sm text-gray-500 hover:text-gray-700"
+        >
+          ← Back to regular upload
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div
       className={`border-2 border-dashed ${
@@ -137,7 +167,7 @@ export default function DirectFileUploader({
       <input
         type="file"
         onChange={handleFileInput}
-        accept={accept}
+        accept={accept || (uploadType === 'image' ? 'image/*' : 'image/*,application/pdf,.doc,.docx,.txt')}
         className="hidden"
         id={`file-upload-${moduleId}-${blockId || 'default'}`}
       />
@@ -157,9 +187,20 @@ export default function DirectFileUploader({
             >
               browse
             </label>
+            {deviceHasCamera && (
+              <>
+                {' '}or{' '}
+                <button
+                  onClick={() => setShowCameraUpload(true)}
+                  className="text-blue-600 hover:text-blue-500 font-medium"
+                >
+                  take photo
+                </button>
+              </>
+            )}
           </div>
           <div className="text-xs text-gray-500">
-            Maximum file size: {maxSizeMB}MB
+            {getFileSizeLimitText(accept || (uploadType === 'image' ? 'image/*' : 'image/*,application/pdf,.doc,.docx,.txt'))}
           </div>
         </div>
       )}
