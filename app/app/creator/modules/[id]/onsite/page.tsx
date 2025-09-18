@@ -223,8 +223,22 @@ async function addRequirementAction(formData: FormData) {
 
   if (!moduleId || !label) throw new Error("Missing fields");
 
-  // Use 'trainer' or 'assessor' for consistency with existing data
-  const role = roleRaw === "assessor" || roleRaw === "onsite_assessor" ? "assessor" : "trainer";
+  // Get the module to determine its type
+  const { data: moduleData } = await supabase
+    .from("course_modules")
+    .select("type")
+    .eq("id", moduleId)
+    .maybeSingle();
+
+  // Use the correct role based on module type
+  // For onsite modules, use 'onsite_trainer' or 'onsite_assessor'
+  let role: string;
+  if (moduleData?.type === "onsite_training" || moduleData?.type === "onsite_assessment") {
+    role = roleRaw.includes("assessor") ? "onsite_assessor" : "onsite_trainer";
+  } else {
+    // Fallback to legacy values if needed
+    role = roleRaw.includes("assessor") ? "assessor" : "trainer";
+  }
 
   // options NOT NULL -> always an array
   let options: any = [];
