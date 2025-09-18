@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
+import DocumentSummary from "./DocumentSummary";
+import ExpandableCourseDetails from "./ExpandableCourseDetails";
 
 type Props = {
   params: Promise<{ assignmentId: string }>;
@@ -75,21 +77,160 @@ async function loadAssignmentDetails(assignmentId: string) {
 
   if (courseAssignError) throw new Error(courseAssignError.message);
 
+  // Fetch learner documents for all courses
+  const { data: documents } = await supabase
+    .from("learner_documents")
+    .select("*")
+    .eq("user_id", assignment.user_id)
+    .in("course_id", courseIds);
+
+  // Fetch all modules for the courses
+  const { data: modules } = await supabase
+    .from("course_modules")
+    .select("id, course_id, title, type, order_index")
+    .in("course_id", courseIds)
+    .order("order_index", { ascending: true });
+
+  // Fetch module progress for all assignments
+  const courseAssignmentIds = (courseAssignments || []).map(ca => ca.id);
+  const { data: moduleProgress } = await supabase
+    .from("assignment_progress")
+    .select("assignment_id, module_id, completed_at")
+    .in("assignment_id", courseAssignmentIds);
+
+  // Fetch quiz attempts for the user
+  const { data: quizAttempts } = await supabase
+    .from("quiz_attempts")
+    .select(`
+      id,
+      quiz_id,
+      score_pct,
+      passed,
+      answers,
+      created_at,
+      quizzes!inner(
+        module_id
+      )
+    `)
+    .eq("user_id", assignment.user_id);
+
+  // Fetch onsite training and assessment responses
+  const { data: requirementResponses } = await supabase
+    .from("requirement_responses")
+    .select(`
+      id,
+      assignment_id,
+      module_id,
+      requirement_id,
+      response_text,
+      response_date,
+      onsite_requirements!inner(
+        label,
+        role
+      )
+    `)
+    .in("assignment_id", courseAssignmentIds);
+
+  // Fetch assessor information for onsite responses if available
+  const assessorIds = new Set();
+  for (const assignment of courseAssignments || []) {
+    const { data: assessors } = await supabase
+      .from("course_assignments")
+      .select("user_id, profiles!inner(full_name)")
+      .eq("course_id", assignment.course_id)
+      .in("role", ["trainer", "assessor", "onsite_trainer", "onsite_assessor"]);
+    
+    assessors?.forEach(a => assessorIds.add(a.user_id));
+  }
+
   // Map course assignments by course_id
   const courseAssignmentMap = new Map(
     (courseAssignments || []).map(ca => [ca.course_id, ca])
   );
 
-  // Combine course info with assignment status
-  const coursesWithProgress = (authCourses || []).map(ac => ({
-    ...ac,
-    assignment: courseAssignmentMap.get(ac.course_id)
-  }));
+  // Process and organize all data by course
+  const coursesWithDetails = (authCourses || []).map(ac => {
+    const courseData = ac.courses as any;
+    const assignment = courseAssignmentMap.get(ac.course_id);
+    const courseModules = (modules || []).filter(m => m.course_id === ac.course_id);
+    
+    // Process module details
+    const moduleDetails = courseModules.map(module => {
+      // Check if module is completed
+      const isCompleted = moduleProgress?.some(
+        mp => mp.module_id === module.id && mp.completed_at
+      );
+
+      // Get quiz attempts for this module
+      const moduleQuizAttempts = quizAttempts?.filter(
+        qa => (qa.quizzes as any)?.module_id === module.id
+      ).map(qa => ({
+        score_pct: qa.score_pct,
+        passed: qa.passed,
+        answers: qa.answers,
+        created_at: qa.created_at
+      }));
+
+      // Get onsite responses for this module
+      const moduleOnsiteResponses = requirementResponses?.filter(
+        rr => rr.module_id === module.id
+      ).map(rr => ({
+        requirement_label: (rr.onsite_requirements as any)?.label || "Requirement",
+        response_text: rr.response_text,
+        response_date: rr.response_date,
+        assessor_name: null // Could be enhanced to fetch actual assessor name
+      }));
+
+      // Get documents uploaded for this module
+      const moduleDocuments = documents?.filter(
+        d => d.module_id === module.id
+      ).map(d => ({
+        document_title: d.title || "Untitled Document",
+        uploaded_at: d.created_at
+      }));
+
+      return {
+        module_id: module.id,
+        module_type: module.type,
+        module_title: module.title || `Module ${module.order_index + 1}`,
+        completed: isCompleted,
+        quiz_attempts: moduleQuizAttempts,
+        onsite_responses: moduleOnsiteResponses,
+        documents: moduleDocuments
+      };
+    });
+
+    return {
+      course_id: ac.course_id,
+      course_title: courseData.title,
+      course_description: courseData.description,
+      assignment: assignment,
+      modules: moduleDetails
+    };
+  });
+
+  // Process documents for the summary section
+  const documentsWithContext = (documents || []).map(doc => {
+    const course = authCourses?.find(ac => ac.course_id === doc.course_id);
+    const module = modules?.find(m => m.id === doc.module_id);
+    
+    return {
+      id: doc.id,
+      title: doc.title || "Untitled Document",
+      course_title: (course?.courses as any)?.title || "Unknown Course",
+      module_title: module?.title || "Unknown Module",
+      storage_path: doc.file_path || doc.storage_path,
+      expires_on: doc.expires_on,
+      created_at: doc.created_at,
+      user_id: doc.user_id
+    };
+  });
 
   return {
     assignment,
     profile,
-    courses: coursesWithProgress
+    courses: coursesWithDetails,
+    documents: documentsWithContext
   };
 }
 
@@ -178,7 +319,7 @@ export default async function ReviewAssignmentPage({ params }: Props) {
   }
 
   const resolvedParams = await params;
-  const { assignment, profile, courses } = await loadAssignmentDetails(resolvedParams.assignmentId);
+  const { assignment, profile, courses, documents } = await loadAssignmentDetails(resolvedParams.assignmentId);
 
   const authorisation = assignment.authorisations as any;
 
@@ -241,48 +382,16 @@ export default async function ReviewAssignmentPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Course Progress */}
-      <div className="rounded-xl border bg-white p-6">
-        <h2 className="text-lg font-semibold mb-4">Course Completion Summary</h2>
-        <div className="space-y-4">
-          {courses.map((course) => {
-            const courseData = course.courses as any;
-            const assignment = course.assignment;
-            // Check if the course assignment status is 'completed' (meaning admin approved)
-            const isCompleted = assignment?.assignment_status === "completed";
-            // Check if the course assignment status is 'pending_approval' (meaning trainee completed but not yet approved)
-            const isPendingApproval = assignment?.assignment_status === "pending_approval";
+      {/* Document Summary */}
+      <DocumentSummary documents={documents} />
 
-            return (
-              <div key={course.course_id} className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex-1">
-                  <h3 className="font-medium text-gray-900">{courseData.title}</h3>
-                  {courseData.description && (
-                    <p className="text-sm text-gray-600 mt-1">{courseData.description}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-4">
-                  <div className="text-sm text-gray-600">
-                    {assignment?.completed_at ? 
-                      `Completed ${new Date(assignment.completed_at).toLocaleDateString()}` :
-                      "Not completed"
-                    }
-                  </div>
-                  {/* Display status based on whether it's completed or pending approval */}
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    isCompleted 
-                      ? "bg-green-100 text-green-800" 
-                      : isPendingApproval
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-gray-100 text-gray-800"
-                  }`}>
-                    {isCompleted ? "✓ Completed" : isPendingApproval ? "Pending Approval" : "Not Completed"}
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+      {/* Course Progress with Expandable Details */}
+      <div className="rounded-xl border bg-white p-6">
+        <h2 className="text-lg font-semibold mb-4">Course Completion Details</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Click on a course to view detailed module completion information including quiz results and onsite training responses.
+        </p>
+        <ExpandableCourseDetails courses={courses} />
       </div>
 
       {/* Actions */}
