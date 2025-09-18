@@ -176,37 +176,20 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("course_id", courseId)
     .eq("type", moduleType)
     .order("order_index");
-  
-  console.log("📚 Modules query:", {
-    courseId,
-    moduleType,
-    modulesFound: modules?.length || 0,
-    modules: modules?.map(m => ({ id: m.id, type: m.type, title: m.title }))
-  });
 
   // Get onsite requirements for each module
   const moduleIds = modules?.map(m => m.id) || [];
   
   let requirementsByModule: Record<string, any[]> = {};
   if (moduleIds.length > 0) {
-    // Fetch ALL requirements for the modules (like the learner module does)
-    // This ensures we get requirements regardless of their role value
+    // Fetch ALL requirements for the modules regardless of role value
+    // This matches how the learner module fetches them
+    // Security is handled by the role check above, not by filtering requirements
     const { data: requirements } = await supabase
       .from("onsite_requirements")
       .select("*")
       .in("module_id", moduleIds)
       .order("order_index");
-    
-    console.log("📋 Requirements for modules:", {
-      moduleIds,
-      sessionType,
-      requirementsCount: requirements?.length || 0,
-      requirements: requirements?.map(r => ({ 
-        module_id: r.module_id, 
-        role: r.role, 
-        label: r.label 
-      }))
-    });
     
     // Group requirements by module
     requirementsByModule = (requirements || []).reduce((acc, req) => {
