@@ -1,13 +1,27 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServer } from "@/lib/supabase/server";
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createSupabaseServer();
+    // Use admin client to bypass RLS
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return NextResponse.json({ 
+        error: "Server configuration error" 
+      }, { status: 500 });
+    }
+    
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      }
+    });
     
     // For this setup endpoint, we'll use a default assigner ID
-    // This is needed to set up the test user when authentication isn't available
     const assignerId = 'd23e5879-46f0-456f-a75f-06c0f0f4bc06'; // Default admin user ID
 
     // Test data
@@ -18,7 +32,7 @@ export async function POST(request: NextRequest) {
     console.log("Assigning test user to course and authorization...");
 
     // 1. Check if course assignment exists, if not create it
-    const { data: existingCourse } = await supabase
+    const { data: existingCourse } = await supabaseAdmin
       .from("course_assignments")
       .select("id")
       .eq("user_id", testUserId)
@@ -27,7 +41,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!existingCourse) {
-      const { data: newCourseAssignment, error: courseError } = await supabase
+      const { data: newCourseAssignment, error: courseError } = await supabaseAdmin
         .from("course_assignments")
         .insert({
           user_id: testUserId,
@@ -54,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Check if authorization assignment exists, if not create it
-    const { data: existingAuth } = await supabase
+    const { data: existingAuth } = await supabaseAdmin
       .from("authorisation_assignments")
       .select("id")
       .eq("user_id", testUserId)
@@ -63,7 +77,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!existingAuth) {
-      const { data: newAuthAssignment, error: authError } = await supabase
+      const { data: newAuthAssignment, error: authError } = await supabaseAdmin
         .from("authorisation_assignments")
         .insert({
           user_id: testUserId,
@@ -92,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Return current status
-    const { data: courseStatus } = await supabase
+    const { data: courseStatus } = await supabaseAdmin
       .from("course_assignments")
       .select("*")
       .eq("user_id", testUserId)
@@ -100,7 +114,7 @@ export async function POST(request: NextRequest) {
       .eq("role", "trainee")
       .single();
 
-    const { data: authStatus } = await supabase
+    const { data: authStatus } = await supabaseAdmin
       .from("authorisation_assignments")
       .select("*")
       .eq("user_id", testUserId)
