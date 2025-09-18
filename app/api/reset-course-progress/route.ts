@@ -20,14 +20,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Check if user is admin or trainer
-    const { data: roles } = await supabase
+    // Check if user is admin or trainer by checking course assignments
+    const { data: trainerRoles } = await supabase
+      .from("course_assignments")
+      .select("role")
+      .eq("user_id", user.id)
+      .in("role", ["trainer", "onsite_trainer", "onsite_assessor", "assessor"]);
+    
+    // Also check user_roles table for admin roles
+    const { data: adminRoles } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
       .in("role", ["Admin", "Trainers", "Senior Management"]);
 
-    if (!roles || roles.length === 0) {
+    const hasPermission = (trainerRoles && trainerRoles.length > 0) || (adminRoles && adminRoles.length > 0);
+
+    if (!hasPermission) {
+      console.log("Permission check failed - trainer roles:", trainerRoles, "admin roles:", adminRoles);
       return NextResponse.json({ 
         error: "You need Admin or Trainer permissions to reset course progress" 
       }, { status: 403 });
