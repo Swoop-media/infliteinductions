@@ -602,7 +602,7 @@ export default async function OnsiteModulePage(props: {
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Requirements</h2>
             
             <SortableRequirements 
-              requirements={trainerReqs}
+              requirements={mod.type === "onsite_assessment" ? assessorReqs : trainerReqs}
               moduleId={mod.id}
               updateRequirementAction={updateRequirementAction}
               deleteRequirementAction={deleteRequirementAction}
@@ -621,7 +621,9 @@ export default async function OnsiteModulePage(props: {
             </div>
             <div className="bg-white rounded-lg p-3">
               <p className="text-gray-600">Requirements</p>
-              <p className="text-2xl font-bold text-blue-600">{trainerReqs.length}</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {mod.type === "onsite_assessment" ? assessorReqs.length : trainerReqs.length}
+              </p>
             </div>
             {mod.type === "onsite_assessment" && hasEquipmentModule && (
               <div className="bg-white rounded-lg p-3">
