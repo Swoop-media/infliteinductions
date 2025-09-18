@@ -158,10 +158,8 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   console.log("✅ Trainer assignments verified:", userRoles);
 
   // Check if user has the right role for this session type
-  const requiredRole = sessionType === 'training' ? 'trainer' : 'assessor';
-  const hasRequiredRole = sessionType === 'training' 
-    ? userRoles.includes('onsite_trainer')
-    : userRoles.includes('onsite_assessor');
+  const requiredRole = sessionType === 'training' ? 'onsite_trainer' : 'onsite_assessor';
+  const hasRequiredRole = userRoles.includes(requiredRole);
   
   if (!hasRequiredRole) {
     console.log(`❌ User doesn't have required role '${requiredRole}' for session type '${sessionType}'`);
@@ -184,11 +182,16 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   
   let requirementsByModule: Record<string, any[]> = {};
   if (moduleIds.length > 0) {
+    // Query for requirements with all possible role values for this session type
+    const roleValues = sessionType === 'training' 
+      ? ['trainer', 'onsite_trainer']
+      : ['assessor', 'onsite_assessor'];
+      
     const { data: requirements } = await supabase
       .from("onsite_requirements")
       .select("*")
       .in("module_id", moduleIds)
-      .eq("role", requiredRole)
+      .in("role", roleValues)
       .order("order_index");
     
     // Group requirements by module
