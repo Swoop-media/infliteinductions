@@ -25,6 +25,7 @@ export type NotificationType =
   | "course_assigned"
   | "course_updated"
   | "authorization_assigned"
+  | "authorization_approved"
   | "authorization_revoked"
   | "authorisation_pending_approval"
   | "role_granted"
@@ -194,6 +195,17 @@ function formatTeamsText(
         learner ? `• Learner: ${learner}` : "",
         payload?.authorizationTitle ? `• Authorisation: ${payload.authorizationTitle}` : "",
         url ? `• Review: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "authorization_approved":
+      return [
+        "✅ Authorisation approved!",
+        payload?.authorizationTitle ? `• Authorisation: ${payload.authorizationTitle}` : "",
+        payload?.approvedBy ? `• Approved by: ${payload.approvedBy}` : "",
+        payload?.validFor ? `• Valid for: ${payload.validFor} days` : "",
+        url ? `• View details: ${url}` : "",
       ]
         .filter(Boolean)
         .join("\n");

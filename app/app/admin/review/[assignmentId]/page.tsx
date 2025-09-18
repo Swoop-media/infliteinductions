@@ -107,6 +107,27 @@ async function approveAssignment(formData: FormData) {
     redirect("/auth/login");
   }
 
+  // Get the assignment details to know who to notify
+  const { data: assignment } = await supabase
+    .from("authorisation_assignments")
+    .select(`
+      id,
+      user_id,
+      authorisations (
+        title,
+        valid_for_days
+      )
+    `)
+    .eq("id", assignmentId)
+    .single();
+
+  // Get the approver's name
+  const { data: approverProfile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single();
+
   // Update the authorisation assignment status to 'completed' and record approval details.
   const { error } = await supabase
     .from("authorisation_assignments")
@@ -119,8 +140,30 @@ async function approveAssignment(formData: FormData) {
 
   if (error) {
     console.error("Error approving assignment:", error);
-    // Optionally, you could redirect with an error banner
-    // redirect(`/app/admin/review/${assignmentId}?banner=approval_failed`);
+    redirect(`/app/admin/review/${assignmentId}?banner=approval_failed`);
+  }
+
+  // Send notification to the trainee about the approval
+  if (assignment && assignment.user_id) {
+    try {
+      const { notifyUser } = await import("@/lib/notifications/dispatcher");
+      const authorization = assignment.authorisations as any;
+      
+      await notifyUser(
+        assignment.user_id,
+        "authorization_approved",
+        {
+          authorizationTitle: authorization?.title || "Authorization",
+          approvedBy: approverProfile?.full_name || user.email,
+          validFor: authorization?.valid_for_days || null,
+          url: "/app/myprofile/authorisations"
+        }
+      );
+      console.log(`✅ Notification sent to trainee ${assignment.user_id} for authorization approval`);
+    } catch (notifyError) {
+      console.error("Failed to send notification:", notifyError);
+      // Don't block the approval process if notification fails
+    }
   }
 
   // Redirect back to the admin dashboard with a success banner
