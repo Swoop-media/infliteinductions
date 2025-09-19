@@ -312,9 +312,9 @@ async function approveAssignment(formData: FormData) {
 }
 
 export default async function ReviewAssignmentPage({ params }: Props) {
-  // Check if user has Senior Management role
-  const isSeniorManager = await hasRole("Senior Management");
-  if (!isSeniorManager) {
+  // Check if user has Authorization Approver role
+  const isApprover = await hasRole("Authorization Approver");
+  if (!isApprover) {
     redirect("/app/admin?tab=pending_authorisations&banner=no_access");
   }
 
