@@ -22,13 +22,13 @@ ORDER BY c.title, ca.role;
 
 -- Step 2: Delete all related data (order matters due to foreign keys)
 
--- Delete quiz answers
-DELETE FROM quiz_answers 
-WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
-
--- Delete quiz attempts
+-- Delete quiz attempts (quiz_answers might be stored in quiz_attempts.answers as JSONB)
 DELETE FROM quiz_attempts 
-WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
+OR enrolment_id IN (
+    SELECT id FROM course_assignments 
+    WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
+);
 
 -- Delete assignment progress
 DELETE FROM assignment_progress 
@@ -37,12 +37,9 @@ WHERE assignment_id IN (
     WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
 );
 
--- Delete module progress
+-- Delete module progress (check if it uses assignment_id or user_id)
 DELETE FROM module_progress 
-WHERE assignment_id IN (
-    SELECT id FROM course_assignments 
-    WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
-);
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete learner progress
 DELETE FROM learner_progress 
@@ -81,23 +78,19 @@ WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete onsite requirement responses
 DELETE FROM onsite_requirement_responses 
-WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b'
-OR author_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete onsite checks
 DELETE FROM onsite_checks 
-WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b'
-OR assessor_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete onsite signoffs
 DELETE FROM onsite_signoffs 
-WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b'
-OR assessor_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete onsite notes
 DELETE FROM onsite_notes 
-WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b'
-OR author_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete authorisation assignments
 DELETE FROM authorisation_assignments 
@@ -105,8 +98,7 @@ WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete authorisation completions
 DELETE FROM authorisation_completions 
-WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
-OR approved_by = '464ef929-8116-47ac-8e95-10a09c14511b';
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete course enrolments
 DELETE FROM course_enrolments 
@@ -127,6 +119,10 @@ OR trainee_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete course assignments (this is the main table)
 DELETE FROM course_assignments 
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete app user roles (not the same as user_roles)
+DELETE FROM app_user_roles 
 WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete user roles
