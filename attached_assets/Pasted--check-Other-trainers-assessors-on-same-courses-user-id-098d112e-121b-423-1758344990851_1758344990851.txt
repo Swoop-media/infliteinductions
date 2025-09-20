@@ -1,0 +1,90 @@
+[
+  {
+    "check": "Other trainers/assessors on same courses:",
+    "user_id": "098d112e-121b-423b-bff7-ebf5d334fc3f",
+    "full_name": "Linh An Hoang",
+    "email": "linhan.hoang@inflite.nz",
+    "roles": [
+      "onsite_assessor",
+      "onsite_trainer"
+    ],
+    "course_count": 2
+  },
+  {
+    "check": "Other trainers/assessors on same courses:",
+    "user_id": "121cb584-8ac1-4f33-a2a7-0438b6d29a6b",
+    "full_name": "Peter Hansen",
+    "email": "peter.hansen@inflite.nz",
+    "roles": [
+      "onsite_assessor",
+      "onsite_trainer"
+    ],
+    "course_count": 2
+  },
+  {
+    "check": "Other trainers/assessors on same courses:",
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "full_name": "Henry Morgan",
+    "email": "henry.morgan@inflite.nz",
+    "roles": [
+      "onsite_assessor",
+      "onsite_trainer"
+    ],
+    "course_count": 8
+  },
+  {
+    "check": "Other trainers/assessors on same courses:",
+    "user_id": "41acd744-a131-48f6-824a-0db4e78d075b",
+    "full_name": "Matt Moore",
+    "email": "matt.moore@inflite.nz",
+    "roles": [
+      "onsite_assessor",
+      "onsite_trainer"
+    ],
+    "course_count": 8
+  },
+  {
+    "check": "Other trainers/assessors on same courses:",
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "full_name": "Damien Ettema",
+    "email": "damien.ettema@inflite.nz",
+    "roles": [
+      "onsite_assessor",
+      "onsite_trainer"
+    ],
+    "course_count": 8
+  },
+  {
+    "check": "Other trainers/assessors on same courses:",
+    "user_id": "9b51d6ca-22e7-45b3-abc6-33ef99befe2f",
+    "full_name": "Emily Leask",
+    "email": "emily.leask@inflite.nz",
+    "roles": [
+      "onsite_assessor",
+      "onsite_trainer"
+    ],
+    "course_count": 1
+  },
+  {
+    "check": "Other trainers/assessors on same courses:",
+    "user_id": "d00d5516-a1a6-4992-becf-cbd835d26bcc",
+    "full_name": "Gabrielle Prevost",
+    "email": "gabrielle.prevost@inflite.nz",
+    "roles": [
+      "onsite_assessor",
+      "onsite_trainer"
+    ],
+    "course_count": 2
+  },
+  {
+    "check": "Other trainers/assessors on same courses:",
+    "user_id": "f6baa70e-2ac0-40f7-a10a-ad7d1a97c1f2",
+    "full_name": "oliver burgin",
+    "email": "oliver.burgin@inflite.nz",
+    "roles": [
+      "onsite_assessor",
+      "onsite_trainer"
+    ],
+    "course_count": 2
+  }
+]

@@ -1,0 +1,146 @@
+[
+  {
+    "check": "Connor assignments data quality:",
+    "id": "d7f05e9e-b5d6-4b56-ad51-c90e18336915",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "onsite_assessor",
+    "created_at": "2025-09-19 05:02:49.876586+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "e9e3be47-a0a2-4ef0-970b-ac9f758f9024",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "role": "onsite_trainer",
+    "created_at": "2025-09-15 05:20:52.748179+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "05db0962-e96c-440f-993b-bae4596d1945",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "role": "onsite_assessor",
+    "created_at": "2025-09-15 05:20:58.494529+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "304f64a2-f300-4754-82ed-d7fa02908b1f",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "role": "onsite_trainer",
+    "created_at": "2025-09-15 06:40:21.449003+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "53742759-c662-4e08-b527-fccca6c73963",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "role": "onsite_assessor",
+    "created_at": "2025-09-15 06:40:25.536222+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "d8f673dd-0837-4df8-88c1-304abce1a87c",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "role": "onsite_trainer",
+    "created_at": "2025-09-15 06:42:26.215213+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "7ee2bcee-c0ce-4852-9c3c-9d7808b27989",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "role": "onsite_assessor",
+    "created_at": "2025-09-15 06:42:29.587269+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "70640a3e-98b3-4bf8-8e66-ee7b9cdf141b",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7",
+    "role": "onsite_trainer",
+    "created_at": "2025-09-16 22:29:50.542476+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "52ab49c7-bcd6-45f3-84c6-0557031dce77",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7",
+    "role": "onsite_assessor",
+    "created_at": "2025-09-16 22:29:54.921273+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "ea180112-92ae-440c-8069-953d7f4c8561",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "role": "onsite_trainer",
+    "created_at": "2025-09-16 23:01:56.602354+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "0a1e7502-4d2d-4fcf-8219-a0fd57b8490a",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "role": "onsite_assessor",
+    "created_at": "2025-09-16 23:01:59.959068+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "bf2635b1-ec55-46f3-a4a5-c81106fde14a",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "96191cc2-6519-4665-b1d5-e08707a9139c",
+    "role": "onsite_trainer",
+    "created_at": "2025-09-16 23:51:32.126268+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "03a00017-69c5-40bd-81e9-1829c314800f",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "96191cc2-6519-4665-b1d5-e08707a9139c",
+    "role": "onsite_assessor",
+    "created_at": "2025-09-16 23:51:35.865533+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "ff05a1ee-0459-4c90-bfc4-dc4e83a56a0b",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "30950fba-e4cd-4fc3-8b72-cb7d27b02565",
+    "role": "onsite_trainer",
+    "created_at": "2025-09-17 20:41:59.424505+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "6807cab2-c04c-4a3d-b86f-dcaf5db6de69",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "30950fba-e4cd-4fc3-8b72-cb7d27b02565",
+    "role": "onsite_assessor",
+    "created_at": "2025-09-17 20:42:06.460393+00",
+    "data_status": "OK"
+  },
+  {
+    "check": "Connor assignments data quality:",
+    "id": "d9119264-0a19-4571-8a12-939d6826ff68",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "onsite_trainer",
+    "created_at": "2025-09-19 05:02:40.533953+00",
+    "data_status": "OK"
+  }
+]
