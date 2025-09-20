@@ -1,0 +1,79 @@
+[
+  {
+    "check": "RLS policies on course_assignments:",
+    "policyname": "ca_read_manage_course",
+    "operation": "SELECT",
+    "roles": "{authenticated}",
+    "condition": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_assignments.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text) OR app_has_role(auth.uid(), 'Course creators'::text)))))"
+  },
+  {
+    "check": "RLS policies on course_assignments:",
+    "policyname": "ca_read_own",
+    "operation": "SELECT",
+    "roles": "{authenticated}",
+    "condition": "(user_id = auth.uid())"
+  },
+  {
+    "check": "RLS policies on course_assignments:",
+    "policyname": "ca_write_manage_course",
+    "operation": "ALL",
+    "roles": "{authenticated}",
+    "condition": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_assignments.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text) OR app_has_role(auth.uid(), 'Course creators'::text)))))"
+  },
+  {
+    "check": "RLS policies on course_assignments:",
+    "policyname": "course_assignments delete",
+    "operation": "DELETE",
+    "roles": "{authenticated}",
+    "condition": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_assignments.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))"
+  },
+  {
+    "check": "RLS policies on course_assignments:",
+    "policyname": "course_assignments insert",
+    "operation": "INSERT",
+    "roles": "{authenticated}",
+    "condition": null
+  },
+  {
+    "check": "RLS policies on course_assignments:",
+    "policyname": "course_assignments read",
+    "operation": "SELECT",
+    "roles": "{authenticated}",
+    "condition": "((user_id = auth.uid()) OR (EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_assignments.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text))))))"
+  },
+  {
+    "check": "RLS policies on course_assignments:",
+    "policyname": "course_assignments update",
+    "operation": "UPDATE",
+    "roles": "{authenticated}",
+    "condition": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_assignments.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))"
+  },
+  {
+    "check": "RLS policies on course_assignments:",
+    "policyname": "course_assignments_delete",
+    "operation": "DELETE",
+    "roles": "{authenticated}",
+    "condition": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_assignments.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))"
+  },
+  {
+    "check": "RLS policies on course_assignments:",
+    "policyname": "course_assignments_insert",
+    "operation": "INSERT",
+    "roles": "{authenticated}",
+    "condition": null
+  },
+  {
+    "check": "RLS policies on course_assignments:",
+    "policyname": "course_assignments_select",
+    "operation": "SELECT",
+    "roles": "{authenticated}",
+    "condition": "((user_id = auth.uid()) OR (EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_assignments.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text))))))"
+  },
+  {
+    "check": "RLS policies on course_assignments:",
+    "policyname": "course_assignments_update",
+    "operation": "UPDATE",
+    "roles": "{authenticated}",
+    "condition": "(EXISTS ( SELECT 1\n   FROM courses c\n  WHERE ((c.id = course_assignments.course_id) AND ((c.created_by = auth.uid()) OR app_has_role(auth.uid(), 'Admin'::text) OR app_has_role(auth.uid(), 'Senior management'::text)))))"
+  }
+]

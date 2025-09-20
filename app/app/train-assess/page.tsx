@@ -44,7 +44,8 @@ export default async function TrainAssessPage() {
   });
   console.log("Trainer course IDs:", trainerAssignments?.map(a => a.course_id));
 
-  const trainerCourseIds = trainerAssignments?.map(a => a.course_id) || [];
+  // Remove duplicates using Set
+  const trainerCourseIds = [...new Set(trainerAssignments?.map(a => a.course_id) || [])];
   const isOnsiteTrainer = trainerAssignments?.some(a => a.role === "onsite_trainer");
   const isOnsiteAssessor = trainerAssignments?.some(a => a.role === "onsite_assessor");
 

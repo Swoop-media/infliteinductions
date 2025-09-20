@@ -1,0 +1,58 @@
+[
+  {
+    "query_as_connor": "What Connor sees with RLS:",
+    "id": "0e474370-c6f1-4337-a15d-77deddc58874",
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "trainee",
+    "full_name": "Henry Morgan"
+  },
+  {
+    "query_as_connor": "What Connor sees with RLS:",
+    "id": "265e41d9-387a-49b4-b650-79540f95f7f8",
+    "user_id": "121cb584-8ac1-4f33-a2a7-0438b6d29a6b",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "role": "trainee",
+    "full_name": "Peter Hansen"
+  },
+  {
+    "query_as_connor": "What Connor sees with RLS:",
+    "id": "971d3027-8e28-4e03-b6d3-9e1104aa70a6",
+    "user_id": "121cb584-8ac1-4f33-a2a7-0438b6d29a6b",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "role": "trainee",
+    "full_name": "Peter Hansen"
+  },
+  {
+    "query_as_connor": "What Connor sees with RLS:",
+    "id": "8a435396-d96a-4790-af4d-29f9dde2e786",
+    "user_id": "121cb584-8ac1-4f33-a2a7-0438b6d29a6b",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "trainee",
+    "full_name": "Peter Hansen"
+  },
+  {
+    "query_as_connor": "What Connor sees with RLS:",
+    "id": "4fd375a1-8628-4347-8eba-1d5a204bbd9f",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "role": "trainee",
+    "full_name": "Connor Johnston"
+  },
+  {
+    "query_as_connor": "What Connor sees with RLS:",
+    "id": "6352abe9-c463-417c-a157-192f80d9531f",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "role": "trainee",
+    "full_name": "Connor Johnston"
+  },
+  {
+    "query_as_connor": "What Connor sees with RLS:",
+    "id": "9cf29f9c-4a0a-435d-814b-76917e904d47",
+    "user_id": "464ef929-8116-47ac-8e95-10a09c14511b",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "trainee",
+    "full_name": "Connor Johnston"
+  }
+]
