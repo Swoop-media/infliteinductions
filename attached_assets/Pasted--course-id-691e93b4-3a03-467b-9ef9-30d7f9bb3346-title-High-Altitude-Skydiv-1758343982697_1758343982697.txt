@@ -1,0 +1,114 @@
+[
+  {
+    "course_id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "title": "High Altitude Skydiving",
+    "role": "onsite_trainer",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "title": "High Altitude Skydiving",
+    "role": "onsite_assessor",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "title": "Sigma 25 jump checks",
+    "role": "onsite_assessor",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "title": "Sigma 25 jump checks",
+    "role": "onsite_trainer",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "title": "Sigma Packing",
+    "role": "onsite_assessor",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "title": "Sigma Packing",
+    "role": "onsite_trainer",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "title": "Sigma passenger Harnessing and Briefing.",
+    "role": "onsite_trainer",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "title": "Sigma passenger Harnessing and Briefing.",
+    "role": "onsite_assessor",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "96191cc2-6519-4665-b1d5-e08707a9139c",
+    "title": "Tandem documents, rules and responsibilities",
+    "role": "onsite_trainer",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "96191cc2-6519-4665-b1d5-e08707a9139c",
+    "title": "Tandem documents, rules and responsibilities",
+    "role": "onsite_assessor",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "title": "Tandem Instructor Camera",
+    "role": "onsite_trainer",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "title": "Tandem Instructor Camera",
+    "role": "onsite_assessor",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7",
+    "title": "Tandem Master equipment",
+    "role": "onsite_trainer",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7",
+    "title": "Tandem Master equipment",
+    "role": "onsite_assessor",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "30950fba-e4cd-4fc3-8b72-cb7d27b02565",
+    "title": "Tandem OCA - OPERATIONAL COMPETENCY ASSESSMENT",
+    "role": "onsite_trainer",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  },
+  {
+    "course_id": "30950fba-e4cd-4fc3-8b72-cb7d27b02565",
+    "title": "Tandem OCA - OPERATIONAL COMPETENCY ASSESSMENT",
+    "role": "onsite_assessor",
+    "assignments_per_course": 2,
+    "course_status": "OK"
+  }
+]
