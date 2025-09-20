@@ -88,8 +88,44 @@ export default function InteractiveRequirements({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // Save requirement responses first
-      await onSave(moduleId, assignmentId, responses);
+      // Check if there are any file uploads
+      const hasFileUploads = Object.entries(responses).some(
+        ([_, value]) => value instanceof File
+      );
+
+      if (hasFileUploads) {
+        // Use FormData for file uploads
+        const formData = new FormData();
+        formData.append('moduleId', moduleId);
+        formData.append('assignmentId', assignmentId);
+        
+        const regularResponses: Record<string, any> = {};
+        
+        // Separate files from regular responses
+        for (const [reqId, value] of Object.entries(responses)) {
+          if (value instanceof File) {
+            formData.append(`file_${reqId}`, value);
+          } else {
+            regularResponses[reqId] = value;
+          }
+        }
+        
+        formData.append('responses', JSON.stringify(regularResponses));
+        
+        // Save with file uploads
+        const uploadResponse = await fetch('/api/requirement-responses-upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!uploadResponse.ok) {
+          const error = await uploadResponse.json();
+          throw new Error(error.error || 'Failed to upload files');
+        }
+      } else {
+        // Save regular responses without files
+        await onSave(moduleId, assignmentId, responses);
+      }
       
       // Mark module as completed and handle progression
       const progressResponse = await fetch('/api/assignment/progress', {
@@ -285,6 +321,43 @@ export default function InteractiveRequirements({
                 </span>
               )}
             </div>
+          </div>
+        );
+
+      case 'file':
+        return (
+          <div className="mt-3">
+            <input
+              type="file"
+              id={`req-file-${req.id}`}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  updateResponse(req.id, file);
+                }
+              }}
+              accept="image/*,.pdf,.doc,.docx"
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {responses[req.id] && (
+              <p className="text-sm text-gray-600 mt-2">
+                {responses[req.id] instanceof File 
+                  ? `Selected: ${responses[req.id].name}`
+                  : typeof responses[req.id] === 'string' && responses[req.id].includes('requirement-uploads')
+                  ? '✓ File previously uploaded'
+                  : ''}
+              </p>
+            )}
+            {responses[req.id] && typeof responses[req.id] === 'string' && responses[req.id].includes('requirement-uploads') && (
+              <a 
+                href={`/api/download-requirement-file?path=${encodeURIComponent(responses[req.id])}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                View uploaded file
+              </a>
+            )}
           </div>
         );
 
