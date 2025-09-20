@@ -13,8 +13,7 @@ SELECT
     'BACKUP - Connor trainer/assessor assignments:' as backup_type,
     ca.course_id,
     c.title as course_title,
-    ca.role,
-    ca.created_at
+    ca.role
 FROM course_assignments ca
 JOIN courses c ON c.id = ca.course_id
 WHERE ca.user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
@@ -22,13 +21,6 @@ AND ca.role IN ('onsite_trainer', 'onsite_assessor')
 ORDER BY c.title, ca.role;
 
 -- Step 2: Delete all related data (order matters due to foreign keys)
-
--- Delete quiz answers
-DELETE FROM quiz_answers 
-WHERE assignment_id IN (
-    SELECT id FROM course_assignments 
-    WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
-);
 
 -- Delete assignment progress
 DELETE FROM assignment_progress 
@@ -56,16 +48,7 @@ WHERE trainee_assignment_id IN (
     WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
 );
 
--- Delete form progress cache (skip if not exists)
--- DELETE FROM form_progress_cache 
--- WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
-
--- Delete requirement responses (skip if not exists)
--- DELETE FROM requirement_responses 
--- WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b'
--- OR author_id = '464ef929-8116-47ac-8e95-10a09c14511b';
-
--- Delete course assignments
+-- Delete course assignments (this is the main table)
 DELETE FROM course_assignments 
 WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
