@@ -1,6 +1,6 @@
 -- =========================================================
--- MINIMAL VERSION: Remove Connor Johnston (Essential tables only)
--- This script only touches the core tables to avoid column name issues
+-- MINIMAL VERSION: Remove Connor Johnston (Real tables only)
+-- This script only deletes from actual tables, not views
 -- =========================================================
 
 -- Connor's user ID: 464ef929-8116-47ac-8e95-10a09c14511b
@@ -12,16 +12,13 @@ SELECT id, email FROM profiles WHERE id = '464ef929-8116-47ac-8e95-10a09c14511b'
 -- Step 2: Delete from course_assignments (main assignment table)
 DELETE FROM course_assignments WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
--- Step 3: Delete from app_user_roles (from your table list)
-DELETE FROM app_user_roles WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
-
--- Step 4: Delete from user_roles
+-- Step 3: Delete from user_roles (actual table, not the view)
 DELETE FROM user_roles WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
--- Step 5: Delete from profiles
+-- Step 4: Delete from profiles
 DELETE FROM profiles WHERE id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
--- Step 6: Delete from auth.users (Supabase authentication)
+-- Step 5: Delete from auth.users (Supabase authentication)
 DELETE FROM auth.users WHERE id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Verification
