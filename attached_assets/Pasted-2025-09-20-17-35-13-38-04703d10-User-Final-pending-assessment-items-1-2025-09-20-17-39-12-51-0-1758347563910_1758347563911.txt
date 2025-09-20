@@ -1,0 +1,183 @@
+2025-09-20 17:35:13.38
+04703d10
+User
+Final pending assessment items: 1
+2025-09-20 17:39:12.51
+04703d10
+User
+TypeError: fetch failed
+2025-09-20 17:39:12.51
+04703d10
+User
+at async bf (.next/server/chunks/3008.js:21:30497)
+2025-09-20 17:39:12.51
+04703d10
+User
+at async be (.next/server/chunks/3008.js:21:29995)
+2025-09-20 17:39:12.51
+04703d10
+User
+at async c (.next/server/chunks/3008.js:21:66145)
+2025-09-20 17:39:12.51
+04703d10
+User
+at async (.next/server/chunks/3008.js:21:66408) {
+2025-09-20 17:39:12.51
+04703d10
+User
+[cause]: [Error [ConnectTimeoutError]: Connect Timeout Error (attempted addresses: 104.18.38.10:443, 172.64.149.246:443, timeout: 10000ms)] {
+2025-09-20 17:39:12.51
+04703d10
+User
+code: 'UND_ERR_CONNECT_TIMEOUT'
+2025-09-20 17:39:12.51
+04703d10
+User
+}
+2025-09-20 17:39:12.51
+04703d10
+User
+}
+2025-09-20 17:45:06.06
+04703d10
+User
+Error: fetch failed
+2025-09-20 17:45:06.06
+04703d10
+User
+at context.fetch (/home/runner/workspace/node_modules/next/dist/server/web/sandbox/context.js:321:60)
+2025-09-20 17:45:06.06
+04703d10
+User
+at /home/runner/workspace/.next/server/middleware.js:21:24996
+2025-09-20 17:45:06.06
+04703d10
+User
+at bg (/home/runner/workspace/.next/server/middleware.js:21:30464)
+2025-09-20 17:45:06.06
+04703d10
+User
+at bf (/home/runner/workspace/.next/server/middleware.js:21:29962)
+2025-09-20 17:45:06.06
+04703d10
+User
+at c (/home/runner/workspace/.next/server/middleware.js:21:66112)
+2025-09-20 17:45:06.06
+04703d10
+User
+at /home/runner/workspace/.next/server/middleware.js:21:66375
+2025-09-20 17:45:06.06
+04703d10
+User
+at /home/runner/workspace/.next/server/middleware.js:21:66452
+2025-09-20 17:45:06.06
+04703d10
+User
+at new Promise ()
+2025-09-20 17:45:06.06
+04703d10
+User
+at bA._refreshAccessToken (/home/runner/workspace/.next/server/middleware.js:21:66306)
+2025-09-20 17:45:06.06
+04703d10
+User
+at bA._callRefreshToken (/home/runner/workspace/.next/server/middleware.js:21:69034) {
+2025-09-20 17:45:06.06
+04703d10
+User
+2025-09-20 17:45:06.06
+04703d10
+User
+}
+2025-09-20 17:45:16.82
+04703d10
+User
+AuthApiError: Request rate limit reached
+2025-09-20 17:45:16.82
+04703d10
+User
+at be (.next/server/middleware.js:21:29572)
+2025-09-20 17:45:16.82
+04703d10
+User
+at async bg (.next/server/middleware.js:21:30546)
+2025-09-20 17:45:16.82
+04703d10
+User
+at async bf (.next/server/middleware.js:21:29956)
+2025-09-20 17:45:16.82
+04703d10
+User
+at async c (.next/server/middleware.js:21:66106)
+2025-09-20 17:45:16.82
+04703d10
+User
+at async (.next/server/middleware.js:21:66369) {
+2025-09-20 17:45:16.82
+04703d10
+User
+__isAuthError: true,
+2025-09-20 17:45:16.82
+04703d10
+User
+status: 429,
+2025-09-20 17:45:16.82
+04703d10
+User
+code: 'over_request_rate_limit'
+2025-09-20 17:45:16.82
+04703d10
+User
+}
+2025-09-20 17:46:04.54
+04703d10
+User
+TypeError: fetch failed
+2025-09-20 17:46:04.54
+04703d10
+User
+at async bf (.next/server/chunks/3008.js:21:30497)
+2025-09-20 17:46:04.54
+04703d10
+User
+at async be (.next/server/chunks/3008.js:21:29995)
+2025-09-20 17:46:04.54
+04703d10
+User
+at async c (.next/server/chunks/3008.js:21:66145)
+2025-09-20 17:46:04.54
+04703d10
+User
+at async (.next/server/chunks/3008.js:21:66408) {
+2025-09-20 17:46:04.54
+04703d10
+User
+[cause]: [Error [SocketError]: other side closed] {
+2025-09-20 17:46:04.54
+04703d10
+User
+code: 'UND_ERR_SOCKET',
+2025-09-20 17:46:04.54
+04703d10
+User
+socket: {
+2025-09-20 17:46:04.54
+04703d10
+User
+localAddress: '169.254.8.1',
+2025-09-20 17:46:04.54
+04703d10
+User
+localPort: 43082,
+2025-09-20 17:46:04.54
+04703d10
+User
+remoteAddress: '172.64.149.246',
+2025-09-20 17:46:04.54
+04703d10
+User
+remotePort: 443,
+2025-09-20 17:46:04.54
+04703d10
+User
+remoteFamily: 'IPv4',
