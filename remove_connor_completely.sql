@@ -22,6 +22,14 @@ ORDER BY c.title, ca.role;
 
 -- Step 2: Delete all related data (order matters due to foreign keys)
 
+-- Delete quiz answers
+DELETE FROM quiz_answers 
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete quiz attempts
+DELETE FROM quiz_attempts 
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
 -- Delete assignment progress
 DELETE FROM assignment_progress 
 WHERE assignment_id IN (
@@ -29,17 +37,36 @@ WHERE assignment_id IN (
     WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
 );
 
--- Delete assessor confirmations
-DELETE FROM assessor_confirmations 
-WHERE assessor_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+-- Delete module progress
+DELETE FROM module_progress 
+WHERE assignment_id IN (
+    SELECT id FROM course_assignments 
+    WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
+);
+
+-- Delete learner progress
+DELETE FROM learner_progress 
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete learner documents
+DELETE FROM learner_documents 
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete assessor equipment confirmations  
 DELETE FROM assessor_equipment_confirmations 
 WHERE assessor_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
+-- Delete assessor submissions
+DELETE FROM assessor_submissions 
+WHERE assessor_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
 -- Delete equipment assessments 
 DELETE FROM equipment_assessments 
 WHERE assessor_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete equipment submissions
+DELETE FROM equipment_submissions 
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete trainee equipment responses
 DELETE FROM trainee_equipment_responses 
@@ -47,6 +74,56 @@ WHERE trainee_assignment_id IN (
     SELECT id FROM course_assignments 
     WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
 );
+
+-- Delete requirement responses
+DELETE FROM requirement_responses 
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete onsite requirement responses
+DELETE FROM onsite_requirement_responses 
+WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b'
+OR author_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete onsite checks
+DELETE FROM onsite_checks 
+WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b'
+OR assessor_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete onsite signoffs
+DELETE FROM onsite_signoffs 
+WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b'
+OR assessor_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete onsite notes
+DELETE FROM onsite_notes 
+WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b'
+OR author_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete authorisation assignments
+DELETE FROM authorisation_assignments 
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete authorisation completions
+DELETE FROM authorisation_completions 
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
+OR approved_by = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete course enrolments
+DELETE FROM course_enrolments 
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete course progress
+DELETE FROM course_progress 
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete contractor course completions
+DELETE FROM contractor_course_completions 
+WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete assigned trainers
+DELETE FROM assigned_trainers 
+WHERE trainer_id = '464ef929-8116-47ac-8e95-10a09c14511b'
+OR trainee_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete course assignments (this is the main table)
 DELETE FROM course_assignments 
