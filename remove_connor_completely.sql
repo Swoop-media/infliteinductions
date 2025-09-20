@@ -23,20 +23,6 @@ ORDER BY c.title, ca.role;
 
 -- Step 2: Delete all related data (order matters due to foreign keys)
 
--- Delete form responses
-DELETE FROM form_responses 
-WHERE assignment_id IN (
-    SELECT id FROM course_assignments 
-    WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
-);
-
--- Delete requirement responses
-DELETE FROM requirement_responses 
-WHERE assignment_id IN (
-    SELECT id FROM course_assignments 
-    WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
-);
-
 -- Delete quiz answers
 DELETE FROM quiz_answers 
 WHERE assignment_id IN (
@@ -59,7 +45,7 @@ WHERE assessor_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 DELETE FROM assessor_equipment_confirmations 
 WHERE assessor_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
--- Delete equipment assessments
+-- Delete equipment assessments 
 DELETE FROM equipment_assessments 
 WHERE assessor_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
@@ -70,12 +56,14 @@ WHERE trainee_assignment_id IN (
     WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
 );
 
--- Delete form progress cache
-DELETE FROM form_progress_cache 
-WHERE assignment_id IN (
-    SELECT id FROM course_assignments 
-    WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b'
-);
+-- Delete form progress cache (skip if not exists)
+-- DELETE FROM form_progress_cache 
+-- WHERE user_id = '464ef929-8116-47ac-8e95-10a09c14511b';
+
+-- Delete requirement responses (skip if not exists)
+-- DELETE FROM requirement_responses 
+-- WHERE learner_id = '464ef929-8116-47ac-8e95-10a09c14511b'
+-- OR author_id = '464ef929-8116-47ac-8e95-10a09c14511b';
 
 -- Delete course assignments
 DELETE FROM course_assignments 
