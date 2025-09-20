@@ -27,15 +27,21 @@ export default async function TrainAssessPage() {
     redirect("/auth/login");
   }
 
-  console.log("Current user:", user.id);
+  console.log("Current user:", user.id, user.email);
 
   // Get user's role assignments for training and assessment
-  const { data: trainerAssignments } = await supabase
+  const { data: trainerAssignments, error: trainerError } = await supabase
     .from("course_assignments")
     .select("course_id, role")
     .eq("user_id", user.id)
     .in("role", ["onsite_trainer", "onsite_assessor"]);
 
+  console.log("Trainer assignments query result:", { 
+    userId: user.id,
+    email: user.email,
+    assignments: trainerAssignments,
+    error: trainerError
+  });
   console.log("Trainer course IDs:", trainerAssignments?.map(a => a.course_id));
 
   const trainerCourseIds = trainerAssignments?.map(a => a.course_id) || [];
@@ -65,6 +71,12 @@ export default async function TrainAssessPage() {
       user_id: ta.user_id,
       course_id: ta.course_id
     })));
+    
+    // Additional debug: Check if Connor is filtering himself out
+    const connorAsTrainee = traineeAssignments?.filter(ta => ta.user_id === user.id);
+    if (connorAsTrainee?.length > 0) {
+      console.log("NOTE: User is also a trainee in", connorAsTrainee.length, "courses");
+    }
 
     if (traineeAssignments) {
       for (const assignment of traineeAssignments) {
