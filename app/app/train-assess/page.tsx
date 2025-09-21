@@ -28,7 +28,6 @@ export default async function TrainAssessPage() {
     redirect("/auth/login");
   }
 
-  console.log("Current user:", user.id, user.email);
 
   // Get user's role assignments for training and assessment
   const { data: trainerAssignments, error: trainerError } = await supabase
@@ -37,13 +36,6 @@ export default async function TrainAssessPage() {
     .eq("user_id", user.id)
     .in("role", ["onsite_trainer", "onsite_assessor"]);
 
-  console.log("Trainer assignments query result:", { 
-    userId: user.id,
-    email: user.email,
-    assignments: trainerAssignments,
-    error: trainerError
-  });
-  console.log("Trainer course IDs:", trainerAssignments?.map(a => a.course_id));
 
   // Remove duplicates using Set
   const trainerCourseIds = [...new Set(trainerAssignments?.map(a => a.course_id) || [])];
@@ -68,19 +60,6 @@ export default async function TrainAssessPage() {
       .eq("role", "trainee")
       .in("course_id", trainerCourseIds);
 
-    console.log("Trainee assignments query error:", traineeError);
-    console.log("Trainee assignments found:", traineeAssignments?.length);
-    console.log("Trainee assignments data:", traineeAssignments?.map(ta => ({
-      id: ta.id,
-      user_id: ta.user_id,
-      course_id: ta.course_id
-    })));
-    
-    // Additional debug: Check if Connor is filtering himself out
-    const connorAsTrainee = traineeAssignments?.filter(ta => ta.user_id === user.id);
-    if (connorAsTrainee?.length > 0) {
-      console.log("NOTE: User is also a trainee in", connorAsTrainee.length, "courses");
-    }
 
     if (traineeAssignments) {
       for (const assignment of traineeAssignments) {
@@ -88,11 +67,6 @@ export default async function TrainAssessPage() {
         const traineeId = assignment.user_id;
         const assignmentId = assignment.id;
         
-        console.log(`Processing assignment ${assignmentId}:`, {
-          traineeId,
-          courseId,
-          isCurrentUser: traineeId === user.id
-        });
 
         // Get all modules for this course
         const { data: allModules } = await supabase
@@ -101,14 +75,8 @@ export default async function TrainAssessPage() {
           .eq("course_id", courseId)
           .order("order_index");
 
-        console.log(`Modules for course ${courseId}:`, allModules?.map(m => ({
-          id: m.id,
-          type: m.type,
-          title: m.title
-        })));
 
         if (!allModules || allModules.length === 0) {
-          console.log(`No modules found for course ${courseId}`);
           continue;
         }
 
@@ -134,20 +102,6 @@ export default async function TrainAssessPage() {
         const onsiteTrainingComplete = onsiteTrainingModules.length > 0 && 
           onsiteTrainingModules.every(m => completedModuleIds.has(m.id));
         
-        // Debug logging for Connor's assignments
-        if (traineeId === user.id) {
-          console.log(`Debug for Connor's assignment ${assignmentId}:`, {
-            courseId,
-            digitalModules: digitalModules.length,
-            digitalComplete: allDigitalComplete,
-            onsiteTrainingModules: onsiteTrainingModules.length,
-            onsiteTrainingComplete,
-            onsiteAssessmentModules: onsiteAssessmentModules.length,
-            completedModules: completedModuleIds.size,
-            isOnsiteTrainer,
-            isOnsiteAssessor
-          });
-        }
 
         // Get trainee profile separately
         const { data: traineeProfile } = await supabase
@@ -202,8 +156,6 @@ export default async function TrainAssessPage() {
     }
   }
 
-  console.log("Final pending training items:", pendingTrainingItems.length);
-  console.log("Final pending assessment items:", pendingAssessmentItems.length);
 
   return (
     <div className="container mx-auto py-6 space-y-6">
