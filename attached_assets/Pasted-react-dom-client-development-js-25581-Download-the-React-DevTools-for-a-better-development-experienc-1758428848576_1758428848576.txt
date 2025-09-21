@@ -1,0 +1,17 @@
+react-dom-client.development.js:25581 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+use-websocket.ts:16  WebSocket connection to 'wss://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/_next/webpack-hmr' failed: 
+eval @ use-websocket.ts:16
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+page.tsx:30  Server  Current user: ffcf28b5-b9b2-4728-a382-43bb97e5968f connor.johnston@inflite.nz
+page.tsx:39  Server  Trainer assignments query result: {userId: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', email: 'connor.johnston@inflite.nz', assignments: Array(6), error: null}assignments: (6) [{…}, {…}, {…}, {…}, {…}, {…}]email: "connor.johnston@inflite.nz"error: nulluserId: "ffcf28b5-b9b2-4728-a382-43bb97e5968f"[[Prototype]]: Object
+page.tsx:45  Server  Trainer course IDs: (6) ['bdc908f2-0346-4678-9b96-ba76a6dc591b', 'bdc908f2-0346-4678-9b96-ba76a6dc591b', '54e82b81-b2db-49ee-b644-27e6b0ad4451', '54e82b81-b2db-49ee-b644-27e6b0ad4451', 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', 'c7e65bae-bb3d-49d0-b992-fe4c09b15451']0: "bdc908f2-0346-4678-9b96-ba76a6dc591b"1: "bdc908f2-0346-4678-9b96-ba76a6dc591b"2: "54e82b81-b2db-49ee-b644-27e6b0ad4451"3: "54e82b81-b2db-49ee-b644-27e6b0ad4451"4: "c7e65bae-bb3d-49d0-b992-fe4c09b15451"5: "c7e65bae-bb3d-49d0-b992-fe4c09b15451"length: 6[[Prototype]]: Array(0)
+page.tsx:68  Server  Trainee assignments query error: null
+page.tsx:69  Server  Trainee assignments found: 3
+page.tsx:70  Server  Trainee assignments data: (3) [{…}, {…}, {…}]0: {id: '70defdd3-de92-4b22-9f63-bfd6df478b91', user_id: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', course_id: '54e82b81-b2db-49ee-b644-27e6b0ad4451'}1: {id: '68ec03c8-648d-498d-bca7-fa616771aeab', user_id: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', course_id: 'bdc908f2-0346-4678-9b96-ba76a6dc591b'}2: {id: '0b25744c-6d3b-4ea9-87b2-f892f91fc898', user_id: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', course_id: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451'}length: 3[[Prototype]]: Array(0)
+page.tsx:79  Server  NOTE: User is also a trainee in 3 courses
+page.tsx:169  Server  Final pending training items: 0
+page.tsx:170  Server  Final pending assessment items: 0

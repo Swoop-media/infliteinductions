@@ -84,14 +84,30 @@ export default async function TrainAssessPage() {
         const courseId = assignment.course_id;
         const traineeId = assignment.user_id;
         const assignmentId = assignment.id;
+        
+        console.log(`Processing assignment ${assignmentId}:`, {
+          traineeId,
+          courseId,
+          isCurrentUser: traineeId === user.id
+        });
 
         // Get all modules for this course
         const { data: allModules } = await supabase
           .from("course_modules")
-          .select("id, type")
-          .eq("course_id", courseId);
+          .select("id, type, title")
+          .eq("course_id", courseId)
+          .order("order_index");
 
-        if (!allModules) continue;
+        console.log(`Modules for course ${courseId}:`, allModules?.map(m => ({
+          id: m.id,
+          type: m.type,
+          title: m.title
+        })));
+
+        if (!allModules || allModules.length === 0) {
+          console.log(`No modules found for course ${courseId}`);
+          continue;
+        }
 
         const digitalModules = allModules.filter(m =>
           m.type === "digital_training" || m.type === "digital_assessment_quiz"
@@ -107,12 +123,28 @@ export default async function TrainAssessPage() {
 
         const completedModuleIds = new Set(progress?.map(p => p.module_id) || []);
 
-        // Check if all digital modules are complete
-        const allDigitalComplete = digitalModules.length > 0 &&
+        // Check if all digital modules are complete (or if there are no digital modules)
+        const allDigitalComplete = digitalModules.length === 0 || 
           digitalModules.every(m => completedModuleIds.has(m.id));
 
         // Check if onsite training is complete
-        const onsiteTrainingComplete = onsiteTrainingModules.every(m => completedModuleIds.has(m.id));
+        const onsiteTrainingComplete = onsiteTrainingModules.length > 0 && 
+          onsiteTrainingModules.every(m => completedModuleIds.has(m.id));
+        
+        // Debug logging for Connor's assignments
+        if (traineeId === user.id) {
+          console.log(`Debug for Connor's assignment ${assignmentId}:`, {
+            courseId,
+            digitalModules: digitalModules.length,
+            digitalComplete: allDigitalComplete,
+            onsiteTrainingModules: onsiteTrainingModules.length,
+            onsiteTrainingComplete,
+            onsiteAssessmentModules: onsiteAssessmentModules.length,
+            completedModules: completedModuleIds.size,
+            isOnsiteTrainer,
+            isOnsiteAssessor
+          });
+        }
 
         // Get trainee profile separately
         const { data: traineeProfile } = await supabase
@@ -133,7 +165,8 @@ export default async function TrainAssessPage() {
         const courseTitle = courseInfo?.title || "Unknown Course";
 
         // Add to pending training if digital complete but onsite training not done
-        if (allDigitalComplete && !onsiteTrainingComplete && isOnsiteTrainer) {
+        // (courses must have onsite training modules to appear in the list)
+        if (allDigitalComplete && onsiteTrainingModules.length > 0 && !onsiteTrainingComplete && isOnsiteTrainer) {
           pendingTrainingItems.push({
             id: assignmentId,
             trainee_name: traineeName,
