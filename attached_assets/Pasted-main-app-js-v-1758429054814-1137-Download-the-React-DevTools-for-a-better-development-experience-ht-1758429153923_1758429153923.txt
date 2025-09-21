@@ -1,0 +1,66 @@
+main-app.js?v=1758429054814:1137 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+page.tsx:30  Server  Current user: ffcf28b5-b9b2-4728-a382-43bb97e5968f connor.johnston@inflite.nz
+page.tsx:39  Server  Trainer assignments query result: {userId: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', email: 'connor.johnston@inflite.nz', assignments: Array(6), error: null}
+page.tsx:45  Server  Trainer course IDs: (6) ['bdc908f2-0346-4678-9b96-ba76a6dc591b', 'bdc908f2-0346-4678-9b96-ba76a6dc591b', '54e82b81-b2db-49ee-b644-27e6b0ad4451', '54e82b81-b2db-49ee-b644-27e6b0ad4451', 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', 'c7e65bae-bb3d-49d0-b992-fe4c09b15451']
+page.tsx:68  Server  Trainee assignments query error: null
+page.tsx:69  Server  Trainee assignments found: 3
+page.tsx:70  Server  Trainee assignments data: (3) [{…}, {…}, {…}]
+page.tsx:79  Server  NOTE: User is also a trainee in 3 courses
+page.tsx:88  Server  Processing assignment 70defdd3-de92-4b22-9f63-bfd6df478b91: {traineeId: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', courseId: '54e82b81-b2db-49ee-b644-27e6b0ad4451', isCurrentUser: true}
+page.tsx:101  Server  Modules for course 54e82b81-b2db-49ee-b644-27e6b0ad4451: (13) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+page.tsx:136  Server  Debug for Connor's assignment 70defdd3-de92-4b22-9f63-bfd6df478b91: {courseId: '54e82b81-b2db-49ee-b644-27e6b0ad4451', digitalModules: 11, digitalComplete: false, onsiteTrainingModules: 1, onsiteTrainingComplete: false, …}
+page.tsx:88  Server  Processing assignment 68ec03c8-648d-498d-bca7-fa616771aeab: {traineeId: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', courseId: 'bdc908f2-0346-4678-9b96-ba76a6dc591b', isCurrentUser: true}
+page.tsx:101  Server  Modules for course bdc908f2-0346-4678-9b96-ba76a6dc591b: (10) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+page.tsx:136  Server  Debug for Connor's assignment 68ec03c8-648d-498d-bca7-fa616771aeab: {courseId: 'bdc908f2-0346-4678-9b96-ba76a6dc591b', digitalModules: 7, digitalComplete: false, onsiteTrainingModules: 2, onsiteTrainingComplete: false, …}
+page.tsx:88  Server  Processing assignment 0b25744c-6d3b-4ea9-87b2-f892f91fc898: {traineeId: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', isCurrentUser: true}
+page.tsx:101  Server  Modules for course c7e65bae-bb3d-49d0-b992-fe4c09b15451: (7) [{…}, {…}, {…}, {…}, {…}, {…}, {…}]
+page.tsx:136  Server  Debug for Connor's assignment 0b25744c-6d3b-4ea9-87b2-f892f91fc898: {courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', digitalModules: 5, digitalComplete: false, onsiteTrainingModules: 1, onsiteTrainingComplete: false, …}
+page.tsx:202  Server  Final pending training items: 0
+page.tsx:203  Server  Final pending assessment items: 0
+use-websocket.ts:16  WebSocket connection to 'wss://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/_next/webpack-hmr' failed: 
+eval @ use-websocket.ts:16
+react_stack_bottom_frame @ react-dom-client.development.js:23637
+runWithFiberInDEV @ react-dom-client.development.js:872
+commitHookEffectListMount @ react-dom-client.development.js:12295
+commitHookPassiveMountEffects @ react-dom-client.development.js:12416
+commitPassiveMountOnFiber @ react-dom-client.development.js:14337
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14464
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14464
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14464
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14464
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14464
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14464
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14330
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14340
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14330
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14330
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14464
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14330
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14330
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14464
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14464
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14310
+commitPassiveMountOnFiber @ react-dom-client.development.js:14349
+flushPassiveEffects @ react-dom-client.development.js:16288
+eval @ react-dom-client.development.js:15924
+performWorkUntilDeadline @ scheduler.development.js:45
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
