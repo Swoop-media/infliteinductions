@@ -102,6 +102,11 @@ export default async function TrainAssessPage() {
         const onsiteTrainingComplete = onsiteTrainingModules.length > 0 && 
           onsiteTrainingModules.every(m => completedModuleIds.has(m.id));
         
+        // Check if training stage is done or not required (for courses with only assessment)
+        // For courses without training modules, require digital modules to be complete first
+        const trainingStageComplete = onsiteTrainingModules.length === 0 
+          ? allDigitalComplete 
+          : onsiteTrainingComplete;
 
         // Get trainee profile separately
         const { data: traineeProfile } = await supabase
@@ -136,8 +141,8 @@ export default async function TrainAssessPage() {
           });
         }
 
-        // Add to pending assessment if onsite training complete but assessment not done
-        if (onsiteTrainingComplete && onsiteAssessmentModules.length > 0 && isOnsiteAssessor) {
+        // Add to pending assessment if training stage is complete (or not required) but assessment not done
+        if (trainingStageComplete && onsiteAssessmentModules.length > 0 && isOnsiteAssessor) {
           const onsiteAssessmentComplete = onsiteAssessmentModules.every(m => completedModuleIds.has(m.id));
           if (!onsiteAssessmentComplete) {
             pendingAssessmentItems.push({
