@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +55,9 @@ export default async function TrainAssessPage() {
 
   if (trainerCourseIds.length > 0) {
     // Get trainee assignments for courses where this user is a trainer/assessor
-    const { data: traineeAssignments, error: traineeError } = await supabase
+    // Use service role client to bypass RLS and see all trainees
+    const supabaseService = supabaseAdmin();
+    const { data: traineeAssignments, error: traineeError } = await supabaseService
       .from("course_assignments")
       .select(`
         id,
