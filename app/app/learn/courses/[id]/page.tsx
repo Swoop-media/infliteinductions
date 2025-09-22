@@ -598,7 +598,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
             Your Score: {result?.score_pct ?? 0}%
           </p>
           <p className="text-xs text-gray-600 mt-2">
-            Pass Mark: {quizData.pass_mark || 70}%
+            Pass Mark: {quizData.pass_mark || 80}%
           </p>
         </div>
       </div>
@@ -878,6 +878,32 @@ export default async function LearnerCoursePage(props: {
     sortedModules.slice(0, currentModuleIndex).every(m => completedModules.has(m.id))
   ) : false);
 
+  // Fetch quiz data if current module is a quiz and we're showing results
+  let quizPassMark = 80; // Default pass mark
+  if (currentModule?.type === 'digital_assessment_quiz' && quizResult) {
+    // Try to get quiz by module_id first
+    const { data: quiz } = await supabase
+      .from("quizzes")
+      .select("pass_mark")
+      .eq("module_id", currentModule.id)
+      .maybeSingle();
+    
+    if (quiz?.pass_mark) {
+      quizPassMark = quiz.pass_mark;
+    } else {
+      // Fallback: try to get quiz by course_id
+      const { data: courseQuiz } = await supabase
+        .from("quizzes")
+        .select("pass_mark")
+        .eq("course_id", courseId)
+        .maybeSingle();
+      
+      if (courseQuiz?.pass_mark) {
+        quizPassMark = courseQuiz.pass_mark;
+      }
+    }
+  }
+
   // Helper to check if a module is completed
   const moduleCompleted = (moduleId: string) => completedModules.has(moduleId);
 
@@ -1063,7 +1089,7 @@ export default async function LearnerCoursePage(props: {
                             ) : (
                               <div className="space-y-2">
                                 <p className="text-sm text-red-700">
-                                  You need 70% or higher to pass. Review the material and try again.
+                                  You need {quizPassMark}% or higher to pass. Review the material and try again.
                                 </p>
                                 <Link
                                   href={`/app/learn/courses/${courseId}?module=${currentModule.id}&quiz=start${authorizationId ? `&auth=${authorizationId}` : ''}`}
