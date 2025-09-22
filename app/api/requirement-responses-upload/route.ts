@@ -8,6 +8,7 @@ export const maxDuration = 30;
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('=== REQUIREMENT UPLOAD ENDPOINT CALLED ===');
     const supabase = await createSupabaseServer();
     
     // Check authentication
@@ -15,11 +16,14 @@ export async function POST(request: NextRequest) {
     if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    console.log('Authenticated user (trainer/assessor):', user.id);
 
     const formData = await request.formData();
     const moduleId = formData.get('moduleId') as string;
     const assignmentId = formData.get('assignmentId') as string;
     const responsesJson = formData.get('responses') as string;
+    
+    console.log('Request data:', { moduleId, assignmentId, hasResponses: !!responsesJson });
     
     if (!moduleId || !assignmentId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -30,16 +34,33 @@ export async function POST(request: NextRequest) {
     
     // Process file uploads
     const fileResponses: Record<string, string> = {};
+    const learnerDocumentEntries: any[] = [];
     
     // Get trainee info for learner_documents table
-    const { data: assignmentData } = await supabase
+    const { data: assignmentData, error: assignmentError } = await supabase
       .from("course_assignments")
-      .select("user_id, course_id, courses(title)")
+      .select("user_id, course_id, role, courses(title)")
       .eq("id", assignmentId)
       .single();
     
+    console.log('Assignment query result:', { 
+      assignmentData, 
+      assignmentError,
+      assignmentId 
+    });
+    
+    if (assignmentError) {
+      console.error('Error fetching assignment:', assignmentError);
+    }
+    
     const traineeUserId = assignmentData?.user_id;
     const courseTitle = assignmentData?.courses?.title || "Unknown Course";
+    
+    console.log('Trainee info:', {
+      traineeUserId,
+      role: assignmentData?.role,
+      courseTitle
+    });
     
     // Get module info
     const { data: moduleData } = await supabase
@@ -83,14 +104,18 @@ export async function POST(request: NextRequest) {
           
           // Prepare entry for learner_documents table
           if (traineeUserId) {
-            learnerDocumentEntries.push({
+            const docEntry = {
               user_id: traineeUserId,
               title: file.name,
               file_path: filePath,
               course_title: courseTitle,
               module_title: moduleTitle,
               created_at: new Date().toISOString()
-            });
+            };
+            console.log('Preparing learner document entry:', docEntry);
+            learnerDocumentEntries.push(docEntry);
+          } else {
+            console.error('No traineeUserId found for assignment:', assignmentId);
           }
         }
       }
@@ -109,9 +134,6 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     }));
-    
-    // Also prepare learner documents entries for file uploads
-    const learnerDocumentEntries = [];
 
     // First, delete existing responses for this module/assignment/trainer combination
     await supabase
@@ -137,15 +159,22 @@ export async function POST(request: NextRequest) {
     
     // Insert learner documents for file uploads
     if (learnerDocumentEntries.length > 0) {
-      const { error: docError } = await supabase
+      console.log('Attempting to insert learner documents:', learnerDocumentEntries);
+      const { data: insertedDocs, error: docError } = await supabase
         .from("learner_documents")
-        .insert(learnerDocumentEntries);
+        .insert(learnerDocumentEntries)
+        .select();
       
       if (docError) {
         console.error("Error saving learner documents:", docError);
+        console.error("Error details:", JSON.stringify(docError, null, 2));
         // Don't fail the entire request if document saving fails
         // The files are still uploaded and responses are saved
+      } else {
+        console.log('Successfully inserted learner documents:', insertedDocs);
       }
+    } else {
+      console.log('No learner document entries to insert');
     }
 
     return NextResponse.json({ 
