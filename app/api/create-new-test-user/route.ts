@@ -72,7 +72,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Assign to course
-    const courseId = '4a25c12d-fc4f-4eae-8053-e1b0bff5d27e'; // INFLITE Driver Training
+    const courseId = process.env.DEFAULT_COURSE_ID || '4a25c12d-fc4f-4eae-8053-e1b0bff5d27e'; // INFLITE Driver Training
+    const defaultAdminId = process.env.DEFAULT_ADMIN_ID || 'd23e5879-46f0-456f-a75f-06c0f0f4bc06';
+    
     const { data: courseAssignment, error: courseError } = await supabaseAdmin
       .from("course_assignments")
       .insert({
@@ -80,7 +82,7 @@ export async function POST(request: NextRequest) {
         course_id: courseId,
         role: 'trainee',
         assignment_status: 'assigned',
-        created_by: 'd23e5879-46f0-456f-a75f-06c0f0f4bc06', // Default admin
+        created_by: defaultAdminId,
         created_at: new Date().toISOString()
       })
       .select()
@@ -91,7 +93,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Assign to authorization
-    const authId = 'a707ba0b-7ba3-4ee0-9937-c85e2b0e66b3'; // INFLITE Driver Authorisation
+    const authId = process.env.DEFAULT_AUTHORIZATION_ID || 'a707ba0b-7ba3-4ee0-9937-c85e2b0e66b3'; // INFLITE Driver Authorisation
     const { data: authAssignment, error: authError2 } = await supabaseAdmin
       .from("authorisation_assignments")
       .insert({
@@ -99,8 +101,8 @@ export async function POST(request: NextRequest) {
         authorisation_id: authId,
         role: 'trainee',
         assignment_status: 'assigned',
-        assigned_by: 'd23e5879-46f0-456f-a75f-06c0f0f4bc06', // Default admin
-        created_by: 'd23e5879-46f0-456f-a75f-06c0f0f4bc06',
+        assigned_by: defaultAdminId,
+        created_by: defaultAdminId,
         assigned_at: new Date().toISOString(),
         created_at: new Date().toISOString()
       })
