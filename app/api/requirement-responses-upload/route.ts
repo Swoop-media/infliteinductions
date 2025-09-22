@@ -108,6 +108,8 @@ export async function POST(request: NextRequest) {
               user_id: traineeUserId,
               title: file.name,
               file_path: filePath,
+              file_size: file.size,
+              file_type: file.type,
               course_title: courseTitle,
               module_title: moduleTitle,
               created_at: new Date().toISOString()
@@ -157,21 +159,43 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Insert learner documents for file uploads
+    // Insert learner documents using RPC function (same as digital module uploads)
     if (learnerDocumentEntries.length > 0) {
       console.log('Attempting to insert learner documents:', learnerDocumentEntries);
-      const { data: insertedDocs, error: docError } = await supabase
-        .from("learner_documents")
-        .insert(learnerDocumentEntries)
-        .select();
       
-      if (docError) {
-        console.error("Error saving learner documents:", docError);
-        console.error("Error details:", JSON.stringify(docError, null, 2));
-        // Don't fail the entire request if document saving fails
-        // The files are still uploaded and responses are saved
-      } else {
-        console.log('Successfully inserted learner documents:', insertedDocs);
+      // Use the RPC function for each document entry
+      for (const docEntry of learnerDocumentEntries) {
+        try {
+          // Get course_id and module_id from the assignment
+          const { data: moduleInfo } = await supabase
+            .from("course_modules")
+            .select("course_id")
+            .eq("id", moduleId)
+            .single();
+          
+          const { data: documentId, error: rpcError } = await supabase
+            .rpc('upsert_learner_document', {
+              p_user_id: docEntry.user_id,
+              p_course_id: moduleInfo?.course_id || assignmentData?.course_id,
+              p_module_id: moduleId,
+              p_block_id: null,  // No block for onsite requirements
+              p_title: docEntry.title,
+              p_file_path: docEntry.file_path,
+              p_file_size: docEntry.file_size,
+              p_file_type: docEntry.file_type,
+              p_expires_on: null,  // No expiry for onsite requirements
+              p_assignment_id: assignmentId
+            });
+          
+          if (rpcError) {
+            console.error("Error saving learner document via RPC:", rpcError);
+            console.error("Error details:", JSON.stringify(rpcError, null, 2));
+          } else {
+            console.log('Successfully inserted learner document via RPC, ID:', documentId);
+          }
+        } catch (err) {
+          console.error("Exception while saving learner document:", err);
+        }
       }
     } else {
       console.log('No learner document entries to insert');
