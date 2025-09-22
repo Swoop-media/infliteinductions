@@ -283,17 +283,21 @@ async function submitQuizAnswers(formData: FormData) {
   const authorizationId = formData.get("authorizationId") as string;
   const preview = formData.get("preview") === "1";
 
-  // In preview mode, don't save anything, just calculate and show results
+  // In preview mode, don't save to database but still calculate actual score
   if (preview) {
-    redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=result&score=85&passed=1&preview=1${authorizationId ? `&auth=${authorizationId}` : ''}`);
-    return;
+    // Continue with score calculation instead of redirecting immediately
+    // The actual calculation will happen below
   }
 
-  // Get current user
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
-    redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=auth_required`);
-    return;
+  // Get current user (skip in preview mode)
+  let user = null;
+  if (!preview) {
+    const { data: authData } = await supabase.auth.getUser();
+    user = authData.user;
+    if (!user) {
+      redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=auth_required`);
+      return;
+    }
   }
 
   // Collect answers from form data
@@ -371,35 +375,37 @@ async function submitQuizAnswers(formData: FormData) {
     .eq("id", quizId)
     .single();
 
-  const passMarkPercent = quiz?.pass_mark || 70;
+  const passMarkPercent = quiz?.pass_mark || 80;  // Use 80% as default to match other quiz modules
   const passed = scorePercent >= passMarkPercent;
 
-  // Save quiz attempt
-  const { error: attemptError } = await supabase.from("quiz_attempts").insert({
-    quiz_id: quizId,
-    user_id: user.id,
-    score_pct: scorePercent,
-    passed: passed,
-    answers: answers,
-  });
+  // Save quiz attempt (skip in preview mode)
+  if (!preview && user) {
+    const { error: attemptError } = await supabase.from("quiz_attempts").insert({
+      quiz_id: quizId,
+      user_id: user.id,
+      score_pct: scorePercent,
+      passed: passed,
+      answers: answers,
+    });
 
-  if (attemptError) {
-    console.error("Failed to save quiz attempt:", attemptError);
+    if (attemptError) {
+      console.error("Failed to save quiz attempt:", attemptError);
+    }
+
+    // Mark module as complete if passed
+    if (passed) {
+      await supabase.from("assignment_progress").upsert([
+        {
+          assignment_id: assignmentId,
+          module_id: moduleId,
+          completed_at: new Date().toISOString(),
+        },
+      ]);
+    }
   }
 
-  // Mark module as complete if passed
-  if (passed) {
-    await supabase.from("assignment_progress").upsert([
-      {
-        assignment_id: assignmentId,
-        module_id: moduleId,
-        completed_at: new Date().toISOString(),
-      },
-    ]);
-  }
-
-  // Redirect with results
-  const redirectUrl = `/app/learn/courses/${courseId}?module=${moduleId}&quiz=result&score=${scorePercent}&passed=${passed ? '1' : '0'}${authorizationId ? `&auth=${authorizationId}` : ''}`;
+  // Redirect with results (include preview flag if in preview mode)
+  const redirectUrl = `/app/learn/courses/${courseId}?module=${moduleId}&quiz=result&score=${scorePercent}&passed=${passed ? '1' : '0'}${preview ? '&preview=1' : ''}${authorizationId ? `&auth=${authorizationId}` : ''}`;
   redirect(redirectUrl);
 }
 
