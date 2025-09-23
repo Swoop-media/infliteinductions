@@ -107,15 +107,23 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("role", "trainee")
     .maybeSingle();
 
-  // Get profile separately if assignment found
+  // Get profile from auth.users if assignment found
   let profile = null;
   if (assignment) {
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", assignment.user_id)
-      .single();
-    profile = profileData;
+    // Try to get from Supabase auth metadata
+    const { data: { user: traineeUser } } = await supabase.auth.admin.getUserById(assignment.user_id).catch(() => ({ data: { user: null } }));
+    if (traineeUser) {
+      profile = {
+        full_name: traineeUser.user_metadata?.full_name || traineeUser.email?.split('@')[0] || 'Unknown',
+        email: traineeUser.email || ''
+      };
+    } else {
+      // Fallback to basic info
+      profile = {
+        full_name: 'Trainee',
+        email: ''
+      };
+    }
   }
 
 
