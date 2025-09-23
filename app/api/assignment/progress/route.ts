@@ -132,6 +132,111 @@ export async function POST(req: NextRequest) {
       } catch (error) {
         console.warn("Failed to run try_complete_assignment RPC:", error);
       }
+
+      // Check if this module completion should trigger course completion
+      // Get all modules for this course
+      const { data: allModules } = await supabase
+        .from("course_modules")
+        .select("id")
+        .eq("course_id", typedAssignmentCheck.course_id);
+      
+      const allModuleIds = allModules?.map(m => m.id) || [];
+      
+      // Check if all modules are now completed
+      const { data: completedProgress } = await supabase
+        .from("assignment_progress")
+        .select("module_id")
+        .eq("assignment_id", assignmentId);
+      
+      const completedModuleIds = completedProgress?.map(p => p.module_id) || [];
+      const allModulesCompleted = allModuleIds.length > 0 && 
+                                   allModuleIds.every(id => completedModuleIds.includes(id));
+      
+      if (allModulesCompleted) {
+        console.log("All modules completed, checking if course should be marked as complete");
+        
+        // Check current assignment status
+        const { data: currentAssignment } = await supabase
+          .from("course_assignments")
+          .select("assignment_status")
+          .eq("id", assignmentId)
+          .single();
+        
+        if (currentAssignment && currentAssignment.assignment_status !== 'completed') {
+          // Mark the course assignment as completed
+          const { error: completeError } = await supabase
+            .from("course_assignments")
+            .update({
+              assignment_status: 'completed',
+              completed_at: new Date().toISOString()
+            })
+            .eq("id", assignmentId);
+          
+          if (!completeError) {
+            console.log("Course assignment marked as completed");
+            
+            // Now check if authorization should be marked as pending_approval
+            const { data: authCourses } = await supabase
+              .from("authorisation_courses")
+              .select("authorisation_id")
+              .eq("course_id", typedAssignmentCheck.course_id);
+
+            if (authCourses && authCourses.length > 0) {
+              for (const authCourse of authCourses) {
+                const authId = authCourse.authorisation_id;
+                
+                // Get all courses for this authorization
+                const { data: allAuthCourses } = await supabase
+                  .from("authorisation_courses")
+                  .select("course_id")
+                  .eq("authorisation_id", authId);
+
+                const courseIds = allAuthCourses?.map(ac => ac.course_id) || [];
+                
+                // Check if all courses are completed for this user
+                const { data: completedCourses } = await supabase
+                  .from("course_assignments")
+                  .select("course_id")
+                  .eq("user_id", typedAssignmentCheck.user_id)
+                  .eq("role", "trainee")
+                  .eq("assignment_status", "completed")
+                  .in("course_id", courseIds);
+
+                const allAuthCoursesCompleted = completedCourses?.length === courseIds.length && courseIds.length > 0;
+                
+                if (allAuthCoursesCompleted) {
+                  // Check if there's an existing authorization assignment
+                  const { data: existingAuth } = await supabase
+                    .from("authorisation_assignments")
+                    .select("id, assignment_status")
+                    .eq("user_id", typedAssignmentCheck.user_id)
+                    .eq("authorisation_id", authId)
+                    .eq("role", "trainee")
+                    .single();
+
+                  if (existingAuth && 
+                      existingAuth.assignment_status !== 'completed' && 
+                      existingAuth.assignment_status !== 'pending_approval') {
+                    // Update authorization status to pending_approval
+                    const { error: authUpdateError } = await supabase
+                      .from("authorisation_assignments")
+                      .update({
+                        assignment_status: 'pending_approval',
+                        completed_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                      })
+                      .eq("id", existingAuth.id);
+
+                    if (!authUpdateError) {
+                      console.log(`Authorization ${authId} updated to pending_approval`);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
 
     return NextResponse.json({

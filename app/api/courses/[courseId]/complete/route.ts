@@ -100,20 +100,74 @@ export async function POST(
     }
 
     // Check if authorization should be marked as pending_approval
-    // Try the enhanced function first, then fall back to the original
-    try {
-      await supabase.rpc("check_all_user_authorizations", {
-        p_user_id: assignment.user_id
-      });
-    } catch (authCheckError) {
-      // Fall back to original function if new one doesn't exist
-      try {
-        await supabase.rpc("check_authorization_completion", {
-          p_user_id: assignment.user_id,
-          p_course_id: courseId
-        });
-      } catch (fallbackError) {
-        console.log("Authorization completion check failed:", fallbackError);
+    // First, find all authorizations that include this course
+    const { data: authCourses } = await supabase
+      .from("authorisation_courses")
+      .select("authorisation_id")
+      .eq("course_id", courseId);
+
+    if (authCourses && authCourses.length > 0) {
+      console.log(`Course ${courseId} is part of ${authCourses.length} authorization(s)`);
+      
+      // For each authorization, check if all courses are completed
+      for (const authCourse of authCourses) {
+        const authId = authCourse.authorisation_id;
+        
+        // Get all courses for this authorization
+        const { data: allAuthCourses } = await supabase
+          .from("authorisation_courses")
+          .select("course_id")
+          .eq("authorisation_id", authId);
+
+        const courseIds = allAuthCourses?.map(ac => ac.course_id) || [];
+        
+        console.log(`Checking authorization ${authId}: ${courseIds.length} total courses`);
+
+        // Check if all courses are completed for this user
+        const { data: completedCourses } = await supabase
+          .from("course_assignments")
+          .select("course_id")
+          .eq("user_id", assignment.user_id)
+          .eq("role", "trainee")
+          .eq("assignment_status", "completed")
+          .in("course_id", courseIds);
+
+        const allCompleted = completedCourses?.length === courseIds.length && courseIds.length > 0;
+        
+        console.log(`Authorization ${authId}: ${completedCourses?.length}/${courseIds.length} courses completed`);
+
+        if (allCompleted) {
+          // Check if there's an existing authorization assignment
+          const { data: existingAuth } = await supabase
+            .from("authorisation_assignments")
+            .select("id, assignment_status")
+            .eq("user_id", assignment.user_id)
+            .eq("authorisation_id", authId)
+            .eq("role", "trainee")
+            .single();
+
+          if (existingAuth && 
+              existingAuth.assignment_status !== 'completed' && 
+              existingAuth.assignment_status !== 'pending_approval') {
+            // Update authorization status to pending_approval
+            const { error: authUpdateError } = await supabase
+              .from("authorisation_assignments")
+              .update({
+                assignment_status: 'pending_approval',
+                completed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", existingAuth.id);
+
+            if (authUpdateError) {
+              console.error("Error updating authorization status:", authUpdateError);
+            } else {
+              console.log(`Authorization ${authId} updated to pending_approval for user ${assignment.user_id}`);
+            }
+          } else {
+            console.log(`Authorization already in status: ${existingAuth?.assignment_status}`);
+          }
+        }
       }
     }
 
