@@ -37,15 +37,19 @@ export default async function TrainAssessPage() {
     .in("role", ["onsite_trainer", "onsite_assessor"]);
 
 
-  // Remove duplicates using Set
-  const trainerCourseIds = [...new Set(trainerAssignments?.map(a => a.course_id) || [])];
-  const isOnsiteTrainer = trainerAssignments?.some(a => a.role === "onsite_trainer");
-  const isOnsiteAssessor = trainerAssignments?.some(a => a.role === "onsite_assessor");
+  // Build separate Sets for courses where user is trainer vs assessor
+  const trainerCourseIds = new Set(
+    trainerAssignments?.filter(a => a.role === "onsite_trainer").map(a => a.course_id) || []
+  );
+  const assessorCourseIds = new Set(
+    trainerAssignments?.filter(a => a.role === "onsite_assessor").map(a => a.course_id) || []
+  );
+  const allCourseIds = [...new Set([...trainerCourseIds, ...assessorCourseIds])];
 
   let pendingTrainingItems: PendingTrainingItem[] = [];
   let pendingAssessmentItems: PendingTrainingItem[] = [];
 
-  if (trainerCourseIds.length > 0) {
+  if (allCourseIds.length > 0) {
     // Get trainee assignments for courses where this user is a trainer/assessor
     // Use service role client to bypass RLS and see all trainees
     const supabaseService = supabaseAdmin();
@@ -58,7 +62,7 @@ export default async function TrainAssessPage() {
         created_at
       `)
       .eq("role", "trainee")
-      .in("course_id", trainerCourseIds);
+      .in("course_id", allCourseIds);
 
 
     if (traineeAssignments) {
@@ -127,8 +131,8 @@ export default async function TrainAssessPage() {
         const courseTitle = courseInfo?.title || "Unknown Course";
 
         // Add to pending training if digital complete but onsite training not done
-        // (courses must have onsite training modules to appear in the list)
-        if (allDigitalComplete && onsiteTrainingModules.length > 0 && !onsiteTrainingComplete && isOnsiteTrainer) {
+        // AND if current user is assigned as onsite_trainer for this specific course
+        if (allDigitalComplete && onsiteTrainingModules.length > 0 && !onsiteTrainingComplete && trainerCourseIds.has(courseId)) {
           pendingTrainingItems.push({
             id: assignmentId,
             trainee_name: traineeName,
@@ -142,7 +146,8 @@ export default async function TrainAssessPage() {
         }
 
         // Add to pending assessment if training stage is complete (or not required) but assessment not done
-        if (trainingStageComplete && onsiteAssessmentModules.length > 0 && isOnsiteAssessor) {
+        // AND if current user is assigned as onsite_assessor for this specific course
+        if (trainingStageComplete && onsiteAssessmentModules.length > 0 && assessorCourseIds.has(courseId)) {
           const onsiteAssessmentComplete = onsiteAssessmentModules.every(m => completedModuleIds.has(m.id));
           if (!onsiteAssessmentComplete) {
             pendingAssessmentItems.push({
