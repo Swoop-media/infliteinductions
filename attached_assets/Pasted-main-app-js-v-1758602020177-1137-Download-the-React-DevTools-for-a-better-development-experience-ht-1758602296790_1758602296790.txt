@@ -1,0 +1,51 @@
+main-app.js?v=1758602020177:1137 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+use-websocket.js:42 WebSocket connection to 'wss://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/_next/webpack-hmr' failed: 
+eval @ use-websocket.js:42
+react_stack_bottom_frame @ react-dom-client.development.js:23638
+runWithFiberInDEV @ react-dom-client.development.js:873
+commitHookEffectListMount @ react-dom-client.development.js:12296
+commitHookPassiveMountEffects @ react-dom-client.development.js:12417
+commitPassiveMountOnFiber @ react-dom-client.development.js:14338
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14465
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14465
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14465
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14465
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14465
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14465
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14331
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14341
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14331
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14331
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14465
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14331
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14331
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14465
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14465
+recursivelyTraversePassiveMountEffects @ react-dom-client.development.js:14311
+commitPassiveMountOnFiber @ react-dom-client.development.js:14350
+flushPassiveEffects @ react-dom-client.development.js:16289
+eval @ react-dom-client.development.js:15925
+performWorkUntilDeadline @ scheduler.development.js:45
+page.tsx:79  Server  === COURSE PAGE DEBUG START ===
+page.tsx:80  Server  0. Initial params: {courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', assignmentId: '971d3027-8e28-4e03-b6d3-9e1104aa70a6', sessionType: 'training'}
+page.tsx:93  Server  0.1 Current user: {userId: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', email: 'inductions@inflite.nz'}
+page.tsx:111  Server  0.2 Course query result: {course: 'Sigma 25 jump checks', courseError: 'none'}
+page.tsx:130  Server  0.3 Assignment query result: {assignmentFound: false, assignmentError: 'none'}
+page.tsx:152  Server  ERROR: Assignment not found or not a trainee assignment
+page.tsx:153  Server     Assignment ID: 971d3027-8e28-4e03-b6d3-9e1104aa70a6
+page.tsx:154  Server     Course ID: c7e65bae-bb3d-49d0-b992-fe4c09b15451
