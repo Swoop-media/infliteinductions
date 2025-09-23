@@ -132,8 +132,16 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("course_id", courseId)
     .in("role", ["onsite_trainer", "onsite_assessor"]);
 
+  console.log("DEBUG: Checking trainer access", {
+    userId: user.id,
+    courseId,
+    trainerAssignments,
+    trainerError,
+    sessionType
+  });
 
   if (!trainerAssignments || trainerAssignments.length === 0) {
+    console.log("DEBUG: No trainer assignments found, redirecting");
     redirect("/app/train-assess");
   }
 
@@ -143,7 +151,14 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   const requiredRole = sessionType === 'training' ? 'onsite_trainer' : 'onsite_assessor';
   const hasRequiredRole = userRoles.includes(requiredRole);
   
+  console.log("DEBUG: Role check", {
+    userRoles,
+    requiredRole,
+    hasRequiredRole
+  });
+  
   if (!hasRequiredRole) {
+    console.log("DEBUG: User doesn't have required role, redirecting");
     redirect("/app/train-assess");
   }
 
