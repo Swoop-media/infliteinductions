@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     // Get trainee info for learner_documents table
     const { data: assignmentData, error: assignmentError } = await adminClient
       .from("course_assignments")
-      .select("user_id, course_id, role, courses(title)")
+      .select("user_id, course_id, role, courses!course_assignments_course_id_fkey(title)")
       .eq("id", assignmentId)
       .single();
     
