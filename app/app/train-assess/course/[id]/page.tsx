@@ -24,6 +24,9 @@ async function saveRequirementResponses(moduleId: string, assignmentId: string, 
     throw new Error("Authentication required");
   }
 
+  // Use admin client to bypass RLS when trainers save responses for trainees
+  const supabaseService = supabaseAdmin();
+
   // Save or update requirement responses
   const responseEntries = Object.entries(responses).map(([requirementId, value]) => ({
     requirement_id: requirementId,
@@ -36,7 +39,7 @@ async function saveRequirementResponses(moduleId: string, assignmentId: string, 
   }));
 
   // First, delete existing responses for this module/assignment/trainer combination
-  await supabase
+  await supabaseService
     .from("requirement_responses")
     .delete()
     .eq("module_id", moduleId)
@@ -45,7 +48,7 @@ async function saveRequirementResponses(moduleId: string, assignmentId: string, 
 
   // Insert new responses
   if (responseEntries.length > 0) {
-    const { error } = await supabase
+    const { error } = await supabaseService
       .from("requirement_responses")
       .insert(responseEntries);
     
@@ -365,8 +368,9 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
                           canEdit={!isCompleted}
                           onComplete={async () => {
                             'use server';
-                            const supabase = await createSupabaseServer();
-                            const { error } = await supabase
+                            // Use admin client to bypass RLS for trainers marking trainee progress
+                            const supabaseService = supabaseAdmin();
+                            const { error } = await supabaseService
                               .from("assignment_progress")
                               .upsert({
                                 assignment_id: assignmentId,

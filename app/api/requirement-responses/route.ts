@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,8 +21,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Use admin client to bypass RLS for fetching trainer responses
+    const adminClient = supabaseAdmin();
+    
     // Get existing responses for this module/assignment/trainer
-    const { data: responses, error } = await supabase
+    const { data: responses, error } = await adminClient
       .from("requirement_responses")
       .select("requirement_id, response_value")
       .eq("module_id", moduleId)

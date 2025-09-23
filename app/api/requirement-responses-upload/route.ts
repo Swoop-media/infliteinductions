@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -36,8 +37,11 @@ export async function POST(request: NextRequest) {
     const fileResponses: Record<string, string> = {};
     const learnerDocumentEntries: any[] = [];
     
+    // Use admin client to bypass RLS
+    const adminClient = supabaseAdmin();
+    
     // Get trainee info for learner_documents table
-    const { data: assignmentData, error: assignmentError } = await supabase
+    const { data: assignmentData, error: assignmentError } = await adminClient
       .from("course_assignments")
       .select("user_id, course_id, role, courses(title)")
       .eq("id", assignmentId)
@@ -63,7 +67,7 @@ export async function POST(request: NextRequest) {
     });
     
     // Get module info
-    const { data: moduleData } = await supabase
+    const { data: moduleData } = await adminClient
       .from("course_modules")
       .select("title")
       .eq("id", moduleId)
@@ -86,7 +90,8 @@ export async function POST(request: NextRequest) {
           const arrayBuffer = await file.arrayBuffer();
           const buffer = Buffer.from(arrayBuffer);
           
-          const { error: uploadError } = await supabase.storage
+          // Use admin client for storage upload as well
+          const { error: uploadError } = await adminClient.storage
             .from('course-files')
             .upload(filePath, buffer, {
               contentType: file.type,
@@ -138,7 +143,7 @@ export async function POST(request: NextRequest) {
     }));
 
     // First, delete existing responses for this module/assignment/trainer combination
-    await supabase
+    await adminClient
       .from("requirement_responses")
       .delete()
       .eq("module_id", moduleId)
@@ -147,7 +152,7 @@ export async function POST(request: NextRequest) {
 
     // Insert new responses
     if (responseEntries.length > 0) {
-      const { error } = await supabase
+      const { error } = await adminClient
         .from("requirement_responses")
         .insert(responseEntries);
       
@@ -167,13 +172,13 @@ export async function POST(request: NextRequest) {
       for (const docEntry of learnerDocumentEntries) {
         try {
           // Get course_id and module_id from the assignment
-          const { data: moduleInfo } = await supabase
+          const { data: moduleInfo } = await adminClient
             .from("course_modules")
             .select("course_id")
             .eq("id", moduleId)
             .single();
           
-          const { data: documentId, error: rpcError } = await supabase
+          const { data: documentId, error: rpcError } = await adminClient
             .rpc('upsert_learner_document', {
               p_user_id: docEntry.user_id,
               p_course_id: moduleInfo?.course_id || assignmentData?.course_id,

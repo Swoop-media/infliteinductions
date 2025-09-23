@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,8 +35,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing assignmentId or moduleId" }, { status: 400 });
     }
 
+    // Use admin client to bypass RLS for assignment verification
+    const adminClient = supabaseAdmin();
+    
     // Get the assignment to verify it exists
-  const { data: assignment, error: assignmentError } = await supabase
+  const { data: assignment, error: assignmentError } = await adminClient
     .from('course_assignments')
     .select('*')
     .eq('id', assignmentId)
@@ -55,7 +59,7 @@ export async function POST(req: NextRequest) {
   }
 
     // Verify user can manage this assignment (either as the trainee or as a trainer/assessor)
-    const { data: assignmentCheck, error: assignmentErr } = await supabase
+    const { data: assignmentCheck, error: assignmentErr } = await adminClient
       .from("course_assignments")
       .select("id, course_id, user_id")
       .eq("id", assignmentId)
@@ -107,7 +111,8 @@ export async function POST(req: NextRequest) {
         completed_at: new Date().toISOString()
       };
 
-      const { error: upsertErr } = await supabase
+      // Use admin client to bypass RLS for trainers updating trainee progress
+      const { error: upsertErr } = await adminClient
         .from("assignment_progress")
         .upsert(progressData, {
           onConflict: "assignment_id,module_id"
@@ -128,14 +133,14 @@ export async function POST(req: NextRequest) {
         const rpcParams: any = {
           p_assignment_id: assignmentId
         };
-        await supabase.rpc("try_complete_assignment", rpcParams);
+        await adminClient.rpc("try_complete_assignment", rpcParams);
       } catch (error) {
         console.warn("Failed to run try_complete_assignment RPC:", error);
       }
 
       // Check if this module completion should trigger course completion
       // Get all modules for this course
-      const { data: allModules } = await supabase
+      const { data: allModules } = await adminClient
         .from("course_modules")
         .select("id")
         .eq("course_id", typedAssignmentCheck.course_id);
@@ -143,7 +148,7 @@ export async function POST(req: NextRequest) {
       const allModuleIds = allModules?.map(m => m.id) || [];
       
       // Check if all modules are now completed
-      const { data: completedProgress } = await supabase
+      const { data: completedProgress } = await adminClient
         .from("assignment_progress")
         .select("module_id")
         .eq("assignment_id", assignmentId);
@@ -156,7 +161,7 @@ export async function POST(req: NextRequest) {
         console.log("All modules completed, checking if course should be marked as complete");
         
         // Check current assignment status
-        const { data: currentAssignment } = await supabase
+        const { data: currentAssignment } = await adminClient
           .from("course_assignments")
           .select("assignment_status")
           .eq("id", assignmentId)
@@ -164,7 +169,7 @@ export async function POST(req: NextRequest) {
         
         if (currentAssignment && currentAssignment.assignment_status !== 'completed') {
           // Mark the course assignment as completed
-          const { error: completeError } = await supabase
+          const { error: completeError } = await adminClient
             .from("course_assignments")
             .update({
               assignment_status: 'completed',
@@ -176,7 +181,7 @@ export async function POST(req: NextRequest) {
             console.log("Course assignment marked as completed");
             
             // Now check if authorization should be marked as pending_approval
-            const { data: authCourses } = await supabase
+            const { data: authCourses } = await adminClient
               .from("authorisation_courses")
               .select("authorisation_id")
               .eq("course_id", typedAssignmentCheck.course_id);
@@ -186,7 +191,7 @@ export async function POST(req: NextRequest) {
                 const authId = authCourse.authorisation_id;
                 
                 // Get all courses for this authorization
-                const { data: allAuthCourses } = await supabase
+                const { data: allAuthCourses } = await adminClient
                   .from("authorisation_courses")
                   .select("course_id")
                   .eq("authorisation_id", authId);
@@ -194,7 +199,7 @@ export async function POST(req: NextRequest) {
                 const courseIds = allAuthCourses?.map(ac => ac.course_id) || [];
                 
                 // Check if all courses are completed for this user
-                const { data: completedCourses } = await supabase
+                const { data: completedCourses } = await adminClient
                   .from("course_assignments")
                   .select("course_id")
                   .eq("user_id", typedAssignmentCheck.user_id)
@@ -206,7 +211,7 @@ export async function POST(req: NextRequest) {
                 
                 if (allAuthCoursesCompleted) {
                   // Check if there's an existing authorization assignment
-                  const { data: existingAuth } = await supabase
+                  const { data: existingAuth } = await adminClient
                     .from("authorisation_assignments")
                     .select("id, assignment_status")
                     .eq("user_id", typedAssignmentCheck.user_id)
@@ -218,7 +223,7 @@ export async function POST(req: NextRequest) {
                       existingAuth.assignment_status !== 'completed' && 
                       existingAuth.assignment_status !== 'pending_approval') {
                     // Update authorization status to pending_approval
-                    const { error: authUpdateError } = await supabase
+                    const { error: authUpdateError } = await adminClient
                       .from("authorisation_assignments")
                       .update({
                         assignment_status: 'pending_approval',
