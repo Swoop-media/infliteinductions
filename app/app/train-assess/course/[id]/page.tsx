@@ -76,13 +76,27 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   const sessionType = resolvedSearchParams.type || 'training';
   
   
+  console.log("=== COURSE PAGE DEBUG START ===");
+  console.log("0. Initial params:", {
+    courseId,
+    assignmentId,
+    sessionType
+  });
+
   // Get current user
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
+    console.log("ERROR: User auth failed:", userError);
     redirect("/auth/login");
   }
 
+  console.log("0.1 Current user:", {
+    userId: user.id,
+    email: user.email
+  });
+
   if (!assignmentId) {
+    console.log("ERROR: No assignment ID provided");
     redirect("/app/train-assess");
   }
 
@@ -94,8 +108,13 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("id", courseId)
     .single();
 
+  console.log("0.2 Course query result:", {
+    course: course?.title,
+    courseError: courseError?.message || 'none'
+  });
 
   if (!course) {
+    console.log("ERROR: Course not found:", courseId);
     redirect("/app/train-assess");
   }
 
@@ -107,6 +126,13 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("course_id", courseId)
     .eq("role", "trainee")
     .maybeSingle();
+    
+  console.log("0.3 Assignment query result:", {
+    assignmentFound: !!assignment,
+    assignmentId: assignment?.id,
+    traineeId: assignment?.user_id,
+    assignmentError: assignmentError?.message || 'none'
+  });
 
   // Get profile separately if assignment found
   // Use service role client to bypass RLS, same as train-assess page does
@@ -123,6 +149,9 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
 
 
   if (!assignment) {
+    console.log("ERROR: Assignment not found or not a trainee assignment");
+    console.log("   Assignment ID:", assignmentId);
+    console.log("   Course ID:", courseId);
     redirect("/app/train-assess");
   }
 
@@ -135,16 +164,24 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("course_id", courseId)
     .in("role", ["onsite_trainer", "onsite_assessor"]);
 
-  console.log("DEBUG: Checking trainer access", {
+  console.log("=== COURSE PAGE DEBUG START ===");
+  console.log("1. User accessing course:", {
     userId: user.id,
+    userEmail: user.email,
     courseId,
-    trainerAssignments,
-    trainerError,
+    assignmentId,
     sessionType
+  });
+  
+  console.log("2. Trainer assignments query:", {
+    trainerAssignments,
+    trainerError: trainerError?.message || 'none'
   });
 
   if (!trainerAssignments || trainerAssignments.length === 0) {
-    console.log("DEBUG: No trainer assignments found, redirecting");
+    console.log("3. REDIRECT: No trainer assignments found for this user and course");
+    console.log("   User ID:", user.id);
+    console.log("   Course ID:", courseId);
     redirect("/app/train-assess");
   }
 
@@ -154,16 +191,21 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   const requiredRole = sessionType === 'training' ? 'onsite_trainer' : 'onsite_assessor';
   const hasRequiredRole = userRoles.includes(requiredRole);
   
-  console.log("DEBUG: Role check", {
+  console.log("4. Role verification:", {
     userRoles,
     requiredRole,
     hasRequiredRole
   });
   
   if (!hasRequiredRole) {
-    console.log("DEBUG: User doesn't have required role, redirecting");
+    console.log("5. REDIRECT: User doesn't have required role");
+    console.log("   User has roles:", userRoles);
+    console.log("   Needs role:", requiredRole);
+    console.log("   For session type:", sessionType);
     redirect("/app/train-assess");
   }
+  
+  console.log("6. Access granted - continuing to load course page");
 
 
   // Get course modules
