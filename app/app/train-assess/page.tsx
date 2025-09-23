@@ -65,11 +65,19 @@ export default async function TrainAssessPage() {
       .in("course_id", allCourseIds);
 
 
+    console.log("DEBUG: Trainee assignments found:", traineeAssignments);
+    
     if (traineeAssignments) {
       for (const assignment of traineeAssignments) {
         const courseId = assignment.course_id;
         const traineeId = assignment.user_id;
         const assignmentId = assignment.id;
+        
+        console.log("DEBUG: Processing assignment:", {
+          assignmentId,
+          traineeId,
+          courseId
+        });
         
 
         // Get all modules for this course
@@ -133,7 +141,7 @@ export default async function TrainAssessPage() {
         // Add to pending training if digital complete but onsite training not done
         // AND if current user is assigned as onsite_trainer for this specific course
         if (allDigitalComplete && onsiteTrainingModules.length > 0 && !onsiteTrainingComplete && trainerCourseIds.has(courseId)) {
-          pendingTrainingItems.push({
+          const trainingItem = {
             id: assignmentId,
             trainee_name: traineeName,
             trainee_email: traineeEmail,
@@ -142,7 +150,9 @@ export default async function TrainAssessPage() {
             assignment_id: assignmentId,
             created_at: assignment.created_at,
             type: 'training'
-          });
+          };
+          console.log("DEBUG: Adding training item:", trainingItem);
+          pendingTrainingItems.push(trainingItem);
         }
 
         // Add to pending assessment if training stage is complete (or not required) but assessment not done
@@ -166,6 +176,11 @@ export default async function TrainAssessPage() {
     }
   }
 
+
+  console.log("DEBUG: Final items to render:", {
+    pendingTrainingItems,
+    pendingAssessmentItems
+  });
 
   return (
     <div className="container mx-auto py-6 space-y-6">
