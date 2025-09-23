@@ -1,0 +1,63 @@
+ ○ Compiling /app/train-assess/course/[id] ...
+ ⨯ ./app/app/train-assess/course/[id]/page.tsx:4:1
+Module not found: Can't resolve '@/lib/supabase/service-role'
+  2 |
+  3 | import { createSupabaseServer } from "@/lib/supabase/server";
+> 4 | import { supabaseAdmin } from "@/lib/supabase/service-role";
+    | ^
+  5 | import { redirect } from "next/navigation";
+  6 | import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+  7 | import { Badge } from "@/components/ui/badge";
+
+https://nextjs.org/docs/messages/module-not-found
+ ⨯ ./app/app/train-assess/course/[id]/page.tsx:4:1
+Module not found: Can't resolve '@/lib/supabase/service-role'
+  2 |
+  3 | import { createSupabaseServer } from "@/lib/supabase/server";
+> 4 | import { supabaseAdmin } from "@/lib/supabase/service-role";
+    | ^
+  5 | import { redirect } from "next/navigation";
+  6 | import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+  7 | import { Badge } from "@/components/ui/badge";
+
+https://nextjs.org/docs/messages/module-not-found
+ ⨯ ./app/app/train-assess/course/[id]/page.tsx:4:1
+Module not found: Can't resolve '@/lib/supabase/service-role'
+  2 |
+  3 | import { createSupabaseServer } from "@/lib/supabase/server";
+> 4 | import { supabaseAdmin } from "@/lib/supabase/service-role";
+    | ^
+  5 | import { redirect } from "next/navigation";
+  6 | import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+  7 | import { Badge } from "@/components/ui/badge";
+
+https://nextjs.org/docs/messages/module-not-found
+ GET /app/train-assess/course/c7e65bae-bb3d-49d0-b992-fe4c09b15451?trainee=971d3027-8e28-4e03-b6d3-9e1104aa70a6&type=training 500 in 6435ms
+ GET /app/train-assess/course/c7e65bae-bb3d-49d0-b992-fe4c09b15451?trainee=971d3027-8e28-4e03-b6d3-9e1104aa70a6&type=training 500 in 27ms
+ GET /app/notifications/list 500 in 19ms
+ GET /app/train-assess/course/c7e65bae-bb3d-49d0-b992-fe4c09b15451?trainee=971d3027-8e28-4e03-b6d3-9e1104aa70a6&type=training 500 in 19ms
+ ⨯ ./app/app/train-assess/course/[id]/page.tsx:4:1
+Module not found: Can't resolve '@/lib/supabase/service-role'
+  2 |
+  3 | import { createSupabaseServer } from "@/lib/supabase/server";
+> 4 | import { supabaseAdmin } from "@/lib/supabase/service-role";
+    | ^
+  5 | import { redirect } from "next/navigation";
+  6 | import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+  7 | import { Badge } from "@/components/ui/badge";
+
+https://nextjs.org/docs/messages/module-not-found
+ GET /app/train-assess 500 in 593ms
+ GET /app/train-assess 500 in 20ms
+ ⨯ ./app/app/train-assess/course/[id]/page.tsx:4:1
+Module not found: Can't resolve '@/lib/supabase/service-role'
+  2 |
+  3 | import { createSupabaseServer } from "@/lib/supabase/server";
+> 4 | import { supabaseAdmin } from "@/lib/supabase/service-role";
+    | ^
+  5 | import { redirect } from "next/navigation";
+  6 | import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+  7 | import { Badge } from "@/components/ui/badge";
+
+https://nextjs.org/docs/messages/module-not-found
+ GET / 500 in 430ms

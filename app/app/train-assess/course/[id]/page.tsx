@@ -1,7 +1,7 @@
 // @ts-nocheck
 
 import { createSupabaseServer } from "@/lib/supabase/server";
-import { supabaseAdmin } from "@/lib/supabase/service-role";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
