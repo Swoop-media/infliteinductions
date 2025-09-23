@@ -1,0 +1,176 @@
+[
+  {
+    "id": "c3366f14-c721-4789-bf84-e3800a2ec084",
+    "title": "115 Ground Crew Training",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "c3366f14-c721-4789-bf84-e3800a2ec084",
+    "title": "115 Ground Crew Training",
+    "module_needs": "onsite_training",
+    "role_needed": "onsite_trainer"
+  },
+  {
+    "id": "7dc16948-a7d4-47b5-b799-7af4e7469443",
+    "title": "Camera Minimum Standards sign off",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "7dc16948-a7d4-47b5-b799-7af4e7469443",
+    "title": "Camera Minimum Standards sign off",
+    "module_needs": "onsite_training",
+    "role_needed": "onsite_trainer"
+  },
+  {
+    "id": "012fdaa6-9999-4b50-9217-4d81f6bd19e1",
+    "title": "Drop Pilot Bailout Training and Competency - NEEDS DIGITAL TRAINING",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "cf3f90dd-c67b-4138-85d6-945680cba0a0",
+    "title": "Existing Pre employment Drug and Alcohol test",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "692ac0f8-5c6c-457e-81e3-3899ade32831",
+    "title": "Front of House",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "692ac0f8-5c6c-457e-81e3-3899ade32831",
+    "title": "Front of House",
+    "module_needs": "onsite_training",
+    "role_needed": "onsite_trainer"
+  },
+  {
+    "id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "title": "High Altitude Skydiving",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "title": "High Altitude Skydiving",
+    "module_needs": "onsite_training",
+    "role_needed": "onsite_trainer"
+  },
+  {
+    "id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "title": "INFLITE Driver Training and Vehicle induction.",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "title": "INFLITE Driver Training and Vehicle induction.",
+    "module_needs": "onsite_training",
+    "role_needed": "onsite_trainer"
+  },
+  {
+    "id": "3a30a98a-d703-4e89-9ee0-3ae5f056339f",
+    "title": "New Hire Fixed Wing Pilots Documents",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "15400a2c-8b6a-4112-99bc-fd01782d8165",
+    "title": "Pilatus PC6 Porter Type Rating",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "c7c67c89-dec9-4247-933f-3bff8b03d246",
+    "title": "Skydive Abel Tasman General Induction",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "c7c67c89-dec9-4247-933f-3bff8b03d246",
+    "title": "Skydive Abel Tasman General Induction",
+    "module_needs": "onsite_training",
+    "role_needed": "onsite_trainer"
+  },
+  {
+    "id": "53e06ebc-2e61-4d78-90ac-9451e435155c",
+    "title": "Skydive MT Cook General Induction",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "53e06ebc-2e61-4d78-90ac-9451e435155c",
+    "title": "Skydive MT Cook General Induction",
+    "module_needs": "onsite_training",
+    "role_needed": "onsite_trainer"
+  },
+  {
+    "id": "7a3179c3-bbca-4f85-8c9f-201e3af0a603",
+    "title": "Starting the PAC 750 with a Ground Power Unit (GPU)",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "7a3179c3-bbca-4f85-8c9f-201e3af0a603",
+    "title": "Starting the PAC 750 with a Ground Power Unit (GPU)",
+    "module_needs": "onsite_training",
+    "role_needed": "onsite_trainer"
+  },
+  {
+    "id": "a128e2fe-4e62-4dd8-b047-623fa6cc0f29",
+    "title": "Starting the Pilatus Porter PC6 with a Ground Power Unit (GPU)",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "a128e2fe-4e62-4dd8-b047-623fa6cc0f29",
+    "title": "Starting the Pilatus Porter PC6 with a Ground Power Unit (GPU)",
+    "module_needs": "onsite_training",
+    "role_needed": "onsite_trainer"
+  },
+  {
+    "id": "96191cc2-6519-4665-b1d5-e08707a9139c",
+    "title": "Tandem documents, rules and responsibilities",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "title": "Tandem Instructor Camera",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "title": "Tandem Instructor Camera",
+    "module_needs": "onsite_training",
+    "role_needed": "onsite_trainer"
+  },
+  {
+    "id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7",
+    "title": "Tandem Master equipment",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "30950fba-e4cd-4fc3-8b72-cb7d27b02565",
+    "title": "Tandem OCA - OPERATIONAL COMPETENCY ASSESSMENT",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "ffb5cc4e-f6cf-4363-a6b5-154ee2361802",
+    "title": "Tandem Standard Operational Procedures",
+    "module_needs": "onsite_assessment",
+    "role_needed": "onsite_assessor"
+  },
+  {
+    "id": "ffb5cc4e-f6cf-4363-a6b5-154ee2361802",
+    "title": "Tandem Standard Operational Procedures",
+    "module_needs": "onsite_training",
+    "role_needed": "onsite_trainer"
+  }
+]
