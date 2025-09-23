@@ -1,8 +1,11 @@
 // middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
+import { createServerClient } from "@supabase/ssr";
 import type { Database } from "./lib/supabase/types";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 /**
  * Keeps the Supabase session in sync via cookies so
@@ -14,7 +17,22 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
 
   try {
-    const supabase = createMiddlewareClient<Database>({ req, res });
+    const supabase = createServerClient<Database>(
+      supabaseUrl,
+      supabaseAnonKey,
+      {
+        cookies: {
+          getAll() {
+            return req.cookies.getAll();
+          },
+          setAll(cookiesToSet) {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              res.cookies.set({ name, value, ...options });
+            });
+          },
+        },
+      }
+    );
     // This only sets/refreshes cookies; it does NOT read the request body.
     await supabase.auth.getSession();
   } catch (error: any) {

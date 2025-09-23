@@ -13,7 +13,7 @@
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-progress": "^1.1.7",
     "@radix-ui/react-slot": "^1.2.3",
-    "@supabase/auth-helpers-nextjs": "^0.10.0",
+    "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.54.0",
     "@tiptap/extension-color": "^3.4.2",
     "@tiptap/extension-font-family": "^3.4.2",
