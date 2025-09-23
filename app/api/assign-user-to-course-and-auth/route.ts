@@ -22,12 +22,12 @@ export async function POST(request: NextRequest) {
     });
     
     // For this setup endpoint, we'll use a default assigner ID
-    const assignerId = 'd23e5879-46f0-456f-a75f-06c0f0f4bc06'; // Default admin user ID
+    const assignerId = process.env.DEFAULT_ASSIGNER_ID || 'd23e5879-46f0-456f-a75f-06c0f0f4bc06'; // Default admin user ID
 
     // Test data
-    const testUserId = 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551'; // test user
-    const courseId = '4a25c12d-fc4f-4eae-8053-e1b0bff5d27e'; // INFLITE Driver Training
-    const authId = 'a707ba0b-7ba3-4ee0-9937-c85e2b0e66b3'; // INFLITE Driver Authorisation
+    const testUserId = process.env.TEST_USER_ID || 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551'; // test user
+    const courseId = process.env.INFLITE_DRIVER_TRAINING_COURSE_ID || '4a25c12d-fc4f-4eae-8053-e1b0bff5d27e'; // INFLITE Driver Training
+    const authId = process.env.INFLITE_DRIVER_AUTH_ID || 'a707ba0b-7ba3-4ee0-9937-c85e2b0e66b3'; // INFLITE Driver Authorisation
 
     console.log("Assigning test user to course and authorization...");
 
