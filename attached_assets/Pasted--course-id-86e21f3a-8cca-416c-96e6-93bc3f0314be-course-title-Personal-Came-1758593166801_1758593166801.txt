@@ -1,0 +1,177 @@
+[
+  {
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "course_title": "Personal Camera rig and outside camera equipment",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "course_title": "Sigma 25 jump checks",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "course_title": "Sigma 25 jump checks",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_training"
+  },
+  {
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "course_title": "Sigma 25 jump checks",
+    "role": "onsite_trainer",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "course_title": "Sigma 25 jump checks",
+    "role": "onsite_trainer",
+    "assignment_status": "assigned",
+    "module_type": "onsite_training"
+  },
+  {
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "course_title": "Sigma Packing",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "course_title": "Sigma Packing",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_training"
+  },
+  {
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "course_title": "Sigma Packing",
+    "role": "onsite_trainer",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "course_title": "Sigma Packing",
+    "role": "onsite_trainer",
+    "assignment_status": "assigned",
+    "module_type": "onsite_training"
+  },
+  {
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_training"
+  },
+  {
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_training"
+  },
+  {
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "role": "onsite_trainer",
+    "assignment_status": "assigned",
+    "module_type": "onsite_training"
+  },
+  {
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "role": "onsite_trainer",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "role": "onsite_trainer",
+    "assignment_status": "assigned",
+    "module_type": "onsite_training"
+  },
+  {
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_training"
+  },
+  {
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_training"
+  },
+  {
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "role": "onsite_assessor",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "role": "onsite_trainer",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "role": "onsite_trainer",
+    "assignment_status": "assigned",
+    "module_type": "onsite_training"
+  },
+  {
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "role": "onsite_trainer",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "role": "onsite_trainer",
+    "assignment_status": "assigned",
+    "module_type": "onsite_assessment"
+  },
+  {
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "role": "onsite_trainer",
+    "assignment_status": "assigned",
+    "module_type": "onsite_training"
+  }
+]
