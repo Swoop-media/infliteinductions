@@ -1,6 +1,7 @@
 // @ts-nocheck
 
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/service-role";
 import { redirect } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -107,23 +108,17 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("role", "trainee")
     .maybeSingle();
 
-  // Get profile from auth.users if assignment found
+  // Get profile separately if assignment found
+  // Use service role client to bypass RLS, same as train-assess page does
   let profile = null;
   if (assignment) {
-    // Try to get from Supabase auth metadata
-    const { data: { user: traineeUser } } = await supabase.auth.admin.getUserById(assignment.user_id).catch(() => ({ data: { user: null } }));
-    if (traineeUser) {
-      profile = {
-        full_name: traineeUser.user_metadata?.full_name || traineeUser.email?.split('@')[0] || 'Unknown',
-        email: traineeUser.email || ''
-      };
-    } else {
-      // Fallback to basic info
-      profile = {
-        full_name: 'Trainee',
-        email: ''
-      };
-    }
+    const supabaseService = supabaseAdmin();
+    const { data: profileData } = await supabaseService
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", assignment.user_id)
+      .single();
+    profile = profileData;
   }
 
 
