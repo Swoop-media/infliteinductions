@@ -1,6 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseRoute } from "@/lib/supabase/server";
 
+// Type definitions for database responses
+type Profile = {
+  id: string;
+  role: string;
+  full_name?: string;
+  email?: string;
+};
+
+type AuthAssignment = {
+  id: string;
+  user_id: string;
+  authorisation_id: string;
+  assignment_status: string;
+};
+
+type AuthCourse = {
+  course_id: string;
+};
+
+type Authorization = {
+  id: string;
+  name: string;
+};
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseRoute();
@@ -20,7 +44,7 @@ export async function POST(request: NextRequest) {
       .from("profiles")
       .select("role")
       .eq("id", user.id)
-      .single();
+      .single() as { data: Profile | null; error: any };
 
     if (!profile || profile.role !== 'admin') {
       return NextResponse.json(
@@ -34,7 +58,7 @@ export async function POST(request: NextRequest) {
       .from("authorisation_assignments")
       .select("id, user_id, authorisation_id, assignment_status")
       .eq("role", "trainee")
-      .not("assignment_status", "in", "(completed,pending_approval)");
+      .not("assignment_status", "in", "(completed,pending_approval)") as { data: AuthAssignment[] | null; error: any };
 
     if (authError) {
       console.error("Error fetching authorization assignments:", authError);
@@ -61,7 +85,7 @@ export async function POST(request: NextRequest) {
       const { data: authCourses } = await supabase
         .from("authorisation_courses")
         .select("course_id")
-        .eq("authorisation_id", authorisation_id);
+        .eq("authorisation_id", authorisation_id) as { data: AuthCourse[] | null; error?: any };
 
       const courseIds = authCourses?.map(ac => ac.course_id) || [];
 
@@ -88,7 +112,7 @@ export async function POST(request: NextRequest) {
 
       if (allCompleted) {
         // Update the authorization to pending_approval
-        const { data: updateData, error: updateError } = await supabase
+        const { data: updateData, error: updateError } = await (supabase as any)
           .from("authorisation_assignments")
           .update({
             assignment_status: 'pending_approval',
@@ -108,13 +132,13 @@ export async function POST(request: NextRequest) {
             .from("profiles")
             .select("full_name, email")
             .eq("id", user_id)
-            .single();
+            .single() as { data: Profile | null; error?: any };
 
           const { data: authData } = await supabase
             .from("authorisations")
             .select("name")
             .eq("id", authorisation_id)
-            .single();
+            .single() as { data: Authorization | null; error?: any };
 
           updatedAuthorizations.push({
             user_id,

@@ -81,7 +81,7 @@ export default function EquipmentAssessmentView({
   async function fetchAssessmentStatus() {
     try {
       // Check if there's an assessment for this course and trainee
-      const { data, error } = await supabaseBrowser
+      const { data, error } = await (supabaseBrowser as any)
         .from('equipment_assessments')
         .select('status, assessed_at, assessor_id')
         .eq('course_id', courseId)
@@ -138,7 +138,7 @@ export default function EquipmentAssessmentView({
     setSaving(true);
     try {
       // Update the existing response with assessor's edits
-      const { error } = await supabaseBrowser
+      const { error } = await (supabaseBrowser as any)
         .from('trainee_equipment_responses')
         .upsert({
           course_id: courseId,
@@ -175,7 +175,7 @@ export default function EquipmentAssessmentView({
       if (!user) return;
 
       // Upsert assessment record (insert or update if exists)
-      const { data, error } = await supabaseBrowser
+      const { data, error } = await (supabaseBrowser as any)
         .from('equipment_assessments')
         .upsert({
           course_id: courseId,

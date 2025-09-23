@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { Database } from '@/lib/supabase/types';
+import { createSupabaseRoute } from '@/lib/supabase/server';
 
 // GET - Load trainee equipment responses for a course
 export async function GET(
@@ -10,7 +8,7 @@ export async function GET(
 ) {
   try {
     const { courseId } = await params;
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const supabase = await createSupabaseRoute();
     const { searchParams } = new URL(request.url);
     const traineeId = searchParams.get('trainee_id');
 
@@ -82,7 +80,7 @@ export async function POST(
 ) {
   try {
     const { courseId } = await params;
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const supabase = await createSupabaseRoute();
 
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -101,14 +99,14 @@ export async function POST(
     try {
       // Fetch equipment using the SAME logic as the GET /equipment route
       // First try equipment_templates table
-      let { data: equipment, error } = await supabase
+      let { data: equipment, error }: any = await supabase
         .from("equipment_templates")
         .select("*")
         .eq("course_id", courseId);
       
       // If equipment_templates doesn't exist or is empty, check module_content_blocks
       if (error?.code === '42P01' || !equipment?.length) {
-        const { data: blocks, error: blocksError } = await supabase
+        const { data: blocks, error: blocksError } = await (supabase as any)
           .from("module_content_blocks")
           .select(`
             *,
@@ -161,7 +159,7 @@ export async function POST(
     }
 
     // Upsert the response (insert or update if exists)
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('trainee_equipment_responses')
       .upsert({
         user_id: user.id,

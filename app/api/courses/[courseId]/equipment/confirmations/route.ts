@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createRouteHandlerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
-import { Database } from '@/lib/supabase/types';
+import { createSupabaseRoute } from '@/lib/supabase/server';
 
 // GET - Load assessor confirmations for equipment
 export async function GET(
@@ -10,7 +8,7 @@ export async function GET(
 ) {
   try {
     const { courseId } = await params;
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const supabase = await createSupabaseRoute();
     const { searchParams } = new URL(request.url);
     const traineeId = searchParams.get('trainee_id');
 
@@ -65,7 +63,7 @@ export async function POST(
 ) {
   try {
     const { courseId } = await params;
-    const supabase = createRouteHandlerClient<Database>({ cookies });
+    const supabase = await createSupabaseRoute();
 
     // Get current user (assessor)
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -124,7 +122,7 @@ export async function POST(
     }
 
     // Upsert the confirmation (insert or update if exists)
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('assessor_equipment_confirmations')
       .upsert({
         user_id: user.id,
