@@ -1,0 +1,58 @@
+react-dom-client.development.js:25581 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+use-websocket.ts:16  WebSocket connection to 'wss://dacb1217-61ed-4cb0-a794-a7b3ae30caf4-00-2mqfcku6rv7d6.worf.replit.dev/_next/webpack-hmr' failed: 
+eval @ use-websocket.ts:16
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+page.tsx:68  Server  DEBUG: Trainee assignments found: (11) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '506f6fbe-66aa-4b45-92b6-44a608ef72b2', traineeId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10', courseId: '4a25c12d-fc4f-4eae-8053-e1b0bff5d27e'}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '0e474370-c6f1-4337-a15d-77deddc58874', traineeId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10', courseId: 'bdc908f2-0346-4678-9b96-ba76a6dc591b'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '0e474370-c6f1-4337-a15d-77deddc58874', trainee_name: 'Henry Morgan', trainee_email: 'henry.morgan@inflite.nz', course_title: 'Sigma passenger Harnessing and Briefing.', course_id: 'bdc908f2-0346-4678-9b96-ba76a6dc591b', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '265e41d9-387a-49b4-b650-79540f95f7f8', traineeId: '121cb584-8ac1-4f33-a2a7-0438b6d29a6b', courseId: '54e82b81-b2db-49ee-b644-27e6b0ad4451'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '265e41d9-387a-49b4-b650-79540f95f7f8', trainee_name: 'Peter Hansen', trainee_email: 'peter.hansen@inflite.nz', course_title: 'Sigma Packing', course_id: '54e82b81-b2db-49ee-b644-27e6b0ad4451', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '971d3027-8e28-4e03-b6d3-9e1104aa70a6', traineeId: '121cb584-8ac1-4f33-a2a7-0438b6d29a6b', courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '971d3027-8e28-4e03-b6d3-9e1104aa70a6', trainee_name: 'Peter Hansen', trainee_email: 'peter.hansen@inflite.nz', course_title: 'Sigma 25 jump checks', course_id: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '8a435396-d96a-4790-af4d-29f9dde2e786', traineeId: '121cb584-8ac1-4f33-a2a7-0438b6d29a6b', courseId: 'bdc908f2-0346-4678-9b96-ba76a6dc591b'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '8a435396-d96a-4790-af4d-29f9dde2e786', trainee_name: 'Peter Hansen', trainee_email: 'peter.hansen@inflite.nz', course_title: 'Sigma passenger Harnessing and Briefing.', course_id: 'bdc908f2-0346-4678-9b96-ba76a6dc591b', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '2fcf37c0-4d23-4e75-9afa-7da0d3bbe69a', traineeId: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', courseId: '4a25c12d-fc4f-4eae-8053-e1b0bff5d27e'}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '0b25744c-6d3b-4ea9-87b2-f892f91fc898', traineeId: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '0b25744c-6d3b-4ea9-87b2-f892f91fc898', trainee_name: 'Connor Johnston', trainee_email: 'connor.johnston@inflite.nz', course_title: 'Sigma 25 jump checks', course_id: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '70defdd3-de92-4b22-9f63-bfd6df478b91', traineeId: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', courseId: '54e82b81-b2db-49ee-b644-27e6b0ad4451'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '70defdd3-de92-4b22-9f63-bfd6df478b91', trainee_name: 'Connor Johnston', trainee_email: 'connor.johnston@inflite.nz', course_title: 'Sigma Packing', course_id: '54e82b81-b2db-49ee-b644-27e6b0ad4451', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '68ec03c8-648d-498d-bca7-fa616771aeab', traineeId: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', courseId: 'bdc908f2-0346-4678-9b96-ba76a6dc591b'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '68ec03c8-648d-498d-bca7-fa616771aeab', trainee_name: 'Connor Johnston', trainee_email: 'connor.johnston@inflite.nz', course_title: 'Sigma passenger Harnessing and Briefing.', course_id: 'bdc908f2-0346-4678-9b96-ba76a6dc591b', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: 'd597728a-ea1f-44ff-b5eb-cb0b5e930305', traineeId: '41acd744-a131-48f6-824a-0db4e78d075b', courseId: 'cf3f90dd-c67b-4138-85d6-945680cba0a0'}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '7416c20a-1d15-45bd-b418-31d324fde897', traineeId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10', courseId: 'cf3f90dd-c67b-4138-85d6-945680cba0a0'}
+page.tsx:180  Server  DEBUG: Final items to render: {pendingTrainingItems: Array(7), pendingAssessmentItems: Array(2)}
+page.tsx:79  Server  === COURSE PAGE DEBUG START ===
+page.tsx:80  Server  0. Initial params: {courseId: 'bdc908f2-0346-4678-9b96-ba76a6dc591b', assignmentId: '0e474370-c6f1-4337-a15d-77deddc58874', sessionType: 'training'}
+page.tsx:93  Server  0.1 Current user: {userId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10', email: 'henry.morgan@inflite.nz'}
+page.tsx:111  Server  0.2 Course query result: {course: 'Sigma passenger Harnessing and Briefing.', courseError: 'none'}
+page.tsx:130  Server  0.3 Assignment query result: {assignmentFound: true, assignmentId: '0e474370-c6f1-4337-a15d-77deddc58874', traineeId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10', assignmentError: 'none'}
+page.tsx:167  Server  === COURSE PAGE DEBUG START ===
+page.tsx:168  Server  1. User accessing course: {userId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10', userEmail: 'henry.morgan@inflite.nz', courseId: 'bdc908f2-0346-4678-9b96-ba76a6dc591b', assignmentId: '0e474370-c6f1-4337-a15d-77deddc58874', sessionType: 'training'}
+page.tsx:176  Server  2. Trainer assignments query: {trainerAssignments: Array(2), trainerError: 'none'}
+page.tsx:194  Server  4. Role verification: {userRoles: Array(2), requiredRole: 'onsite_trainer', hasRequiredRole: true}
+page.tsx:208  Server  6. Access granted - continuing to load course page
+page.tsx:68  Server  DEBUG: Trainee assignments found: (11) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}]
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '506f6fbe-66aa-4b45-92b6-44a608ef72b2', traineeId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10', courseId: '4a25c12d-fc4f-4eae-8053-e1b0bff5d27e'}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '0e474370-c6f1-4337-a15d-77deddc58874', traineeId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10', courseId: 'bdc908f2-0346-4678-9b96-ba76a6dc591b'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '0e474370-c6f1-4337-a15d-77deddc58874', trainee_name: 'Henry Morgan', trainee_email: 'henry.morgan@inflite.nz', course_title: 'Sigma passenger Harnessing and Briefing.', course_id: 'bdc908f2-0346-4678-9b96-ba76a6dc591b', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '265e41d9-387a-49b4-b650-79540f95f7f8', traineeId: '121cb584-8ac1-4f33-a2a7-0438b6d29a6b', courseId: '54e82b81-b2db-49ee-b644-27e6b0ad4451'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '265e41d9-387a-49b4-b650-79540f95f7f8', trainee_name: 'Peter Hansen', trainee_email: 'peter.hansen@inflite.nz', course_title: 'Sigma Packing', course_id: '54e82b81-b2db-49ee-b644-27e6b0ad4451', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '971d3027-8e28-4e03-b6d3-9e1104aa70a6', traineeId: '121cb584-8ac1-4f33-a2a7-0438b6d29a6b', courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '971d3027-8e28-4e03-b6d3-9e1104aa70a6', trainee_name: 'Peter Hansen', trainee_email: 'peter.hansen@inflite.nz', course_title: 'Sigma 25 jump checks', course_id: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '8a435396-d96a-4790-af4d-29f9dde2e786', traineeId: '121cb584-8ac1-4f33-a2a7-0438b6d29a6b', courseId: 'bdc908f2-0346-4678-9b96-ba76a6dc591b'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '8a435396-d96a-4790-af4d-29f9dde2e786', trainee_name: 'Peter Hansen', trainee_email: 'peter.hansen@inflite.nz', course_title: 'Sigma passenger Harnessing and Briefing.', course_id: 'bdc908f2-0346-4678-9b96-ba76a6dc591b', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '2fcf37c0-4d23-4e75-9afa-7da0d3bbe69a', traineeId: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', courseId: '4a25c12d-fc4f-4eae-8053-e1b0bff5d27e'}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '0b25744c-6d3b-4ea9-87b2-f892f91fc898', traineeId: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', courseId: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '0b25744c-6d3b-4ea9-87b2-f892f91fc898', trainee_name: 'Connor Johnston', trainee_email: 'connor.johnston@inflite.nz', course_title: 'Sigma 25 jump checks', course_id: 'c7e65bae-bb3d-49d0-b992-fe4c09b15451', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '70defdd3-de92-4b22-9f63-bfd6df478b91', traineeId: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', courseId: '54e82b81-b2db-49ee-b644-27e6b0ad4451'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '70defdd3-de92-4b22-9f63-bfd6df478b91', trainee_name: 'Connor Johnston', trainee_email: 'connor.johnston@inflite.nz', course_title: 'Sigma Packing', course_id: '54e82b81-b2db-49ee-b644-27e6b0ad4451', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '68ec03c8-648d-498d-bca7-fa616771aeab', traineeId: 'ffcf28b5-b9b2-4728-a382-43bb97e5968f', courseId: 'bdc908f2-0346-4678-9b96-ba76a6dc591b'}
+page.tsx:154  Server  DEBUG: Adding training item: {id: '68ec03c8-648d-498d-bca7-fa616771aeab', trainee_name: 'Connor Johnston', trainee_email: 'connor.johnston@inflite.nz', course_title: 'Sigma passenger Harnessing and Briefing.', course_id: 'bdc908f2-0346-4678-9b96-ba76a6dc591b', …}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: 'd597728a-ea1f-44ff-b5eb-cb0b5e930305', traineeId: '41acd744-a131-48f6-824a-0db4e78d075b', courseId: 'cf3f90dd-c67b-4138-85d6-945680cba0a0'}
+page.tsx:76  Server  DEBUG: Processing assignment: {assignmentId: '7416c20a-1d15-45bd-b418-31d324fde897', traineeId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10', courseId: 'cf3f90dd-c67b-4138-85d6-945680cba0a0'}
+page.tsx:180  Server  DEBUG: Final items to render: {pendingTrainingItems: Array(7), pendingAssessmentItems: Array(2)}

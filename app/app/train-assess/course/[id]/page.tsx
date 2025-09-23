@@ -100,15 +100,45 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     redirect("/app/train-assess");
   }
 
+  // FIRST: Verify trainer/assessor has access to this course (can have multiple roles)
+  const { data: trainerAssignments, error: trainerError } = await supabase
+    .from("course_assignments")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("course_id", courseId)
+    .in("role", ["onsite_trainer", "onsite_assessor"]);
+    
+  console.log("0.2 Trainer role check:", {
+    trainerAssignments,
+    trainerError: trainerError?.message || 'none'
+  });
+  
+  if (!trainerAssignments || trainerAssignments.length === 0) {
+    console.log("ERROR: User has no trainer/assessor role for this course");
+    redirect("/app/train-assess");
+  }
+  
+  const userRoles = trainerAssignments.map(a => a.role);
+  const requiredRole = sessionType === 'training' ? 'onsite_trainer' : 'onsite_assessor';
+  const hasRequiredRole = userRoles.includes(requiredRole);
+  
+  if (!hasRequiredRole) {
+    console.log("ERROR: User doesn't have required role", {
+      userRoles,
+      requiredRole,
+      sessionType
+    });
+    redirect("/app/train-assess");
+  }
 
-  // Get course info
+  // NOW: Get course info
   const { data: course, error: courseError } = await supabase
     .from("courses")
     .select("title, description")
     .eq("id", courseId)
     .single();
 
-  console.log("0.2 Course query result:", {
+  console.log("0.3 Course query result:", {
     course: course?.title,
     courseError: courseError?.message || 'none'
   });
@@ -118,8 +148,10 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     redirect("/app/train-assess");
   }
 
-  // Get trainee assignment (without profile for now)
-  const { data: assignment, error: assignmentError } = await supabase
+  // THEN: Get trainee assignment using SERVICE ROLE to bypass RLS
+  // Since we already verified the trainer has access to this course
+  const supabaseService = supabaseAdmin();
+  const { data: assignment, error: assignmentError } = await supabaseService
     .from("course_assignments")
     .select("id, user_id, course_id, assignment_status")
     .eq("id", assignmentId)
@@ -127,26 +159,12 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("role", "trainee")
     .maybeSingle();
     
-  console.log("0.3 Assignment query result:", {
+  console.log("0.4 Assignment query result (using service role):", {
     assignmentFound: !!assignment,
     assignmentId: assignment?.id,
     traineeId: assignment?.user_id,
     assignmentError: assignmentError?.message || 'none'
   });
-
-  // Get profile separately if assignment found
-  // Use service role client to bypass RLS, same as train-assess page does
-  let profile = null;
-  if (assignment) {
-    const supabaseService = supabaseAdmin();
-    const { data: profileData } = await supabaseService
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", assignment.user_id)
-      .single();
-    profile = profileData;
-  }
-
 
   if (!assignment) {
     console.log("ERROR: Assignment not found or not a trainee assignment");
@@ -154,58 +172,18 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     console.log("   Course ID:", courseId);
     redirect("/app/train-assess");
   }
-
-
-  // Verify trainer/assessor has access to this course (can have multiple roles)
-  const { data: trainerAssignments, error: trainerError } = await supabase
-    .from("course_assignments")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("course_id", courseId)
-    .in("role", ["onsite_trainer", "onsite_assessor"]);
-
-  console.log("=== COURSE PAGE DEBUG START ===");
-  console.log("1. User accessing course:", {
-    userId: user.id,
-    userEmail: user.email,
-    courseId,
-    assignmentId,
-    sessionType
-  });
   
-  console.log("2. Trainer assignments query:", {
-    trainerAssignments,
-    trainerError: trainerError?.message || 'none'
-  });
+  // Get trainee profile using service role
+  const { data: profile } = await supabaseService
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", assignment.user_id)
+    .single();
 
-  if (!trainerAssignments || trainerAssignments.length === 0) {
-    console.log("3. REDIRECT: No trainer assignments found for this user and course");
-    console.log("   User ID:", user.id);
-    console.log("   Course ID:", courseId);
-    redirect("/app/train-assess");
-  }
-
-  const userRoles = trainerAssignments.map(a => a.role);
-
-  // Check if user has the right role for this session type
-  const requiredRole = sessionType === 'training' ? 'onsite_trainer' : 'onsite_assessor';
-  const hasRequiredRole = userRoles.includes(requiredRole);
-  
-  console.log("4. Role verification:", {
-    userRoles,
-    requiredRole,
-    hasRequiredRole
-  });
-  
-  if (!hasRequiredRole) {
-    console.log("5. REDIRECT: User doesn't have required role");
-    console.log("   User has roles:", userRoles);
-    console.log("   Needs role:", requiredRole);
-    console.log("   For session type:", sessionType);
-    redirect("/app/train-assess");
-  }
-  
-  console.log("6. Access granted - continuing to load course page");
+  console.log("0.5 Successfully accessed assignment and profile");
+  console.log("   Trainee:", profile?.full_name || profile?.email);
+  console.log("   Trainer/Assessor:", user.email);
+  console.log("   Session type:", sessionType);
 
 
   // Get course modules
