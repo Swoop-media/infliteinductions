@@ -126,7 +126,7 @@ export async function POST(
         equipment = [];
         
         // If no real data, use the same mock equipment as GET route
-        if (!blocks?.length || !blocks.some(b => b.data?.equipment_templates?.length)) {
+        if (!blocks?.length || !blocks.some((b: any) => b.data?.equipment_templates?.length)) {
           equipment = [
             { id: "visual_altimeter_1", equipment_name: "Visual Altimeter" },
             { id: "audible_altimeter_1", equipment_name: "Audible Altimeter" },
