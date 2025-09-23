@@ -65,21 +65,12 @@ export default async function TrainAssessPage() {
       .in("course_id", allCourseIds);
 
 
-    console.log("DEBUG: Trainee assignments found:", traineeAssignments);
-    
     if (traineeAssignments) {
       for (const assignment of traineeAssignments) {
         const courseId = assignment.course_id;
         const traineeId = assignment.user_id;
         const assignmentId = assignment.id;
         
-        console.log("DEBUG: Processing assignment:", {
-          assignmentId,
-          traineeId,
-          courseId
-        });
-        
-
         // Get all modules for this course
         const { data: allModules } = await supabase
           .from("course_modules")
@@ -151,7 +142,6 @@ export default async function TrainAssessPage() {
             created_at: assignment.created_at,
             type: 'training'
           };
-          console.log("DEBUG: Adding training item:", trainingItem);
           pendingTrainingItems.push(trainingItem);
         }
 
@@ -176,11 +166,6 @@ export default async function TrainAssessPage() {
     }
   }
 
-
-  console.log("DEBUG: Final items to render:", {
-    pendingTrainingItems,
-    pendingAssessmentItems
-  });
 
   return (
     <div className="container mx-auto py-6 space-y-6">

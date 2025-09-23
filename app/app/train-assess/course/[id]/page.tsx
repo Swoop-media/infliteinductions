@@ -75,28 +75,13 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   const assignmentId = resolvedSearchParams.trainee;
   const sessionType = resolvedSearchParams.type || 'training';
   
-  
-  console.log("=== COURSE PAGE DEBUG START ===");
-  console.log("0. Initial params:", {
-    courseId,
-    assignmentId,
-    sessionType
-  });
-
   // Get current user
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
-    console.log("ERROR: User auth failed:", userError);
     redirect("/auth/login");
   }
 
-  console.log("0.1 Current user:", {
-    userId: user.id,
-    email: user.email
-  });
-
   if (!assignmentId) {
-    console.log("ERROR: No assignment ID provided");
     redirect("/app/train-assess");
   }
 
@@ -107,14 +92,8 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("user_id", user.id)
     .eq("course_id", courseId)
     .in("role", ["onsite_trainer", "onsite_assessor"]);
-    
-  console.log("0.2 Trainer role check:", {
-    trainerAssignments,
-    trainerError: trainerError?.message || 'none'
-  });
   
   if (!trainerAssignments || trainerAssignments.length === 0) {
-    console.log("ERROR: User has no trainer/assessor role for this course");
     redirect("/app/train-assess");
   }
   
@@ -123,11 +102,6 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   const hasRequiredRole = userRoles.includes(requiredRole);
   
   if (!hasRequiredRole) {
-    console.log("ERROR: User doesn't have required role", {
-      userRoles,
-      requiredRole,
-      sessionType
-    });
     redirect("/app/train-assess");
   }
 
@@ -138,13 +112,7 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("id", courseId)
     .single();
 
-  console.log("0.3 Course query result:", {
-    course: course?.title,
-    courseError: courseError?.message || 'none'
-  });
-
   if (!course) {
-    console.log("ERROR: Course not found:", courseId);
     redirect("/app/train-assess");
   }
 
@@ -158,18 +126,8 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .eq("course_id", courseId)
     .eq("role", "trainee")
     .maybeSingle();
-    
-  console.log("0.4 Assignment query result (using service role):", {
-    assignmentFound: !!assignment,
-    assignmentId: assignment?.id,
-    traineeId: assignment?.user_id,
-    assignmentError: assignmentError?.message || 'none'
-  });
 
   if (!assignment) {
-    console.log("ERROR: Assignment not found or not a trainee assignment");
-    console.log("   Assignment ID:", assignmentId);
-    console.log("   Course ID:", courseId);
     redirect("/app/train-assess");
   }
   
@@ -179,11 +137,6 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .select("full_name, email")
     .eq("id", assignment.user_id)
     .single();
-
-  console.log("0.5 Successfully accessed assignment and profile");
-  console.log("   Trainee:", profile?.full_name || profile?.email);
-  console.log("   Trainer/Assessor:", user.email);
-  console.log("   Session type:", sessionType);
 
 
   // Get course modules
