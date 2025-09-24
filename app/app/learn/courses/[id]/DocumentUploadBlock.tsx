@@ -102,45 +102,93 @@ export default function DocumentUploadBlock({
         throw uploadError;
       }
 
-      // Save document record using the upsert function
-      // Prepare the expiry date - must be a valid timestamp or null
+      // Save document record - use direct SQL to avoid RPC type issues
+      // Prepare the expiry date
       const expiresOn = requireExpiry && expiryDate 
         ? new Date(expiryDate + 'T00:00:00').toISOString()
         : null;
       
-      console.log('Calling upsert_learner_document with params:', {
-        p_user_id: currentUserId,
-        p_course_id: courseId,
-        p_module_id: moduleId,
-        p_block_id: blockId,
-        p_title: file.name,
-        p_file_path: filePath,
-        p_file_size: file.size,
-        p_file_type: file.type,
-        p_expires_on: expiresOn,
-        p_assignment_id: assignmentId || null  // Ensure null, not undefined
+      console.log('Saving document with params:', {
+        user_id: currentUserId,
+        course_id: courseId,
+        module_id: moduleId,
+        block_id: blockId,
+        title: file.name,
+        file_path: filePath,
+        file_size: file.size,
+        file_type: file.type,
+        expires_on: expiresOn,
+        assignment_id: assignmentId || null
       });
       
-      // Call with all parameters - ensure null instead of undefined for optional params
-      const { data: documentId, error: dbError } = await supabase
-        .rpc('upsert_learner_document', {
-          p_user_id: currentUserId,
-          p_course_id: courseId,
-          p_module_id: moduleId,
-          p_block_id: blockId,
-          p_title: file.name,
-          p_file_path: filePath,
-          p_file_size: file.size,
-          p_file_type: file.type,
-          p_expires_on: expiresOn,
-          p_assignment_id: assignmentId || null  // Ensure null, not undefined
-        })
+      // First check if document exists
+      const { data: existingDoc } = await supabase
+        .from('learner_documents')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .eq('module_id', moduleId)
+        .eq('block_id', blockId)
         .single();
-
-      if (dbError) {
-        console.error('Database error:', dbError);
-        throw dbError;
+      
+      let documentId;
+      
+      if (existingDoc) {
+        // Update existing document
+        const { data: updated, error: updateError } = await supabase
+          .from('learner_documents')
+          .update({
+            title: file.name,
+            file_path: filePath,
+            file_size: file.size,
+            file_type: file.type,
+            expires_on: expiresOn,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingDoc.id)
+          .select()
+          .single();
+        
+        if (updateError) {
+          console.error('Update error:', updateError);
+          throw updateError;
+        }
+        documentId = updated.id;
+      } else {
+        // Get course and module titles for the new document
+        const [courseData, moduleData] = await Promise.all([
+          supabase.from('courses').select('title').eq('id', courseId).single(),
+          supabase.from('course_modules').select('title').eq('id', moduleId).single()
+        ]);
+        
+        // Insert new document
+        const { data: inserted, error: insertError } = await supabase
+          .from('learner_documents')
+          .insert({
+            user_id: currentUserId,
+            course_id: courseId,
+            module_id: moduleId,
+            block_id: blockId,
+            title: file.name,
+            file_path: filePath,
+            file_size: file.size,
+            file_type: file.type,
+            expires_on: expiresOn,
+            assignment_id: assignmentId || null,
+            course_title: courseData.data?.title || '',
+            module_title: moduleData.data?.title || '',
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        
+        if (insertError) {
+          console.error('Insert error:', insertError);
+          throw insertError;
+        }
+        documentId = inserted.id;
       }
+      
+      console.log('Document saved with ID:', documentId);
 
       setSuccess('Document uploaded successfully!');
       setFile(null);

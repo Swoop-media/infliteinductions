@@ -1,0 +1,27 @@
+main-app.js?v=1758754031260:1137 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+DocumentUploadBlock.tsx:87 Uploading file: {fileName: 'b6a599bf-e0dd-4037-b8b9-4a44d8202680.pdf', filePath: 'learner-documents/aaaf24e3-9b9b-41d2-ac52-220d1ee25551/b6a599bf-e0dd-4037-b8b9-4a44d8202680.pdf', fileSize: 370250, fileType: 'application/pdf', currentUserId: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', …}
+DocumentUploadBlock.tsx:111 Calling upsert_learner_document with params: {p_user_id: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', p_course_id: '96191cc2-6519-4665-b1d5-e08707a9139c', p_module_id: '7bd99a39-b7d6-4d0a-8e6f-5ab595e29d7c', p_block_id: 'b15086a5-fc0d-4c3e-8e3d-d8b2159bf9d5', p_title: 'OUR STANDARDS.pdf', …}
+DocumentUploadBlock.tsx:141 Database error: {code: 'PGRST203', details: null, hint: 'Try renaming the parameters or the function itself… database so function overloading can be resolved', message: 'Could not choose the best candidate function betwe…t, p_expires_on => date, p_assignment_id => uuid)'}
+error @ intercept-console-error.js:57
+handleUpload @ DocumentUploadBlock.tsx:141
+await in handleUpload
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277
+DocumentUploadBlock.tsx:153 Upload error: {code: 'PGRST203', details: null, hint: 'Try renaming the parameters or the function itself… database so function overloading can be resolved', message: 'Could not choose the best candidate function betwe…t, p_expires_on => date, p_assignment_id => uuid)'}
+error @ intercept-console-error.js:57
+handleUpload @ DocumentUploadBlock.tsx:153
+await in handleUpload
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277
