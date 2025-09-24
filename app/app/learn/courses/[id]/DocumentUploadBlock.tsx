@@ -84,6 +84,11 @@ export default function DocumentUploadBlock({
       if (uploadError) throw uploadError;
 
       // Save document record using the upsert function
+      // Convert the date string to a proper timestamp for PostgreSQL
+      const expiresOn = requireExpiry && expiryDate 
+        ? new Date(expiryDate + 'T00:00:00').toISOString()
+        : null;
+      
       const { data: documentId, error: dbError } = await supabase
         .rpc('upsert_learner_document', {
           p_user_id: currentUserId,
@@ -94,7 +99,7 @@ export default function DocumentUploadBlock({
           p_file_path: filePath,
           p_file_size: file.size,
           p_file_type: file.type,
-          p_expires_on: requireExpiry ? expiryDate : null,
+          p_expires_on: expiresOn,
           p_assignment_id: null
         });
 
