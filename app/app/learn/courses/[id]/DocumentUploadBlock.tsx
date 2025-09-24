@@ -103,12 +103,8 @@ export default function DocumentUploadBlock({
       }
 
       // Save document record using the upsert function
-      // Convert the date string to a proper timestamp for PostgreSQL
-      const expiresOn = requireExpiry && expiryDate 
-        ? new Date(expiryDate + 'T00:00:00').toISOString()
-        : null;
-      
-      console.log('Calling upsert_learner_document with params:', {
+      // Build parameters object - only include non-null values
+      const rpcParams: any = {
         p_user_id: currentUserId,
         p_course_id: courseId,
         p_module_id: moduleId,
@@ -116,24 +112,22 @@ export default function DocumentUploadBlock({
         p_title: file.name,
         p_file_path: filePath,
         p_file_size: file.size,
-        p_file_type: file.type,
-        p_expires_on: expiresOn,
-        p_assignment_id: assignmentId
-      });
+        p_file_type: file.type
+      };
+
+      // Only add optional parameters if they have values
+      if (requireExpiry && expiryDate) {
+        rpcParams.p_expires_on = new Date(expiryDate + 'T00:00:00').toISOString();
+      }
+      
+      if (assignmentId) {
+        rpcParams.p_assignment_id = assignmentId;
+      }
+      
+      console.log('Calling upsert_learner_document with params:', rpcParams);
       
       const { data: documentId, error: dbError } = await supabase
-        .rpc('upsert_learner_document', {
-          p_user_id: currentUserId,
-          p_course_id: courseId,
-          p_module_id: moduleId,
-          p_block_id: blockId,
-          p_title: file.name,
-          p_file_path: filePath,
-          p_file_size: file.size,
-          p_file_type: file.type,
-          p_expires_on: expiresOn,
-          p_assignment_id: assignmentId
-        });
+        .rpc('upsert_learner_document', rpcParams);
 
       if (dbError) {
         console.error('Database error:', dbError);
