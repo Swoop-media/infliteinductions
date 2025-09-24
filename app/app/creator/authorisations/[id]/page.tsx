@@ -461,22 +461,20 @@ export default async function Page(props: {
 }
 
 /** ---- Details Tab ---- */
+// Use hardcoded departments list to match the courses page
+const DEFAULT_DEPARTMENTS = [
+  "Skydive",
+  "Skydive Franz",
+  "Helicopter",
+  "Fixed wing",
+  "Inflite general",
+  "Safety"
+];
+
 async function loadAllDepartments() {
   "use server";
-  const supabase = await createSupabaseServer();
-  
-  // Get all departments from the departments table
-  const { data: departments, error } = await supabase
-    .from("departments")
-    .select("name")
-    .order("name", { ascending: true });
-  
-  if (error) {
-    console.error("Error loading departments:", error);
-    return [];
-  }
-  
-  return departments?.map(dept => dept.name).filter(Boolean) || [];
+  // Return the hardcoded list since the departments table doesn't exist
+  return DEFAULT_DEPARTMENTS;
 }
 
 function DetailsTab({ auth, allDepartments }: { auth: any; allDepartments: string[] }) {
