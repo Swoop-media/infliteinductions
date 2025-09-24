@@ -461,14 +461,21 @@ export default async function Page(props: {
 }
 
 /** ---- Details Tab ---- */
-// Use hardcoded departments list to match the courses page
+// Use hardcoded departments list - matches the full list from the UI
 const DEFAULT_DEPARTMENTS = [
-  "Skydive",
-  "Skydive Franz",
+  "Engineering",
+  "Fixed Wing",
+  "Franz and Fox Helicopters",
+  "General",
   "Helicopter",
-  "Fixed wing",
-  "Inflite general",
-  "Safety"
+  "Helitranz",
+  "Management",
+  "Mt Cook Ski Planes & Helicopters",
+  "Safety",
+  "Skydive",
+  "Skydive Abel Tasman",
+  "Skydive Franz",
+  "Skydive Mt Cook"
 ];
 
 async function loadAllDepartments() {
