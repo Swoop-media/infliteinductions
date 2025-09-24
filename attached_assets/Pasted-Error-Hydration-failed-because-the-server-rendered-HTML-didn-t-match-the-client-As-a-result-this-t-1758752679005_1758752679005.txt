@@ -1,0 +1,51 @@
+Error: Hydration failed because the server rendered HTML didn't match the client. As a result this tree will be regenerated on the client. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <LearnerCoursePage>
+      <div className="flex h-screen">
+        <div>
+        <div className="flex-1 fle...">
+          <div>
+          <div className="flex-1 ove...">
+            <div className="max-w-5xl ...">
+              <div className="bg-white r...">
+                <div className="space-y-6">
+                  <div>
+                  <div className="space-y-4">
+                    <DocumentUploadBlock moduleId="7bd99a39-b..." blockId="b15086a5-f..." label="Please upl..." ...>
+                      <div className="border rou...">
+                        <div>
+                        <form onSubmit={function handleUpload} className="space-y-4">
+                          <div>
+                            <label>
+                            <div className="space-y-2">
++                             <button
++                               type="button"
++                               onClick={function onClick}
++                               className="w-full px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 f..."
++                             >
+-                             <div className="relative">
+                              ...
+                          ...
+                  ...
+    ...
+
+    at throwOnHydrationMismatch (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:4508:11)
+    at beginWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:10929:17)
+    at runWithFiberInDEV (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:873:30)
+    at performUnitOfWork (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15678:22)
+    at workLoopConcurrentByScheduler (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15672:9)
+    at renderRootConcurrent (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:15647:15)
+    at performWorkOnRoot (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:14941:13)
+    at performWorkOnRootViaSchedulerTask (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/react-dom/cjs/react-dom-client.development.js:16767:7)
+    at MessagePort.performWorkUntilDeadline (webpack-internal:///(app-pages-browser)/./node_modules/next/dist/compiled/scheduler/cjs/scheduler.development.js:45:48)
