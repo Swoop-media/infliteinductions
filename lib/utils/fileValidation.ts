@@ -11,9 +11,9 @@ export interface ValidationResult {
 
 export function validateSelectedFile(
   file: File,
-  options: FileValidationOptions = { imageMaxMB: 5, docMaxMB: 100 }
+  options: FileValidationOptions = { imageMaxMB: 5, docMaxMB: 20 }
 ): ValidationResult {
-  const { imageMaxMB = 5, docMaxMB = 100 } = options;
+  const { imageMaxMB = 5, docMaxMB = 20 } = options;
   
   // Block PowerPoint files
   const fileName = file.name.toLowerCase();
@@ -49,10 +49,10 @@ export function getFileSizeLimitText(accept?: string): string {
   }
   
   if (!accept.includes('image')) {
-    return 'Maximum document size: 100MB';
+    return 'Maximum document size: 20MB - use an online compressor for larger files';
   }
   
-  return 'Images: max 5MB • Documents: max 100MB';
+  return 'Images: max 5MB • Documents: max 20MB - use an online compressor for larger files';
 }
 
 export function isFileTypeAllowed(file: File, accept?: string): boolean {
