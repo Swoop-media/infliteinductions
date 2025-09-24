@@ -1,0 +1,128 @@
+2025-09-24 17:48:00.96
+f6a24218
+User
+In progress auth: [
+2025-09-24 17:48:00.96
+f6a24218
+User
+{
+2025-09-24 17:48:00.96
+f6a24218
+User
+id: '8b58f067-d23e-4302-957d-1a460f38298e',
+2025-09-24 17:48:00.96
+f6a24218
+User
+authorisation_id: '80b34b2f-b5ca-4378-8192-dfbef1564a60',
+2025-09-24 17:48:00.96
+f6a24218
+User
+assignment_status: 'assigned',
+2025-09-24 17:48:00.96
+f6a24218
+User
+completed_at: null,
+2025-09-24 17:48:00.96
+f6a24218
+User
+authorisations: {
+2025-09-24 17:48:00.96
+f6a24218
+User
+id: '80b34b2f-b5ca-4378-8192-dfbef1564a60',
+2025-09-24 17:48:00.96
+f6a24218
+User
+title: 'Onsite Assessor',
+2025-09-24 17:48:00.96
+f6a24218
+User
+status: 'active'
+2025-09-24 17:48:00.96
+f6a24218
+User
+},
+2025-09-24 17:48:00.96
+f6a24218
+User
+courses: [ [Object] ]
+2025-09-24 17:48:00.96
+f6a24218
+User
+},
+2025-09-24 17:48:00.96
+f6a24218
+User
+{
+2025-09-24 17:48:00.96
+f6a24218
+User
+id: 'd44fad2b-6980-4ab8-9db0-19f985c9b95c',
+2025-09-24 17:48:00.96
+f6a24218
+User
+authorisation_id: '40349fdb-066e-4bb0-af2a-fbee34c4243b',
+2025-09-24 17:48:00.96
+f6a24218
+User
+assignment_status: 'assigned',
+2025-09-24 17:48:00.96
+f6a24218
+User
+completed_at: null,
+2025-09-24 17:48:00.96
+f6a24218
+User
+authorisations: {
+2025-09-24 17:48:00.96
+f6a24218
+User
+id: '40349fdb-066e-4bb0-af2a-fbee34c4243b',
+2025-09-24 17:48:00.96
+f6a24218
+User
+title: 'Skydive Mt Cook Base authorisation',
+2025-09-24 17:48:00.96
+f6a24218
+User
+status: 'active'
+2025-09-24 17:48:00.96
+f6a24218
+User
+},
+2025-09-24 17:48:00.96
+f6a24218
+User
+courses: [ [Object] ]
+2025-09-24 17:48:00.96
+f6a24218
+User
+}
+2025-09-24 17:48:00.96
+f6a24218
+User
+]
+2025-09-24 17:48:00.96
+f6a24218
+User
+Completed auth: []
+2025-09-24 18:54:22.53
+f6a24218
+User
+Assignment progress request: {
+2025-09-24 18:54:22.53
+f6a24218
+User
+userId: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551',
+2025-09-24 18:54:22.53
+f6a24218
+User
+assignmentId: '6f97bdcf-e8e7-491b-9a1b-1e1a886c5750',
+2025-09-24 18:54:22.53
+f6a24218
+User
+moduleId: '65c14a74-9bd1-421a-b206-67e831c7e76c',
+2025-09-24 18:54:22.53
+f6a24218
+User
+completed: true

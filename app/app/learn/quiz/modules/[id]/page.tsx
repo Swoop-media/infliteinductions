@@ -333,14 +333,14 @@ async function submitQuiz(formData: FormData) {
   if (qIds.length) {
     const { data: opts } = await supabase
       .from("quiz_options")
-      .select("id, question_id, is_correct")
+      .select("id, question_id, correct")
       .in("question_id", qIds);
     allOptions = opts ?? [];
   }
 
   const correctMap = new Map<string, string[]>();
   for (const o of allOptions) {
-    if ((o as any).is_correct) {
+    if ((o as any).correct) {
       const arr = correctMap.get((o as any).question_id) ?? [];
       arr.push((o as any).id);
       correctMap.set((o as any).question_id, arr);
