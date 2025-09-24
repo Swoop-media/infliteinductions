@@ -84,17 +84,42 @@ export default function DocumentUploadBlock({
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
       const filePath = `learner-documents/${currentUserId}/${fileName}`;
 
+      console.log('Uploading file:', { 
+        fileName, 
+        filePath, 
+        fileSize: file.size,
+        fileType: file.type,
+        currentUserId,
+        assignmentId
+      });
+
       const { error: uploadError } = await supabase.storage
         .from('course-files')
         .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        throw uploadError;
+      }
 
       // Save document record using the upsert function
       // Convert the date string to a proper timestamp for PostgreSQL
       const expiresOn = requireExpiry && expiryDate 
         ? new Date(expiryDate + 'T00:00:00').toISOString()
         : null;
+      
+      console.log('Calling upsert_learner_document with params:', {
+        p_user_id: currentUserId,
+        p_course_id: courseId,
+        p_module_id: moduleId,
+        p_block_id: blockId,
+        p_title: file.name,
+        p_file_path: filePath,
+        p_file_size: file.size,
+        p_file_type: file.type,
+        p_expires_on: expiresOn,
+        p_assignment_id: assignmentId
+      });
       
       const { data: documentId, error: dbError } = await supabase
         .rpc('upsert_learner_document', {
@@ -110,7 +135,10 @@ export default function DocumentUploadBlock({
           p_assignment_id: assignmentId
         });
 
-      if (dbError) throw dbError;
+      if (dbError) {
+        console.error('Database error:', dbError);
+        throw dbError;
+      }
 
       setSuccess('Document uploaded successfully!');
       setFile(null);
