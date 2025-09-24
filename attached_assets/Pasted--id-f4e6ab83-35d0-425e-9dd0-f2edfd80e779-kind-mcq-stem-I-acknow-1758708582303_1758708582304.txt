@@ -1,0 +1,79 @@
+[
+  {
+    "id": "f4e6ab83-35d0-425e-9dd0-f2edfd80e779",
+    "kind": "mcq",
+    "stem": "I acknowledge that I have reviewed the training materials provided for the courses i am assigned assessor.",
+    "prompt": "I acknowledge that I have reviewed the training materials provided for the courses i am assigned trainer.",
+    "position": 1,
+    "order_index": 0,
+    "quiz_id": "a5d5c746-bf88-4950-8f58-f74914cf1c6d",
+    "module_id": "770efaed-0d0f-464d-aa6c-54f60f456c88",
+    "created_at": "2025-09-19 19:07:26.850751+00"
+  },
+  {
+    "id": "d5348d43-1d25-40cc-af55-bf8a34dba027",
+    "kind": "mcq",
+    "stem": "I will deliver assessment in accordance with the standards, guidelines, and learning outcomes outlined in the training materials",
+    "prompt": "I will deliver assessment in accordance with the standards, guidelines, and learning outcomes outlined in the training materials",
+    "position": 1,
+    "order_index": 1,
+    "quiz_id": "a5d5c746-bf88-4950-8f58-f74914cf1c6d",
+    "module_id": "770efaed-0d0f-464d-aa6c-54f60f456c88",
+    "created_at": "2025-09-19 19:08:17.369414+00"
+  },
+  {
+    "id": "533e4dc6-45e1-4c54-82ad-466b7bf3df05",
+    "kind": "mcq",
+    "stem": "I will ensure that all participants receive accurate, consistent, and complete instruction as described in the course content.",
+    "prompt": "I will ensure that all participants receive accurate, consistent, and complete instruction as described in the course content.",
+    "position": 1,
+    "order_index": 2,
+    "quiz_id": "a5d5c746-bf88-4950-8f58-f74914cf1c6d",
+    "module_id": "770efaed-0d0f-464d-aa6c-54f60f456c88",
+    "created_at": "2025-09-19 19:08:33.101099+00"
+  },
+  {
+    "id": "ed2f0427-a78d-4739-883d-4a08b5fc7007",
+    "kind": "mcq",
+    "stem": "I will not omit, alter, or contradict the prescribed course standards without prior approval.",
+    "prompt": "I will not omit, alter, or contradict the prescribed course standards without prior approval.",
+    "position": 1,
+    "order_index": 3,
+    "quiz_id": "a5d5c746-bf88-4950-8f58-f74914cf1c6d",
+    "module_id": "770efaed-0d0f-464d-aa6c-54f60f456c88",
+    "created_at": "2025-09-19 19:08:58.740731+00"
+  },
+  {
+    "id": "af94e19e-1596-4abd-8bbb-8f222b4b5b30",
+    "kind": "mcq",
+    "stem": "I accept responsibility for upholding the integrity and quality of the assesment delivered.",
+    "prompt": "I accept responsibility for upholding the integrity and quality of the assesment delivered.",
+    "position": 1,
+    "order_index": 4,
+    "quiz_id": "a5d5c746-bf88-4950-8f58-f74914cf1c6d",
+    "module_id": "770efaed-0d0f-464d-aa6c-54f60f456c88",
+    "created_at": "2025-09-19 19:09:22.717964+00"
+  },
+  {
+    "id": "c33dbcb3-f8d1-41b5-8a19-7592bfffd93c",
+    "kind": "mcq",
+    "stem": "I declare i will not perform any Onsite training or assessment for myself, and understand another staff member must complete those modules for my courses",
+    "prompt": "I declare i will not perform any Onsite training or assessment for myself, and understand another staff member must complete those modules for my courses",
+    "position": 1,
+    "order_index": 5,
+    "quiz_id": "a5d5c746-bf88-4950-8f58-f74914cf1c6d",
+    "module_id": "770efaed-0d0f-464d-aa6c-54f60f456c88",
+    "created_at": "2025-09-19 19:09:58.077722+00"
+  },
+  {
+    "id": "c197bcc8-2b5b-4ed9-a7a7-3c299c3d31e4",
+    "kind": "mcq",
+    "stem": "I accept to take the role and responsibilities of onsite assesor",
+    "prompt": "I accept to take the role and responsibilities of onsite assesor",
+    "position": 1,
+    "order_index": 6,
+    "quiz_id": null,
+    "module_id": "770efaed-0d0f-464d-aa6c-54f60f456c88",
+    "created_at": "2025-09-24 09:34:43.213998+00"
+  }
+]

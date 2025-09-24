@@ -383,6 +383,7 @@ async function createQuestion(formData: FormData) {
   const validType = validTypes.includes(qType) ? qType : 'mcq'; // default to mcq if invalid
 
   const basePayload = {
+    quiz_id: quizId, // CRITICAL: Include quiz_id so questions are properly linked
     module_id: moduleId,
     type: validType,
     points: 1,
