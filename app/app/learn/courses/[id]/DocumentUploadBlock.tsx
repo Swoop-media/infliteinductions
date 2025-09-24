@@ -103,8 +103,12 @@ export default function DocumentUploadBlock({
       }
 
       // Save document record using the upsert function
-      // Build parameters object - only include non-null values
-      const rpcParams: any = {
+      // Prepare the expiry date - must be a valid timestamp or null
+      const expiresOn = requireExpiry && expiryDate 
+        ? new Date(expiryDate + 'T00:00:00').toISOString()
+        : null;
+      
+      console.log('Calling upsert_learner_document with params:', {
         p_user_id: currentUserId,
         p_course_id: courseId,
         p_module_id: moduleId,
@@ -112,22 +116,26 @@ export default function DocumentUploadBlock({
         p_title: file.name,
         p_file_path: filePath,
         p_file_size: file.size,
-        p_file_type: file.type
-      };
-
-      // Only add optional parameters if they have values
-      if (requireExpiry && expiryDate) {
-        rpcParams.p_expires_on = new Date(expiryDate + 'T00:00:00').toISOString();
-      }
+        p_file_type: file.type,
+        p_expires_on: expiresOn,
+        p_assignment_id: assignmentId || null  // Ensure null, not undefined
+      });
       
-      if (assignmentId) {
-        rpcParams.p_assignment_id = assignmentId;
-      }
-      
-      console.log('Calling upsert_learner_document with params:', rpcParams);
-      
+      // Call with all parameters - ensure null instead of undefined for optional params
       const { data: documentId, error: dbError } = await supabase
-        .rpc('upsert_learner_document', rpcParams);
+        .rpc('upsert_learner_document', {
+          p_user_id: currentUserId,
+          p_course_id: courseId,
+          p_module_id: moduleId,
+          p_block_id: blockId,
+          p_title: file.name,
+          p_file_path: filePath,
+          p_file_size: file.size,
+          p_file_type: file.type,
+          p_expires_on: expiresOn,
+          p_assignment_id: assignmentId || null  // Ensure null, not undefined
+        })
+        .single();
 
       if (dbError) {
         console.error('Database error:', dbError);
