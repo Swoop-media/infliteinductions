@@ -1,0 +1,47 @@
+main-app.js?v=1758755214036:1137 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+DocumentUploadBlock.tsx:87 Uploading file: {fileName: '562f38c6-642e-45e1-926c-33f707677d06.pdf', filePath: 'learner-documents/aaaf24e3-9b9b-41d2-ac52-220d1ee25551/562f38c6-642e-45e1-926c-33f707677d06.pdf', fileSize: 370250, fileType: 'application/pdf', currentUserId: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', …}
+DocumentUploadBlock.tsx:111 Saving document with params: {user_id: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', course_id: '96191cc2-6519-4665-b1d5-e08707a9139c', module_id: '7bd99a39-b7d6-4d0a-8e6f-5ab595e29d7c', block_id: 'b15086a5-fc0d-4c3e-8e3d-d8b2159bf9d5', title: 'OUR STANDARDS.pdf', …}
+fetch.js:30  GET https://renzfiptfymtmfmnmhny.supabase.co/rest/v1/learner_documents?select=id&user_id=eq.aaaf24e3-9b9b-41d2-ac52-220d1ee25551&module_id=eq.7bd99a39-b7d6-4d0a-8e6f-5ab595e29d7c&block_id=eq.b15086a5-fc0d-4c3e-8e3d-d8b2159bf9d5 406 (Not Acceptable)
+eval @ fetch.js:30
+eval @ fetch.js:51
+fulfilled @ fetch.js:11
+Promise.then
+step @ fetch.js:13
+eval @ fetch.js:14
+__awaiter @ fetch.js:10
+eval @ fetch.js:41
+then @ PostgrestBuilder.js:66
+fetch.js:30  POST https://renzfiptfymtmfmnmhny.supabase.co/rest/v1/learner_documents?select=* 400 (Bad Request)
+eval @ fetch.js:30
+eval @ fetch.js:51
+fulfilled @ fetch.js:11
+Promise.then
+step @ fetch.js:13
+eval @ fetch.js:14
+__awaiter @ fetch.js:10
+eval @ fetch.js:41
+then @ PostgrestBuilder.js:66
+DocumentUploadBlock.tsx:185 Insert error: {code: 'PGRST204', details: null, hint: null, message: "Could not find the 'course_title' column of 'learner_documents' in the schema cache"}
+error @ intercept-console-error.js:57
+handleUpload @ DocumentUploadBlock.tsx:185
+await in handleUpload
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277
+DocumentUploadBlock.tsx:201 Upload error: {code: 'PGRST204', details: null, hint: null, message: "Could not find the 'course_title' column of 'learner_documents' in the schema cache"}
+error @ intercept-console-error.js:57
+handleUpload @ DocumentUploadBlock.tsx:201
+await in handleUpload
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277

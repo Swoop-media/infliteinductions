@@ -102,11 +102,11 @@ export default function DocumentUploadBlock({
         throw uploadError;
       }
 
-      // Save document record - use direct SQL to avoid RPC type issues
-      // Prepare the expiry date
+      // Save document record using the simplified function
+      // Pass expires_on as text string (or empty string for null)
       const expiresOn = requireExpiry && expiryDate 
         ? new Date(expiryDate + 'T00:00:00').toISOString()
-        : null;
+        : '';
       
       console.log('Saving document with params:', {
         user_id: currentUserId,
@@ -118,77 +118,34 @@ export default function DocumentUploadBlock({
         file_size: file.size,
         file_type: file.type,
         expires_on: expiresOn,
-        assignment_id: assignmentId || null
+        assignment_id: assignmentId
       });
       
-      // First check if document exists
-      const { data: existingDoc } = await supabase
-        .from('learner_documents')
-        .select('id')
-        .eq('user_id', currentUserId)
-        .eq('module_id', moduleId)
-        .eq('block_id', blockId)
-        .single();
+      // Call the simplified function with all parameters as non-null
+      const { data: result, error: dbError } = await supabase.rpc('upsert_learner_document', {
+        p_user_id: currentUserId,
+        p_course_id: courseId,
+        p_module_id: moduleId,
+        p_block_id: blockId,
+        p_title: file.name,
+        p_file_path: filePath,
+        p_file_size: file.size,
+        p_file_type: file.type,
+        p_expires_on: expiresOn || '',  // Pass empty string instead of null
+        p_assignment_id: assignmentId || null
+      });
       
-      let documentId;
-      
-      if (existingDoc) {
-        // Update existing document
-        const { data: updated, error: updateError } = await supabase
-          .from('learner_documents')
-          .update({
-            title: file.name,
-            file_path: filePath,
-            file_size: file.size,
-            file_type: file.type,
-            expires_on: expiresOn,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingDoc.id)
-          .select()
-          .single();
-        
-        if (updateError) {
-          console.error('Update error:', updateError);
-          throw updateError;
-        }
-        documentId = updated.id;
-      } else {
-        // Get course and module titles for the new document
-        const [courseData, moduleData] = await Promise.all([
-          supabase.from('courses').select('title').eq('id', courseId).single(),
-          supabase.from('course_modules').select('title').eq('id', moduleId).single()
-        ]);
-        
-        // Insert new document
-        const { data: inserted, error: insertError } = await supabase
-          .from('learner_documents')
-          .insert({
-            user_id: currentUserId,
-            course_id: courseId,
-            module_id: moduleId,
-            block_id: blockId,
-            title: file.name,
-            file_path: filePath,
-            file_size: file.size,
-            file_type: file.type,
-            expires_on: expiresOn,
-            assignment_id: assignmentId || null,
-            course_title: courseData.data?.title || '',
-            module_title: moduleData.data?.title || '',
-            created_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-        
-        if (insertError) {
-          console.error('Insert error:', insertError);
-          throw insertError;
-        }
-        documentId = inserted.id;
+      if (dbError) {
+        console.error('Database error details:', {
+          code: dbError.code,
+          message: dbError.message,
+          details: dbError.details,
+          hint: dbError.hint
+        });
+        throw dbError;
       }
       
-      console.log('Document saved with ID:', documentId);
+      console.log('Document saved successfully:', result);
 
       setSuccess('Document uploaded successfully!');
       setFile(null);
