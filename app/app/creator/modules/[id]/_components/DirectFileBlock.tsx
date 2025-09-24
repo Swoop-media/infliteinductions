@@ -180,9 +180,9 @@ export default function DirectFileBlock({
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) {
-                  // Check file size (max 20MB)
-                  if (file.size > 20 * 1024 * 1024) {
-                    setUploadError('File size exceeds 20MB limit. Please use an online compressor for larger files.');
+                  // Check file size (max 35MB)
+                  if (file.size > 35 * 1024 * 1024) {
+                    setUploadError('File size exceeds 35MB limit. Please use an online compressor for larger files.');
                     return;
                   }
                   
@@ -257,7 +257,7 @@ export default function DirectFileBlock({
 
         {/* Info */}
         <div className="text-xs text-gray-500 space-y-1">
-          <div>• Maximum file size: 20MB - use an online compressor for larger files</div>
+          <div>• Maximum file size: 35MB - use an online compressor for larger files</div>
           <div>• ⚠️ PowerPoint files not supported - convert to PDF</div>
           <div>• Supports: PDF, Word, Excel, images, videos, and more</div>
         </div>
