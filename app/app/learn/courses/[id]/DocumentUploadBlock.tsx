@@ -15,6 +15,7 @@ type DocumentUploadBlockProps = {
   requireExpiry: boolean;
   courseId: string;
   currentUserId: string;
+  assignmentId: string;
   existingDocument?: {
     id: string;
     title: string;
@@ -30,6 +31,7 @@ export default function DocumentUploadBlock({
   requireExpiry,
   courseId,
   currentUserId,
+  assignmentId,
   existingDocument
 }: DocumentUploadBlockProps) {
   const [uploading, setUploading] = useState(false);
@@ -105,7 +107,7 @@ export default function DocumentUploadBlock({
           p_file_size: file.size,
           p_file_type: file.type,
           p_expires_on: expiresOn,
-          p_assignment_id: null
+          p_assignment_id: assignmentId
         });
 
       if (dbError) throw dbError;

@@ -1164,6 +1164,7 @@ export default async function LearnerCoursePage(props: {
                                 requireExpiry={block.data?.require_expiry || false}
                                 courseId={courseId}
                                 currentUserId={user.id}
+                                assignmentId={assignment.id}
                                 existingDocument={userDocuments?.find(doc => doc.block_id === block.id) || null}
                               />
                             )}
