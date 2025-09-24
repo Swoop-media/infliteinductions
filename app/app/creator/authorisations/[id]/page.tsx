@@ -461,27 +461,22 @@ export default async function Page(props: {
 }
 
 /** ---- Details Tab ---- */
-// Use hardcoded departments list - matches the full list from the UI
-const DEFAULT_DEPARTMENTS = [
-  "Engineering",
-  "Fixed Wing",
-  "Franz and Fox Helicopters",
-  "General",
-  "Helicopter",
-  "Helitranz",
-  "Management",
-  "Mt Cook Ski Planes & Helicopters",
-  "Safety",
-  "Skydive",
-  "Skydive Abel Tasman",
-  "Skydive Franz",
-  "Skydive Mt Cook"
-];
-
 async function loadAllDepartments() {
   "use server";
-  // Return the hardcoded list since the departments table doesn't exist
-  return DEFAULT_DEPARTMENTS;
+  const supabase = await createSupabaseServer();
+  
+  // Get all departments from the departments table
+  const { data: departments, error } = await supabase
+    .from("departments")
+    .select("name")
+    .order("name", { ascending: true });
+  
+  if (error) {
+    console.error("Error loading departments:", error);
+    return [];
+  }
+  
+  return departments?.map(dept => dept.name).filter(Boolean) || [];
 }
 
 function DetailsTab({ auth, allDepartments }: { auth: any; allDepartments: string[] }) {

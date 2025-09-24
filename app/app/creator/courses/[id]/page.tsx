@@ -839,19 +839,11 @@ export default async function CourseEditorPage(props: {
 
 /** DETAILS TAB (unchanged aside from earlier department/tags support) */
 const DEFAULT_DEPARTMENTS = [
-  "Engineering",
-  "Fixed Wing",
-  "Franz and Fox Helicopters",
-  "General",
-  "Helicopter",
-  "Helitranz",
-  "Management",
-  "Mt Cook Ski Planes & Helicopters",
-  "Safety",
   "Skydive",
-  "Skydive Abel Tasman",
-  "Skydive Franz",
-  "Skydive Mt Cook"
+  "Helicopter",
+  "Fixed wing",
+  "Inflite general",
+  "Safety",
 ] as const;
 
 function DetailsTab({
