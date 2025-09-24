@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import CameraCaptureUpload from '@/components/CameraCaptureUpload';
 import { hasCamera } from '@/lib/utils/device';
@@ -38,7 +38,12 @@ export default function DocumentUploadBlock({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showCameraUpload, setShowCameraUpload] = useState(false);
-  const deviceHasCamera = hasCamera();
+  const [deviceHasCamera, setDeviceHasCamera] = useState(false);
+
+  // Check for camera only on client side after mount
+  useEffect(() => {
+    setDeviceHasCamera(hasCamera());
+  }, []);
 
   const handleFileSelection = (selectedFile: File) => {
     setFile(selectedFile);
@@ -113,7 +118,13 @@ export default function DocumentUploadBlock({
       // Refresh the page to show the uploaded document
       window.location.reload();
     } catch (err: any) {
-      setError(err.message || 'Upload failed');
+      console.error('Upload error:', err);
+      // Show user-friendly error message instead of technical details
+      if (err.message?.includes('upsert_learner_document')) {
+        setError('There was a problem uploading your document. Please try again or contact support if the issue persists.');
+      } else {
+        setError(err.message || 'Upload failed. Please try again.');
+      }
     } finally {
       setUploading(false);
     }
