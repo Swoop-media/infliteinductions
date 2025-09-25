@@ -977,7 +977,15 @@ async function PendingAuthorisationsSection({ q }: { q: string | null }) {
       </div>
 
       {pendingAuthorisations.length === 0 ? (
-        <p className="text-sm text-gray-600">No pending authorisations found.</p>
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">No pending authorisations found.</p>
+          <Link
+            href="/app/admin/diagnose-authorizations"
+            className="inline-flex items-center px-3 py-2 border border-blue-600 text-sm font-medium rounded-md text-blue-600 hover:bg-blue-50"
+          >
+            Diagnose Authorization Issues →
+          </Link>
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
