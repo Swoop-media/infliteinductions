@@ -121,8 +121,8 @@ export default function DocumentUploadBlock({
         assignment_id: assignmentId
       });
       
-      // Call the simplified function with all parameters as non-null
-      const { data: result, error: dbError } = await supabase.rpc('upsert_learner_document', {
+      // Call the new function with all parameters
+      const { data: result, error: dbError } = await supabase.rpc('save_learner_document', {
         p_user_id: currentUserId,
         p_course_id: courseId,
         p_module_id: moduleId,
