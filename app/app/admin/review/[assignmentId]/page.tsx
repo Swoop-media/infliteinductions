@@ -77,12 +77,12 @@ async function loadAssignmentDetails(assignmentId: string) {
 
   if (courseAssignError) throw new Error(courseAssignError.message);
 
-  // Fetch learner documents for all courses
+  // Fetch learner documents for this user (all documents, not just course-specific)
   const { data: documents } = await supabase
     .from("learner_documents")
     .select("*")
     .eq("user_id", assignment.user_id)
-    .in("course_id", courseIds);
+    .order("created_at", { ascending: false });
 
   // Fetch all modules for the courses
   const { data: modules } = await supabase
@@ -181,9 +181,9 @@ async function loadAssignmentDetails(assignmentId: string) {
         assessor_name: null // Could be enhanced to fetch actual assessor name
       }));
 
-      // Get documents uploaded for this module
+      // Get documents uploaded for this module or course
       const moduleDocuments = documents?.filter(
-        d => d.module_id === module.id
+        d => d.module_id === module.id || (d.course_id === ac.course_id && !d.module_id)
       ).map(d => ({
         document_title: d.title || "Untitled Document",
         uploaded_at: d.created_at
@@ -217,8 +217,8 @@ async function loadAssignmentDetails(assignmentId: string) {
     return {
       id: doc.id,
       title: doc.title || "Untitled Document",
-      course_title: (course?.courses as any)?.title || "Unknown Course",
-      module_title: module?.title || "Unknown Module",
+      course_title: doc.course_title || (course?.courses as any)?.title || "General Document",
+      module_title: doc.module_title || module?.title || "N/A",
       storage_path: doc.file_path || doc.storage_path,
       expires_on: doc.expires_on,
       created_at: doc.created_at,

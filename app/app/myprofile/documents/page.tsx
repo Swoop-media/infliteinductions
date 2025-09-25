@@ -91,6 +91,8 @@ async function loadMyDocs() {
       url,
       expires_on: row.expires_on ?? null,
       created_at: row.created_at ?? null,
+      course_title: row.course_title,
+      module_title: row.module_title,
     });
   }
 
@@ -135,6 +137,10 @@ export default async function MyDocumentsPage({
             <li key={d.id} className="flex items-center justify-between p-3">
               <div>
                 <div className="font-medium">{d.title}</div>
+                <div className="text-xs text-gray-500">
+                  {d.course_title ? `${d.course_title}` : ""}
+                  {d.module_title ? ` - ${d.module_title}` : ""}
+                </div>
                 <div className="text-xs text-gray-500">
                   {d.expires_on ? `Expires ${new Date(d.expires_on).toLocaleDateString()}` : "No expiry"}
                   {d.created_at ? ` • Uploaded ${new Date(d.created_at).toLocaleString()}` : ""}
