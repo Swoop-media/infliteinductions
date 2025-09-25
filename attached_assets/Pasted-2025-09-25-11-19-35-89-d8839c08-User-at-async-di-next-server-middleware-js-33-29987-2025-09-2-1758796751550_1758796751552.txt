@@ -1,0 +1,220 @@
+2025-09-25 11:19:35.89
+d8839c08
+User
+at async di (.next/server/middleware.js:33:29987)
+2025-09-25 11:19:35.89
+d8839c08
+User
+at async c (.next/server/middleware.js:33:66137)
+2025-09-25 11:19:35.89
+d8839c08
+User
+at async (.next/server/middleware.js:33:66400) {
+2025-09-25 11:19:35.89
+d8839c08
+User
+__isAuthError: true,
+2025-09-25 11:19:35.89
+d8839c08
+User
+status: 400,
+2025-09-25 11:19:35.89
+d8839c08
+User
+code: 'refresh_token_not_found'
+2025-09-25 11:19:35.89
+d8839c08
+User
+}
+2025-09-25 14:44:44.46
+d8839c08
+User
+Error fetching notifications: {
+2025-09-25 14:44:44.46
+d8839c08
+User
+message: 'TypeError: fetch failed',
+2025-09-25 14:44:44.46
+d8839c08
+User
+details: 'TypeError: fetch failed\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at node:internal/deps/undici/undici:13510:13\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async w (/home/runner/workspace/.next/server/app/app/notifications/list/route.js:1:2025)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async rb.do (/home/runner/workspace/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21059)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async rb.handle (/home/runner/workspace/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:25902)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async k (/home/runner/workspace/.next/server/app/app/notifications/list/route.js:1:5608)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async rb.handleResponse (/home/runner/workspace/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:1:104365)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async g (/home/runner/workspace/.next/server/app/app/notifications/list/route.js:1:6611)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async C (/home/runner/workspace/.next/server/app/app/notifications/list/route.js:1:7733)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async doRender (/home/runner/workspace/node_modules/next/dist/server/base-server.js:1592:34)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async NextNodeServer.renderToResponseWithComponentsImpl (/home/runner/workspace/node_modules/next/dist/server/base-server.js:1934:13)',
+2025-09-25 14:44:44.46
+d8839c08
+User
+hint: '',
+2025-09-25 14:44:44.46
+d8839c08
+User
+code: ''
+2025-09-25 14:44:44.46
+d8839c08
+User
+}
+2025-09-25 14:44:44.46
+d8839c08
+User
+Error fetching notifications: {
+2025-09-25 14:44:44.46
+d8839c08
+User
+message: 'TypeError: fetch failed',
+2025-09-25 14:44:44.46
+d8839c08
+User
+details: 'TypeError: fetch failed\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at node:internal/deps/undici/undici:13510:13\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async w (/home/runner/workspace/.next/server/app/app/notifications/list/route.js:1:2025)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async rb.do (/home/runner/workspace/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21059)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async rb.handle (/home/runner/workspace/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:25902)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async k (/home/runner/workspace/.next/server/app/app/notifications/list/route.js:1:5608)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async rb.handleResponse (/home/runner/workspace/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:1:104365)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async g (/home/runner/workspace/.next/server/app/app/notifications/list/route.js:1:6611)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async C (/home/runner/workspace/.next/server/app/app/notifications/list/route.js:1:7733)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async doRender (/home/runner/workspace/node_modules/next/dist/server/base-server.js:1592:34)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async NextNodeServer.renderToResponseWithComponentsImpl (/home/runner/workspace/node_modules/next/dist/server/base-server.js:1934:13)',
+2025-09-25 14:44:44.46
+d8839c08
+User
+hint: '',
+2025-09-25 14:44:44.46
+d8839c08
+User
+code: ''
+2025-09-25 14:44:44.46
+d8839c08
+User
+}
+2025-09-25 14:44:44.46
+d8839c08
+User
+Error fetching notifications: {
+2025-09-25 14:44:44.46
+d8839c08
+User
+message: 'TypeError: fetch failed',
+2025-09-25 14:44:44.46
+d8839c08
+User
+details: 'TypeError: fetch failed\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at node:internal/deps/undici/undici:13510:13\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async w (/home/runner/workspace/.next/server/app/app/notifications/list/route.js:1:2233)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async rb.do (/home/runner/workspace/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:21059)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async rb.handle (/home/runner/workspace/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:5:25902)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async k (/home/runner/workspace/.next/server/app/app/notifications/list/route.js:1:5608)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async rb.handleResponse (/home/runner/workspace/node_modules/next/dist/compiled/next-server/app-route.runtime.prod.js:1:104365)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async g (/home/runner/workspace/.next/server/app/app/notifications/list/route.js:1:6611)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async C (/home/runner/workspace/.next/server/app/app/notifications/list/route.js:1:7733)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async doRender (/home/runner/workspace/node_modules/next/dist/server/base-server.js:1592:34)\n' +
+2025-09-25 14:44:44.46
+d8839c08
+User
+' at async NextNodeServer.renderToResponseWithComponentsImpl (/home/runner/workspace/node_modules/next/dist/server/base-server.js:1934:13)',
+2025-09-25 14:44:44.46
+d8839c08
+User
+hint: '',
+2025-09-25 14:44:44.46
+d8839c08
+User
+code: ''
+2025-09-25 14:44:44.46
+d8839c08
+User
+}
