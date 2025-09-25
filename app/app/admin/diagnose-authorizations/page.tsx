@@ -166,9 +166,9 @@ export default function DiagnoseAuthorizationsPage() {
     try {
       const supabase = supabaseBrowser;
       
+      // Only include assignment_status and completed_at to avoid schema cache issues
       const updateData: any = {
-        assignment_status: expectedStatus,
-        updated_at: new Date().toISOString()
+        assignment_status: expectedStatus
       };
 
       if (expectedStatus === 'pending_approval') {

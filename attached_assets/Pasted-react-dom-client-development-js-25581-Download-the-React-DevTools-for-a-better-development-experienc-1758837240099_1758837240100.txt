@@ -1,0 +1,45 @@
+react-dom-client.development.js:25581 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+fetch.js:23   PATCH https://renzfiptfymtmfmnmhny.supabase.co/rest/v1/authorisation_assignments?user_id=eq.121cb584-8ac1-4f33-a2a7-0438b6d29a6b&authorisation_id=eq.01cfe799-1454-4d8a-9a18-d97a5057de26&role=eq.trainee 400 (Bad Request)
+eval @ fetch.js:23
+eval @ fetch.js:44
+fulfilled @ fetch.js:4
+Promise.then
+step @ fetch.js:6
+eval @ fetch.js:7
+__awaiter @ fetch.js:3
+eval @ fetch.js:34
+then @ PostgrestBuilder.js:66
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+page.tsx:190  Fix error: {code: 'PGRST204', details: null, hint: null, message: "Could not find the 'updated_at' column of 'authorisation_assignments' in the schema cache"}
+error @ intercept-console-error.js:62
+fixAuthorization @ page.tsx:190
+await in fixAuthorization
+onClick @ page.tsx:308
+executeDispatch @ react-dom-client.development.js:16921
+runWithFiberInDEV @ react-dom-client.development.js:872
+processDispatchQueue @ react-dom-client.development.js:16971
+eval @ react-dom-client.development.js:17572
+batchedUpdates$1 @ react-dom-client.development.js:3312
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17125
+dispatchEvent @ react-dom-client.development.js:21308
+dispatchDiscreteEvent @ react-dom-client.development.js:21276
+<button>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:345
+eval @ page.tsx:307
+DiagnoseAuthorizationsPage @ page.tsx:283
+react_stack_bottom_frame @ react-dom-client.development.js:23552
+renderWithHooksAgain @ react-dom-client.development.js:6863
+renderWithHooks @ react-dom-client.development.js:6775
+updateFunctionComponent @ react-dom-client.development.js:9069
+beginWork @ react-dom-client.development.js:10679
+runWithFiberInDEV @ react-dom-client.development.js:872
+performUnitOfWork @ react-dom-client.development.js:15677
+workLoopSync @ react-dom-client.development.js:15497
+renderRootSync @ react-dom-client.development.js:15477
+performWorkOnRoot @ react-dom-client.development.js:14941
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16766
+performWorkUntilDeadline @ scheduler.development.js:45
