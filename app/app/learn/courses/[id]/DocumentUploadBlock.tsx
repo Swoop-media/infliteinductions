@@ -102,46 +102,87 @@ export default function DocumentUploadBlock({
         throw uploadError;
       }
 
-      // Save document record using the simplified function
-      // Pass expires_on as text string (or empty string for null)
+      // Save document record - bypass RPC and use direct table operations
       const expiresOn = requireExpiry && expiryDate 
         ? new Date(expiryDate + 'T00:00:00').toISOString()
-        : '';
+        : null;
       
-      console.log('Saving document with params:', {
+      // Get course and module titles for the record
+      const [courseData, moduleData] = await Promise.all([
+        supabase.from('courses').select('title').eq('id', courseId).single(),
+        supabase.from('course_modules').select('title').eq('id', moduleId).single()
+      ]);
+      
+      const courseTitle = courseData.data?.title || '';
+      const moduleTitle = moduleData.data?.title || '';
+      
+      console.log('Saving document:', {
         user_id: currentUserId,
-        course_id: courseId,
-        module_id: moduleId,
-        block_id: blockId,
         title: file.name,
-        file_path: filePath,
-        file_size: file.size,
-        file_type: file.type,
-        expires_on: expiresOn,
-        assignment_id: assignmentId
+        course_title: courseTitle,
+        module_title: moduleTitle
       });
       
-      // Call the new function with all parameters
-      const { data: result, error: dbError } = await supabase.rpc('save_learner_document', {
-        p_user_id: currentUserId,
-        p_course_id: courseId,
-        p_module_id: moduleId,
-        p_block_id: blockId,
-        p_title: file.name,
-        p_file_path: filePath,
-        p_file_size: file.size,
-        p_file_type: file.type,
-        p_expires_on: expiresOn || '',  // Pass empty string instead of null
-        p_assignment_id: assignmentId || null
-      });
+      // Check if document already exists for this user/module/block
+      const { data: existingDoc } = await supabase
+        .from('learner_documents')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .eq('module_id', moduleId)
+        .eq('block_id', blockId)
+        .maybeSingle();
+      
+      let result;
+      let dbError;
+      
+      if (existingDoc) {
+        // Update existing document
+        const { data, error } = await supabase
+          .from('learner_documents')
+          .update({
+            title: file.name,
+            file_path: filePath,
+            file_size: file.size,
+            file_type: file.type,
+            expires_on: expiresOn,
+            course_title: courseTitle,
+            module_title: moduleTitle,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingDoc.id)
+          .select()
+          .single();
+        
+        result = data;
+        dbError = error;
+      } else {
+        // Insert new document
+        const { data, error } = await supabase
+          .from('learner_documents')
+          .insert({
+            user_id: currentUserId,
+            course_id: courseId,
+            module_id: moduleId,
+            block_id: blockId,
+            title: file.name,
+            file_path: filePath,
+            file_size: file.size,
+            file_type: file.type,
+            expires_on: expiresOn,
+            assignment_id: assignmentId || null,
+            course_title: courseTitle,
+            module_title: moduleTitle,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+        
+        result = data;
+        dbError = error;
+      }
       
       if (dbError) {
-        console.error('Database error details:', {
-          code: dbError.code,
-          message: dbError.message,
-          details: dbError.details,
-          hint: dbError.hint
-        });
+        console.error('Database error:', dbError);
         throw dbError;
       }
       

@@ -1,0 +1,167 @@
+main-app.js?v=1758764257002:1137 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+DocumentUploadBlock.tsx:87 Uploading file: {fileName: 'fff637e7-7d0c-478e-a6f6-e1d7ccd0acff.pdf', filePath: 'learner-documents/aaaf24e3-9b9b-41d2-ac52-220d1ee25551/fff637e7-7d0c-478e-a6f6-e1d7ccd0acff.pdf', fileSize: 370250, fileType: 'application/pdf', currentUserId: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', …}
+DocumentUploadBlock.tsx:111 Saving document with params: {user_id: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', course_id: '96191cc2-6519-4665-b1d5-e08707a9139c', module_id: '7bd99a39-b7d6-4d0a-8e6f-5ab595e29d7c', block_id: 'b15086a5-fc0d-4c3e-8e3d-d8b2159bf9d5', title: 'OUR STANDARDS.pdf', …}
+fetch.js:30  POST https://renzfiptfymtmfmnmhny.supabase.co/rest/v1/rpc/save_learner_document 404 (Not Found)
+eval @ fetch.js:30
+eval @ fetch.js:51
+fulfilled @ fetch.js:11
+Promise.then
+step @ fetch.js:13
+eval @ fetch.js:14
+__awaiter @ fetch.js:10
+eval @ fetch.js:41
+then @ PostgrestBuilder.js:66
+DocumentUploadBlock.tsx:139 Database error details: {code: 'PGRST202', message: 'Could not find the function public.save_learner_do…odule_id, p_title, p_user_id) in the schema cache', details: 'Searched for the function public.save_learner_docu…r, but no matches were found in the schema cache.', hint: 'Perhaps you meant to call the function public.upsert_learner_document'}
+error @ intercept-console-error.js:57
+handleUpload @ DocumentUploadBlock.tsx:139
+await in handleUpload
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277
+<form>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:345
+DocumentUploadBlock @ DocumentUploadBlock.tsx:245
+react_stack_bottom_frame @ react-dom-client.development.js:23553
+renderWithHooksAgain @ react-dom-client.development.js:6864
+renderWithHooks @ react-dom-client.development.js:6776
+updateFunctionComponent @ react-dom-client.development.js:9070
+beginWork @ react-dom-client.development.js:10629
+runWithFiberInDEV @ react-dom-client.development.js:873
+performUnitOfWork @ react-dom-client.development.js:15678
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15672
+renderRootConcurrent @ react-dom-client.development.js:15647
+performWorkOnRoot @ react-dom-client.development.js:14941
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16767
+performWorkUntilDeadline @ scheduler.development.js:45
+"use client"
+eval @ page.tsx:1160
+Array.map @ <anonymous>:1
+LearnerCoursePage @ page.tsx:1148
+initializeElement @ react-server-dom-webpack-client.browser.development.js:1207
+eval @ react-server-dom-webpack-client.browser.development.js:2830
+initializeModelChunk @ react-server-dom-webpack-client.browser.development.js:1109
+readChunk @ react-server-dom-webpack-client.browser.development.js:935
+react_stack_bottom_frame @ react-dom-client.development.js:23660
+createChild @ react-dom-client.development.js:5465
+reconcileChildrenArray @ react-dom-client.development.js:5772
+reconcileChildFibersImpl @ react-dom-client.development.js:6095
+eval @ react-dom-client.development.js:6200
+reconcileChildren @ react-dom-client.development.js:8754
+beginWork @ react-dom-client.development.js:10951
+runWithFiberInDEV @ react-dom-client.development.js:873
+performUnitOfWork @ react-dom-client.development.js:15678
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15672
+renderRootConcurrent @ react-dom-client.development.js:15647
+performWorkOnRoot @ react-dom-client.development.js:14941
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16767
+performWorkUntilDeadline @ scheduler.development.js:45
+<LearnerCoursePage>
+initializeFakeTask @ react-server-dom-webpack-client.browser.development.js:2408
+resolveDebugInfo @ react-server-dom-webpack-client.browser.development.js:2433
+processFullStringRow @ react-server-dom-webpack-client.browser.development.js:2634
+processFullBinaryRow @ react-server-dom-webpack-client.browser.development.js:2606
+processBinaryChunk @ react-server-dom-webpack-client.browser.development.js:2733
+progress @ react-server-dom-webpack-client.browser.development.js:2997
+"use server"
+ResponseInstance @ react-server-dom-webpack-client.browser.development.js:1870
+createResponseFromOptions @ react-server-dom-webpack-client.browser.development.js:2858
+exports.createFromReadableStream @ react-server-dom-webpack-client.browser.development.js:3228
+eval @ app-index.js:131
+(app-pages-browser)/./node_modules/next/dist/client/app-index.js @ main-app.js?v=1758764257002:160
+options.factory @ webpack.js:1
+__webpack_require__ @ webpack.js:1
+fn @ webpack.js:1
+eval @ app-next-dev.js:14
+eval @ app-bootstrap.js:62
+loadScriptsInSequence @ app-bootstrap.js:23
+appBootstrap @ app-bootstrap.js:56
+eval @ app-next-dev.js:13
+(app-pages-browser)/./node_modules/next/dist/client/app-next-dev.js @ main-app.js?v=1758764257002:182
+options.factory @ webpack.js:1
+__webpack_require__ @ webpack.js:1
+__webpack_exec__ @ main-app.js?v=1758764257002:1801
+(anonymous) @ main-app.js?v=1758764257002:1802
+webpackJsonpCallback @ webpack.js:1
+(anonymous) @ main-app.js?v=1758764257002:9
+DocumentUploadBlock.tsx:158 Upload error: {code: 'PGRST202', details: 'Searched for the function public.save_learner_docu…r, but no matches were found in the schema cache.', hint: 'Perhaps you meant to call the function public.upsert_learner_document', message: 'Could not find the function public.save_learner_do…odule_id, p_title, p_user_id) in the schema cache'}
+error @ intercept-console-error.js:57
+handleUpload @ DocumentUploadBlock.tsx:158
+await in handleUpload
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277
+<form>
+exports.jsxDEV @ react-jsx-dev-runtime.development.js:345
+DocumentUploadBlock @ DocumentUploadBlock.tsx:245
+react_stack_bottom_frame @ react-dom-client.development.js:23553
+renderWithHooksAgain @ react-dom-client.development.js:6864
+renderWithHooks @ react-dom-client.development.js:6776
+updateFunctionComponent @ react-dom-client.development.js:9070
+beginWork @ react-dom-client.development.js:10629
+runWithFiberInDEV @ react-dom-client.development.js:873
+performUnitOfWork @ react-dom-client.development.js:15678
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15672
+renderRootConcurrent @ react-dom-client.development.js:15647
+performWorkOnRoot @ react-dom-client.development.js:14941
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16767
+performWorkUntilDeadline @ scheduler.development.js:45
+"use client"
+eval @ page.tsx:1160
+Array.map @ <anonymous>:1
+LearnerCoursePage @ page.tsx:1148
+initializeElement @ react-server-dom-webpack-client.browser.development.js:1207
+eval @ react-server-dom-webpack-client.browser.development.js:2830
+initializeModelChunk @ react-server-dom-webpack-client.browser.development.js:1109
+readChunk @ react-server-dom-webpack-client.browser.development.js:935
+react_stack_bottom_frame @ react-dom-client.development.js:23660
+createChild @ react-dom-client.development.js:5465
+reconcileChildrenArray @ react-dom-client.development.js:5772
+reconcileChildFibersImpl @ react-dom-client.development.js:6095
+eval @ react-dom-client.development.js:6200
+reconcileChildren @ react-dom-client.development.js:8754
+beginWork @ react-dom-client.development.js:10951
+runWithFiberInDEV @ react-dom-client.development.js:873
+performUnitOfWork @ react-dom-client.development.js:15678
+workLoopConcurrentByScheduler @ react-dom-client.development.js:15672
+renderRootConcurrent @ react-dom-client.development.js:15647
+performWorkOnRoot @ react-dom-client.development.js:14941
+performWorkOnRootViaSchedulerTask @ react-dom-client.development.js:16767
+performWorkUntilDeadline @ scheduler.development.js:45
+<LearnerCoursePage>
+initializeFakeTask @ react-server-dom-webpack-client.browser.development.js:2408
+resolveDebugInfo @ react-server-dom-webpack-client.browser.development.js:2433
+processFullStringRow @ react-server-dom-webpack-client.browser.development.js:2634
+processFullBinaryRow @ react-server-dom-webpack-client.browser.development.js:2606
+processBinaryChunk @ react-server-dom-webpack-client.browser.development.js:2733
+progress @ react-server-dom-webpack-client.browser.development.js:2997
+"use server"
+ResponseInstance @ react-server-dom-webpack-client.browser.development.js:1870
+createResponseFromOptions @ react-server-dom-webpack-client.browser.development.js:2858
+exports.createFromReadableStream @ react-server-dom-webpack-client.browser.development.js:3228
+eval @ app-index.js:131
+(app-pages-browser)/./node_modules/next/dist/client/app-index.js @ main-app.js?v=1758764257002:160
+options.factory @ webpack.js:1
+__webpack_require__ @ webpack.js:1
+fn @ webpack.js:1
+eval @ app-next-dev.js:14
+eval @ app-bootstrap.js:62
+loadScriptsInSequence @ app-bootstrap.js:23
+appBootstrap @ app-bootstrap.js:56
+eval @ app-next-dev.js:13
+(app-pages-browser)/./node_modules/next/dist/client/app-next-dev.js @ main-app.js?v=1758764257002:182
+options.factory @ webpack.js:1
+__webpack_require__ @ webpack.js:1
+__webpack_exec__ @ main-app.js?v=1758764257002:1801
+(anonymous) @ main-app.js?v=1758764257002:1802
+webpackJsonpCallback @ webpack.js:1
+(anonymous) @ main-app.js?v=1758764257002:9
