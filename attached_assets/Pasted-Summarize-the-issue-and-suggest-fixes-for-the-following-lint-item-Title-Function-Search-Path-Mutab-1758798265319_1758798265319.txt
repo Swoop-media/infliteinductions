@@ -1,0 +1,39 @@
+Summarize the issue and suggest fixes for the following lint item: Title: Function Search Path Mutable Entity: public.upsert_learner_document Schema: public Issue Details: Function public.upsert_learner_document has a role mutable search_path Description: Detects functions where the search_path parameter is not set.
+
+
+
+
+Reasoned
+
+Understand the lint rule and its risk
+Summarize the issue for the specific function
+Provide concise, safe SQL fixes
+Note best practices and validation steps
+Summary
+The function public.upsert_learner_document does not set search_path.
+Without an explicit search_path, resolution of unqualified names (tables, functions, operators) depends on the caller’s role and current search_path, which can lead to privilege escalation or calling the wrong objects.
+Risks
+Security: SECURITY DEFINER functions can be hijacked via objects in earlier schemas on the caller’s path.
+Correctness: Unintended objects may be referenced if names are unqualified.
+Fixes
+Set a fixed, minimal search_path inside the function
+Best practice: empty path plus explicit schema-qualification.
+Update the function to include SET search_path = '' and fully qualify all referenced objects.
+Example pattern: create or replace function public.upsert_learner_document(...) returns ... language plpgsql security invoker set search_path = '' as $$ declare -- variables begin -- qualify everything with schema insert into public.learner_documents(...) values (...) /* or */ perform public.some_helper(...); return ...; end; $$;
+
+Fully qualify all identifiers
+Prefix with schema for tables, views, functions, types, sequences, and operators if custom.
+Example: public.learner_documents, public.some_helper, extensions.uuid_generate_v7().
+If SECURITY DEFINER is required
+Keep set search_path = ''.
+Add a minimal, controlled path if absolutely needed (e.g., set search_path = public, pg_temp), but still fully qualify objects.
+Revoke execute from anon/authenticated if the function exposes sensitive behavior, and grant explicitly to needed roles.
+Validate after changes
+Recreate the function with create or replace.
+Run a quick call in a session with a custom search_path to ensure behavior is stable.
+Consider a regression test that checks pg_proc.proconfig includes search_path for this function.
+Optional helper check: select p.oid::regprocedure, p.proconfig from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'upsert_learner_document';
+
+Outcome
+
+The function becomes search_path-agnostic, eliminating role-dependent behavior and aligning with security best practices.
