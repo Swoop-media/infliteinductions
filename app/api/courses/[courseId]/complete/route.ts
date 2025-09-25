@@ -150,12 +150,12 @@ export async function POST(
               existingAuth.assignment_status !== 'completed' && 
               existingAuth.assignment_status !== 'pending_approval') {
             // Update authorization status to pending_approval
+            // Note: Removing updated_at to avoid PostgREST schema cache issues
             const { error: authUpdateError } = await supabase
               .from("authorisation_assignments")
               .update({
                 assignment_status: 'pending_approval',
-                completed_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                completed_at: new Date().toISOString()
               })
               .eq("id", existingAuth.id);
 
