@@ -1,0 +1,37 @@
+main-app.js?v=1758794697273:1137 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+DocumentUploadBlock.tsx:87 Uploading file: {fileName: 'dde5acb6-7997-4f60-a9d4-d1a34606a9a0.pdf', filePath: 'learner-documents/aaaf24e3-9b9b-41d2-ac52-220d1ee25551/dde5acb6-7997-4f60-a9d4-d1a34606a9a0.pdf', fileSize: 370250, fileType: 'application/pdf', currentUserId: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', …}
+DocumentUploadBlock.tsx:119 Saving document: {user_id: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551', title: 'OUR STANDARDS.pdf', course_title: 'Tandem documents, rules and responsibilities', module_title: 'NZPIA license'}
+fetch.js:30  POST https://renzfiptfymtmfmnmhny.supabase.co/rest/v1/learner_documents?select=* 400 (Bad Request)
+eval @ fetch.js:30
+eval @ fetch.js:51
+fulfilled @ fetch.js:11
+Promise.then
+step @ fetch.js:13
+eval @ fetch.js:14
+__awaiter @ fetch.js:10
+eval @ fetch.js:41
+then @ PostgrestBuilder.js:66
+DocumentUploadBlock.tsx:185 Database error: {code: 'PGRST204', details: null, hint: null, message: "Could not find the 'course_title' column of 'learner_documents' in the schema cache"}
+error @ intercept-console-error.js:57
+handleUpload @ DocumentUploadBlock.tsx:185
+await in handleUpload
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277
+DocumentUploadBlock.tsx:199 Upload error: {code: 'PGRST204', details: null, hint: null, message: "Could not find the 'course_title' column of 'learner_documents' in the schema cache"}
+error @ intercept-console-error.js:57
+handleUpload @ DocumentUploadBlock.tsx:199
+await in handleUpload
+executeDispatch @ react-dom-client.development.js:16922
+runWithFiberInDEV @ react-dom-client.development.js:873
+processDispatchQueue @ react-dom-client.development.js:16972
+eval @ react-dom-client.development.js:17573
+batchedUpdates$1 @ react-dom-client.development.js:3313
+dispatchEventForPluginEventSystem @ react-dom-client.development.js:17126
+dispatchEvent @ react-dom-client.development.js:21309
+dispatchDiscreteEvent @ react-dom-client.development.js:21277
