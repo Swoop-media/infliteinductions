@@ -24,11 +24,22 @@ export default async function FixDocumentsPage() {
   // Load all documents with missing fields
   const { data: documents, error } = await supabase
     .from("learner_documents")
-    .select(`
-      *,
-      profiles!learner_documents_user_id_fkey(full_name, email)
-    `)
+    .select("*")
     .order("created_at", { ascending: false });
+  
+  // Load profiles separately to avoid foreign key issues
+  const userIds = documents ? [...new Set(documents.map(d => d.user_id))] : [];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", userIds);
+  
+  // Map profiles to documents
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+  const documentsWithProfiles = (documents || []).map(doc => ({
+    ...doc,
+    profiles: profileMap.get(doc.user_id)
+  }));
 
   // Load all courses and modules for reference
   const { data: courses } = await supabase
@@ -54,13 +65,13 @@ export default async function FixDocumentsPage() {
           This tool helps fix missing fields in document records that were uploaded but lack proper course/module associations.
         </p>
         <p className="text-sm text-yellow-800 mt-2">
-          <strong>Total Documents:</strong> {documents?.length || 0}
+          <strong>Total Documents:</strong> {documentsWithProfiles?.length || 0}
         </p>
         <p className="text-sm text-yellow-800">
-          <strong>Documents with missing course_title:</strong> {documents?.filter(d => !d.course_title).length || 0}
+          <strong>Documents with missing course_title:</strong> {documentsWithProfiles?.filter(d => !d.course_title).length || 0}
         </p>
         <p className="text-sm text-yellow-800">
-          <strong>Documents with missing module_title:</strong> {documents?.filter(d => !d.module_title).length || 0}
+          <strong>Documents with missing module_title:</strong> {documentsWithProfiles?.filter(d => !d.module_title).length || 0}
         </p>
       </div>
 
@@ -71,7 +82,7 @@ export default async function FixDocumentsPage() {
       )}
 
       <DocumentFixer 
-        documents={documents || []}
+        documents={documentsWithProfiles || []}
         courses={courses || []}
         modules={modules || []}
       />
