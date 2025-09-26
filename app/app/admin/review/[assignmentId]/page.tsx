@@ -127,7 +127,7 @@ async function loadAssignmentDetails(assignmentId: string) {
     `)
     .eq("user_id", assignment.user_id);
 
-  // Fetch onsite training and assessment responses
+  // Fetch onsite training and assessment responses with trainer info
   const { data: requirementResponses } = await supabase
     .from("requirement_responses")
     .select(`
@@ -137,6 +137,7 @@ async function loadAssignmentDetails(assignmentId: string) {
       requirement_id,
       response_text,
       response_date,
+      trainer_id,
       onsite_requirements!inner(
         label,
         role
@@ -144,16 +145,20 @@ async function loadAssignmentDetails(assignmentId: string) {
     `)
     .in("assignment_id", courseAssignmentIds);
 
-  // Fetch assessor information for onsite responses if available
-  const assessorIds = new Set();
-  for (const assignment of courseAssignments || []) {
-    const { data: assessors } = await supabase
-      .from("course_assignments")
-      .select("user_id, profiles!inner(full_name)")
-      .eq("course_id", assignment.course_id)
-      .in("role", ["trainer", "assessor", "onsite_trainer", "onsite_assessor"]);
+  // Get unique trainer IDs from requirement responses
+  const trainerIds = [...new Set(requirementResponses?.map(rr => rr.trainer_id).filter(Boolean) || [])];
+  
+  // Fetch trainer/assessor profiles
+  const trainerProfilesMap = new Map();
+  if (trainerIds.length > 0) {
+    const { data: trainerProfiles } = await supabase
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", trainerIds);
     
-    assessors?.forEach(a => assessorIds.add(a.user_id));
+    trainerProfiles?.forEach(profile => {
+      trainerProfilesMap.set(profile.id, profile.full_name);
+    });
   }
 
   // Map course assignments by course_id
@@ -191,7 +196,7 @@ async function loadAssignmentDetails(assignmentId: string) {
         requirement_label: (rr.onsite_requirements as any)?.label || "Requirement",
         response_text: rr.response_text,
         response_date: rr.response_date,
-        assessor_name: null // Could be enhanced to fetch actual assessor name
+        assessor_name: rr.trainer_id ? trainerProfilesMap.get(rr.trainer_id) || null : null
       }));
 
       // Get documents uploaded for this module or course
@@ -414,9 +419,6 @@ export default async function ReviewAssignmentPage({ params }: Props) {
           <input type="hidden" name="assignmentId" value={resolvedParams.assignmentId} />
           <button className="rounded-md bg-green-600 px-6 py-2 text-sm text-white hover:bg-green-700">
             Approve Authorisation
-          </button>
-          <button className="rounded-md bg-red-600 px-6 py-2 text-sm text-white hover:bg-red-700">
-            Request Additional Training
           </button>
           <button className="rounded-md border px-6 py-2 text-sm hover:bg-gray-50">
             Add Notes
