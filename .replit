@@ -20,10 +20,6 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 37453
-externalPort = 3000
-
-[[ports]]
 localPort = 38807
 externalPort = 3001
 
@@ -56,13 +52,13 @@ args = "Next.js Development Server"
 name = "Next.js Development Server"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [agent]
 expertMode = true
