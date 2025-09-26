@@ -142,8 +142,8 @@ export default async function MyDocumentsPage({
                   {d.module_title ? ` - ${d.module_title}` : ""}
                 </div>
                 <div className="text-xs text-gray-500">
-                  {d.expires_on ? `Expires ${new Date(d.expires_on).toLocaleDateString()}` : "No expiry"}
-                  {d.created_at ? ` • Uploaded ${new Date(d.created_at).toLocaleString()}` : ""}
+                  {d.expires_on ? `Expires ${new Date(d.expires_on).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}` : "No expiry"}
+                  {d.created_at ? ` • Uploaded ${new Date(d.created_at).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ""}
                 </div>
               </div>
               {d.url ? (

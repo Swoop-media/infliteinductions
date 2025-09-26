@@ -97,7 +97,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                 <div className="flex items-center gap-4">
                   <div className="text-sm text-gray-600">
                     {course.assignment?.completed_at
-                      ? `Completed ${new Date(course.assignment.completed_at).toLocaleDateString()}`
+                      ? `Completed ${new Date(course.assignment.completed_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}`
                       : "Not completed"}
                   </div>
                   <span
@@ -188,7 +188,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                       )}
                                       {response.response_date && (
                                         <div className="text-xs text-gray-500">
-                                          {new Date(response.response_date).toLocaleDateString()}
+                                          {new Date(response.response_date).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}
                                         </div>
                                       )}
                                     </div>
@@ -226,7 +226,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                   <span>{doc.document_title}</span>
                                   {doc.uploaded_at && (
                                     <span className="text-xs text-gray-500">
-                                      ({new Date(doc.uploaded_at).toLocaleDateString()})
+                                      ({new Date(doc.uploaded_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })})
                                     </span>
                                   )}
                                 </div>

@@ -16,7 +16,9 @@ async function loadAssignmentDetails(assignmentId: string) {
   "use server";
   noStore();
 
-  const supabase = await createSupabaseServer();
+  // Use admin client to get all documents from all users
+  const { supabaseAdmin } = await import("@/lib/supabase/admin");
+  const supabase = supabaseAdmin();
 
   // Get the authorisation assignment details
   const { data: assignment, error: assignError } = await supabase

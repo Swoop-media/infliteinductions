@@ -392,9 +392,14 @@ type DocumentRow = {
 async function loadUserDocuments(q: string | null) {
   "use server";
   noStore();
-  const supabase = await createSupabaseServer();
+  // Check authorization with regular client
+  const regularSupabase = await createSupabaseServer();
   const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
   if (!allowed) redirect("/app/home?banner=no_access");
+  
+  // Use admin client for fetching ALL documents from all users
+  const { supabaseAdmin } = await import("@/lib/supabase/admin");
+  const supabase = supabaseAdmin();
 
   // First fetch all user documents
   const { data: documents, error: documentsError } = await supabase
