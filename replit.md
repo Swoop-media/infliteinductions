@@ -50,3 +50,36 @@ Preferred communication style: Simple, everyday language.
 - **Microsoft Graph API**: User profile and organizational data access
 
 The architecture follows a hybrid approach with server-side rendering for performance and client-side interactivity where needed. The system handles complex workflows including course creation, assignment management, progress tracking, and multi-modal training delivery (digital + onsite components).
+
+# Admin Diagnostic Tools
+
+## Authorization Diagnostic Tool
+- **Location**: `/app/admin/diagnose-authorizations`
+- **Access**: Admin or Trainers and Assessors roles required
+- **Purpose**: Identifies and fixes authorization assignment status issues
+- **Features**:
+  - Lists all authorization assignments with status mismatches
+  - Shows completed course requirements vs pending authorization status
+  - One-click fix for status synchronization issues
+  - Detects orphaned or incomplete assignments
+- **Production Ready**: Yes - fully secured with role-based access control
+
+## Document Diagnostic Tool
+- **Location**: `/app/admin/diagnose-documents`
+- **Access**: Admin or Trainers and Assessors roles required
+- **Purpose**: Comprehensive document visibility and relationship analysis
+- **Features**:
+  - Shows all documents system-wide (uses admin client to bypass user filtering)
+  - Identifies missing relationships (user, course, module, assignment links)
+  - Detects expired documents
+  - Shows where each document should appear in the system
+  - Lists orphaned documents without proper relationships
+  - Document count validation and integrity checks
+- **Production Ready**: Yes - fully secured with role-based access control
+
+## Important Notes for Production
+- Both diagnostic tools are **safe for production** deployment
+- They include proper authentication checks (hasRole validation)
+- They use the admin Supabase client only for data viewing, not for authentication
+- The tools provide read-only diagnostics with optional fix capabilities
+- No need to remove these tools when publishing - they provide valuable debugging capabilities for admins
