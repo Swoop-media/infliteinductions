@@ -77,12 +77,24 @@ async function loadAssignmentDetails(assignmentId: string) {
 
   if (courseAssignError) throw new Error(courseAssignError.message);
 
-  // Fetch learner documents for this user (all documents, not just course-specific)
-  const { data: documents } = await supabase
+  // Get course assignment IDs for various queries
+  const courseAssignmentIds = (courseAssignments || []).map(ca => ca.id);
+  
+  // Fetch learner documents for this user's course assignments in this authorization
+  let documentsQuery = supabase
     .from("learner_documents")
-    .select("*")
-    .eq("user_id", assignment.user_id)
-    .order("created_at", { ascending: false });
+    .select("*");
+  
+  // Build query based on available IDs
+  if (courseAssignmentIds.length > 0) {
+    // Get documents by user_id OR assignment_id in the course assignments
+    documentsQuery = documentsQuery.or(`user_id.eq.${assignment.user_id},assignment_id.in.(${courseAssignmentIds.join(',')})`);
+  } else {
+    // Fallback to just user_id if no course assignments
+    documentsQuery = documentsQuery.eq("user_id", assignment.user_id);
+  }
+  
+  const { data: documents } = await documentsQuery.order("created_at", { ascending: false });
 
   // Fetch all modules for the courses
   const { data: modules } = await supabase
@@ -92,7 +104,6 @@ async function loadAssignmentDetails(assignmentId: string) {
     .order("order_index", { ascending: true });
 
   // Fetch module progress for all assignments
-  const courseAssignmentIds = (courseAssignments || []).map(ca => ca.id);
   const { data: moduleProgress } = await supabase
     .from("assignment_progress")
     .select("assignment_id, module_id, completed_at")
