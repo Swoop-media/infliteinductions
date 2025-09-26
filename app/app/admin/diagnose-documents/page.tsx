@@ -9,39 +9,56 @@ async function loadAllDocuments() {
   "use server";
   const supabase = await createSupabaseServer();
   
-  // Get ALL documents with extensive details
+  // Get ALL documents first
   const { data: documents, error } = await supabase
     .from("learner_documents")
-    .select(`
-      *,
-      profiles:user_id (
-        id,
-        full_name,
-        email
-      ),
-      courses:course_id (
-        id,
-        title
-      ),
-      course_modules:module_id (
-        id,
-        title
-      ),
-      course_assignments:assignment_id (
-        id,
-        user_id,
-        course_id,
-        status
-      )
-    `)
+    .select("*")
     .order("created_at", { ascending: false });
-
+  
   if (error) {
     console.error("Error loading documents:", error);
     return { documents: [], error: error.message };
   }
+  
+  // Get unique IDs for lookups
+  const userIds = [...new Set(documents?.map(d => d.user_id).filter(Boolean) || [])];
+  const courseIds = [...new Set(documents?.map(d => d.course_id).filter(Boolean) || [])];
+  const moduleIds = [...new Set(documents?.map(d => d.module_id).filter(Boolean) || [])];
+  const assignmentIds = [...new Set(documents?.map(d => d.assignment_id).filter(Boolean) || [])];
+  
+  // Fetch related data separately
+  const { data: profiles } = userIds.length > 0 
+    ? await supabase.from("profiles").select("id, full_name, email").in("id", userIds)
+    : { data: [] };
+    
+  const { data: courses } = courseIds.length > 0
+    ? await supabase.from("courses").select("id, title").in("id", courseIds) 
+    : { data: [] };
+    
+  const { data: modules } = moduleIds.length > 0
+    ? await supabase.from("course_modules").select("id, title").in("id", moduleIds)
+    : { data: [] };
+    
+  const { data: assignments } = assignmentIds.length > 0
+    ? await supabase.from("course_assignments").select("id, user_id, course_id, status").in("id", assignmentIds)
+    : { data: [] };
+  
+  // Create lookup maps
+  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+  const courseMap = new Map((courses || []).map(c => [c.id, c]));
+  const moduleMap = new Map((modules || []).map(m => [m.id, m]));
+  const assignmentMap = new Map((assignments || []).map(a => [a.id, a]));
+  
+  // Combine data
+  const enrichedDocuments = (documents || []).map(doc => ({
+    ...doc,
+    profiles: profileMap.get(doc.user_id) || null,
+    courses: courseMap.get(doc.course_id) || null,
+    course_modules: moduleMap.get(doc.module_id) || null,
+    course_assignments: assignmentMap.get(doc.assignment_id) || null
+  }));
 
-  return { documents: documents || [], error: null };
+  return { documents: enrichedDocuments, error: null };
 }
 
 async function loadOrphanedDocuments() {
@@ -56,9 +73,16 @@ async function loadOrphanedDocuments() {
     // RPC might not exist yet, try manual query
     const { data: allDocs } = await supabase
       .from("learner_documents")
-      .select("*, profiles:user_id(id)");
+      .select("*");
     
-    const orphanedDocs = allDocs?.filter(doc => !doc.profiles) || [];
+    // Check which docs have missing user profiles
+    const userIds = allDocs?.map(d => d.user_id).filter(Boolean) || [];
+    const { data: profiles } = userIds.length > 0 
+      ? await supabase.from("profiles").select("id").in("id", userIds)
+      : { data: [] };
+    
+    const validUserIds = new Set((profiles || []).map(p => p.id));
+    const orphanedDocs = allDocs?.filter(doc => doc.user_id && !validUserIds.has(doc.user_id)) || [];
     return { orphaned: orphanedDocs, error: null };
   }
 
@@ -79,53 +103,74 @@ async function loadDocumentLocations() {
   // Documents visible in MyProfile (all user documents)
   const { data: userDocs } = await supabase
     .from("learner_documents")
-    .select(`
-      id,
-      title,
-      user_id,
-      expires_on,
-      profiles:user_id (full_name, email)
-    `)
+    .select("id, title, user_id, expires_on")
     .not("user_id", "is", null);
   
-  locations.myProfileDocs = userDocs || [];
+  // Get profiles for user docs
+  const userDocUserIds = [...new Set(userDocs?.map(d => d.user_id).filter(Boolean) || [])];
+  const { data: userDocProfiles } = userDocUserIds.length > 0
+    ? await supabase.from("profiles").select("id, full_name, email").in("id", userDocUserIds)
+    : { data: [] };
+  const userProfileMap = new Map((userDocProfiles || []).map(p => [p.id, p]));
+  const enrichedUserDocs = (userDocs || []).map(doc => ({
+    ...doc,
+    profiles: userProfileMap.get(doc.user_id) || null
+  }));
+  
+  locations.myProfileDocs = enrichedUserDocs || [];
 
   // Documents with expiry dates (for admin due dates)
   const { data: expiryDocs } = await supabase
     .from("learner_documents")
-    .select(`
-      id,
-      title,
-      expires_on,
-      profiles:user_id (full_name, email)
-    `)
+    .select("id, title, user_id, expires_on")
     .not("expires_on", "is", null)
     .order("expires_on", { ascending: true });
   
-  locations.adminDueDates = expiryDocs || [];
+  // Get profiles for expiry docs
+  const expiryDocUserIds = [...new Set(expiryDocs?.map(d => d.user_id).filter(Boolean) || [])];
+  const { data: expiryDocProfiles } = expiryDocUserIds.length > 0
+    ? await supabase.from("profiles").select("id, full_name, email").in("id", expiryDocUserIds)
+    : { data: [] };
+  const expiryProfileMap = new Map((expiryDocProfiles || []).map(p => [p.id, p]));
+  const enrichedExpiryDocs = (expiryDocs || []).map(doc => ({
+    ...doc,
+    profiles: expiryProfileMap.get(doc.user_id) || null
+  }));
+  
+  locations.adminDueDates = enrichedExpiryDocs || [];
 
   // Documents linked to authorization assignments
   const { data: authDocs } = await supabase
     .from("learner_documents")
-    .select(`
-      id,
-      title,
-      assignment_id,
-      course_assignments!inner (
-        id,
-        user_id,
-        course_id,
-        status,
-        authorisation_assignments!inner (
-          id,
-          authorisation_id,
-          status
-        )
-      )
-    `)
+    .select("id, title, assignment_id")
     .not("assignment_id", "is", null);
   
-  locations.authorizationReviews = authDocs || [];
+  // Check which are valid by getting course assignments
+  const authAssignmentIds = [...new Set(authDocs?.map(d => d.assignment_id).filter(Boolean) || [])];
+  
+  if (authAssignmentIds.length > 0) {
+    // Get course assignments that have authorization assignments
+    const { data: validAssignments } = await supabase
+      .from("course_assignments")
+      .select("id")
+      .in("id", authAssignmentIds);
+    
+    // Then check which have auth assignments
+    const validIds = validAssignments?.map(a => a.id) || [];
+    if (validIds.length > 0) {
+      const { data: authAssignments } = await supabase
+        .from("authorisation_assignments")
+        .select("id")
+        .in("user_id", validIds);
+      
+      const docsWithAuth = authDocs?.filter(doc => validIds.includes(doc.assignment_id)) || [];
+      locations.authorizationReviews = docsWithAuth;
+    } else {
+      locations.authorizationReviews = [];
+    }
+  } else {
+    locations.authorizationReviews = [];
+  }
 
   return locations;
 }
