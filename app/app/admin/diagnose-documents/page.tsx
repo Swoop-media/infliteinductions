@@ -1,19 +1,23 @@
 // @ts-nocheck
 
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
 import { DiagnosticTool } from "./DiagnosticTool";
 
 async function loadAllDocuments() {
   "use server";
-  const supabase = await createSupabaseServer();
+  // Use admin client to bypass any RLS or auth filtering
+  const supabase = supabaseAdmin();
   
-  // Get ALL documents first
-  const { data: documents, error } = await supabase
+  // Get ALL documents first - using service role to bypass any RLS
+  const { data: documents, error, count } = await supabase
     .from("learner_documents")
-    .select("*")
+    .select("*", { count: "exact" })
     .order("created_at", { ascending: false });
+  
+  console.log(`Query returned ${documents?.length || 0} documents (count: ${count})`);
   
   if (error) {
     console.error("Error loading documents:", error);
@@ -63,7 +67,7 @@ async function loadAllDocuments() {
 
 async function loadOrphanedDocuments() {
   "use server";
-  const supabase = await createSupabaseServer();
+  const supabase = supabaseAdmin();
   
   // Find documents with missing relationships
   const { data: orphaned, error } = await supabase
@@ -91,7 +95,7 @@ async function loadOrphanedDocuments() {
 
 async function loadDocumentLocations() {
   "use server";
-  const supabase = await createSupabaseServer();
+  const supabase = supabaseAdmin();
   
   // Check where documents should appear
   const locations = {
@@ -177,7 +181,7 @@ async function loadDocumentLocations() {
 
 async function checkDocumentIssues() {
   "use server";
-  const supabase = await createSupabaseServer();
+  const supabase = supabaseAdmin();
   
   const issues = [];
 
@@ -282,7 +286,7 @@ async function checkDocumentIssues() {
 
 async function fixDocumentIssue(issueType: string, documentId: string, fixData: any) {
   "use server";
-  const supabase = await createSupabaseServer();
+  const supabase = supabaseAdmin();
   
   switch (issueType) {
     case "missing_user":
@@ -322,7 +326,7 @@ async function fixDocumentIssue(issueType: string, documentId: string, fixData: 
 
 async function linkDocumentToAssignment(documentId: string, assignmentId: string) {
   "use server";
-  const supabase = await createSupabaseServer();
+  const supabase = supabaseAdmin();
   
   // First verify the assignment exists
   const { data: assignment, error: checkError } = await supabase
