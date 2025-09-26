@@ -535,14 +535,18 @@ export default async function AdminPage({
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin</h1>
         <div className="flex gap-2">
-          {tab === "documents" && (
-            <Link
-              href="/app/admin/fix-documents"
-              className="rounded-md bg-blue-600 text-white px-3 py-1 text-sm hover:bg-blue-700"
-            >
-              Fix Missing Documents
-            </Link>
-          )}
+          <Link
+            href="/app/admin/diagnose-documents"
+            className="rounded-md bg-purple-600 text-white px-3 py-1 text-sm hover:bg-purple-700"
+          >
+            Document Diagnostics
+          </Link>
+          <Link
+            href="/app/admin/diagnose-authorizations"
+            className="rounded-md bg-indigo-600 text-white px-3 py-1 text-sm hover:bg-indigo-700"
+          >
+            Authorization Diagnostics
+          </Link>
         </div>
       </div>
 
