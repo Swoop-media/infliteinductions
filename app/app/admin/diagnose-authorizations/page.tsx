@@ -251,7 +251,7 @@ export default function DiagnoseAuthorizationsPage() {
             <li>Missing authorization assignments for users enrolled in related courses</li>
           </ul>
           <p className="text-sm text-gray-600 mt-2">
-            <strong>Comprehensive Fix:</strong> Creates missing authorization assignments for all users who are enrolled in courses that are part of authorizations, and updates status to pending_approval if all courses are completed.
+            <strong>Comprehensive Fix:</strong> Updates all authorization assignments to pending_approval status where all related courses have been completed.
           </p>
         </div>
 

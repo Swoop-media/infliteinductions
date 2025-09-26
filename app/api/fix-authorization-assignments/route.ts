@@ -26,130 +26,73 @@ export async function POST(request: NextRequest) {
     const fixes = [];
     const errors = [];
 
-    // Get all course assignments that are for trainees
-    const { data: courseAssignments, error: caError } = await supabase
-      .from("course_assignments")
-      .select("user_id, course_id")
-      .eq("role", "trainee");
+    // Get all authorization assignments that are in 'assigned' status
+    const { data: assignments, error: assignError } = await supabase
+      .from("authorisation_assignments")
+      .select(`
+        id,
+        user_id,
+        authorisation_id,
+        assignment_status
+      `)
+      .eq("role", "trainee")
+      .eq("assignment_status", "assigned");
 
-    if (caError) {
-      console.error("Error fetching course assignments:", caError);
-      return NextResponse.json({ error: "Failed to fetch course assignments" }, { status: 500 });
+    if (assignError) {
+      console.error("Error fetching assignments:", assignError);
+      return NextResponse.json({ error: "Failed to fetch authorization assignments" }, { status: 500 });
     }
 
-    // Group by user
-    const userCourses = new Map();
-    for (const ca of courseAssignments || []) {
-      if (!userCourses.has(ca.user_id)) {
-        userCourses.set(ca.user_id, []);
-      }
-      userCourses.get(ca.user_id).push(ca.course_id);
+    if (!assignments || assignments.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: "No authorization assignments need updating",
+        fixes: [],
+        summary: { updated_to_pending: 0, total: 0 }
+      });
     }
 
-    // For each user, check their authorizations
-    for (const [userId, userCourseIds] of userCourses) {
-      // Get all authorizations that contain any of the user's courses
-      const { data: relevantAuths } = await supabase
+    // Check each assignment to see if all courses are completed
+    for (const assignment of assignments) {
+      // Get all courses for this authorization
+      const { data: authCourses } = await supabase
         .from("authorisation_courses")
-        .select("authorisation_id, course_id")
-        .in("course_id", userCourseIds);
+        .select("course_id")
+        .eq("authorisation_id", assignment.authorisation_id);
 
-      if (!relevantAuths || relevantAuths.length === 0) continue;
+      if (!authCourses || authCourses.length === 0) continue;
 
-      // Group by authorization
-      const authMap = new Map();
-      for (const ac of relevantAuths) {
-        if (!authMap.has(ac.authorisation_id)) {
-          authMap.set(ac.authorisation_id, []);
-        }
-        authMap.get(ac.authorisation_id).push(ac.course_id);
-      }
+      const courseIds = authCourses.map(ac => ac.course_id);
 
-      // For each authorization, check if user should have it
-      for (const [authId, authCourseIds] of authMap) {
-        // Check if user has ANY course from this authorization
-        const hasAnyCourse = authCourseIds.some(courseId => userCourseIds.includes(courseId));
-        
-        if (hasAnyCourse) {
-          // Check if authorization assignment exists
-          const { data: existingAuth } = await supabase
-            .from("authorisation_assignments")
-            .select("id, assignment_status")
-            .eq("user_id", userId)
-            .eq("authorisation_id", authId)
-            .eq("role", "trainee")
-            .single();
+      // Check if all courses are completed for this user
+      const { data: completedCourses } = await supabase
+        .from("course_assignments")
+        .select("course_id")
+        .eq("user_id", assignment.user_id)
+        .eq("role", "trainee")
+        .eq("assignment_status", "completed")
+        .in("course_id", courseIds);
 
-          if (!existingAuth) {
-            // Create the missing authorization assignment
-            const { error: createError } = await supabase
-              .from("authorisation_assignments")
-              .insert({
-                user_id: userId,
-                authorisation_id: authId,
-                role: 'trainee',
-                assignment_status: 'assigned',
-                assigned_by: user.id,
-                assigned_at: new Date().toISOString(),
-                created_by: user.id,
-                created_at: new Date().toISOString()
-              });
+      const allCompleted = completedCourses?.length === courseIds.length && courseIds.length > 0;
 
-            if (createError) {
-              errors.push(`Failed to create auth assignment for user ${userId} and auth ${authId}: ${createError.message}`);
-            } else {
-              fixes.push({
-                action: "created",
-                user_id: userId,
-                authorisation_id: authId
-              });
-            }
-          }
+      if (allCompleted) {
+        // Update to pending_approval
+        const { error: updateError } = await supabase
+          .from("authorisation_assignments")
+          .update({
+            assignment_status: 'pending_approval',
+            completed_at: new Date().toISOString()
+          })
+          .eq("id", assignment.id);
 
-          // Now check if all courses are completed
-          const { data: completedCourses } = await supabase
-            .from("course_assignments")
-            .select("course_id")
-            .eq("user_id", userId)
-            .eq("role", "trainee")
-            .eq("assignment_status", "completed")
-            .in("course_id", authCourseIds);
-
-          const allCompleted = completedCourses?.length === authCourseIds.length && authCourseIds.length > 0;
-
-          if (allCompleted) {
-            // Get the authorization assignment (might be just created)
-            const { data: authAssignment } = await supabase
-              .from("authorisation_assignments")
-              .select("id, assignment_status")
-              .eq("user_id", userId)
-              .eq("authorisation_id", authId)
-              .eq("role", "trainee")
-              .single();
-
-            if (authAssignment && 
-                authAssignment.assignment_status !== 'completed' && 
-                authAssignment.assignment_status !== 'pending_approval') {
-              // Update to pending_approval
-              const { error: updateError } = await supabase
-                .from("authorisation_assignments")
-                .update({
-                  assignment_status: 'pending_approval',
-                  completed_at: new Date().toISOString()
-                })
-                .eq("id", authAssignment.id);
-
-              if (updateError) {
-                errors.push(`Failed to update auth ${authId} for user ${userId}: ${updateError.message}`);
-              } else {
-                fixes.push({
-                  action: "updated_to_pending",
-                  user_id: userId,
-                  authorisation_id: authId
-                });
-              }
-            }
-          }
+        if (updateError) {
+          errors.push(`Failed to update auth ${assignment.authorisation_id} for user ${assignment.user_id}: ${updateError.message}`);
+        } else {
+          fixes.push({
+            action: "updated_to_pending",
+            user_id: assignment.user_id,
+            authorisation_id: assignment.authorisation_id
+          });
         }
       }
     }
@@ -186,7 +129,6 @@ export async function POST(request: NextRequest) {
       fixes: detailedFixes,
       errors: errors.length > 0 ? errors : undefined,
       summary: {
-        created: fixes.filter(f => f.action === "created").length,
         updated_to_pending: fixes.filter(f => f.action === "updated_to_pending").length,
         total: fixes.length
       }

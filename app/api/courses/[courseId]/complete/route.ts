@@ -146,30 +146,9 @@ export async function POST(
             .eq("role", "trainee")
             .single();
 
-          if (!existingAuth) {
-            // Create the authorization assignment as it doesn't exist
-            console.log(`Creating missing authorization assignment for auth ${authId} and user ${assignment.user_id}`);
-            const { error: createError } = await supabase
-              .from("authorisation_assignments")
-              .insert({
-                user_id: assignment.user_id,
-                authorisation_id: authId,
-                role: 'trainee',
-                assignment_status: 'pending_approval',
-                assigned_by: user.id,
-                assigned_at: new Date().toISOString(),
-                created_by: user.id,
-                created_at: new Date().toISOString(),
-                completed_at: new Date().toISOString()
-              });
-            
-            if (createError) {
-              console.error("Error creating authorization assignment:", createError);
-            } else {
-              console.log(`Authorization ${authId} created as pending_approval for user ${assignment.user_id}`);
-            }
-          } else if (existingAuth.assignment_status !== 'completed' && 
-                     existingAuth.assignment_status !== 'pending_approval') {
+          if (existingAuth && 
+              existingAuth.assignment_status !== 'completed' && 
+              existingAuth.assignment_status !== 'pending_approval') {
             // Update authorization status to pending_approval
             // Note: Removing updated_at to avoid PostgREST schema cache issues
             const { error: authUpdateError } = await supabase
