@@ -53,33 +53,88 @@ export default async function TrainAssessPage() {
     // Get trainee assignments for courses where this user is a trainer/assessor
     // Use service role client to bypass RLS and see all trainees
     const supabaseService = supabaseAdmin();
+    
+    // Batch query 1: Get all trainee assignments with profiles and courses in one query
     const { data: traineeAssignments, error: traineeError } = await supabaseService
       .from("course_assignments")
       .select(`
         id,
         user_id,
         course_id,
-        created_at
+        created_at,
+        profiles!inner(full_name, email),
+        courses!inner(title)
       `)
       .eq("role", "trainee")
       .in("course_id", allCourseIds);
 
+    if (!traineeAssignments || traineeAssignments.length === 0) {
+      // No trainees to process
+      return (
+        <div className="container mx-auto py-6 space-y-6">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight">Training & Assessment</h1>
+            <p className="text-muted-foreground">
+              Manage onsite training and assessments for your assigned courses.
+            </p>
+          </div>
+          <Card>
+            <CardContent className="py-8">
+              <p className="text-center text-muted-foreground">
+                No pending training or assessment sessions.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
 
+    // Batch query 2: Get all modules for all relevant courses at once
+    const { data: allCourseModules } = await supabase
+      .from("course_modules")
+      .select("id, type, title, course_id, order_index")
+      .in("course_id", allCourseIds)
+      .order("order_index");
+
+    // Batch query 3: Get all assignment progress for all trainee assignments at once
+    const assignmentIds = traineeAssignments.map(a => a.id);
+    const { data: allProgress } = await supabase
+      .from("assignment_progress")
+      .select("module_id, assignment_id")
+      .in("assignment_id", assignmentIds);
+
+    // Create maps for efficient lookups
+    const modulesByCourse = new Map();
+    if (allCourseModules) {
+      for (const module of allCourseModules) {
+        if (!modulesByCourse.has(module.course_id)) {
+          modulesByCourse.set(module.course_id, []);
+        }
+        modulesByCourse.get(module.course_id).push(module);
+      }
+    }
+
+    const progressByAssignment = new Map();
+    if (allProgress) {
+      for (const prog of allProgress) {
+        if (!progressByAssignment.has(prog.assignment_id)) {
+          progressByAssignment.set(prog.assignment_id, new Set());
+        }
+        progressByAssignment.get(prog.assignment_id).add(prog.module_id);
+      }
+    }
+
+    // Process assignments using in-memory data
     if (traineeAssignments) {
       for (const assignment of traineeAssignments) {
         const courseId = assignment.course_id;
         const traineeId = assignment.user_id;
         const assignmentId = assignment.id;
         
-        // Get all modules for this course
-        const { data: allModules } = await supabase
-          .from("course_modules")
-          .select("id, type, title")
-          .eq("course_id", courseId)
-          .order("order_index");
+        // Get modules from map
+        const allModules = modulesByCourse.get(courseId) || [];
 
-
-        if (!allModules || allModules.length === 0) {
+        if (allModules.length === 0) {
           continue;
         }
 
@@ -89,13 +144,8 @@ export default async function TrainAssessPage() {
         const onsiteTrainingModules = allModules.filter(m => m.type === "onsite_training");
         const onsiteAssessmentModules = allModules.filter(m => m.type === "onsite_assessment");
 
-        // Get trainee's progress
-        const { data: progress } = await supabase
-          .from("assignment_progress")
-          .select("module_id")
-          .eq("assignment_id", assignmentId);
-
-        const completedModuleIds = new Set(progress?.map(p => p.module_id) || []);
+        // Get progress from map
+        const completedModuleIds = progressByAssignment.get(assignmentId) || new Set();
 
         // Check if all digital modules are complete (or if there are no digital modules)
         const allDigitalComplete = digitalModules.length === 0 || 
@@ -111,19 +161,9 @@ export default async function TrainAssessPage() {
           ? allDigitalComplete 
           : onsiteTrainingComplete;
 
-        // Get trainee profile separately
-        const { data: traineeProfile } = await supabase
-          .from("profiles")
-          .select("full_name, email")
-          .eq("id", traineeId)
-          .maybeSingle();
-
-        // Get course info separately
-        const { data: courseInfo } = await supabase
-          .from("courses")
-          .select("title")
-          .eq("id", courseId)
-          .maybeSingle();
+        // Get trainee and course info from joined data
+        const traineeProfile = assignment.profiles;
+        const courseInfo = assignment.courses;
 
         const traineeName = traineeProfile?.full_name || traineeProfile?.email || "Unknown";
         const traineeEmail = traineeProfile?.email || "";
