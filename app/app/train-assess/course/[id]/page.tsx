@@ -134,50 +134,59 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     redirect("/app/train-assess");
   }
   
-  // Get trainee profile using service role
+  // Batch query 1: Get trainee profile using service role
   const { data: profile } = await supabaseService
     .from("profiles")
     .select("full_name, email")
     .eq("id", assignment.user_id)
     .single();
 
-
-  // Get course modules
+  // Batch query 2: Get course modules with all related data in a single query
   const moduleType = sessionType === 'training' ? 'onsite_training' : 'onsite_assessment';
-  const { data: modules } = await supabase
-    .from("course_modules")
-    .select("*, include_equipment_assessment")
-    .eq("course_id", courseId)
-    .eq("type", moduleType)
-    .order("order_index");
-
-  // Get onsite requirements for each module
-  const moduleIds = modules?.map(m => m.id) || [];
   
-  let requirementsByModule: Record<string, any[]> = {};
-  if (moduleIds.length > 0) {
-    // Fetch ALL requirements for the modules regardless of role value
-    // This matches how the learner module fetches them
-    // Security is handled by the role check above, not by filtering requirements
-    const { data: requirements } = await supabase
-      .from("onsite_requirements")
-      .select("*")
-      .in("module_id", moduleIds)
-      .order("order_index");
+  // Batch fetch modules with requirements and progress in parallel
+  const [modulesResult, progressResult] = await Promise.all([
+    // Get modules with their requirements joined
+    supabase
+      .from("course_modules")
+      .select(`
+        *,
+        include_equipment_assessment,
+        onsite_requirements (
+          id,
+          module_id,
+          title,
+          description,
+          field_type,
+          options,
+          order_index,
+          role
+        )
+      `)
+      .eq("course_id", courseId)
+      .eq("type", moduleType)
+      .order("order_index")
+      .order("onsite_requirements(order_index)"),
     
-    // Group requirements by module
-    requirementsByModule = (requirements || []).reduce((acc, req) => {
-      if (!acc[req.module_id]) acc[req.module_id] = [];
-      acc[req.module_id].push(req);
-      return acc;
-    }, {} as Record<string, any[]>);
-  }
+    // Get trainee's progress
+    supabase
+      .from("assignment_progress")
+      .select("module_id, completed_at")
+      .eq("assignment_id", assignmentId)
+  ]);
 
-  // Get trainee's progress
-  const { data: progress } = await supabase
-    .from("assignment_progress")
-    .select("module_id, completed_at")
-    .eq("assignment_id", assignmentId);
+  const modules = modulesResult.data;
+  const progress = progressResult.data;
+
+  // Extract requirements from modules and create the requirementsByModule map
+  let requirementsByModule: Record<string, any[]> = {};
+  if (modules) {
+    for (const module of modules) {
+      requirementsByModule[module.id] = module.onsite_requirements || [];
+      // Clean up the module object to remove the nested requirements
+      delete module.onsite_requirements;
+    }
+  }
 
   const completedModuleIds = new Set(progress?.map(p => p.module_id) || []);
 
@@ -189,27 +198,25 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   const completedModules = modules?.filter(m => completedModuleIds.has(m.id)).length || 0;
   const progressPercentage = totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
 
-  // Check if any pass_fail requirements have "fail" responses
+  // Check if any pass_fail requirements have "fail" responses - optimized query
   let hasFailedRequirements = false;
   if (sessionType === 'assessment' && user) {
-    const { data: failResponses } = await supabase
+    // Single query to check for failed pass_fail requirements
+    const { data: failedRequirements } = await supabase
       .from("requirement_responses")
-      .select("response_value, requirement_id")
+      .select(`
+        response_value,
+        onsite_requirements!inner(
+          id,
+          field_type
+        )
+      `)
       .eq("assignment_id", assignmentId)
       .eq("trainer_id", user.id)
-      .eq("response_value", "fail");
+      .eq("response_value", "fail")
+      .eq("onsite_requirements.field_type", "pass_fail");
     
-    if (failResponses && failResponses.length > 0) {
-      // Check if these are actually pass_fail type requirements
-      const failedReqIds = failResponses.map(r => r.requirement_id);
-      const { data: requirements } = await supabase
-        .from("onsite_requirements")
-        .select("id, field_type")
-        .in("id", failedReqIds)
-        .eq("field_type", "pass_fail");
-      
-      hasFailedRequirements = requirements && requirements.length > 0;
-    }
+    hasFailedRequirements = failedRequirements && failedRequirements.length > 0;
   }
 
   return (
