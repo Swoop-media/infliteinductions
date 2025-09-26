@@ -178,7 +178,7 @@ export default function SortableDocumentsTable({ documents }: Props) {
                     </div>
                   </td>
                   <td className="px-3 py-2 text-gray-600">
-                    {doc.expires_on ? new Date(doc.expires_on).toLocaleDateString() : 'No expiry'}
+                    {doc.expires_on ? new Date(doc.expires_on).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'No expiry'}
                   </td>
                   <td className="px-3 py-2">
                     <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${className}`}>

@@ -417,6 +417,8 @@ async function loadUserDocuments(q: string | null) {
   if (documentsError) throw new Error(documentsError.message);
   if (!documents || documents.length === 0) return [];
 
+  console.log(`Found ${documents.length} documents in database`);
+
   // Get unique user IDs, course IDs, and module IDs
   const userIds = [...new Set(documents.map(d => d.user_id))];
   const courseIds = [...new Set(documents.map(d => d.course_id).filter(Boolean))];
@@ -475,6 +477,7 @@ async function loadUserDocuments(q: string | null) {
   // Apply search filter if provided
   if (q && q.trim()) {
     const searchTerm = q.trim().toLowerCase();
+    const beforeFilter = formattedDocuments.length;
     formattedDocuments = formattedDocuments.filter(doc =>
       (doc.full_name?.toLowerCase().includes(searchTerm) ?? false) ||
       (doc.email?.toLowerCase().includes(searchTerm) ?? false) ||
@@ -482,8 +485,10 @@ async function loadUserDocuments(q: string | null) {
       (doc.course_title?.toLowerCase().includes(searchTerm) ?? false) ||
       (doc.module_title?.toLowerCase().includes(searchTerm) ?? false)
     );
+    console.log(`Filtered documents from ${beforeFilter} to ${formattedDocuments.length} for search term: "${q}"`);
   }
 
+  console.log(`Returning ${formattedDocuments.length} documents total`);
   return formattedDocuments;
 }
 
