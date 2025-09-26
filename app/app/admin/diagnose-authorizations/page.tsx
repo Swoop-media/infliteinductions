@@ -200,6 +200,35 @@ export default function DiagnoseAuthorizationsPage() {
     }
   };
 
+  const runComprehensiveFix = async () => {
+    setLoading(true);
+    setStatus("Running comprehensive fix for all missing authorization assignments...");
+    setError(null);
+    
+    try {
+      const response = await fetch('/api/fix-authorization-assignments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setStatus(`Successfully fixed ${data.summary.total} authorization assignments (${data.summary.created} created, ${data.summary.updated_to_pending} updated to pending)`);
+        // Run diagnosis again to show updated results
+        await diagnoseAuthorizations();
+      } else {
+        setError(data.error || "Failed to run comprehensive fix");
+      }
+    } catch (err: any) {
+      setError(`Error running comprehensive fix: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
@@ -219,7 +248,11 @@ export default function DiagnoseAuthorizationsPage() {
             <li>Authorizations where all courses are completed but status is not "pending_approval"</li>
             <li>Authorizations with incorrect progress status</li>
             <li>Missing or mismatched completion data</li>
+            <li>Missing authorization assignments for users enrolled in related courses</li>
           </ul>
+          <p className="text-sm text-gray-600 mt-2">
+            <strong>Comprehensive Fix:</strong> Creates missing authorization assignments for all users who are enrolled in courses that are part of authorizations, and updates status to pending_approval if all courses are completed.
+          </p>
         </div>
 
         <div className="pt-4 border-t flex gap-3">
@@ -244,6 +277,14 @@ export default function DiagnoseAuthorizationsPage() {
               Fix All Issues
             </button>
           )}
+          
+          <button
+            onClick={runComprehensiveFix}
+            disabled={loading}
+            className="px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700 text-white font-medium"
+          >
+            {loading ? "Fixing..." : "Comprehensive Fix (All Users)"}
+          </button>
         </div>
 
         {status && (
