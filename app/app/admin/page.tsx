@@ -530,7 +530,14 @@ export default async function AdminPage({
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin</h1>
         <div className="flex gap-2">
-          {/* Removed unnecessary buttons */}
+          {tab === "documents" && (
+            <Link
+              href="/app/admin/fix-documents"
+              className="rounded-md bg-blue-600 text-white px-3 py-1 text-sm hover:bg-blue-700"
+            >
+              Fix Missing Documents
+            </Link>
+          )}
         </div>
       </div>
 
