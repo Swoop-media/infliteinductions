@@ -145,6 +145,8 @@ export default function DocumentUploadBlock({
             file_size: file.size,
             file_type: file.type,
             expires_on: expiresOn,
+            course_id: courseId,  // Make sure course_id is always set
+            assignment_id: assignmentId || null,  // Also ensure assignment_id is updated
             course_title: courseTitle,
             module_title: moduleTitle,
             updated_at: new Date().toISOString()
