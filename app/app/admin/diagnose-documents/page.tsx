@@ -1,7 +1,7 @@
 // @ts-nocheck
 
 import { createSupabaseServer } from "@/lib/supabase/server";
-import { hasRole } from "@/lib/supabase/auth/roles";
+import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
 import { DiagnosticTool } from "./DiagnosticTool";
 
