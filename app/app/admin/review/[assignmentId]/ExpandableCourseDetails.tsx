@@ -3,6 +3,39 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, CheckCircle, Circle, FileText, User, AlertCircle } from "lucide-react";
 
+// Deterministic date formatting to prevent hydration mismatches
+function formatDateSafe(dateString: string | null | undefined): string {
+  if (!dateString) return '';
+  
+  try {
+    // Parse the date and extract UTC components
+    const date = new Date(dateString);
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${month}/${day}/${year}`;
+  } catch (error) {
+    return '';
+  }
+}
+
+function formatDateTimeSafe(dateString: string | null | undefined): string {
+  if (!dateString) return '';
+  
+  try {
+    // Parse the date and extract UTC components
+    const date = new Date(dateString);
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const hours = String(date.getUTCHours()).padStart(2, '0');
+    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${month}/${day}/${year} ${hours}:${minutes} UTC`;
+  } catch (error) {
+    return '';
+  }
+}
+
 interface ModuleProgress {
   module_id: string;
   module_type: string;
@@ -97,7 +130,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                 <div className="flex items-center gap-4">
                   <div className="text-sm text-gray-600">
                     {course.assignment?.completed_at
-                      ? `Completed ${new Date(course.assignment.completed_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}`
+                      ? `Completed ${formatDateSafe(course.assignment.completed_at)}`
                       : "Not completed"}
                   </div>
                   <span
@@ -160,7 +193,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                   </div>
                                   {attempt.created_at && (
                                     <div className="text-xs text-gray-500 mt-1">
-                                      {new Date(attempt.created_at).toLocaleString()}
+                                      {formatDateTimeSafe(attempt.created_at)}
                                     </div>
                                   )}
                                 </div>
@@ -188,7 +221,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                       )}
                                       {response.response_date && (
                                         <div className="text-xs text-gray-500">
-                                          {new Date(response.response_date).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}
+                                          {formatDateSafe(response.response_date)}
                                         </div>
                                       )}
                                     </div>
@@ -226,7 +259,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                   <span>{doc.document_title}</span>
                                   {doc.uploaded_at && (
                                     <span className="text-xs text-gray-500">
-                                      ({new Date(doc.uploaded_at).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })})
+                                      ({formatDateSafe(doc.uploaded_at)})
                                     </span>
                                   )}
                                 </div>
