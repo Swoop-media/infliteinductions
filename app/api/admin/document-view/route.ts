@@ -20,9 +20,17 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createSupabaseServer();
 
+    // Determine which bucket to use based on the file path
+    // Learner documents are stored with user ID as the first part of the path
+    // Check if the path matches the UUID pattern for user IDs
+    const isLearnerDocument = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//.test(filePath);
+    const bucketName = isLearnerDocument ? 'learner-documents' : 'course-files';
+
+    console.log('Creating signed URL:', { filePath, bucketName });
+
     // Create a 1-hour signed URL for the document
     const { data, error } = await supabase.storage
-      .from('course-files')
+      .from(bucketName)
       .createSignedUrl(filePath, 3600); // 1 hour
 
     if (error) {

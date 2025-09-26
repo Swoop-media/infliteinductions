@@ -82,7 +82,7 @@ export default function DocumentUploadBlock({
       // Upload file to storage
       const fileExt = file.name.split('.').pop();
       const fileName = `${crypto.randomUUID()}.${fileExt}`;
-      const filePath = `learner-documents/${currentUserId}/${fileName}`;
+      const filePath = `${currentUserId}/${fileName}`;
 
       console.log('Uploading file:', { 
         fileName, 
@@ -90,11 +90,12 @@ export default function DocumentUploadBlock({
         fileSize: file.size,
         fileType: file.type,
         currentUserId,
-        assignmentId
+        assignmentId,
+        bucket: 'learner-documents'
       });
 
       const { error: uploadError } = await supabase.storage
-        .from('course-files')
+        .from('learner-documents')
         .upload(filePath, file);
 
       if (uploadError) {
