@@ -1,0 +1,216 @@
+2025-09-27 09:52:08.11
+9e768eb2
+User
+code: '23502',
+2025-09-27 09:52:08.11
+9e768eb2
+User
+details: 'Failing row contains (2de096f9-7d54-4686-bd8a-366559840ad7, 3b734c29-6b8a-433b-9090-5e82a5fa890e, 2c9fb780-9c86-48ae-8521-854a6c9ed005, trainee, null, 2025-09-26 21:52:07.972831+00, 1b44c8f5-95aa-4f8c-8110-8f36106b4d10, 2025-09-26 21:52:07.972831+00, active, null, assigned, 2025-09-26 21:52:07.972831+00).',
+2025-09-27 09:52:08.11
+9e768eb2
+User
+hint: null,
+2025-09-27 09:52:08.11
+9e768eb2
+User
+message: 'null value in column "created_by" of relation "course_assignments" violates not-null constraint'
+2025-09-27 09:52:08.11
+9e768eb2
+User
+}
+2025-09-27 09:57:45.61
+9e768eb2
+User
+Error saving learner document via RPC: {
+2025-09-27 09:57:45.61
+9e768eb2
+User
+code: '23502',
+2025-09-27 09:57:45.61
+9e768eb2
+User
+details: 'Failing row contains (942b50b9-bc62-45a7-b151-20f2d533d05e, c7ddc6e9-be43-47a0-b91d-eeb4fe1007f2, cf3f90dd-c67b-4138-85d6-945680cba0a0, b52d13ba-fe30-4b1a-8446-32e4f90600f7, null, f93b3c52-bf80-488a-a7e8-a1b49d1ac8a0, rod d and a.pdf, requirement-uploads/f93b3c52-bf80-488a-a7e8-a1b49d1ac8a0/87e376e..., 2021212, application/pdf, active, null, 2025-09-26 21:57:45.449939+00, 2025-09-26 21:57:45.449939+00, Pre employment Drug and Alcohol test, Upload evidence).',
+2025-09-27 09:57:45.61
+9e768eb2
+User
+hint: null,
+2025-09-27 09:57:45.61
+9e768eb2
+User
+message: 'null value in column "block_id" of relation "learner_documents" violates not-null constraint'
+2025-09-27 09:57:45.61
+9e768eb2
+User
+}
+2025-09-27 09:57:45.61
+9e768eb2
+User
+Error details: {
+2025-09-27 09:57:45.61
+9e768eb2
+User
+"code": "23502",
+2025-09-27 09:57:45.61
+9e768eb2
+User
+"details": "Failing row contains (942b50b9-bc62-45a7-b151-20f2d533d05e, c7ddc6e9-be43-47a0-b91d-eeb4fe1007f2, cf3f90dd-c67b-4138-85d6-945680cba0a0, b52d13ba-fe30-4b1a-8446-32e4f90600f7, null, f93b3c52-bf80-488a-a7e8-a1b49d1ac8a0, rod d and a.pdf, requirement-uploads/f93b3c52-bf80-488a-a7e8-a1b49d1ac8a0/87e376e..., 2021212, application/pdf, active, null, 2025-09-26 21:57:45.449939+00, 2025-09-26 21:57:45.449939+00, Pre employment Drug and Alcohol test, Upload evidence).",
+2025-09-27 09:57:45.61
+9e768eb2
+User
+"hint": null,
+2025-09-27 09:57:45.61
+9e768eb2
+User
+"message": "null value in column \"block_id\" of relation \"learner_documents\" violates not-null constraint"
+2025-09-27 09:57:45.61
+9e768eb2
+User
+}
+2025-09-27 09:59:04.65
+9e768eb2
+User
+Error saving learner document via RPC: {
+2025-09-27 09:59:04.65
+9e768eb2
+User
+code: '23502',
+2025-09-27 09:59:04.65
+9e768eb2
+User
+details: 'Failing row contains (eca29b73-da5a-4551-9428-f3a080e24dbf, 8c7ae70e-2c9c-4600-a294-6ab49cc657dd, cf3f90dd-c67b-4138-85d6-945680cba0a0, b52d13ba-fe30-4b1a-8446-32e4f90600f7, null, 033990e5-fa8e-41f7-8bc2-1dd5b9e5ee33, Dani d and a.pdf, requirement-uploads/033990e5-fa8e-41f7-8bc2-1dd5b9e5ee33/87e376e..., 1970767, application/pdf, active, null, 2025-09-26 21:59:04.525284+00, 2025-09-26 21:59:04.525284+00, Pre employment Drug and Alcohol test, Upload evidence).',
+2025-09-27 09:59:04.65
+9e768eb2
+User
+hint: null,
+2025-09-27 09:59:04.65
+9e768eb2
+User
+message: 'null value in column "block_id" of relation "learner_documents" violates not-null constraint'
+2025-09-27 09:59:04.65
+9e768eb2
+User
+}
+2025-09-27 09:59:04.65
+9e768eb2
+User
+Error details: {
+2025-09-27 09:59:04.65
+9e768eb2
+User
+"code": "23502",
+2025-09-27 09:59:04.65
+9e768eb2
+User
+"details": "Failing row contains (eca29b73-da5a-4551-9428-f3a080e24dbf, 8c7ae70e-2c9c-4600-a294-6ab49cc657dd, cf3f90dd-c67b-4138-85d6-945680cba0a0, b52d13ba-fe30-4b1a-8446-32e4f90600f7, null, 033990e5-fa8e-41f7-8bc2-1dd5b9e5ee33, Dani d and a.pdf, requirement-uploads/033990e5-fa8e-41f7-8bc2-1dd5b9e5ee33/87e376e..., 1970767, application/pdf, active, null, 2025-09-26 21:59:04.525284+00, 2025-09-26 21:59:04.525284+00, Pre employment Drug and Alcohol test, Upload evidence).",
+2025-09-27 09:59:04.65
+9e768eb2
+User
+"hint": null,
+2025-09-27 09:59:04.65
+9e768eb2
+User
+"message": "null value in column \"block_id\" of relation \"learner_documents\" violates not-null constraint"
+2025-09-27 09:59:04.65
+9e768eb2
+User
+}
+2025-09-27 10:08:06.49
+9e768eb2
+User
+"details": "Failing row contains (b9b31256-cd9b-4534-ad02-171ed0286b08, 9fa77406-c504-4667-96a5-3c9a8e0a8108, cf3f90dd-c67b-4138-85d6-945680cba0a0, b52d13ba-fe30-4b1a-8446-32e4f90600f7, null, 8e2bdab3-64f2-44ff-ae4d-495502822483, Nisha Paytah - D and A - 22_10_24.pdf, requirement-uploads/8e2bdab3-64f2-44ff-ae4d-495502822483/87e376e..., 1654472, application/pdf, active, null, 2025-09-26 22:08:06.372833+00, 2025-09-26 22:08:06.372833+00, Pre employment Drug and Alcohol test, Upload evidence).",
+2025-09-27 10:08:06.49
+9e768eb2
+User
+"hint": null,
+2025-09-27 10:08:06.49
+9e768eb2
+User
+"message": "null value in column \"block_id\" of relation \"learner_documents\" violates not-null constraint"
+2025-09-27 10:08:06.49
+9e768eb2
+User
+}
+2025-09-27 10:09:25.28
+9e768eb2
+User
+Error saving learner document via RPC: {
+2025-09-27 10:09:25.28
+9e768eb2
+User
+code: '23502',
+2025-09-27 10:09:25.28
+9e768eb2
+User
+details: 'Failing row contains (260b11f0-c512-4266-ad47-b9cc06354a41, d484090a-3b68-4441-999d-18a66eb71fe8, cf3f90dd-c67b-4138-85d6-945680cba0a0, b52d13ba-fe30-4b1a-8446-32e4f90600f7, null, 32c0bdf7-4864-470e-a8ca-ab6c447d3c7f, d and a 10-13-2022 11.59.pdf, requirement-uploads/32c0bdf7-4864-470e-a8ca-ab6c447d3c7f/87e376e..., 567074, application/pdf, active, null, 2025-09-26 22:09:25.163466+00, 2025-09-26 22:09:25.163466+00, Pre employment Drug and Alcohol test, Upload evidence).',
+2025-09-27 10:09:25.28
+9e768eb2
+User
+hint: null,
+2025-09-27 10:09:25.28
+9e768eb2
+User
+message: 'null value in column "block_id" of relation "learner_documents" violates not-null constraint'
+2025-09-27 10:09:25.28
+9e768eb2
+User
+}
+2025-09-27 10:09:25.28
+9e768eb2
+User
+Error details: {
+2025-09-27 10:09:25.28
+9e768eb2
+User
+"code": "23502",
+2025-09-27 10:09:25.28
+9e768eb2
+User
+"details": "Failing row contains (260b11f0-c512-4266-ad47-b9cc06354a41, d484090a-3b68-4441-999d-18a66eb71fe8, cf3f90dd-c67b-4138-85d6-945680cba0a0, b52d13ba-fe30-4b1a-8446-32e4f90600f7, null, 32c0bdf7-4864-470e-a8ca-ab6c447d3c7f, d and a 10-13-2022 11.59.pdf, requirement-uploads/32c0bdf7-4864-470e-a8ca-ab6c447d3c7f/87e376e..., 567074, application/pdf, active, null, 2025-09-26 22:09:25.163466+00, 2025-09-26 22:09:25.163466+00, Pre employment Drug and Alcohol test, Upload evidence).",
+2025-09-27 10:09:25.28
+9e768eb2
+User
+"hint": null,
+2025-09-27 10:09:25.28
+9e768eb2
+User
+"message": "null value in column \"block_id\" of relation \"learner_documents\" violates not-null constraint"
+2025-09-27 10:09:25.28
+9e768eb2
+User
+}
+2025-09-27 10:10:58.15
+9e768eb2
+User
+Error saving learner document via RPC: {
+2025-09-27 10:10:58.15
+9e768eb2
+User
+code: '23502',
+2025-09-27 10:10:58.15
+9e768eb2
+User
+details: 'Failing row contains (2b6a8db0-ac04-40da-9f20-21579dad5426, 2c9fb780-9c86-48ae-8521-854a6c9ed005, cf3f90dd-c67b-4138-85d6-945680cba0a0, b52d13ba-fe30-4b1a-8446-32e4f90600f7, null, 2627146c-eca7-4d12-b154-5e1d44151dac, Matt Wild drug test 09.11.2023.pdf, requirement-uploads/2627146c-eca7-4d12-b154-5e1d44151dac/87e376e..., 921243, application/pdf, active, null, 2025-09-26 22:10:57.98505+00, 2025-09-26 22:10:57.98505+00, Pre employment Drug and Alcohol test, Upload evidence).',
+2025-09-27 10:10:58.15
+9e768eb2
+User
+hint: null,
+2025-09-27 10:10:58.15
+9e768eb2
+User
+message: 'null value in column "block_id" of relation "learner_documents" violates not-null constraint'
+2025-09-27 10:10:58.15
+9e768eb2
+User
+}
+2025-09-27 10:10:58.15
+9e768eb2
+User
+Error details: {
+2025-09-27 10:10:58.15
+9e768eb2
+User
+"code": "23502",
+2025-09-27 10:10:58.15
+9e768eb2
+User
+"details": "Failing row contains (2b6a8db0-ac04-40da-9f20-21579dad5426, 2c9fb780-9c86-48ae-8521-854a6c9ed005, cf3f90dd-c67b-4138-85d6-945680cba0a0, b52d13ba-fe30-4b1a-8446-32e4f90600f7, null, 2627146c-eca7-4d12-b154-5e1d44151dac, Matt Wild drug test 09.11.2023.pdf, requirement-uploads/2627146c-eca7-4d12-b154-5e1d44151dac/87e376e..., 921243, application/pdf, active, null, 2025-09-26 22:10:57.98505+00, 2025-09-26 22:10:57.98505+00, Pre employment Drug and Alcohol test, Upload evidence).",
