@@ -4,40 +4,27 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-/**
- * Notes:
- * - This GET is left intact so existing callers won’t break.
- * - Marked force-dynamic to avoid any unwanted edge caching of user-specific data.
- * - Uses service role for consistent reads of trainer-owned responses.
- */
-export const dynamic = "force-dynamic";
-
 export async function GET(req: NextRequest) {
   try {
     const supabase = await createSupabaseServer();
     const { searchParams } = new URL(req.url);
-    const moduleId = searchParams.get("moduleId");
-    const assignmentId = searchParams.get("assignmentId");
+    const moduleId = searchParams.get('moduleId');
+    const assignmentId = searchParams.get('assignmentId');
 
     if (!moduleId || !assignmentId) {
-      return NextResponse.json(
-        { error: "Missing moduleId or assignmentId" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing moduleId or assignmentId" }, { status: 400 });
     }
 
-    // Current user required
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Use admin client to read trainer responses reliably under RLS
+    // Use admin client to bypass RLS for fetching trainer responses
     const adminClient = supabaseAdmin();
-
+    
+    // Get existing responses for this module/assignment/trainer
     const { data: responses, error } = await adminClient
       .from("requirement_responses")
       .select("requirement_id, response_value")
@@ -47,28 +34,13 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error("Error fetching requirement responses:", error);
-      return NextResponse.json(
-        { error: "Failed to fetch responses" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to fetch responses" }, { status: 500 });
     }
 
-    // Explicit no-store headers for user-specific content
-    return new NextResponse(
-      JSON.stringify({ responses: responses || [] }),
-      {
-        status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store, max-age=0",
-        },
-      }
-    );
+    return NextResponse.json({ responses: responses || [] });
+
   } catch (error) {
     console.error("Requirement responses API error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
