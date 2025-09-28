@@ -7,6 +7,7 @@ import CameraCaptureUpload from '@/components/CameraCaptureUpload';
 import { hasCamera } from '@/lib/utils/device';
 import { Camera } from 'lucide-react';
 import { validateSelectedFile, getFileSizeLimitText } from '@/lib/utils/fileValidation';
+import { formatDateConsistent } from '@/lib/utils';
 
 type DocumentUploadBlockProps = {
   moduleId: string;
@@ -262,17 +263,9 @@ export default function DocumentUploadBlock({
               <p className="font-medium text-sm">✅ Document uploaded:</p>
               <p className="text-sm text-gray-600">{existingDocument.title}</p>
               <p className="text-xs text-gray-500">
-                Uploaded: {new Date(existingDocument.created_at).toLocaleDateString('en-US', { 
-                  year: 'numeric', 
-                  month: 'short', 
-                  day: 'numeric' 
-                })}
+                Uploaded: {formatDateConsistent(existingDocument.created_at)}
                 {existingDocument.expires_on && (
-                  <span> • Expires: {new Date(existingDocument.expires_on).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'short', 
-                    day: 'numeric' 
-                  })}</span>
+                  <span> • Expires: {formatDateConsistent(existingDocument.expires_on)}</span>
                 )}
               </p>
             </div>
