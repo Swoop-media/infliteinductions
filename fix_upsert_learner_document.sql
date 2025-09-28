@@ -1,10 +1,9 @@
 -- =====================================================
 -- FIX FOR DOCUMENT UPLOAD ERROR IN ONSITE TRAINING
 -- =====================================================
--- This fixes the "Could not choose the best candidate function" error
--- by removing duplicate function versions and creating a single clean version
+-- Updated fix that properly handles NULL block_ids for onsite requirements
 
--- Step 1: Drop all existing versions of the function to clean up overloading
+-- Step 1: Drop all existing versions of the function
 DROP FUNCTION IF EXISTS public.upsert_learner_document(
     uuid, uuid, uuid, uuid, text, text, bigint, text, text, uuid
 );
@@ -13,7 +12,7 @@ DROP FUNCTION IF EXISTS public.upsert_learner_document(
     uuid, uuid, uuid, uuid, character varying, text, bigint, character varying, text, uuid
 );
 
--- Step 2: Create a single clean version of the function
+-- Step 2: Create the corrected function that handles NULL block_ids properly
 CREATE OR REPLACE FUNCTION upsert_learner_document(
     p_user_id UUID,
     p_course_id UUID,
@@ -31,7 +30,6 @@ DECLARE
     v_course_title VARCHAR(255);
     v_module_title VARCHAR(255);
     v_expires_timestamp TIMESTAMP;
-    v_effective_block_id UUID;
 BEGIN
     -- Convert text to timestamp if not null
     IF p_expires_on IS NOT NULL AND p_expires_on != '' THEN
@@ -44,19 +42,13 @@ BEGIN
     SELECT title INTO v_course_title FROM public.courses WHERE id = p_course_id;
     SELECT title INTO v_module_title FROM public.course_modules WHERE id = p_module_id;
     
-    -- Handle NULL block_id for onsite requirements
-    -- If block_id is NULL (like for onsite requirements), use the module_id as a placeholder
-    v_effective_block_id := COALESCE(p_block_id, p_module_id);
-    
     -- Check if a document already exists for this user/module/block combination
+    -- For onsite requirements (NULL block_id), we match on NULL block_id
     SELECT id INTO v_document_id
     FROM public.learner_documents
     WHERE user_id = p_user_id 
       AND module_id = p_module_id 
-      AND (
-          (p_block_id IS NOT NULL AND block_id = p_block_id) OR 
-          (p_block_id IS NULL AND block_id = p_module_id)
-      );
+      AND ((p_block_id IS NULL AND block_id IS NULL) OR (p_block_id IS NOT NULL AND block_id = p_block_id));
     
     IF v_document_id IS NOT NULL THEN
         -- Update existing document
@@ -72,7 +64,7 @@ BEGIN
             updated_at = NOW()
         WHERE id = v_document_id;
     ELSE
-        -- Insert new document
+        -- Insert new document with block_id as NULL for onsite requirements
         INSERT INTO public.learner_documents (
             user_id,
             course_id,
@@ -91,7 +83,7 @@ BEGIN
             p_user_id,
             p_course_id,
             p_module_id,
-            v_effective_block_id,  -- Use the effective block_id (module_id if NULL)
+            p_block_id,  -- Keep NULL if it's NULL (for onsite requirements)
             p_title,
             p_file_path,
             p_file_size,
