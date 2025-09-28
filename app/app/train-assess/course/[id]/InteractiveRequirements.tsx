@@ -1,18 +1,11 @@
 // @ts-nocheck
+
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
-
-/**
- * Changes:
- * - Removed initial `useEffect` fetch; data is passed from the server via props.
- * - Added debounced local save plus a hard 60s flush (configurable).
- * - Preserves existing POST endpoints (/api/requirement-responses, /api/assignment/progress).
- * - Keeps UI/logic intact while cutting an extra round-trip on mount.
- */
 
 interface Requirement {
   id: string;
@@ -21,266 +14,434 @@ interface Requirement {
   label: string | null;
   field_type: string | null;
   options: any;
-  is_required?: boolean;
+  required: boolean | null;
+  help_text: string | null;
 }
 
-type Props = {
+interface InteractiveRequirementsProps {
+  requirements: Requirement[];
   moduleId: string;
+  isCompleted: boolean;
+  sessionType: string;
   assignmentId: string;
-  sessionType: "training" | "assessment" | string;
-  role?: string;
-  requirementDefinitions: Requirement[];
-  initialResponses: Record<string, any>;
-  initialCompleted?: boolean;
-  autosaveDebounceMs?: number;  // default 1200ms
-  autosaveHardFlushMs?: number; // default 60000ms
-};
+  onSave: (moduleId: string, assignmentId: string, responses: Record<string, any>) => Promise<void>;
+}
 
-export default function InteractiveRequirements(props: Props) {
-  const {
-    moduleId,
-    assignmentId,
-    sessionType,
-    role,
-    requirementDefinitions,
-    initialResponses,
-    initialCompleted = false,
-    autosaveDebounceMs = 1200,
-    autosaveHardFlushMs = 60000,
-  } = props;
-
-  const [responses, setResponses] = useState<Record<string, any>>(() => {
-    const start: Record<string, any> = {};
-    for (const r of requirementDefinitions) {
-      start[r.id] = initialResponses[r.id] ?? null;
-    }
-    return start;
-  });
+export default function InteractiveRequirements({
+  requirements,
+  moduleId,
+  isCompleted,
+  sessionType,
+  assignmentId,
+  onSave
+}: InteractiveRequirementsProps) {
+  const [responses, setResponses] = useState<Record<string, any>>({});
+  const [selectedRatings, setSelectedRatings] = useState<Record<string, number>>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // kept for compatibility
-  const [isCompleted, setIsCompleted] = useState(Boolean(initialCompleted));
-  const [touchedSinceSave, setTouchedSinceSave] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const debouncer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hardTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pendingSave = useRef<Promise<any> | null>(null);
-
-  const allRequiredFieldsCompleted = useMemo(() => {
-    return requirementDefinitions.every((r) => {
-      if (!r.is_required) return true;
-      const v = responses[r.id];
-      if (r.field_type === "pass_fail") return v === "pass" || v === "fail";
-      if (r.field_type === "boolean") return v === true || v === false;
-      if (r.field_type === "text" || r.field_type === "select") return v != null && String(v).trim().length > 0;
-      return v != null;
-    });
-  }, [requirementDefinitions, responses]);
-
+  // Load existing responses when component mounts
   useEffect(() => {
-    // Hard flush every autosaveHardFlushMs if there are changes
-    hardTimer.current = setInterval(() => {
-      if (touchedSinceSave) {
-        void doSave(false);
-      }
-    }, autosaveHardFlushMs);
-    return () => {
-      if (hardTimer.current) clearInterval(hardTimer.current);
-    };
-  }, [touchedSinceSave, autosaveHardFlushMs]);
-
-  useEffect(() => {
-    // Flush on unmount / route change
-    return () => {
-      if (debouncer.current) clearTimeout(debouncer.current);
-      if (touchedSinceSave) {
-        // Best-effort sync; we can't await here
-        navigator.sendBeacon?.("/api/requirement-responses", new Blob([JSON.stringify({
-          assignmentId,
-          moduleId,
-          responses,
-        })], { type: "application/json" }));
+    const loadExistingResponses = async () => {
+      try {
+        const response = await fetch(`/api/requirement-responses?moduleId=${moduleId}&assignmentId=${assignmentId}`);
+        if (response.ok) {
+          const data = await response.json();
+          const existingResponses: Record<string, any> = {};
+          const existingRatings: Record<string, number> = {};
+          
+          data.responses?.forEach((resp: any) => {
+            existingResponses[resp.requirement_id] = resp.response_value;
+            if (typeof resp.response_value === 'number' && resp.response_value >= 1 && resp.response_value <= 5) {
+              existingRatings[resp.requirement_id] = resp.response_value;
+            }
+          });
+          
+          setResponses(existingResponses);
+          setSelectedRatings(existingRatings);
+        }
+      } catch (error) {
+        console.error('Failed to load existing responses:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
-  }, [touchedSinceSave, responses, assignmentId, moduleId]);
 
-  function queueSave() {
-    setTouchedSinceSave(true);
-    if (debouncer.current) clearTimeout(debouncer.current);
-    debouncer.current = setTimeout(() => {
-      void doSave(false);
-    }, autosaveDebounceMs);
-  }
+    loadExistingResponses();
+  }, [moduleId, assignmentId]);
 
-  async function doSave(showBusy = true) {
-    if (pendingSave.current) return; // collapse overlapping saves
+  const updateResponse = (requirementId: string, value: any) => {
+    setResponses(prev => ({
+      ...prev,
+      [requirementId]: value
+    }));
+  };
+
+  const updateRating = (requirementId: string, rating: number) => {
+    setSelectedRatings(prev => ({
+      ...prev,
+      [requirementId]: rating
+    }));
+    updateResponse(requirementId, rating);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
     try {
-      if (showBusy) setIsSaving(true);
-      pendingSave.current = fetch("/api/requirement-responses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assignmentId,
-          moduleId,
-          responses,
-        }),
-      });
-      const res = await pendingSave.current;
-      if (!res.ok) {
-        console.error("Save failed", await res.text());
-        return;
+      // Check if there are any file uploads
+      const hasFileUploads = Object.entries(responses).some(
+        ([_, value]) => value instanceof File
+      );
+
+      if (hasFileUploads) {
+        // Use FormData for file uploads
+        const formData = new FormData();
+        formData.append('moduleId', moduleId);
+        formData.append('assignmentId', assignmentId);
+        
+        const regularResponses: Record<string, any> = {};
+        
+        // Separate files from regular responses
+        for (const [reqId, value] of Object.entries(responses)) {
+          if (value instanceof File) {
+            formData.append(`file_${reqId}`, value);
+          } else {
+            regularResponses[reqId] = value;
+          }
+        }
+        
+        formData.append('responses', JSON.stringify(regularResponses));
+        
+        // Save with file uploads
+        const uploadResponse = await fetch('/api/requirement-responses-upload', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!uploadResponse.ok) {
+          const error = await uploadResponse.json();
+          throw new Error(error.error || 'Failed to upload files');
+        }
+      } else {
+        // Save regular responses without files
+        await onSave(moduleId, assignmentId, responses);
       }
-      setTouchedSinceSave(false);
-    } finally {
-      pendingSave.current = null;
-      if (showBusy) setIsSaving(false);
-    }
-  }
-
-  async function handleManualSave() {
-    if (debouncer.current) clearTimeout(debouncer.current);
-    await doSave(true);
-  }
-
-  async function handleCompleteModule() {
-    // Ensure latest edits are saved first
-    if (touchedSinceSave) await doSave(true);
-
-    setIsLoading(true);
-    try {
-      const progressResponse = await fetch("/api/assignment/progress", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      
+      // Mark module as completed and handle progression
+      const progressResponse = await fetch('/api/assignment/progress', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          assignmentId,
-          moduleId,
+          assignmentId: assignmentId,
+          moduleId: moduleId,
           completed: true,
         }),
       });
+
       if (progressResponse.ok) {
-        setIsCompleted(true);
+        const result = await progressResponse.json();
+        console.log('Module completed successfully:', result);
+        
+        // Force a page refresh to show updated progress and handle progression
+        window.location.reload();
       } else {
-        console.error("Complete failed", await progressResponse.text());
+        let errorMessage = 'Failed to complete module. Please try again.';
+        try {
+          const error = await progressResponse.json();
+          errorMessage = error.error || error.message || errorMessage;
+          console.error('Failed to complete module:', {
+            error,
+            status: progressResponse.status,
+            statusText: progressResponse.statusText,
+            assignmentId,
+            moduleId
+          });
+          
+          // Show more specific error messages to users
+          if (error.error === 'Assignment not found') {
+            errorMessage = 'Training assignment not found. Please contact your administrator.';
+          } else if (error.error === 'Database error while fetching assignment') {
+            errorMessage = 'Database error occurred. Please try again or contact support.';
+          }
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError);
+          console.error('Response details:', {
+            status: progressResponse.status,
+            statusText: progressResponse.statusText,
+            assignmentId,
+            moduleId
+          });
+        }
+        alert(errorMessage);
       }
+    } catch (error) {
+      console.error("Failed to save responses:", error);
+      const errorMessage = error instanceof Error ? error.message : "Failed to save responses. Please try again.";
+      alert(errorMessage);
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
-  }
+  };
 
-  // Render helper for fields (kept simple; reuse your real renderers if you have them)
-  function renderField(r: Requirement) {
-    const value = responses[r.id];
-    const onChange = (v: any) => {
-      setResponses((prev) => ({ ...prev, [r.id]: v }));
-      queueSave();
-    };
+  const renderFieldControl = (req: Requirement) => {
+    if (isCompleted) {
+      return (
+        <div className="mt-3 flex items-center gap-2 text-green-600">
+          <CheckCircle className="h-4 w-4" />
+          <span className="text-sm">Completed</span>
+        </div>
+      );
+    }
 
-    switch (r.field_type) {
-      case "pass_fail":
+    switch (req.field_type) {
+      case 'checkbox':
         return (
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant={value === "pass" ? "default" : "outline"}
-              onClick={() => onChange("pass")}
-              size="sm"
-            >
-              Pass
-            </Button>
-            <Button
-              type="button"
-              variant={value === "fail" ? "default" : "outline"}
-              onClick={() => onChange("fail")}
-              size="sm"
-            >
-              Fail
-            </Button>
+          <div className="mt-3">
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id={`req-${req.id}`}
+                checked={responses[req.id] || false}
+                onChange={(e) => updateResponse(req.id, e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor={`req-${req.id}`} className="text-sm text-gray-700">
+                Completed
+              </label>
+            </div>
           </div>
         );
-      case "boolean":
+
+      case 'text':
         return (
-          <div className="flex items-center gap-2">
+          <div className="mt-3">
             <input
-              type="checkbox"
-              checked={!!value}
-              onChange={(e) => onChange(e.target.checked)}
+              type="text"
+              value={responses[req.id] || ''}
+              onChange={(e) => updateResponse(req.id, e.target.value)}
+              placeholder="Enter response..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-            <span className="text-sm">Checked</span>
           </div>
         );
-      case "select":
+
+      case 'select':
         return (
-          <select
-            className="border rounded px-2 py-1 text-sm"
-            value={value ?? ""}
-            onChange={(e) => onChange(e.target.value)}
-          >
-            <option value="" disabled>Select…</option>
-            {(Array.isArray(r.options) ? r.options : []).map((opt: any) => (
-              <option key={String(opt?.value ?? opt)} value={String(opt?.value ?? opt)}>
-                {String(opt?.label ?? opt)}
-              </option>
-            ))}
-          </select>
+          <div className="mt-3">
+            <select 
+              value={responses[req.id] || ''}
+              onChange={(e) => updateResponse(req.id, e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Select an option...</option>
+              {req.options && Array.isArray(req.options) && req.options.map((option, idx) => (
+                <option key={idx} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
         );
-      case "text":
+
+      case 'date':
+        return (
+          <div className="mt-3">
+            <input
+              type="date"
+              value={responses[req.id] || ''}
+              onChange={(e) => updateResponse(req.id, e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        );
+
+      case 'rating':
+        return (
+          <div className="mt-3">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">Rating:</span>
+              {[1, 2, 3, 4, 5].map((rating) => (
+                <button
+                  key={rating}
+                  type="button"
+                  onClick={() => updateRating(req.id, rating)}
+                  className={`transition-colors ${
+                    selectedRatings[req.id] >= rating 
+                      ? 'text-yellow-400' 
+                      : 'text-gray-300 hover:text-yellow-400'
+                  }`}
+                >
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 20 20">
+                    <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
+                  </svg>
+                </button>
+              ))}
+              {selectedRatings[req.id] && (
+                <span className="text-sm text-gray-600 ml-2">
+                  {selectedRatings[req.id]}/5
+                </span>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'pass_fail':
+        return (
+          <div className="mt-3">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => updateResponse(req.id, 'pass')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  responses[req.id] === 'pass'
+                    ? 'bg-green-600 text-white' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Pass ✓
+              </button>
+              <button
+                type="button"
+                onClick={() => updateResponse(req.id, 'fail')}
+                className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                  responses[req.id] === 'fail'
+                    ? 'bg-red-600 text-white' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Fail ✗
+              </button>
+              {responses[req.id] && (
+                <span className={`text-sm font-medium ${
+                  responses[req.id] === 'pass' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {responses[req.id] === 'pass' ? 'Pass selected' : 'Fail selected'}
+                </span>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'file':
+        return (
+          <div className="mt-3">
+            <input
+              type="file"
+              id={`req-file-${req.id}`}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  updateResponse(req.id, file);
+                }
+              }}
+              accept="image/*,.pdf,.doc,.docx"
+              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+            />
+            {responses[req.id] && (
+              <p className="text-sm text-gray-600 mt-2">
+                {responses[req.id] instanceof File 
+                  ? `Selected: ${responses[req.id].name}`
+                  : typeof responses[req.id] === 'string' && responses[req.id].includes('requirement-uploads')
+                  ? '✓ File previously uploaded'
+                  : ''}
+              </p>
+            )}
+            {responses[req.id] && typeof responses[req.id] === 'string' && responses[req.id].includes('requirement-uploads') && (
+              <a 
+                href={`/api/download-requirement-file?path=${encodeURIComponent(responses[req.id])}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block mt-2 text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                View uploaded file
+              </a>
+            )}
+          </div>
+        );
+
       default:
         return (
-          <input
-            type="text"
-            className="border rounded px-2 py-1 text-sm w-full"
-            value={value ?? ""}
-            onChange={(e) => onChange(e.target.value)}
-            onBlur={() => queueSave()}
-          />
+          <div className="mt-3">
+            <input
+              type="text"
+              value={responses[req.id] || ''}
+              onChange={(e) => updateResponse(req.id, e.target.value)}
+              placeholder="Enter response..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
         );
     }
+  };
+
+  if (requirements.length === 0) {
+    return null;
   }
 
-  return (
-    <div className="mt-4">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <Badge variant={isCompleted ? "default" : "secondary"}>
-            {isCompleted ? "Completed" : "In progress"}
-          </Badge>
-          {!allRequiredFieldsCompleted && (
-            <span className="text-xs text-muted-foreground">(Some required fields incomplete)</span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            onClick={handleManualSave}
-            size="sm"
-            disabled={isSaving}
-          >
-            {isSaving ? "Saving…" : "Save progress"}
-          </Button>
-          <Button
-            onClick={handleCompleteModule}
-            size="sm"
-            disabled={isLoading || !allRequiredFieldsCompleted}
-          >
-            {isLoading ? "Completing…" : "Complete module"}
-          </Button>
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <div className="text-center text-muted-foreground">
+          Loading requirements...
         </div>
       </div>
+    );
+  }
 
+  const allRequiredFieldsCompleted = requirements
+    .filter(req => req.required)
+    .every(req => {
+      const response = responses[req.id];
+      if (req.field_type === 'checkbox') return response === true;
+      if (req.field_type === 'pass_fail') return response === 'pass' || response === 'fail';
+      return response !== undefined && response !== null && response !== '';
+    });
+
+  return (
+    <div className="p-4">
+      <h4 className="text-sm font-medium text-muted-foreground mb-3">
+        {sessionType === 'training' ? 'Training Requirements' : 'Assessment Requirements'}
+      </h4>
       <div className="space-y-4">
-        {requirementDefinitions.map((r) => (
-          <div key={r.id} className="p-3 rounded border">
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="font-medium text-sm">{r.label ?? "Requirement"}</div>
-                <div className="text-xs text-muted-foreground">
-                  {r.field_type}{r.is_required ? " • required" : ""}
+        {requirements.map((req) => (
+          <div key={req.id} className="p-4 rounded-lg bg-muted/50 border">
+            <div className="flex items-start gap-3 mb-1">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{req.label}</p>
+                {req.help_text && (
+                  <p className="text-xs text-muted-foreground mt-1">{req.help_text}</p>
+                )}
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant="outline" className="text-xs">
+                    {req.field_type}
+                  </Badge>
+                  {req.required && (
+                    <Badge variant="outline" className="text-xs text-red-600 border-red-200">
+                      Required
+                    </Badge>
+                  )}
                 </div>
               </div>
-              <div>{renderField(r)}</div>
             </div>
+            
+            {renderFieldControl(req)}
           </div>
         ))}
       </div>
+      
+      {!isCompleted && (
+        <div className="mt-4 flex justify-end">
+          <Button 
+            onClick={handleSave}
+            disabled={isSaving || isLoading || !allRequiredFieldsCompleted}
+            className="min-w-[120px]"
+          >
+            {isSaving ? 'Saving...' : 'Save Progress'}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

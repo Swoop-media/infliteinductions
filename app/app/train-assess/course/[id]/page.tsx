@@ -22,10 +22,11 @@ import CompleteCourseButton from "./CompleteCourseButton";
  * - No API/permission changes. All endpoints called by the client still exist.
  */
 
-type PageParams = { params: { id: string; }; searchParams?: Record<string, string | string[]> };
+type PageParams = { params: Promise<{ id: string; }>; searchParams?: Promise<Record<string, string | string[]>> };
 
 export default async function CoursePage({ params }: PageParams) {
-  const courseId = params.id;
+  const resolvedParams = await params;
+  const courseId = resolvedParams.id;
 
   const supabase = await createSupabaseServer();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
