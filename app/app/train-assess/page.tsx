@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { User, Calendar, BookOpen, ClipboardCheck, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { formatDateConsistent } from "@/lib/utils";
 
 interface PendingTrainingItem {
   id: string;
@@ -28,14 +29,12 @@ export default async function TrainAssessPage() {
     redirect("/auth/login");
   }
 
-
   // Get user's role assignments for training and assessment
   const { data: trainerAssignments, error: trainerError } = await supabase
     .from("course_assignments")
     .select("course_id, role")
     .eq("user_id", user.id)
     .in("role", ["onsite_trainer", "onsite_assessor"]);
-
 
   // Build separate Sets for courses where user is trainer vs assessor
   const trainerCourseIds = new Set(
@@ -50,89 +49,127 @@ export default async function TrainAssessPage() {
   let pendingAssessmentItems: PendingTrainingItem[] = [];
 
   if (allCourseIds.length > 0) {
-    // Get trainee assignments for courses where this user is a trainer/assessor
-    // Use service role client to bypass RLS and see all trainees
+    // Use service role client to bypass RLS
     const supabaseService = supabaseAdmin();
-    const { data: traineeAssignments, error: traineeError } = await supabaseService
+
+    // OPTIMIZATION: Fetch ALL data upfront with efficient queries instead of N+1 queries in loop
+    
+    // 1. Get all trainee assignments with profile and course info in ONE query
+    const { data: traineeAssignments } = await supabaseService
       .from("course_assignments")
       .select(`
         id,
         user_id,
         course_id,
-        created_at
+        created_at,
+        profiles!inner (
+          id,
+          full_name,
+          email
+        ),
+        courses!inner (
+          id,
+          title
+        )
       `)
       .eq("role", "trainee")
       .in("course_id", allCourseIds);
 
+    if (!traineeAssignments || traineeAssignments.length === 0) {
+      return renderPage(pendingTrainingItems, pendingAssessmentItems);
+    }
 
-    if (traineeAssignments) {
-      for (const assignment of traineeAssignments) {
-        const courseId = assignment.course_id;
-        const traineeId = assignment.user_id;
-        const assignmentId = assignment.id;
-        
-        // Get all modules for this course
-        const { data: allModules } = await supabase
-          .from("course_modules")
-          .select("id, type, title")
-          .eq("course_id", courseId)
-          .order("order_index");
+    // 2. Get ALL modules for ALL relevant courses in ONE query
+    const { data: allCourseModules } = await supabaseService
+      .from("course_modules")
+      .select("id, course_id, type, title, order_index")
+      .in("course_id", allCourseIds)
+      .order("course_id", { ascending: true })
+      .order("order_index", { ascending: true });
 
+    // Group modules by course for easy lookup
+    const modulesByCourse = new Map<string, any[]>();
+    allCourseModules?.forEach(module => {
+      const courseModules = modulesByCourse.get(module.course_id) || [];
+      courseModules.push(module);
+      modulesByCourse.set(module.course_id, courseModules);
+    });
 
-        if (!allModules || allModules.length === 0) {
-          continue;
-        }
+    // 3. Get ALL progress for ALL assignments in ONE query
+    const assignmentIds = traineeAssignments.map(a => a.id);
+    const { data: allProgress } = await supabaseService
+      .from("assignment_progress")
+      .select("assignment_id, module_id")
+      .in("assignment_id", assignmentIds);
 
-        const digitalModules = allModules.filter(m =>
-          m.type === "digital_training" || m.type === "digital_assessment_quiz"
-        );
-        const onsiteTrainingModules = allModules.filter(m => m.type === "onsite_training");
-        const onsiteAssessmentModules = allModules.filter(m => m.type === "onsite_assessment");
+    // Group progress by assignment for easy lookup
+    const progressByAssignment = new Map<string, Set<string>>();
+    allProgress?.forEach(progress => {
+      const moduleSet = progressByAssignment.get(progress.assignment_id) || new Set();
+      moduleSet.add(progress.module_id);
+      progressByAssignment.set(progress.assignment_id, moduleSet);
+    });
 
-        // Get trainee's progress
-        const { data: progress } = await supabase
-          .from("assignment_progress")
-          .select("module_id")
-          .eq("assignment_id", assignmentId);
+    // Now process each assignment using the pre-fetched data (no additional queries!)
+    for (const assignment of traineeAssignments) {
+      const courseId = assignment.course_id;
+      const traineeId = assignment.user_id;
+      const assignmentId = assignment.id;
+      
+      // Use pre-fetched data instead of making queries
+      const courseModules = modulesByCourse.get(courseId) || [];
+      if (courseModules.length === 0) continue;
 
-        const completedModuleIds = new Set(progress?.map(p => p.module_id) || []);
+      const digitalModules = courseModules.filter(m =>
+        m.type === "digital_training" || m.type === "digital_assessment_quiz"
+      );
+      const onsiteTrainingModules = courseModules.filter(m => m.type === "onsite_training");
+      const onsiteAssessmentModules = courseModules.filter(m => m.type === "onsite_assessment");
 
-        // Check if all digital modules are complete (or if there are no digital modules)
-        const allDigitalComplete = digitalModules.length === 0 || 
-          digitalModules.every(m => completedModuleIds.has(m.id));
+      // Use pre-fetched progress
+      const completedModuleIds = progressByAssignment.get(assignmentId) || new Set();
 
-        // Check if onsite training is complete
-        const onsiteTrainingComplete = onsiteTrainingModules.length > 0 && 
-          onsiteTrainingModules.every(m => completedModuleIds.has(m.id));
-        
-        // Check if training stage is done or not required (for courses with only assessment)
-        // For courses without training modules, require digital modules to be complete first
-        const trainingStageComplete = onsiteTrainingModules.length === 0 
-          ? allDigitalComplete 
-          : onsiteTrainingComplete;
+      // Check if all digital modules are complete (or if there are no digital modules)
+      const allDigitalComplete = digitalModules.length === 0 || 
+        digitalModules.every(m => completedModuleIds.has(m.id));
 
-        // Get trainee profile separately
-        const { data: traineeProfile } = await supabase
-          .from("profiles")
-          .select("full_name, email")
-          .eq("id", traineeId)
-          .maybeSingle();
+      // Check if onsite training is complete
+      const onsiteTrainingComplete = onsiteTrainingModules.length > 0 && 
+        onsiteTrainingModules.every(m => completedModuleIds.has(m.id));
+      
+      // Check if training stage is done or not required (for courses with only assessment)
+      const trainingStageComplete = onsiteTrainingModules.length === 0 
+        ? allDigitalComplete 
+        : onsiteTrainingComplete;
 
-        // Get course info separately
-        const { data: courseInfo } = await supabase
-          .from("courses")
-          .select("title")
-          .eq("id", courseId)
-          .maybeSingle();
+      // Use pre-fetched profile and course data
+      const traineeProfile = assignment.profiles;
+      const courseInfo = assignment.courses;
+      
+      const traineeName = traineeProfile?.full_name || traineeProfile?.email || "Unknown";
+      const traineeEmail = traineeProfile?.email || "";
+      const courseTitle = courseInfo?.title || "Unknown Course";
 
-        const traineeName = traineeProfile?.full_name || traineeProfile?.email || "Unknown";
-        const traineeEmail = traineeProfile?.email || "";
-        const courseTitle = courseInfo?.title || "Unknown Course";
+      // Add to pending training if digital complete but onsite training not done
+      if (allDigitalComplete && onsiteTrainingModules.length > 0 && !onsiteTrainingComplete && trainerCourseIds.has(courseId)) {
+        const trainingItem = {
+          id: assignmentId,
+          trainee_name: traineeName,
+          trainee_email: traineeEmail,
+          course_title: courseTitle,
+          course_id: courseId,
+          assignment_id: assignmentId,
+          created_at: assignment.created_at,
+          type: 'training' as const
+        };
+        pendingTrainingItems.push(trainingItem);
+      }
 
-        // Add to pending training if digital complete but onsite training not done
-        // AND if current user is assigned as onsite_trainer for this specific course
-        if (allDigitalComplete && onsiteTrainingModules.length > 0 && !onsiteTrainingComplete && trainerCourseIds.has(courseId)) {
-          const trainingItem = {
+      // Add to pending assessment if training stage is complete but assessment not done
+      if (trainingStageComplete && onsiteAssessmentModules.length > 0 && assessorCourseIds.has(courseId)) {
+        const onsiteAssessmentComplete = onsiteAssessmentModules.every(m => completedModuleIds.has(m.id));
+        if (!onsiteAssessmentComplete) {
+          pendingAssessmentItems.push({
             id: assignmentId,
             trainee_name: traineeName,
             trainee_email: traineeEmail,
@@ -140,33 +177,18 @@ export default async function TrainAssessPage() {
             course_id: courseId,
             assignment_id: assignmentId,
             created_at: assignment.created_at,
-            type: 'training'
-          };
-          pendingTrainingItems.push(trainingItem);
-        }
-
-        // Add to pending assessment if training stage is complete (or not required) but assessment not done
-        // AND if current user is assigned as onsite_assessor for this specific course
-        if (trainingStageComplete && onsiteAssessmentModules.length > 0 && assessorCourseIds.has(courseId)) {
-          const onsiteAssessmentComplete = onsiteAssessmentModules.every(m => completedModuleIds.has(m.id));
-          if (!onsiteAssessmentComplete) {
-            pendingAssessmentItems.push({
-              id: assignmentId,
-              trainee_name: traineeName,
-              trainee_email: traineeEmail,
-              course_title: courseTitle,
-              course_id: courseId,
-              assignment_id: assignmentId,
-              created_at: assignment.created_at,
-              type: 'assessment'
-            });
-          }
+            type: 'assessment' as const
+          });
         }
       }
     }
   }
 
+  return renderPage(pendingTrainingItems, pendingAssessmentItems);
+}
 
+// Extracted rendering logic to keep it clean
+function renderPage(pendingTrainingItems: PendingTrainingItem[], pendingAssessmentItems: PendingTrainingItem[]) {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="space-y-2">
@@ -210,7 +232,7 @@ export default async function TrainAssessPage() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
-                        Ready since {new Date(item.created_at).toLocaleDateString()}
+                        Ready since {formatDateConsistent(item.created_at)}
                       </span>
                     </div>
                   </div>
@@ -263,7 +285,7 @@ export default async function TrainAssessPage() {
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">
-                        Ready since {new Date(item.created_at).toLocaleDateString()}
+                        Ready since {formatDateConsistent(item.created_at)}
                       </span>
                     </div>
                   </div>
