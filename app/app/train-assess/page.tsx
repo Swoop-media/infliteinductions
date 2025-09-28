@@ -52,25 +52,16 @@ export default async function TrainAssessPage() {
     // Use service role client to bypass RLS
     const supabaseService = supabaseAdmin();
 
-    // OPTIMIZATION: Fetch ALL data upfront with efficient queries instead of N+1 queries in loop
+    // OPTIMIZATION: Fetch data in batches instead of in loops
     
-    // 1. Get all trainee assignments with profile and course info in ONE query
+    // 1. Get all trainee assignments for relevant courses
     const { data: traineeAssignments } = await supabaseService
       .from("course_assignments")
       .select(`
         id,
         user_id,
         course_id,
-        created_at,
-        profiles!inner (
-          id,
-          full_name,
-          email
-        ),
-        courses!inner (
-          id,
-          title
-        )
+        created_at
       `)
       .eq("role", "trainee")
       .in("course_id", allCourseIds);
@@ -110,6 +101,31 @@ export default async function TrainAssessPage() {
       progressByAssignment.set(progress.assignment_id, moduleSet);
     });
 
+    // 4. Get ALL profiles for ALL trainees in ONE query
+    const traineeUserIds = [...new Set(traineeAssignments.map(a => a.user_id))];
+    const { data: allProfiles } = await supabaseService
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", traineeUserIds);
+
+    // Create lookup map for profiles
+    const profilesMap = new Map<string, any>();
+    allProfiles?.forEach(profile => {
+      profilesMap.set(profile.id, profile);
+    });
+
+    // 5. Get ALL courses info in ONE query
+    const { data: allCourses } = await supabaseService
+      .from("courses")
+      .select("id, title")
+      .in("id", allCourseIds);
+
+    // Create lookup map for courses
+    const coursesMap = new Map<string, any>();
+    allCourses?.forEach(course => {
+      coursesMap.set(course.id, course);
+    });
+
     // Now process each assignment using the pre-fetched data (no additional queries!)
     for (const assignment of traineeAssignments) {
       const courseId = assignment.course_id;
@@ -142,9 +158,9 @@ export default async function TrainAssessPage() {
         ? allDigitalComplete 
         : onsiteTrainingComplete;
 
-      // Use pre-fetched profile and course data
-      const traineeProfile = assignment.profiles;
-      const courseInfo = assignment.courses;
+      // Use pre-fetched profile and course data from maps
+      const traineeProfile = profilesMap.get(traineeId);
+      const courseInfo = coursesMap.get(courseId);
       
       const traineeName = traineeProfile?.full_name || traineeProfile?.email || "Unknown";
       const traineeEmail = traineeProfile?.email || "";
