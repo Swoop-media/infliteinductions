@@ -82,18 +82,15 @@ async function loadAssignmentDetails(assignmentId: string) {
   // Get course assignment IDs for various queries
   const courseAssignmentIds = (courseAssignments || []).map(ca => ca.id);
   
-  // Fetch learner documents for this user's course assignments in this authorization
+  // Fetch learner documents ONLY for courses in this authorization
   let documentsQuery = supabase
     .from("learner_documents")
-    .select("*");
+    .select("*")
+    .eq("user_id", assignment.user_id);
   
-  // Build query based on available IDs
-  if (courseAssignmentIds.length > 0) {
-    // Get documents by user_id OR assignment_id in the course assignments
-    documentsQuery = documentsQuery.or(`user_id.eq.${assignment.user_id},assignment_id.in.(${courseAssignmentIds.join(',')})`);
-  } else {
-    // Fallback to just user_id if no course assignments
-    documentsQuery = documentsQuery.eq("user_id", assignment.user_id);
+  // Filter to only documents from courses in this authorization
+  if (courseIds.length > 0) {
+    documentsQuery = documentsQuery.in("course_id", courseIds);
   }
   
   const { data: documents } = await documentsQuery.order("created_at", { ascending: false });
@@ -135,15 +132,31 @@ async function loadAssignmentDetails(assignmentId: string) {
       assignment_id,
       module_id,
       requirement_id,
-      response_text,
-      response_date,
+      response_value,
+      created_at,
       trainer_id,
       onsite_requirements!inner(
         label,
-        role
+        role,
+        field_type
       )
     `)
     .in("assignment_id", courseAssignmentIds);
+  
+  // Also fetch all onsite requirements for modules (to show unfilled requirements)
+  const { data: allOnsiteRequirements } = await supabase
+    .from("onsite_requirements")
+    .select(`
+      id,
+      module_id,
+      label,
+      role,
+      field_type,
+      required,
+      order_index
+    `)
+    .in("module_id", modules?.map(m => m.id) || [])
+    .order("order_index", { ascending: true });
 
   // Get unique trainer IDs from requirement responses
   const trainerIds = [...new Set(requirementResponses?.map(rr => rr.trainer_id).filter(Boolean) || [])];
@@ -189,15 +202,58 @@ async function loadAssignmentDetails(assignmentId: string) {
         created_at: qa.created_at
       }));
 
-      // Get onsite responses for this module
-      const moduleOnsiteResponses = requirementResponses?.filter(
+      // Get all requirements for this module
+      const moduleRequirements = allOnsiteRequirements?.filter(
+        req => req.module_id === module.id
+      ) || [];
+      
+      // Get responses for this module
+      const moduleResponses = requirementResponses?.filter(
         rr => rr.module_id === module.id
-      ).map(rr => ({
-        requirement_label: (rr.onsite_requirements as any)?.label || "Requirement",
-        response_text: rr.response_text,
-        response_date: rr.response_date,
-        assessor_name: rr.trainer_id ? trainerProfilesMap.get(rr.trainer_id) || null : null
-      }));
+      ) || [];
+      
+      // Map requirements with their responses
+      const moduleOnsiteResponses = moduleRequirements.map(req => {
+        const response = moduleResponses.find(r => r.requirement_id === req.id);
+        
+        let responseText = '';
+        let trainerName = null;
+        let responseDate = null;
+        
+        if (response) {
+          trainerName = response.trainer_id ? trainerProfilesMap.get(response.trainer_id) || 'Unknown Trainer' : null;
+          responseDate = response.created_at;
+          
+          // Extract the response value based on field type
+          if (response.response_value) {
+            if (typeof response.response_value === 'string') {
+              responseText = response.response_value;
+            } else if (typeof response.response_value === 'object') {
+              // Handle different field types
+              if (req.field_type === 'text' || req.field_type === 'textarea') {
+                responseText = (response.response_value as any).value || (response.response_value as any).text || JSON.stringify(response.response_value);
+              } else if (req.field_type === 'checkbox') {
+                responseText = (response.response_value as any).checked ? 'Yes' : 'No';
+              } else if (req.field_type === 'radio' || req.field_type === 'select') {
+                responseText = (response.response_value as any).value || JSON.stringify(response.response_value);
+              } else {
+                responseText = JSON.stringify(response.response_value);
+              }
+            }
+          }
+        }
+        
+        return {
+          requirement_id: req.id,
+          requirement_label: req.label || "Requirement",
+          response_text: responseText,
+          response_date: responseDate,
+          trainer_name: trainerName,
+          field_type: req.field_type || 'text',
+          required: req.required,
+          has_response: !!response
+        };
+      });
 
       // Get documents uploaded for this module or course
       const moduleDocuments = documents?.filter(
@@ -214,6 +270,7 @@ async function loadAssignmentDetails(assignmentId: string) {
         completed: isCompleted,
         quiz_attempts: moduleQuizAttempts,
         onsite_responses: moduleOnsiteResponses,
+        has_onsite_requirements: moduleOnsiteResponses.length > 0,
         documents: moduleDocuments
       };
     });

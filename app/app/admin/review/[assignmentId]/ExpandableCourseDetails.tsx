@@ -48,11 +48,16 @@ interface ModuleProgress {
     created_at: string;
   }>;
   onsite_responses?: Array<{
+    requirement_id: string;
     requirement_label: string;
     response_text: string;
-    response_date: string;
-    assessor_name?: string;
+    response_date: string | null;
+    trainer_name?: string | null;
+    field_type?: string;
+    required?: boolean;
+    has_response?: boolean;
   }>;
+  has_onsite_requirements?: boolean;
   documents?: Array<{
     document_title: string;
     uploaded_at: string;
@@ -209,23 +214,63 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                   <p className="text-sm font-medium text-gray-700">
                                     {module.module_type === "onsite_training" ? "Training Requirements:" : "Assessment Requirements:"}
                                   </p>
-                                  {module.onsite_responses.map((response, idx) => (
-                                    <div key={idx} className="bg-gray-50 rounded p-2 text-sm">
-                                      <div className="font-medium text-gray-700">{response.requirement_label}</div>
-                                      <div className="text-gray-600 mt-1">{response.response_text || "No response provided"}</div>
-                                      {response.assessor_name && (
-                                        <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                                          <User className="w-3 h-3" />
-                                          <span>Assessed by {response.assessor_name}</span>
+                                  <div className="space-y-3">
+                                    {module.onsite_responses.map((response) => (
+                                      <div 
+                                        key={response.requirement_id} 
+                                        className={`rounded-lg p-3 border ${
+                                          response.has_response 
+                                            ? 'bg-green-50 border-green-200' 
+                                            : 'bg-gray-50 border-gray-200'
+                                        }`}
+                                      >
+                                        <div className="space-y-2">
+                                          {/* Requirement Label with Required indicator */}
+                                          <div className="flex items-start justify-between">
+                                            <span className="text-sm font-semibold text-gray-700">
+                                              {response.requirement_label}
+                                              {response.required && <span className="text-red-500 ml-1">*</span>}
+                                            </span>
+                                            {response.has_response && (
+                                              <CheckCircle className="w-4 h-4 text-green-600" />
+                                            )}
+                                          </div>
+                                          
+                                          {/* Response Value */}
+                                          {response.has_response ? (
+                                            <>
+                                              <div className="bg-white p-2 rounded border border-gray-100">
+                                                <span className="text-sm text-gray-800">
+                                                  {response.response_text || <span className="italic text-gray-400">No text response</span>}
+                                                </span>
+                                              </div>
+                                              
+                                              {/* Trainer/Assessor Info and Date */}
+                                              <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-gray-200">
+                                                {response.trainer_name && (
+                                                  <div className="flex items-center gap-1.5">
+                                                    <User className="w-3.5 h-3.5 text-gray-500" />
+                                                    <span className="text-xs text-gray-600 font-medium">
+                                                      {module.module_type === "onsite_training" ? "Trainer:" : "Assessor:"} {response.trainer_name}
+                                                    </span>
+                                                  </div>
+                                                )}
+                                                {response.response_date && (
+                                                  <div className="text-xs text-gray-500">
+                                                    Completed: {formatDateSafe(response.response_date)}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </>
+                                          ) : (
+                                            <div className="text-sm text-gray-500 italic">
+                                              Not yet completed
+                                            </div>
+                                          )}
                                         </div>
-                                      )}
-                                      {response.response_date && (
-                                        <div className="text-xs text-gray-500">
-                                          {formatDateSafe(response.response_date)}
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
+                                      </div>
+                                    ))}
+                                  </div>
                                 </>
                               ) : module.completed ? (
                                 <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm">
@@ -236,7 +281,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                         {module.module_type === "onsite_training" ? "Onsite Training Completed" : "Onsite Assessment Completed"}
                                       </p>
                                       <p className="text-yellow-700 text-xs mt-1">
-                                        Module marked as completed but detailed assessment responses are not available in the system.
+                                        Module marked as completed but detailed requirement responses are not available in the system.
                                       </p>
                                     </div>
                                   </div>
