@@ -2,6 +2,9 @@
 // app/layout.tsx
 import "./globals.css";
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import NavigationProgress from "@/components/NavigationProgress";
+import LoadingSpinner from "@/components/LoadingSpinner";
 
 export const metadata: Metadata = {
   title: "INFLITE Induction & Training",
@@ -11,7 +14,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gray-50 text-gray-900">{children}</body>
+      <body className="min-h-screen bg-gray-50 text-gray-900">
+        <Suspense fallback={null}>
+          <NavigationProgress />
+        </Suspense>
+        <Suspense fallback={<LoadingSpinner fullScreen={true} message="Loading application..." />}>
+          {children}
+        </Suspense>
+      </body>
     </html>
   );
 }
