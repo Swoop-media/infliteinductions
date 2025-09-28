@@ -162,7 +162,43 @@ export async function POST(
             if (authUpdateError) {
               console.error("Error updating authorization status:", authUpdateError);
             } else {
-              console.log(`Authorization ${authId} updated to pending_approval for user ${assignment.user_id}`);
+              console.log(`✅ Authorization ${authId} updated to pending_approval for user ${assignment.user_id}`);
+              
+              // Send notification about authorization pending approval
+              try {
+                // Get authorization details
+                const { data: authDetails } = await supabase
+                  .from("authorisations")
+                  .select("title")
+                  .eq("id", authId)
+                  .single();
+                
+                // Get user profile
+                const { data: userProfile } = await supabase
+                  .from("profiles")
+                  .select("full_name, email")
+                  .eq("id", assignment.user_id)
+                  .single();
+                
+                if (authDetails && userProfile) {
+                  const { notifyRole } = await import("@/lib/notifications/dispatcher");
+                  await notifyRole(
+                    "Authorization Approver",
+                    "authorisation_pending_approval",
+                    {
+                      authorizationTitle: authDetails.title,
+                      learnerName: userProfile.full_name || userProfile.email,
+                      learner_email: userProfile.email,
+                      assignmentId: existingAuth.id,
+                      url: `/app/admin/review/${existingAuth.id}`
+                    }
+                  );
+                  console.log("📧 Notification sent for pending authorization approval");
+                }
+              } catch (notifyError) {
+                console.error("Failed to send notification:", notifyError);
+                // Don't fail the update if notification fails
+              }
             }
           } else {
             console.log(`Authorization already in status: ${existingAuth?.assignment_status}`);
