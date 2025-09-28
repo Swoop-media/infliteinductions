@@ -37,6 +37,7 @@ export default function InteractiveRequirements({
 }: InteractiveRequirementsProps) {
   const [responses, setResponses] = useState<Record<string, any>>({});
   const [selectedRatings, setSelectedRatings] = useState<Record<string, number>>({});
+  const [fileDueDates, setFileDueDates] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -105,6 +106,10 @@ export default function InteractiveRequirements({
         for (const [reqId, value] of Object.entries(responses)) {
           if (value instanceof File) {
             formData.append(`file_${reqId}`, value);
+            // Add due date if provided
+            if (fileDueDates[reqId]) {
+              formData.append(`dueDate_${reqId}`, fileDueDates[reqId]);
+            }
           } else {
             regularResponses[reqId] = value;
           }
@@ -327,27 +332,55 @@ export default function InteractiveRequirements({
       case 'file':
         return (
           <div className="mt-3">
-            <input
-              type="file"
-              id={`req-file-${req.id}`}
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  updateResponse(req.id, file);
-                }
-              }}
-              accept="image/*,.pdf,.doc,.docx"
-              className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-            {responses[req.id] && (
-              <p className="text-sm text-gray-600 mt-2">
-                {responses[req.id] instanceof File 
-                  ? `Selected: ${responses[req.id].name}`
-                  : typeof responses[req.id] === 'string' && responses[req.id].includes('requirement-uploads')
-                  ? '✓ File previously uploaded'
-                  : ''}
-              </p>
-            )}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Upload Document
+                </label>
+                <input
+                  type="file"
+                  id={`req-file-${req.id}`}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      updateResponse(req.id, file);
+                    }
+                  }}
+                  accept="image/*,.pdf,.doc,.docx"
+                  className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                {responses[req.id] && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    {responses[req.id] instanceof File 
+                      ? `Selected: ${responses[req.id].name}`
+                      : typeof responses[req.id] === 'string' && responses[req.id].includes('requirement-uploads')
+                      ? '✓ File previously uploaded'
+                      : ''}
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <label htmlFor={`due-date-${req.id}`} className="block text-sm font-medium text-gray-700 mb-1">
+                  Document Expiry Date (Optional)
+                </label>
+                <input
+                  type="date"
+                  id={`due-date-${req.id}`}
+                  value={fileDueDates[req.id] || ''}
+                  onChange={(e) => setFileDueDates(prev => ({
+                    ...prev,
+                    [req.id]: e.target.value
+                  }))}
+                  min={new Date().toISOString().split('T')[0]}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Leave blank if no expiry date is required
+                </p>
+              </div>
+            </div>
+            
             {responses[req.id] && typeof responses[req.id] === 'string' && responses[req.id].includes('requirement-uploads') && (
               <a 
                 href={`/api/download-requirement-file?path=${encodeURIComponent(responses[req.id])}`}

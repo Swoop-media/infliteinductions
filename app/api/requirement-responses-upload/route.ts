@@ -75,6 +75,15 @@ export async function POST(request: NextRequest) {
     
     const moduleTitle = moduleData?.title || "Unknown Module";
     
+    // Store due dates from form
+    const dueDates: Record<string, string> = {};
+    for (const [key, value] of formData.entries()) {
+      if (key.startsWith('dueDate_')) {
+        const requirementId = key.replace('dueDate_', '');
+        dueDates[requirementId] = value as string;
+      }
+    }
+    
     for (const [key, value] of formData.entries()) {
       if (key.startsWith('file_')) {
         const requirementId = key.replace('file_', '');
@@ -117,7 +126,8 @@ export async function POST(request: NextRequest) {
               file_type: file.type,
               course_title: courseTitle,
               module_title: moduleTitle,
-              created_at: new Date().toISOString()
+              created_at: new Date().toISOString(),
+              expires_on: dueDates[requirementId] || null  // Use due date if provided, otherwise null
             };
             console.log('Preparing learner document entry:', docEntry);
             learnerDocumentEntries.push(docEntry);
@@ -188,7 +198,7 @@ export async function POST(request: NextRequest) {
               p_file_path: docEntry.file_path,
               p_file_size: docEntry.file_size,
               p_file_type: docEntry.file_type,
-              p_expires_on: null,  // No expiry for onsite requirements
+              p_expires_on: docEntry.expires_on || null,  // Use provided due date or null
               p_assignment_id: assignmentId
             });
           
