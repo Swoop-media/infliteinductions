@@ -1,0 +1,75 @@
+ GET /app/notifications/list 200 in 1586ms
+ ✓ Compiled /api/requirement-responses-upload in 494ms (1029 modules)
+=== REQUIREMENT UPLOAD ENDPOINT CALLED ===
+Authenticated user (trainer/assessor): 1b44c8f5-95aa-4f8c-8110-8f36106b4d10
+Request data: {
+  moduleId: '38441663-a917-4ea0-9b63-a7cb7266e4dd',
+  assignmentId: '65e5b0ec-7242-4ae7-98c8-be269b73b431',
+  hasResponses: true
+}
+Assignment query result: {
+  assignmentData: {
+    user_id: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551',
+    course_id: 'c6cc6439-3993-4c04-8b4c-f29562f651f5',
+    role: 'trainee',
+    courses: { title: 'test course for debugging' }
+  },
+  assignmentError: null,
+  assignmentId: '65e5b0ec-7242-4ae7-98c8-be269b73b431'
+}
+Trainee info: {
+  traineeUserId: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551',
+  role: 'trainee',
+  courseTitle: 'test course for debugging'
+}
+Preparing learner document entry: {
+  user_id: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551',
+  title: 'Skydive Franz ERP.pdf',
+  file_path: 'requirement-uploads/65e5b0ec-7242-4ae7-98c8-be269b73b431/ba67a3f2-d888-4be0-9853-04af8a73e463/546eab7a-7a74-420f-b6d5-f08fde2eb421.pdf',
+  file_size: 558792,
+  file_type: 'application/pdf',
+  course_title: 'test course for debugging',
+  module_title: 'Onsite Training',
+  created_at: '2025-09-28T19:15:54.521Z'
+}
+Attempting to insert learner documents: [
+  {
+    user_id: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551',
+    title: 'Skydive Franz ERP.pdf',
+    file_path: 'requirement-uploads/65e5b0ec-7242-4ae7-98c8-be269b73b431/ba67a3f2-d888-4be0-9853-04af8a73e463/546eab7a-7a74-420f-b6d5-f08fde2eb421.pdf',
+    file_size: 558792,
+    file_type: 'application/pdf',
+    course_title: 'test course for debugging',
+    module_title: 'Onsite Training',
+    created_at: '2025-09-28T19:15:54.521Z'
+  }
+]
+ GET /app/notifications/list 200 in 1074ms
+Error saving learner document via RPC: {
+  code: 'PGRST203',
+  details: null,
+  hint: 'Try renaming the parameters or the function itself in the database so function overloading can be resolved',
+  message: 'Could not choose the best candidate function between: public.upsert_learner_document(p_user_id => uuid, p_course_id => uuid, p_module_id => uuid, p_block_id => uuid, p_title => character varying, p_file_path => text, p_file_size => bigint, p_file_type => character varying, p_expires_on => text, p_assignment_id => uuid), public.upsert_learner_document(p_user_id => uuid, p_course_id => uuid, p_module_id => uuid, p_block_id => uuid, p_title => text, p_file_path => text, p_file_size => bigint, p_file_type => text, p_expires_on => text, p_assignment_id => uuid)'
+}
+Error details: {
+  "code": "PGRST203",
+  "details": null,
+  "hint": "Try renaming the parameters or the function itself in the database so function overloading can be resolved",
+  "message": "Could not choose the best candidate function between: public.upsert_learner_document(p_user_id => uuid, p_course_id => uuid, p_module_id => uuid, p_block_id => uuid, p_title => character varying, p_file_path => text, p_file_size => bigint, p_file_type => character varying, p_expires_on => text, p_assignment_id => uuid), public.upsert_learner_document(p_user_id => uuid, p_course_id => uuid, p_module_id => uuid, p_block_id => uuid, p_title => text, p_file_path => text, p_file_size => bigint, p_file_type => text, p_expires_on => text, p_assignment_id => uuid)"
+}
+ POST /api/requirement-responses-upload 200 in 6767ms
+ ○ Compiling /api/assignment/progress ...
+ ✓ Compiled /api/assignment/progress in 1789ms (1031 modules)
+Assignment progress request: {
+  userId: '1b44c8f5-95aa-4f8c-8110-8f36106b4d10',
+  assignmentId: '65e5b0ec-7242-4ae7-98c8-be269b73b431',
+  moduleId: '38441663-a917-4ea0-9b63-a7cb7266e4dd',
+  completed: true
+}
+Assignment verification: {
+  assignment: {
+    id: '65e5b0ec-7242-4ae7-98c8-be269b73b431',
+    course_id: 'c6cc6439-3993-4c04-8b4c-f29562f651f5',
+    user_id: 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551'
+  },
+  error: undefined
