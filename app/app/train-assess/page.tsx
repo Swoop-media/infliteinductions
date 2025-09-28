@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { User, Calendar, BookOpen, ClipboardCheck, ArrowRight } from "lucide-react";
 import Link from "next/link";
-import TrainAssessButton from "@/components/TrainAssessButton";
 
 interface PendingTrainingItem {
   id: string;
@@ -215,10 +214,14 @@ export default async function TrainAssessPage() {
                       </span>
                     </div>
                   </div>
-                  <TrainAssessButton 
-                    href={`/app/train-assess/course/${item.course_id}?trainee=${item.assignment_id}&type=training`}
-                    type="training"
-                  />
+                  <Link 
+                      href={`/app/train-assess/course/${item.course_id}?trainee=${item.assignment_id}&type=training`}
+                    >
+                      <Button size="sm">
+                        Start Training
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </Link>
                 </div>
               ))}
             </div>
@@ -264,11 +267,12 @@ export default async function TrainAssessPage() {
                       </span>
                     </div>
                   </div>
-                  <TrainAssessButton 
-                    href={`/app/train-assess/course/${item.course_id}?trainee=${item.assignment_id}&type=assessment`}
-                    variant="outline"
-                    type="assessment"
-                  />
+                  <Link href={`/app/train-assess/course/${item.course_id}?trainee=${item.assignment_id}&type=assessment`}>
+                    <Button variant="outline">
+                      Start Assessment
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </Link>
                 </div>
               ))}
             </div>
