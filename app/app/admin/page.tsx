@@ -84,7 +84,7 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
     .eq("assignment_status", "completed")
     .not("completed_at", "is", null)
     .order("completed_at", { ascending: false })
-    .limit(100);
+    .limit(1000);  // Increased limit to show more courses
 
   if (assignError) throw new Error(assignError.message);
   if (!assignments || assignments.length === 0) return [];
@@ -196,7 +196,7 @@ async function loadInProgressCourses(q: string | null) {
     .in("assignment_status", ["assigned", "in_progress"])
     .eq("role", "trainee")
     .order("created_at", { ascending: false })
-    .limit(100);
+    .limit(1000);  // Increased limit to show more courses
 
   if (assignError) throw new Error(assignError.message);
   if (!assignments || assignments.length === 0) return [];
@@ -691,7 +691,7 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
     .not("approved_at", "is", null)
     .order("approved_at", { ascending: false });
 
-  const { data: assignments, error: assignError } = await query.limit(100);
+  const { data: assignments, error: assignError } = await query.limit(1000);  // Increased limit to show more authorizations
   if (assignError) throw new Error(assignError.message);
   if (!assignments || assignments.length === 0) return [];
 

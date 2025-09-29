@@ -51,6 +51,16 @@ Preferred communication style: Simple, everyday language.
 
 The architecture follows a hybrid approach with server-side rendering for performance and client-side interactivity where needed. The system handles complex workflows including course creation, assignment management, progress tracking, and multi-modal training delivery (digital + onsite components).
 
+# Recent Changes
+
+## Query Limit Fix (September 29, 2025)
+- **Issue**: Course Progress tab was showing "No in-progress courses found" for some users due to query limit
+- **Solution**: Increased query limits from 100 to 1000 records for:
+  - In-progress course assignments (line 202 in admin/page.tsx)
+  - Completed course assignments (line 90 in admin/page.tsx)
+  - Completed authorization assignments (line 697 in admin/page.tsx)
+- **Impact**: Admin panel now shows up to 1000 courses/authorizations instead of just the first 100
+
 # Admin Diagnostic Tools
 
 ## Authorization Diagnostic Tool
