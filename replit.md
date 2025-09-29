@@ -55,11 +55,14 @@ The architecture follows a hybrid approach with server-side rendering for perfor
 
 ## Query Limit Fix (September 29, 2025)
 - **Issue**: Course Progress tab was showing "No in-progress courses found" for some users due to query limit
-- **Solution**: Increased query limits from 100 to 1000 records for:
-  - In-progress course assignments (line 202 in admin/page.tsx)
-  - Completed course assignments (line 90 in admin/page.tsx)
-  - Completed authorization assignments (line 697 in admin/page.tsx)
-- **Impact**: Admin panel now shows up to 1000 courses/authorizations instead of just the first 100
+- **Solution**: 
+  - Increased query limits from 100 to 1000 records for all admin queries
+  - Implemented batched queries for assignment progress to avoid Supabase fetch errors
+  - Progress queries now process in batches of 100 assignments to prevent timeouts
+- **Impact**: 
+  - Admin panel now shows up to 1000 courses/authorizations instead of just the first 100
+  - Fixed "TypeError: fetch failed" error when loading course progress with many assignments
+  - More resilient error handling that continues loading even if some progress data fails
 
 # Admin Diagnostic Tools
 

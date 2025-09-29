@@ -231,13 +231,28 @@ async function loadInProgressCourses(q: string | null) {
   if (moduleError) throw new Error(moduleError.message);
 
   // Get assignment progress to count completed modules
-  const { data: progress, error: progressError } = await supabase
-    .from("assignment_progress")
-    .select("assignment_id, module_id, completed_at")
-    .in("assignment_id", assignmentIds)
-    .not("completed_at", "is", null);
-
-  if (progressError) throw new Error(progressError.message);
+  // Batch the query to avoid hitting limits with large numbers of assignments
+  let progress: any[] = [];
+  const batchSize = 100;
+  
+  for (let i = 0; i < assignmentIds.length; i += batchSize) {
+    const batch = assignmentIds.slice(i, i + batchSize);
+    const { data: batchProgress, error: progressError } = await supabase
+      .from("assignment_progress")
+      .select("assignment_id, module_id, completed_at")
+      .in("assignment_id", batch)
+      .not("completed_at", "is", null);
+    
+    if (progressError) {
+      console.error("Error fetching assignment progress batch:", progressError);
+      // Continue without progress data rather than failing completely
+      continue;
+    }
+    
+    if (batchProgress) {
+      progress = progress.concat(batchProgress);
+    }
+  }
 
   // Create lookup maps
   const profileMap = new Map((profiles || []).map(p => [p.id, p]));
