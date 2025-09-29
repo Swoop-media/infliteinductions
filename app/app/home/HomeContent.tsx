@@ -61,6 +61,14 @@ export default function HomeContent({ profile, notice, banner }: HomeContentProp
                 <span className="font-medium">Video Playback:</span> The videos in the course player may not work in all browsers. 
                 Once signed in, you can play them by opening in a new tab if you experience any issues.
               </p>
+              <div className="mt-3">
+                <img 
+                  src="/open-in-browser-guide.png" 
+                  alt="Open in browser button location" 
+                  className="rounded-lg border border-gray-200 shadow-sm max-w-full"
+                  style={{ maxHeight: '300px' }}
+                />
+              </div>
             </div>
           </div>
 
