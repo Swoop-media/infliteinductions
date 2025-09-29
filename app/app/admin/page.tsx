@@ -84,7 +84,7 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
     .eq("assignment_status", "completed")
     .not("completed_at", "is", null)
     .order("completed_at", { ascending: false })
-    .limit(1000);  // Increased limit to show more courses
+    .limit(100);
 
   if (assignError) throw new Error(assignError.message);
   if (!assignments || assignments.length === 0) return [];
@@ -196,7 +196,7 @@ async function loadInProgressCourses(q: string | null) {
     .in("assignment_status", ["assigned", "in_progress"])
     .eq("role", "trainee")
     .order("created_at", { ascending: false })
-    .limit(1000);  // Increased limit to show more courses
+    .limit(100);
 
   if (assignError) throw new Error(assignError.message);
   if (!assignments || assignments.length === 0) return [];
@@ -231,28 +231,13 @@ async function loadInProgressCourses(q: string | null) {
   if (moduleError) throw new Error(moduleError.message);
 
   // Get assignment progress to count completed modules
-  // Batch the query to avoid hitting limits with large numbers of assignments
-  let progress: any[] = [];
-  const batchSize = 100;
-  
-  for (let i = 0; i < assignmentIds.length; i += batchSize) {
-    const batch = assignmentIds.slice(i, i + batchSize);
-    const { data: batchProgress, error: progressError } = await supabase
-      .from("assignment_progress")
-      .select("assignment_id, module_id, completed_at")
-      .in("assignment_id", batch)
-      .not("completed_at", "is", null);
-    
-    if (progressError) {
-      console.error("Error fetching assignment progress batch:", progressError);
-      // Continue without progress data rather than failing completely
-      continue;
-    }
-    
-    if (batchProgress) {
-      progress = progress.concat(batchProgress);
-    }
-  }
+  const { data: progress, error: progressError } = await supabase
+    .from("assignment_progress")
+    .select("assignment_id, module_id, completed_at")
+    .in("assignment_id", assignmentIds)
+    .not("completed_at", "is", null);
+
+  if (progressError) throw new Error(progressError.message);
 
   // Create lookup maps
   const profileMap = new Map((profiles || []).map(p => [p.id, p]));
@@ -706,7 +691,7 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
     .not("approved_at", "is", null)
     .order("approved_at", { ascending: false });
 
-  const { data: assignments, error: assignError } = await query.limit(1000);  // Increased limit to show more authorizations
+  const { data: assignments, error: assignError } = await query.limit(100);
   if (assignError) throw new Error(assignError.message);
   if (!assignments || assignments.length === 0) return [];
 
