@@ -1,0 +1,204 @@
+2025-09-29 20:12:58.77
+54dd2b36
+User
+}
+2025-09-29 20:12:58.77
+54dd2b36
+User
+AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+2025-09-29 20:12:58.77
+54dd2b36
+User
+at dh (.next/server/middleware.js:33:29603)
+2025-09-29 20:12:58.77
+54dd2b36
+User
+at async dj (.next/server/middleware.js:33:30577)
+2025-09-29 20:12:58.77
+54dd2b36
+User
+at async di (.next/server/middleware.js:33:29987)
+2025-09-29 20:12:58.77
+54dd2b36
+User
+at async c (.next/server/middleware.js:33:66137)
+2025-09-29 20:12:58.77
+54dd2b36
+User
+at async (.next/server/middleware.js:33:66400) {
+2025-09-29 20:12:58.77
+54dd2b36
+User
+__isAuthError: true,
+2025-09-29 20:12:58.77
+54dd2b36
+User
+status: 400,
+2025-09-29 20:12:58.77
+54dd2b36
+User
+code: 'refresh_token_not_found'
+2025-09-29 20:12:58.77
+54dd2b36
+User
+}
+2025-09-29 20:12:58.78
+54dd2b36
+User
+AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at dh (.next/server/middleware.js:33:29603)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async dj (.next/server/middleware.js:33:30577)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async di (.next/server/middleware.js:33:29987)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async c (.next/server/middleware.js:33:66137)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async (.next/server/middleware.js:33:66400) {
+2025-09-29 20:12:58.78
+54dd2b36
+User
+__isAuthError: true,
+2025-09-29 20:12:58.78
+54dd2b36
+User
+status: 400,
+2025-09-29 20:12:58.78
+54dd2b36
+User
+code: 'refresh_token_not_found'
+2025-09-29 20:12:58.78
+54dd2b36
+User
+}
+2025-09-29 20:12:58.78
+54dd2b36
+User
+AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at dh (.next/server/middleware.js:33:29603)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async dj (.next/server/middleware.js:33:30577)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async di (.next/server/middleware.js:33:29987)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async c (.next/server/middleware.js:33:66137)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async (.next/server/middleware.js:33:66400) {
+2025-09-29 20:12:58.78
+54dd2b36
+User
+__isAuthError: true,
+2025-09-29 20:12:58.78
+54dd2b36
+User
+status: 400,
+2025-09-29 20:12:58.78
+54dd2b36
+User
+code: 'refresh_token_not_found'
+2025-09-29 20:12:58.78
+54dd2b36
+User
+}
+2025-09-29 20:12:58.78
+54dd2b36
+User
+AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at dh (.next/server/middleware.js:33:29603)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async dj (.next/server/middleware.js:33:30577)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async di (.next/server/middleware.js:33:29987)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async c (.next/server/middleware.js:33:66137)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async (.next/server/middleware.js:33:66400) {
+2025-09-29 20:12:58.78
+54dd2b36
+User
+__isAuthError: true,
+2025-09-29 20:12:58.78
+54dd2b36
+User
+status: 400,
+2025-09-29 20:12:58.78
+54dd2b36
+User
+code: 'refresh_token_not_found'
+2025-09-29 20:12:58.78
+54dd2b36
+User
+}
+2025-09-29 20:12:58.78
+54dd2b36
+User
+AuthApiError: Invalid Refresh Token: Refresh Token Not Found
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at dh (.next/server/middleware.js:33:29603)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async dj (.next/server/middleware.js:33:30577)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async di (.next/server/middleware.js:33:29987)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async c (.next/server/middleware.js:33:66137)
+2025-09-29 20:12:58.78
+54dd2b36
+User
+at async (.next/server/middleware.js:33:66400) {
+2025-09-29 20:12:58.78
+54dd2b36
+User
+__isAuthError: true,
+2025-09-29 20:12:58.78
+54dd2b36
+User
+status: 400,
+2025-09-29 20:12:58.78
+54dd2b36
+User
+code: 'refresh_token_not_found'
+2025-09-29 20:12:58.78
+54dd2b36
+User
+}
