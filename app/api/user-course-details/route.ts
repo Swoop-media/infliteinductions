@@ -20,6 +20,20 @@ export async function GET(request: NextRequest) {
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    
+    // Check if user has permission to view this data (admin or the user themselves)
+    const { data: userRole } = await supabase
+      .from("profiles") 
+      .select("role")
+      .eq("id", user.id)
+      .single();
+    
+    const isAdmin = userRole?.role === 'admin' || userRole?.role === 'trainers_and_assessors';
+    const isOwnData = user.id === userId;
+    
+    if (!isAdmin && !isOwnData) {
+      return NextResponse.json({ error: 'Forbidden - No permission to view this data' }, { status: 403 });
+    }
 
     // Use admin client for fetching data
     const adminClient = supabaseAdmin();
@@ -101,6 +115,102 @@ export async function GET(request: NextRequest) {
       responseMap.set(response.requirement_id, response);
     });
 
+    // Get equipment form blocks for digital training modules
+    const { data: equipmentBlocks } = await adminClient
+      .from("module_content_blocks")
+      .select(`
+        id,
+        module_id,
+        kind,
+        data,
+        order_index
+      `)
+      .eq("kind", "equipment_form")
+      .in("module_id", moduleIds);
+
+    // Get equipment form responses (old structure)
+    const { data: equipmentResponses } = await adminClient
+      .from("trainee_equipment_responses")
+      .select(`
+        equipment_id,
+        response_text,
+        created_at,
+        user_id,
+        course_id
+      `)
+      .eq("user_id", userId);
+
+    // Create a map of equipment responses
+    const equipmentResponseMap = new Map();
+    equipmentResponses?.forEach(response => {
+      equipmentResponseMap.set(response.equipment_id, response);
+    });
+
+    // Get form responses (new structure with form_instances and form_items)
+    const { data: formResponses } = await adminClient
+      .from("form_responses")
+      .select(`
+        *,
+        form_items!inner (
+          id,
+          stable_id,
+          equipment_name,
+          description,
+          required,
+          instance_id,
+          form_instances!inner (
+            id,
+            course_id,
+            module_id,
+            title
+          )
+        )
+      `)
+      .eq("user_id", userId)
+      .eq("is_latest", true);
+
+    // Create a map of form responses by item stable_id
+    const formResponseMap = new Map();
+    formResponses?.forEach(response => {
+      const moduleId = response.form_items?.form_instances?.module_id;
+      if (moduleId) {
+        const key = `${moduleId}_${response.form_items.stable_id}`;
+        formResponseMap.set(key, response);
+      }
+    });
+
+    // Get all form instances for modules to show all questions (not just answered ones)
+    const { data: formInstances } = await adminClient
+      .from("form_instances")
+      .select(`
+        id,
+        module_id,
+        title,
+        kind,
+        form_items (
+          id,
+          stable_id,
+          equipment_name,
+          description,
+          required
+        )
+      `)
+      .in("module_id", moduleIds);
+    
+    // Create a map of form items by module
+    const formItemsByModule = new Map();
+    formInstances?.forEach(instance => {
+      if (!formItemsByModule.has(instance.module_id)) {
+        formItemsByModule.set(instance.module_id, []);
+      }
+      if (instance.form_items && Array.isArray(instance.form_items)) {
+        formItemsByModule.get(instance.module_id).push(...instance.form_items.map(item => ({
+          ...item,
+          instance_id: instance.id
+        })));
+      }
+    });
+
     // Get trainer names
     const trainerIds = [...new Set(requirementResponses?.map(r => r.trainer_id).filter(Boolean) || [])];
     const trainerProfilesMap = new Map();
@@ -141,7 +251,8 @@ export async function GET(request: NextRequest) {
         req => req.module_id === module.id
       ) || [];
       
-      const moduleOnsiteResponses = moduleRequirements.map(req => {
+      // Process onsite requirements
+      const onsiteResponses = moduleRequirements.map(req => {
         const response = responseMap.get(req.id);
         
         return {
@@ -155,6 +266,53 @@ export async function GET(request: NextRequest) {
           trainer_name: response?.trainer_id ? trainerProfilesMap.get(response.trainer_id) || null : null
         };
       });
+      
+      // Process equipment form requirements (for digital training)
+      const moduleEquipmentBlocks = equipmentBlocks?.filter(
+        block => block.module_id === module.id
+      ) || [];
+      
+      const equipmentFormResponses = [];
+      moduleEquipmentBlocks.forEach(block => {
+        if (block.data?.equipment_templates && Array.isArray(block.data.equipment_templates)) {
+          block.data.equipment_templates.forEach(equipment => {
+            const response = equipmentResponseMap.get(equipment.id);
+            equipmentFormResponses.push({
+              requirement_id: equipment.id,
+              requirement_label: equipment.equipment_name || equipment.label || "Equipment",
+              field_type: "text",
+              required: equipment.required || false,
+              has_response: !!response,
+              response_text: response?.response_text || null,
+              response_date: response?.created_at || null,
+              trainer_name: null // Equipment forms are self-completed, not by trainers
+            });
+          });
+        }
+      });
+      
+      // Process form_instances/form_items structure (new format) - show ALL questions
+      const formInstanceResponses = [];
+      const moduleFormItems = formItemsByModule.get(module.id) || [];
+      
+      moduleFormItems.forEach(item => {
+        const responseKey = `${module.id}_${item.stable_id}`;
+        const response = formResponseMap.get(responseKey);
+        
+        formInstanceResponses.push({
+          requirement_id: item.stable_id,
+          requirement_label: item.equipment_name || item.description || "Form Question",
+          field_type: "text",
+          required: item.required || false,
+          has_response: !!response,
+          response_text: response?.response_text || null,
+          response_date: response?.submitted_at || response?.created_at || null,
+          trainer_name: null
+        });
+      });
+      
+      // Combine all responses (onsite + equipment forms + form instances)
+      const moduleOnsiteResponses = [...onsiteResponses, ...equipmentFormResponses, ...formInstanceResponses];
 
       // Get documents for this module
       const moduleDocuments = documents?.filter(
