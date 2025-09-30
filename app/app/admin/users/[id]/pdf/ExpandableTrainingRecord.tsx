@@ -324,11 +324,14 @@ export default function ExpandableTrainingRecord({ profile, courses, authorizati
                                   </div>
                                 )}
 
-                                {/* Onsite Requirements */}
-                                {(module.module_type === "onsite_training" || module.module_type === "onsite_assessment") && module.onsite_responses && module.onsite_responses.length > 0 && (
+                                {/* Form Requirements - Show for all modules with requirements (digital training, onsite training/assessment, etc.) */}
+                                {module.onsite_responses && module.onsite_responses.length > 0 && (
                                   <div className="space-y-1">
                                     <p className="text-xs font-medium text-gray-700">
-                                      {module.module_type === "onsite_training" ? "Training Completed:" : "Assessment Completed:"}
+                                      {module.module_type === "onsite_training" ? "Training Completed:" : 
+                                       module.module_type === "onsite_assessment" ? "Assessment Completed:" :
+                                       module.module_type === "digital_training" ? "Form Questions:" :
+                                       "Requirements:"}
                                     </p>
                                     {module.onsite_responses.map((response, idx) => (
                                       <div key={`onsite-${module.module_id}-${idx}`} className="bg-gray-50 rounded p-1.5 text-xs">

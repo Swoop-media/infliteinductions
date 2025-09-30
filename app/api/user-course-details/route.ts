@@ -66,7 +66,23 @@ export async function GET(request: NextRequest) {
       `)
       .eq("user_id", userId);
 
-    // Get onsite responses
+    // Get ALL requirements for all modules (not just ones with responses)
+    const moduleIds = modules.map(m => m.id);
+    const { data: allRequirements } = await adminClient
+      .from("onsite_requirements")
+      .select(`
+        id,
+        module_id,
+        label,
+        field_type,
+        required,
+        role,
+        order_index
+      `)
+      .in("module_id", moduleIds)
+      .order("order_index", { ascending: true });
+
+    // Get all requirement responses (including digital forms, onsite training, etc.)
     const { data: requirementResponses } = assignment?.id ? await adminClient
       .from("requirement_responses")
       .select(`
@@ -75,13 +91,15 @@ export async function GET(request: NextRequest) {
         requirement_id,
         response_value,
         trainer_id,
-        created_at,
-        onsite_requirements!inner(
-          label,
-          role
-        )
+        created_at
       `)
       .eq("assignment_id", assignment.id) : { data: [] };
+
+    // Create a map of responses by requirement_id
+    const responseMap = new Map();
+    requirementResponses?.forEach(response => {
+      responseMap.set(response.requirement_id, response);
+    });
 
     // Get trainer names
     const trainerIds = [...new Set(requirementResponses?.map(r => r.trainer_id).filter(Boolean) || [])];
@@ -118,15 +136,25 @@ export async function GET(request: NextRequest) {
         created_at: qa.created_at
       }));
 
-      // Get onsite responses for this module
-      const moduleOnsiteResponses = requirementResponses?.filter(
-        rr => rr.module_id === module.id
-      ).map(rr => ({
-        requirement_label: (rr.onsite_requirements as any)?.label || "Requirement",
-        response_text: rr.response_value,
-        response_date: rr.created_at,
-        assessor_name: rr.trainer_id ? trainerProfilesMap.get(rr.trainer_id) || null : null
-      }));
+      // Get ALL requirements for this module and match with responses
+      const moduleRequirements = allRequirements?.filter(
+        req => req.module_id === module.id
+      ) || [];
+      
+      const moduleOnsiteResponses = moduleRequirements.map(req => {
+        const response = responseMap.get(req.id);
+        
+        return {
+          requirement_id: req.id,
+          requirement_label: req.label || "Requirement",
+          field_type: req.field_type,
+          required: req.required,
+          has_response: !!response,
+          response_text: response?.response_value || null,
+          response_date: response?.created_at || null,
+          trainer_name: response?.trainer_id ? trainerProfilesMap.get(response.trainer_id) || null : null
+        };
+      });
 
       // Get documents for this module
       const moduleDocuments = documents?.filter(

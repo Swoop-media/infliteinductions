@@ -206,14 +206,16 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                             </div>
                           )}
 
-                          {/* Onsite Training/Assessment - Show requirements and responses */}
-                          {(module.module_type === "onsite_training" || module.module_type === "onsite_assessment") && (
+                          {/* Form Requirements - Show for all modules with requirements (digital training, onsite training/assessment, etc.) */}
+                          {module.onsite_responses && module.onsite_responses.length > 0 && (
                             <div className="space-y-2">
-                              {module.onsite_responses && module.onsite_responses.length > 0 ? (
-                                <>
-                                  <p className="text-sm font-medium text-gray-700">
-                                    {module.module_type === "onsite_training" ? "Training Requirements:" : "Assessment Requirements:"}
-                                  </p>
+                              <>
+                                <p className="text-sm font-medium text-gray-700">
+                                  {module.module_type === "onsite_training" ? "Training Requirements:" : 
+                                   module.module_type === "onsite_assessment" ? "Assessment Requirements:" :
+                                   module.module_type === "digital_training" ? "Form Questions:" :
+                                   "Requirements:"}
+                                </p>
                                   <div className="space-y-3">
                                     {module.onsite_responses.map((response) => (
                                       <div 
@@ -251,7 +253,9 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                                   <div className="flex items-center gap-1.5">
                                                     <User className="w-3.5 h-3.5 text-gray-500" />
                                                     <span className="text-xs text-gray-600 font-medium">
-                                                      {module.module_type === "onsite_training" ? "Trainer:" : "Assessor:"} {response.trainer_name}
+                                                      {module.module_type === "onsite_training" ? "Trainer:" : 
+                                                       module.module_type === "onsite_assessment" ? "Assessor:" :
+                                                       "Completed by:"} {response.trainer_name}
                                                     </span>
                                                   </div>
                                                 )}
@@ -271,26 +275,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                       </div>
                                     ))}
                                   </div>
-                                </>
-                              ) : module.completed ? (
-                                <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm">
-                                  <div className="flex items-start gap-2">
-                                    <AlertCircle className="w-4 h-4 text-yellow-600 mt-0.5" />
-                                    <div>
-                                      <p className="text-yellow-800 font-medium">
-                                        {module.module_type === "onsite_training" ? "Onsite Training Completed" : "Onsite Assessment Completed"}
-                                      </p>
-                                      <p className="text-yellow-700 text-xs mt-1">
-                                        Module marked as completed but detailed requirement responses are not available in the system.
-                                      </p>
-                                    </div>
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="text-sm text-gray-500 italic">
-                                  {module.module_type === "onsite_training" ? "Onsite training not yet completed" : "Onsite assessment not yet completed"}
-                                </div>
-                              )}
+                              </>
                             </div>
                           )}
 
