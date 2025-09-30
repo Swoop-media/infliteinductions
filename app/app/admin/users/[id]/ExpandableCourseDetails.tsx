@@ -251,7 +251,7 @@ export default function ExpandableCourseDetails({ courses, authorizations, userI
                               <div className="space-y-2">
                                 <p className="text-sm font-medium text-gray-700">Quiz Results:</p>
                                 {module.quiz_attempts.map((attempt, idx) => (
-                                  <div key={idx} className="bg-gray-50 rounded p-2 text-sm">
+                                  <div key={`quiz-${module.module_id}-attempt-${idx}-${attempt.created_at}`} className="bg-gray-50 rounded p-2 text-sm">
                                     <div className="flex items-center justify-between">
                                       <span>Attempt {idx + 1}</span>
                                       <span className={attempt.passed ? "text-green-600" : "text-red-600"}>
@@ -277,7 +277,7 @@ export default function ExpandableCourseDetails({ courses, authorizations, userI
                                       {module.module_type === "onsite_training" ? "Training Requirements:" : "Assessment Requirements:"}
                                     </p>
                                     {module.onsite_responses.map((response, idx) => (
-                                      <div key={idx} className="bg-gray-50 rounded p-2 text-sm">
+                                      <div key={`onsite-${module.module_id}-${response.requirement_label}-${idx}`} className="bg-gray-50 rounded p-2 text-sm">
                                         <div className="font-medium text-gray-700">{response.requirement_label}</div>
                                         <div className="text-gray-600 mt-1">{response.response_text || "No response provided"}</div>
                                         {response.assessor_name && (
@@ -311,7 +311,7 @@ export default function ExpandableCourseDetails({ courses, authorizations, userI
                               <div className="space-y-2">
                                 <p className="text-sm font-medium text-gray-700">Uploaded Documents:</p>
                                 {module.documents.map((doc, idx) => (
-                                  <div key={idx} className="flex items-center gap-2 text-sm text-gray-600">
+                                  <div key={`doc-${module.module_id}-${doc.document_title}-${idx}`} className="flex items-center gap-2 text-sm text-gray-600">
                                     <FileText className="w-4 h-4" />
                                     <span>{doc.document_title}</span>
                                     {doc.uploaded_at && (
@@ -395,8 +395,8 @@ export default function ExpandableCourseDetails({ courses, authorizations, userI
                   ) : details?.courses && details.courses.length > 0 ? (
                     <div className="space-y-3">
                       <h4 className="text-sm font-medium text-gray-700">Courses in this Authorization:</h4>
-                      {details.courses.map((course: any, idx: number) => (
-                        <div key={idx} className="bg-white rounded-lg p-3 border">
+                      {details.courses.map((course: any) => (
+                        <div key={course.course_id || course.course_title} className="bg-white rounded-lg p-3 border">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               {course.completed ? (
