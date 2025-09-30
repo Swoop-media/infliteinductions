@@ -36,6 +36,7 @@ const JOBS = [
 // Raw types from Supabase query results
 type CourseAssignmentWithCourse = {
   id: any;
+  course_id: any;
   completed_at: any;
   courses: {
     title: any;
@@ -45,6 +46,7 @@ type CourseAssignmentWithCourse = {
 
 type CompletedCourse = {
   assignment_id: string;
+  course_id: string;
   course_title: string;
   completed_at: string;
   valid_for_days: number;
@@ -85,6 +87,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
     .from("course_assignments")
     .select(`
       id,
+      course_id,
       assignment_status,
       assigned_at,
       completed_at,
@@ -246,6 +249,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
 
     return {
       assignment_id: course.id,
+      course_id: course.course_id, // Add the actual course_id
       course_title: course.courses?.title || 'Unknown Course',
       completed_at: course.completed_at,
       valid_for_days: validForDays,
