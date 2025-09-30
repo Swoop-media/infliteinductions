@@ -83,3 +83,28 @@ The architecture follows a hybrid approach with server-side rendering for perfor
 - They use the admin Supabase client only for data viewing, not for authentication
 - The tools provide read-only diagnostics with optional fix capabilities
 - No need to remove these tools when publishing - they provide valuable debugging capabilities for admins
+
+# Enhanced UI Features
+
+## Expandable Course Details Component
+- **Locations**: 
+  - `/app/admin/review/[assignmentId]` - Admin review page
+  - `/app/admin/users/[id]` - Admin user details page
+  - PDF export pages
+- **Purpose**: Provides detailed, expandable views of course and authorization progress
+- **Features**:
+  - Click-to-expand interface for courses and authorizations
+  - Module-level progress tracking with completion status
+  - Digital quiz results with scores and pass/fail status
+  - Onsite training/assessment requirements with trainer responses
+  - Trainer/assessor name tracking for accountability
+  - Document uploads associated with each module
+  - Safe date formatting to prevent React hydration issues
+  - Color-coded status badges for visual clarity
+- **API Endpoints**:
+  - `/api/user-course-details` - Fetches detailed course module information
+  - `/api/user-authorization-details` - Fetches authorization course relationships
+- **Benefits**:
+  - Reduces page clutter while providing access to detailed information
+  - Consistent UI across admin pages for better user experience
+  - Improved visibility into learner progress and completion status

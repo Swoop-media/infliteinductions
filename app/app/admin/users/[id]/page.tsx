@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { PDFExportButton } from "./PDFExportButton";
 import { DocumentViewButton } from "./DocumentViewButton";
+import ExpandableCourseDetails from "./ExpandableCourseDetails";
 
 
 
@@ -579,47 +580,16 @@ export default async function EditUserPage({
             {allAuthAssignments.length === 0 ? (
               <p className="text-sm text-gray-500">No authorization assignments found.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Authorization</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {allAuthAssignments.map((assignment) => (
-                      <tr key={assignment.id}>
-                        <td className="px-3 py-2 text-sm font-medium text-gray-900">
-                          {assignment.authorisations?.title || 'Unknown Authorization'}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-500">
-                          {assignment.created_at ? new Date(assignment.created_at).toLocaleDateString() : 'N/A'}
-                        </td>
-                        <td className="px-3 py-2 text-sm">
-                          <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                            assignment.assignment_status === 'completed' 
-                              ? 'bg-green-100 text-green-700' 
-                              : assignment.assignment_status === 'in_progress'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            {assignment.assignment_status || 'assigned'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-500">
-                          {assignment.completed_at 
-                            ? `Completed ${new Date(assignment.completed_at).toLocaleDateString()}` 
-                            : 'In Progress'
-                          }
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ExpandableCourseDetails 
+                authorizations={allAuthAssignments.map(assignment => ({
+                  authorization_id: assignment.authorisation_id,
+                  authorization_title: assignment.authorisations?.title || 'Unknown Authorization',
+                  assignment_status: assignment.assignment_status,
+                  completed_at: assignment.completed_at
+                }))}
+                userId={resolvedParams.id}
+                type="authorizations"
+              />
             )}
           </div>
 
@@ -629,28 +599,16 @@ export default async function EditUserPage({
             {processedCourses.length === 0 ? (
               <p className="text-sm text-gray-500">No completed courses found.</p>
             ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {processedCourses.map((course) => (
-                  <div key={course.assignment_id} className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-sm">{course.course_title}</h3>
-                      <p className="text-xs text-gray-600">
-                        Completed: {new Date(course.completed_at).toLocaleDateString()}
-                      </p>
-                      {course.due_date && (
-                        <p className="text-xs text-gray-600">
-                          Due: {new Date(course.due_date).toLocaleDateString()}
-                        </p>
-                      )}
-                    </div>
-                    <div className="ml-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(course.status)}`}>
-                        {getStatusText(course.status, course.days_until_expiry)}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <ExpandableCourseDetails 
+                courses={processedCourses.map(course => ({
+                  course_id: course.course_id,
+                  course_title: course.course_title,
+                  assignment_status: 'completed',
+                  completed_at: course.completed_at
+                }))}
+                userId={resolvedParams.id}
+                type="courses"
+              />
             )}
           </div>
 
@@ -660,47 +618,16 @@ export default async function EditUserPage({
             {allCourseAssignments.length === 0 ? (
               <p className="text-sm text-gray-500">No course assignments found.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Course</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Progress</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {allCourseAssignments.map((assignment) => (
-                      <tr key={assignment.id}>
-                        <td className="px-3 py-2 text-sm font-medium text-gray-900">
-                          {assignment.courses?.title || 'Unknown Course'}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-500">
-                          {assignment.created_at ? new Date(assignment.created_at).toLocaleDateString() : 'N/A'}
-                        </td>
-                        <td className="px-3 py-2 text-sm">
-                          <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                            assignment.assignment_status === 'completed' 
-                              ? 'bg-green-100 text-green-700' 
-                              : assignment.assignment_status === 'in_progress'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-gray-100 text-gray-700'
-                          }`}>
-                            {assignment.assignment_status || 'assigned'}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-500">
-                          {assignment.completed_at 
-                            ? `Completed ${new Date(assignment.completed_at).toLocaleDateString()}` 
-                            : 'In Progress'
-                          }
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ExpandableCourseDetails 
+                courses={allCourseAssignments.map(assignment => ({
+                  course_id: assignment.course_id,
+                  course_title: assignment.courses?.title || 'Unknown Course',
+                  assignment_status: assignment.assignment_status,
+                  completed_at: assignment.completed_at
+                }))}
+                userId={resolvedParams.id}
+                type="courses"
+              />
             )}
           </div>
 
