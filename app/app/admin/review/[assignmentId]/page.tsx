@@ -224,21 +224,34 @@ async function loadAssignmentDetails(assignmentId: string) {
           trainerName = response.trainer_id ? trainerProfilesMap.get(response.trainer_id) || 'Unknown Trainer' : null;
           responseDate = response.created_at;
           
-          // Extract the response value based on field type
-          if (response.response_value) {
-            if (typeof response.response_value === 'string') {
-              responseText = response.response_value;
-            } else if (typeof response.response_value === 'object') {
-              // Handle different field types
-              if (req.field_type === 'text' || req.field_type === 'textarea') {
-                responseText = (response.response_value as any).value || (response.response_value as any).text || JSON.stringify(response.response_value);
-              } else if (req.field_type === 'checkbox') {
-                responseText = (response.response_value as any).checked ? 'Yes' : 'No';
-              } else if (req.field_type === 'radio' || req.field_type === 'select') {
-                responseText = (response.response_value as any).value || JSON.stringify(response.response_value);
+          // Extract the response value - handle both simple values and objects
+          if (response.response_value !== null && response.response_value !== undefined) {
+            const value = response.response_value;
+            
+            if (typeof value === 'string' || typeof value === 'number') {
+              // Simple value - most common case
+              responseText = String(value);
+            } else if (typeof value === 'boolean') {
+              responseText = value ? 'Yes' : 'No';
+            } else if (typeof value === 'object' && value !== null) {
+              // Handle complex objects (legacy format or special cases)
+              if ('value' in value) {
+                responseText = String(value.value);
+              } else if ('text' in value) {
+                responseText = String(value.text);
+              } else if ('checked' in value) {
+                responseText = value.checked ? 'Yes' : 'No';
               } else {
-                responseText = JSON.stringify(response.response_value);
+                // Fallback: stringify the object
+                responseText = JSON.stringify(value);
               }
+            } else {
+              responseText = '';
+            }
+            
+            // Special handling for numeric ratings (1-5 scale)
+            if (typeof value === 'number' && value >= 1 && value <= 5) {
+              responseText = `Rating: ${value}/5`;
             }
           }
         }
