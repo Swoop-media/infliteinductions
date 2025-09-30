@@ -20,6 +20,21 @@ function formatDateSafe(dateString: string | null | undefined): string {
   }
 }
 
+// Deterministic time formatting to prevent hydration mismatches
+function formatTimeSafe(dateString: string | null | undefined): string {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    const hours = String(date.getUTCHours()).padStart(2, '0');
+    const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+    return `${hours}:${minutes}:${seconds} UTC`;
+  } catch (error) {
+    return '';
+  }
+}
+
 interface ModuleProgress {
   module_id: string;
   module_type: string;
@@ -156,7 +171,7 @@ export default function ExpandableTrainingRecord({ profile, courses, authorizati
             <p><strong>Position:</strong> {profile.job_description || "Not specified"}</p>
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-4">Generated on: {formatDateSafe(new Date().toISOString())} at {new Date().toLocaleTimeString()}</p>
+        <p className="text-xs text-gray-500 mt-4">Generated on: {formatDateSafe(new Date().toISOString())} at {formatTimeSafe(new Date().toISOString())}</p>
       </div>
 
       {/* Print Button */}
