@@ -57,12 +57,25 @@ export default function DocumentSummary({ documents }: Props) {
     return new Date(expiryDate) < new Date();
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+  // Safe date formatting to prevent hydration mismatches
+  const formatDateSafe = (dateString: string) => {
+    if (!dateString) return "";
+    
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return "";
+      
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const month = months[date.getUTCMonth()];
+      const day = date.getUTCDate();
+      const year = date.getUTCFullYear();
+      
+      return `${month} ${day}, ${year}`;
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return "";
+    }
   };
 
   if (!documents || documents.length === 0) {
@@ -125,11 +138,11 @@ export default function DocumentSummary({ documents }: Props) {
                         <div className="flex items-center gap-4 text-xs text-gray-500 mt-1">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3" />
-                            Uploaded: {formatDate(doc.created_at)}
+                            Uploaded: {formatDateSafe(doc.created_at)}
                           </span>
                           {doc.expires_on && (
                             <span className={expired ? "text-red-600 font-medium" : ""}>
-                              Expires: {formatDate(doc.expires_on)}
+                              Expires: {formatDateSafe(doc.expires_on)}
                             </span>
                           )}
                         </div>
