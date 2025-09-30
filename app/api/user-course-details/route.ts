@@ -47,10 +47,10 @@ export async function GET(request: NextRequest) {
       .eq("role", "trainee")
       .single();
 
-    // Get all modules for the course
+    // Get all modules for the course (including equipment assessment flag)
     const { data: modules } = await adminClient
       .from("course_modules")
-      .select("id, title, type, order_index")
+      .select("id, title, type, order_index, include_equipment_assessment")
       .eq("course_id", courseId)
       .order("order_index", { ascending: true });
 
@@ -115,7 +115,24 @@ export async function GET(request: NextRequest) {
       responseMap.set(response.requirement_id, response);
     });
 
-    // Get equipment form blocks for digital training modules
+    // Get modules with equipment assessment enabled
+    const modulesWithEquipment = modules.filter(m => m.include_equipment_assessment);
+    
+    // Get equipment templates for the course (not module-specific)
+    const { data: equipmentTemplates } = await adminClient
+      .from("equipment_templates")
+      .select(`
+        id,
+        equipment_name,
+        description,
+        required,
+        category,
+        order_index
+      `)
+      .eq("course_id", courseId)
+      .order("order_index", { ascending: true });
+    
+    // Get equipment form blocks for digital training modules  
     const { data: equipmentBlocks } = await adminClient
       .from("module_content_blocks")
       .select(`
@@ -128,7 +145,7 @@ export async function GET(request: NextRequest) {
       .eq("kind", "equipment_form")
       .in("module_id", moduleIds);
 
-    // Get equipment form responses (old structure)
+    // Get equipment form responses (trainee responses)
     const { data: equipmentResponses } = await adminClient
       .from("trainee_equipment_responses")
       .select(`
@@ -140,10 +157,33 @@ export async function GET(request: NextRequest) {
       `)
       .eq("user_id", userId);
 
-    // Create a map of equipment responses
+    // Get assessor equipment confirmations (for equipment assessment modules)
+    const { data: equipmentConfirmations } = await adminClient
+      .from("assessor_equipment_confirmations")
+      .select(`
+        equipment_id,
+        confirmed,
+        assessor_notes,
+        created_at,
+        assessor_id,
+        trainee_id
+      `)
+      .eq("trainee_id", userId);
+    
+    // Create a map of equipment responses (combine both sources)
     const equipmentResponseMap = new Map();
     equipmentResponses?.forEach(response => {
       equipmentResponseMap.set(response.equipment_id, response);
+    });
+    
+    // Add assessor confirmations to the map
+    equipmentConfirmations?.forEach(confirmation => {
+      if (confirmation.confirmed) {
+        equipmentResponseMap.set(confirmation.equipment_id, {
+          response_text: confirmation.assessor_notes || 'Confirmed',
+          created_at: confirmation.created_at
+        });
+      }
     });
 
     // Get form responses (new structure with form_instances and form_items)
@@ -267,26 +307,48 @@ export async function GET(request: NextRequest) {
         };
       });
       
-      // Process equipment form requirements (for digital training)
+      // Process equipment form requirements
+      const equipmentFormResponses = [];
+      
+      // Check if this module has equipment assessment enabled (for onsite assessment modules)
+      if (module.include_equipment_assessment && equipmentTemplates) {
+        equipmentTemplates.forEach(equipment => {
+          const response = equipmentResponseMap.get(equipment.id);
+          equipmentFormResponses.push({
+            requirement_id: equipment.id,
+            requirement_label: equipment.equipment_name || "Equipment",
+            field_type: "checkbox",
+            required: equipment.required || false,
+            has_response: !!response,
+            response_text: response?.response_text || null,
+            response_date: response?.created_at || null,
+            trainer_name: null
+          });
+        });
+      }
+      
+      // Also check for equipment form blocks (for digital training modules)
       const moduleEquipmentBlocks = equipmentBlocks?.filter(
         block => block.module_id === module.id
       ) || [];
       
-      const equipmentFormResponses = [];
       moduleEquipmentBlocks.forEach(block => {
         if (block.data?.equipment_templates && Array.isArray(block.data.equipment_templates)) {
           block.data.equipment_templates.forEach(equipment => {
             const response = equipmentResponseMap.get(equipment.id);
-            equipmentFormResponses.push({
-              requirement_id: equipment.id,
-              requirement_label: equipment.equipment_name || equipment.label || "Equipment",
-              field_type: "text",
-              required: equipment.required || false,
-              has_response: !!response,
-              response_text: response?.response_text || null,
-              response_date: response?.created_at || null,
-              trainer_name: null // Equipment forms are self-completed, not by trainers
-            });
+            // Avoid duplicates if already added from equipment_templates
+            if (!equipmentFormResponses.find(r => r.requirement_id === equipment.id)) {
+              equipmentFormResponses.push({
+                requirement_id: equipment.id,
+                requirement_label: equipment.equipment_name || equipment.label || "Equipment",
+                field_type: "text",
+                required: equipment.required || false,
+                has_response: !!response,
+                response_text: response?.response_text || null,
+                response_date: response?.created_at || null,
+                trainer_name: null
+              });
+            }
           });
         }
       });
