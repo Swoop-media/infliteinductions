@@ -90,7 +90,7 @@ The architecture follows a hybrid approach with server-side rendering for perfor
 - **Locations**: 
   - `/app/admin/review/[assignmentId]` - Admin review page
   - `/app/admin/users/[id]` - Admin user details page
-  - PDF export pages
+  - `/app/admin/users/[id]/pdf` - Training Record export page (PDF export)
 - **Purpose**: Provides detailed, expandable views of course and authorization progress
 - **Features**:
   - Click-to-expand interface for courses and authorizations
@@ -101,6 +101,7 @@ The architecture follows a hybrid approach with server-side rendering for perfor
   - Document uploads associated with each module
   - Safe date formatting to prevent React hydration issues
   - Color-coded status badges for visual clarity
+  - **PDF Export Support**: Expanded course details are included when printing/exporting to PDF
 - **API Endpoints**:
   - `/api/user-course-details` - Fetches detailed course module information
   - `/api/user-authorization-details` - Fetches authorization course relationships
@@ -108,3 +109,4 @@ The architecture follows a hybrid approach with server-side rendering for perfor
   - Reduces page clutter while providing access to detailed information
   - Consistent UI across admin pages for better user experience
   - Improved visibility into learner progress and completion status
+  - Comprehensive training records with full module details in PDF exports

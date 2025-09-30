@@ -5,10 +5,11 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
-import PrintButton from "./PrintButton";
+import ExpandableTrainingRecord from "./ExpandableTrainingRecord";
 
 type CompletedCourse = {
   assignment_id: string;
+  course_id: string;
   course_title: string;
   completed_at: string;
   valid_for_days: number;
@@ -35,6 +36,7 @@ async function loadUserCompletedItems(userId: string) {
     .from("course_assignments")
     .select(`
       id,
+      course_id,
       completed_at,
       courses!course_assignments_course_id_fkey(title, valid_for_days)
     `)
@@ -127,6 +129,7 @@ async function loadUserCompletedItems(userId: string) {
 
     return {
       assignment_id: course.id,
+      course_id: course.course_id,
       course_title: course.courses?.title || 'Unknown Course',
       completed_at: course.completed_at,
       valid_for_days: validForDays,
@@ -206,121 +209,10 @@ export default async function UserTrainingRecordPDF({
   const { processedCourses, processedAuthorizations } = await loadUserCompletedItems(resolvedParams.id);
 
   return (
-    <div className="max-w-4xl mx-auto p-8 bg-white min-h-screen print:p-6">
-      <style dangerouslySetInnerHTML={{
-        __html: `
-          @media print {
-            body { -webkit-print-color-adjust: exact; }
-            .no-print { display: none !important; }
-            .page-break { page-break-before: always; }
-          }
-        `
-     }} />
-      
-      {/* Header */}
-      <div className="border-b-2 border-gray-900 pb-6 mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Training Record</h1>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <p><strong>Name:</strong> {profile.full_name || "Not specified"}</p>
-            <p><strong>Email:</strong> {profile.email}</p>
-          </div>
-          <div>
-            <p><strong>Department:</strong> {profile.department || "Not specified"}</p>
-            <p><strong>Position:</strong> {profile.job_description || "Not specified"}</p>
-          </div>
-        </div>
-        <p className="text-xs text-gray-500 mt-4">Generated on: {new Date().toLocaleDateString()} at {new Date().toLocaleTimeString()}</p>
-      </div>
-
-      {/* Print Button */}
-      <PrintButton />
-
-      {/* Completed Authorizations */}
-      <div className="mb-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-4 border-b border-gray-300 pb-2">
-          Completed Authorizations ({processedAuthorizations.length})
-        </h2>
-        {processedAuthorizations.length === 0 ? (
-          <p className="text-gray-500 italic">No completed authorizations found.</p>
-        ) : (
-          <div className="space-y-3">
-            {processedAuthorizations.map((auth) => (
-              <div key={auth.assignment_id} className="border border-gray-300 rounded-lg p-4">
-                <h3 className="font-semibold text-lg">{auth.authorization_title}</h3>
-                <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
-                  <div>
-                    <p><strong>Completed:</strong> {new Date(auth.completed_at).toLocaleDateString()}</p>
-                    {auth.due_date && (
-                      <p><strong>Expires:</strong> {new Date(auth.due_date).toLocaleDateString()}</p>
-                    )}
-                  </div>
-                  <div>
-                    <p><strong>Valid for:</strong> {auth.valid_for_years ? `${auth.valid_for_years} year(s)` : 'No expiry'}</p>
-                    <p><strong>Status:</strong> 
-                      <span className={`ml-1 px-2 py-1 rounded text-xs ${
-                        auth.status === 'current' ? 'bg-green-100 text-green-800' :
-                        auth.status === 'expiring_soon' ? 'bg-yellow-100 text-yellow-800' :
-                        auth.status === 'expired' ? 'bg-red-100 text-red-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {auth.status === 'current' && auth.days_until_expiry ? `Current (${auth.days_until_expiry} days remaining)` :
-                         auth.status === 'expiring_soon' && auth.days_until_expiry ? `Expires in ${auth.days_until_expiry} days` :
-                         auth.status === 'expired' && auth.days_until_expiry ? `Expired ${Math.abs(auth.days_until_expiry)} days ago` :
-                         'No expiry'}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Completed Courses */}
-      <div className="mb-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-4 border-b border-gray-300 pb-2">
-          Completed Courses ({processedCourses.length})
-        </h2>
-        {processedCourses.length === 0 ? (
-          <p className="text-gray-500 italic">No completed courses found.</p>
-        ) : (
-          <div className="space-y-3">
-            {processedCourses.map((course) => (
-              <div key={course.assignment_id} className="border border-gray-300 rounded-lg p-4">
-                <h3 className="font-semibold text-lg">{course.course_title}</h3>
-                <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
-                  <div>
-                    <p><strong>Completed:</strong> {new Date(course.completed_at).toLocaleDateString()}</p>
-                    <p><strong>Expires:</strong> {new Date(course.due_date).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <p><strong>Valid for:</strong> {course.valid_for_days} days</p>
-                    <p><strong>Status:</strong> 
-                      <span className={`ml-1 px-2 py-1 rounded text-xs ${
-                        course.status === 'current' ? 'bg-green-100 text-green-800' :
-                        course.status === 'expiring_soon' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
-                        {course.status === 'current' ? `Current (${course.days_until_expiry} days remaining)` :
-                         course.status === 'expiring_soon' ? `Expires in ${course.days_until_expiry} days` :
-                         `Expired ${Math.abs(course.days_until_expiry)} days ago`}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="border-t-2 border-gray-900 pt-4 mt-8 text-xs text-gray-500">
-        <p>This training record was generated from the Learning Management System.</p>
-        <p>For verification purposes, contact the training department.</p>
-      </div>
-    </div>
+    <ExpandableTrainingRecord 
+      profile={profile}
+      courses={processedCourses}
+      authorizations={processedAuthorizations}
+    />
   );
 }
