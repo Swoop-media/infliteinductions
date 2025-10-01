@@ -307,7 +307,7 @@ export async function GET(request: NextRequest) {
         };
       });
       
-      // Process equipment form requirements
+      // Process equipment form requirements SEPARATELY
       const equipmentFormResponses = [];
       
       // Check if this module has equipment assessment enabled (for onsite assessment modules)
@@ -317,6 +317,7 @@ export async function GET(request: NextRequest) {
           equipmentFormResponses.push({
             requirement_id: equipment.id,
             requirement_label: equipment.equipment_name || "Equipment",
+            description: equipment.description || null,
             field_type: "checkbox",
             required: equipment.required || false,
             has_response: !!response,
@@ -373,8 +374,8 @@ export async function GET(request: NextRequest) {
         });
       });
       
-      // Combine all responses (onsite + equipment forms + form instances)
-      const moduleOnsiteResponses = [...onsiteResponses, ...equipmentFormResponses, ...formInstanceResponses];
+      // Combine NON-equipment responses (onsite + form instances)
+      const moduleOnsiteResponses = [...onsiteResponses, ...formInstanceResponses];
 
       // Get documents for this module
       const moduleDocuments = documents?.filter(
@@ -391,7 +392,9 @@ export async function GET(request: NextRequest) {
         completed: isCompleted,
         quiz_attempts: moduleQuizAttempts,
         onsite_responses: moduleOnsiteResponses,
-        documents: moduleDocuments
+        equipment_requirements: equipmentFormResponses, // Return equipment separately
+        documents: moduleDocuments,
+        include_equipment_assessment: module.include_equipment_assessment || false
       };
     });
 

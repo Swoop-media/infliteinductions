@@ -52,6 +52,13 @@ interface ModuleProgress {
     response_date: string;
     assessor_name?: string;
   }>;
+  equipment_requirements?: Array<{
+    requirement_label: string;
+    description?: string;
+    response_text: string;
+    response_date: string;
+    has_response?: boolean;
+  }>;
   documents?: Array<{
     document_title: string;
     uploaded_at: string;
@@ -319,6 +326,31 @@ export default function ExpandableTrainingRecord({ profile, courses, authorizati
                                         <span className={attempt.passed ? "text-green-600" : "text-red-600"}>
                                           {attempt.score_pct}% {attempt.passed ? "(Passed)" : "(Failed)"}
                                         </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Equipment Assessment Items */}
+                                {module.equipment_requirements && module.equipment_requirements.length > 0 && (
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-blue-700">Equipment Assessment Items:</p>
+                                    {module.equipment_requirements.map((equipment, idx) => (
+                                      <div key={`equipment-${module.module_id}-${idx}`} className="bg-blue-50 rounded p-1.5 text-xs">
+                                        <div className="flex items-start justify-between">
+                                          <div>
+                                            <div className="font-medium">{equipment.requirement_label}</div>
+                                            {equipment.description && (
+                                              <div className="text-gray-600 mt-0.5">{equipment.description}</div>
+                                            )}
+                                          </div>
+                                          {equipment.has_response && (
+                                            <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0" />
+                                          )}
+                                        </div>
+                                        {equipment.response_text && (
+                                          <div className="mt-0.5 text-gray-700">Response: {equipment.response_text}</div>
+                                        )}
                                       </div>
                                     ))}
                                   </div>

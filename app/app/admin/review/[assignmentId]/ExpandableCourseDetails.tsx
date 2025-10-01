@@ -57,7 +57,19 @@ interface ModuleProgress {
     required?: boolean;
     has_response?: boolean;
   }>;
+  equipment_requirements?: Array<{
+    requirement_id: string;
+    requirement_label: string;
+    description?: string | null;
+    response_text: string;
+    response_date: string | null;
+    trainer_name?: string | null;
+    field_type?: string;
+    required?: boolean;
+    has_response?: boolean;
+  }>;
   has_onsite_requirements?: boolean;
+  include_equipment_assessment?: boolean;
   documents?: Array<{
     document_title: string;
     uploaded_at: string;
@@ -203,6 +215,67 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                   )}
                                 </div>
                               ))}
+                            </div>
+                          )}
+
+                          {/* Equipment Assessment Requirements - Show as expandable section */}
+                          {module.equipment_requirements && module.equipment_requirements.length > 0 && (
+                            <div className="space-y-2 border rounded-lg p-3 bg-blue-50">
+                              <p className="text-sm font-medium text-blue-900">
+                                Equipment Assessment Items:
+                              </p>
+                              <div className="space-y-2">
+                                {module.equipment_requirements.map((equipment) => (
+                                  <div 
+                                    key={equipment.requirement_id} 
+                                    className={`rounded-lg p-3 border ${
+                                      equipment.has_response 
+                                        ? 'bg-green-50 border-green-200' 
+                                        : 'bg-white border-gray-200'
+                                    }`}
+                                  >
+                                    <div className="space-y-1">
+                                      {/* Equipment Name with completion status */}
+                                      <div className="flex items-start justify-between">
+                                        <div>
+                                          <span className="text-sm font-semibold text-gray-700">
+                                            {equipment.requirement_label}
+                                            {equipment.required && <span className="text-red-500 ml-1">*</span>}
+                                          </span>
+                                          {equipment.description && (
+                                            <p className="text-xs text-gray-500 mt-0.5">{equipment.description}</p>
+                                          )}
+                                        </div>
+                                        {equipment.has_response && (
+                                          <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                        )}
+                                      </div>
+                                      
+                                      {/* Response or status */}
+                                      {equipment.has_response ? (
+                                        <>
+                                          {equipment.response_text && (
+                                            <div className="bg-white p-2 rounded border border-gray-100 mt-2">
+                                              <span className="text-sm text-gray-800">
+                                                {equipment.response_text}
+                                              </span>
+                                            </div>
+                                          )}
+                                          {equipment.response_date && (
+                                            <div className="text-xs text-gray-500 mt-1">
+                                              Completed: {formatDateSafe(equipment.response_date)}
+                                            </div>
+                                          )}
+                                        </>
+                                      ) : (
+                                        <div className="text-sm text-gray-500 italic mt-1">
+                                          Not yet completed
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           )}
 
