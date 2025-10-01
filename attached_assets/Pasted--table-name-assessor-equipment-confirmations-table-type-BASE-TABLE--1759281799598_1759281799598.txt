@@ -1,0 +1,226 @@
+[
+  {
+    "table_name": "assessor_equipment_confirmations",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "assessor_form_schemas",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "assessor_submissions",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "assigned_trainers",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "assignment_progress",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "authorisation_assignments",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "authorisation_completions",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "authorisation_courses",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "authorisations",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "contractor_course_completions",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "course_allowed_domains",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "course_assets",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "course_assignments",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "course_enrolments",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "course_modules",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "course_progress",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "courses",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "departments",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "email_outbox",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "email_templates",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "embed_allowed_domains",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "enrolments",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "equipment_assessments",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "equipment_submissions",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "equipment_templates",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "equipment_update_requests",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "issue_reports",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "job_descriptions",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "learner_documents",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "learner_progress",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "module_content_blocks",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "module_progress",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "notifications",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "onsite_checklist_items",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "onsite_checks",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "onsite_notes",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "onsite_requirement_responses",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "onsite_requirements",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "onsite_signoffs",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "profiles",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "quiz_answers",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "quiz_attempts",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "quiz_options",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "quiz_questions",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "quizzes",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "release_notes",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "requirement_responses",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "roles",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "sites",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "teams_conversations",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "teams_link_codes",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "teams_links",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "trainee_equipment_responses",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "user_link_codes",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "user_notification_prefs",
+    "table_type": "BASE TABLE"
+  },
+  {
+    "table_name": "user_roles",
+    "table_type": "BASE TABLE"
+  }
+]
