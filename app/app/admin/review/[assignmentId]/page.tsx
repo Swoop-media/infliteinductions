@@ -352,10 +352,10 @@ async function loadAssignmentDetails(assignmentId: string) {
       }));
 
       // Check if this module should include equipment assessment
-      // Show equipment if there are any equipment requirements for this course
-      const includeEquipmentAssessment = equipmentRequirements.length > 0 || 
-                                        module.include_equipment_assessment || 
-                                        module.title?.toLowerCase().includes('equipment');
+      // Only show equipment on modules that are specifically for equipment assessment
+      const includeEquipmentAssessment = module.include_equipment_assessment === true || 
+                                        (module.title?.toLowerCase().includes('equipment') && 
+                                         module.title?.toLowerCase().includes('assessment'));
       
       return {
         module_id: module.id,
@@ -364,7 +364,7 @@ async function loadAssignmentDetails(assignmentId: string) {
         completed: isCompleted,
         quiz_attempts: moduleQuizAttempts,
         onsite_responses: moduleOnsiteResponses,
-        equipment_requirements: includeEquipmentAssessment ? equipmentRequirements : undefined,
+        equipment_requirements: includeEquipmentAssessment && equipmentRequirements.length > 0 ? equipmentRequirements : undefined,
         has_onsite_requirements: moduleOnsiteResponses.length > 0,
         include_equipment_assessment: includeEquipmentAssessment,
         documents: moduleDocuments
