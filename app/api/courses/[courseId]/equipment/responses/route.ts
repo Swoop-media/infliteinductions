@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseRoute } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 // GET - Load trainee equipment responses for a course
 export async function GET(
@@ -18,25 +19,39 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // If trainee_id is provided, verify user is authorized assessor
+    // If trainee_id is provided, verify user is authorized
     if (traineeId) {
-      // Check if current user is a trainer/assessor for this course
-      const { data: enrolment, error: enrolmentError } = await supabase
-        .from('course_assignments')
+      // Check if current user has admin role or is a trainer/assessor for this course
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
         .select('role')
-        .eq('course_id', courseId)
-        .eq('user_id', user.id)
-        .in('role', ['trainer', 'assessor', 'onsite_trainer', 'onsite_assessor'])
+        .eq('id', user.id)
         .single();
 
-      if (enrolmentError || !enrolment) {
-        return NextResponse.json({ error: 'Unauthorized - not an assessor for this course' }, { status: 403 });
+      const isAdmin = profile?.role === 'Admin' || profile?.role === 'Trainers and Assessors' || profile?.role === 'Authorization Approver';
+
+      if (!isAdmin) {
+        // If not admin, check if they're a trainer/assessor for this course
+        const { data: enrolment, error: enrolmentError } = await supabase
+          .from('course_assignments')
+          .select('role')
+          .eq('course_id', courseId)
+          .eq('user_id', user.id)
+          .in('role', ['trainer', 'assessor', 'onsite_trainer', 'onsite_assessor'])
+          .single();
+
+        if (enrolmentError || !enrolment) {
+          return NextResponse.json({ error: 'Unauthorized - not an admin or assessor for this course' }, { status: 403 });
+        }
       }
     }
 
     // Get trainee responses - fallback to empty array if table doesn't exist
     try {
-      let query = supabase
+      // Use admin client when fetching for another user (admin review)
+      const supabaseClient = traineeId ? supabaseAdmin() : supabase;
+      
+      let query = supabaseClient
         .from('trainee_equipment_responses')
         .select('*')
         .eq('course_id', courseId);

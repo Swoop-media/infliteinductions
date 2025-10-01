@@ -134,7 +134,9 @@ export default function ExpandableCourseDetails({ courses }: Props) {
       // Fetch trainee responses if userId provided
       let responses = {};
       if (userId) {
-        const responsesResponse = await fetch(`/api/courses/${courseId}/equipment/responses?traineeId=${userId}`);
+        const responsesUrl = `/api/courses/${courseId}/equipment/responses?trainee_id=${userId}`;
+        const responsesResponse = await fetch(responsesUrl);
+        
         if (responsesResponse.ok) {
           const responseData = await responsesResponse.json();
           // Create a map of equipment_id to response
