@@ -276,6 +276,10 @@ async function loadAssignmentDetails(assignmentId: string) {
         uploaded_at: d.created_at
       }));
 
+      // Check if this module should include equipment assessment
+      const includeEquipmentAssessment = module.include_equipment_assessment || 
+                                        module.title?.toLowerCase().includes('equipment');
+      
       return {
         module_id: module.id,
         module_type: module.type,
@@ -284,10 +288,16 @@ async function loadAssignmentDetails(assignmentId: string) {
         quiz_attempts: moduleQuizAttempts,
         onsite_responses: moduleOnsiteResponses,
         has_onsite_requirements: moduleOnsiteResponses.length > 0,
+        include_equipment_assessment: includeEquipmentAssessment,
         documents: moduleDocuments
       };
     });
 
+    console.log('Course assignment data:', {
+      course_id: ac.course_id,
+      assignment_id: assignment.id,
+      assignment_user_id: assignment.user_id
+    });
     return {
       course_id: ac.course_id,
       course_title: courseData.title,

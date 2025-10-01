@@ -12,6 +12,12 @@ export async function GET(
     const supabase = await createSupabaseRoute();
     const { searchParams } = new URL(request.url);
     const traineeId = searchParams.get('trainee_id');
+    
+    console.log('Equipment responses API called:', {
+      courseId,
+      traineeId,
+      url: request.url
+    });
 
     // Get current user
     const { data: { user }, error: authError } = await supabase.auth.getUser();

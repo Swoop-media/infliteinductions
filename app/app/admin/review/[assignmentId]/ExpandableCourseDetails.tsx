@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { ChevronDown, ChevronUp, CheckCircle, Circle, FileText, User, AlertCircle } from "lucide-react";
 
 // Deterministic date formatting to prevent hydration mismatches
@@ -94,6 +94,15 @@ export default function ExpandableCourseDetails({ courses }: Props) {
   const [equipmentData, setEquipmentData] = useState<Map<string, any>>(new Map());
   const [loadingEquipment, setLoadingEquipment] = useState<Set<string>>(new Set());
 
+  // Debug: Check what assignment data we're receiving
+  React.useEffect(() => {
+    console.log('ExpandableCourseDetails - courses received:', courses.map(c => ({
+      course_id: c.course_id,
+      assignment: c.assignment,
+      assignment_user_id: c.assignment?.user_id
+    })));
+  }, [courses]);
+
   const toggleCourse = (courseId: string) => {
     const newExpanded = new Set(expandedCourses);
     if (newExpanded.has(courseId)) {
@@ -105,6 +114,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
   };
   
   const toggleModule = async (moduleId: string, courseId: string, userId?: string) => {
+    console.log('toggleModule - userId received:', userId);
     const newExpanded = new Set(expandedModules);
     if (newExpanded.has(moduleId)) {
       newExpanded.delete(moduleId);
@@ -113,6 +123,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
       // Load equipment data if not already loaded
       const equipmentKey = `${courseId}_${moduleId}`;
       if (!equipmentData.has(equipmentKey) && !loadingEquipment.has(equipmentKey)) {
+        console.log('Fetching equipment data with userId:', userId);
         await fetchEquipmentData(courseId, moduleId, userId);
       }
     }
@@ -246,6 +257,12 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                 module.include_equipment_assessment) {
                               // Pass the user_id from the assignment
                               const userId = course.assignment?.user_id;
+                              console.log('Equipment module clicked:', {
+                                courseId: course.course_id,
+                                moduleId: module.module_id,
+                                assignment: course.assignment,
+                                userId: userId
+                              });
                               toggleModule(module.module_id, course.course_id, userId);
                             }
                           }}
