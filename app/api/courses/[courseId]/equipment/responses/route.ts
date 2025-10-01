@@ -32,7 +32,7 @@ export async function GET(
         .from('profiles')
         .select('role')
         .eq('id', user.id)
-        .single();
+        .single() as { data: { role: string } | null, error: any };
 
       const isAdmin = profile?.role === 'Admin' || profile?.role === 'Trainers and Assessors' || profile?.role === 'Authorization Approver';
 
