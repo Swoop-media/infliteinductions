@@ -143,7 +143,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
       }
       
       // Fetch trainee responses if userId provided
-      let responses = {};
+      let responses: Record<string, any> = {};
       if (userId) {
         const responsesUrl = `/api/courses/${courseId}/equipment/responses?trainee_id=${userId}`;
         const responsesResponse = await fetch(responsesUrl);
