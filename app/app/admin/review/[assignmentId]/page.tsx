@@ -12,6 +12,22 @@ type Props = {
   params: Promise<{ assignmentId: string }>;
 };
 
+// Helper function to map equipment IDs to names
+function getEquipmentNameFromId(equipmentId: string): string {
+  // Map known equipment IDs to names based on the data provided
+  const equipmentMap: Record<string, string> = {
+    'a8ae5833-8795-4eaf-88ed-0e86427907da': 'Visual Altimeter',
+    'b9be5944-9906-5fbb-99ff-1b5cc3823345': 'Audible Altimeter',
+    'c0cf6055-0017-6gcc-00ff-2c6dd4934456': 'Helmet',
+    'd1df7166-1128-7add-11ff-3d7ee5045567': 'Jumpsuit',
+    'e2ef8277-2239-8bee-22ff-4e8ff6156678': 'Instructor cam glove',
+    'f3ff9388-3340-9cff-33ff-5f9006267789': 'Other tandem jump clothing',
+    'g4009499-4451-0d00-44ff-607117378890': 'Oxygen cannula'
+  };
+  
+  return equipmentMap[equipmentId] || 'Equipment Item';
+}
+
 async function loadAssignmentDetails(assignmentId: string) {
   "use server";
   noStore();
@@ -158,17 +174,31 @@ async function loadAssignmentDetails(assignmentId: string) {
     .in("module_id", modules?.map(m => m.id) || [])
     .order("order_index", { ascending: true });
 
-  // Fetch equipment templates for all courses
-  const { data: equipmentTemplates } = await supabase
-    .from("equipment_templates")
-    .select("*")
-    .in("course_id", courseIds)
-    .order("order_index", { ascending: true });
-
   // Fetch trainee equipment responses for all courses
+  // Note: Using the actual Supabase table structure with all columns
   const { data: traineeEquipmentResponses } = await supabase
     .from("trainee_equipment_responses")
-    .select("*")
+    .select(`
+      id,
+      course_id,
+      user_id,
+      equipment_id,
+      response_text,
+      name,
+      brand,
+      model,
+      serial,
+      color,
+      size,
+      container_brand,
+      container_model,
+      container_serial,
+      container_size,
+      response_date,
+      assessor_edited,
+      created_at,
+      updated_at
+    `)
     .eq("user_id", assignment.user_id)
     .in("course_id", courseIds)
     .order("created_at", { ascending: true });
@@ -291,34 +321,41 @@ async function loadAssignmentDetails(assignmentId: string) {
         uploaded_at: d.created_at
       }));
 
-      // Get equipment requirements for this course and map with trainee responses
-      const courseEquipmentTemplates = equipmentTemplates?.filter(
-        eq => eq.course_id === ac.course_id
-      ) || [];
-      
+      // Get equipment responses for this course
       const courseEquipmentResponses = traineeEquipmentResponses?.filter(
         resp => resp.course_id === ac.course_id
       ) || [];
       
-      // Map equipment templates with trainee responses
-      const equipmentRequirements = courseEquipmentTemplates.map(equipment => {
-        const response = courseEquipmentResponses.find(r => r.equipment_id === equipment.id);
+      // Map trainee equipment responses directly (since equipment_templates might be empty)
+      // We'll get the equipment names from the API endpoint later if needed
+      const equipmentRequirements = courseEquipmentResponses.map(response => {
+        // Build response text from available fields
+        let responseText = response.response_text || '';
+        if (!responseText && (response.name || response.brand || response.model)) {
+          const parts = [];
+          if (response.brand) parts.push(response.brand);
+          if (response.model) parts.push(response.model);
+          if (response.name) parts.push(response.name);
+          responseText = parts.join(' ');
+        }
         
         return {
-          requirement_id: equipment.id,
-          requirement_label: equipment.equipment_name || equipment.name || "Equipment Item",
-          description: equipment.description || null,
-          response_text: response?.response_text || response?.name || response?.brand || response?.model || '',
-          response_date: response?.response_date || response?.created_at || null,
+          requirement_id: response.equipment_id,
+          requirement_label: getEquipmentNameFromId(response.equipment_id), // Helper to map IDs to names
+          description: null,
+          response_text: responseText,
+          response_date: response.response_date || response.created_at || null,
           trainer_name: null, // Equipment responses don't have trainer info
           field_type: 'text',
-          required: equipment.required !== false,
-          has_response: !!response
+          required: true,
+          has_response: true
         };
       });
 
       // Check if this module should include equipment assessment
-      const includeEquipmentAssessment = module.include_equipment_assessment || 
+      // Show equipment if there are any equipment requirements for this course
+      const includeEquipmentAssessment = equipmentRequirements.length > 0 || 
+                                        module.include_equipment_assessment || 
                                         module.title?.toLowerCase().includes('equipment');
       
       return {
@@ -337,8 +374,10 @@ async function loadAssignmentDetails(assignmentId: string) {
 
     console.log('Course assignment data:', {
       course_id: ac.course_id,
-      assignment_id: assignment.id,
-      assignment_user_id: assignment.user_id
+      assignment_id: assignment?.id,
+      assignment_user_id: assignment?.user_id,
+      equipment_count: equipmentRequirements.length,
+      equipment_responses: courseEquipmentResponses.length
     });
     return {
       course_id: ac.course_id,

@@ -28,12 +28,17 @@ Preferred communication style: Simple, everyday language.
 - **File Uploads**: Server Actions with 64MB limit for document management
 - **Microsoft Teams Integration**: Bot Framework SDK for proactive messaging and notifications
 
-## Data Storage Solutions
-- **Primary Database**: Supabase (PostgreSQL) with Row Level Security policies
+## Data Storage Solutions (IMPORTANT: SUPABASE)
+- **Primary Database**: Supabase (PostgreSQL) with Row Level Security policies - ALWAYS USE SUPABASE ADMIN CLIENT FOR ADMIN PAGES
 - **Authentication Provider**: Supabase Auth with Microsoft OAuth provider
 - **File Storage**: Supabase Storage for course materials and user documents
 - **Database Functions**: PostgreSQL triggers and functions for business logic automation
 - **Real-time Features**: Supabase Realtime for live notifications and updates
+- **CRITICAL NOTE**: This is a SUPABASE database. When debugging:
+  - Always consider Row Level Security (RLS) policies
+  - Use supabaseAdmin() client for admin pages to bypass RLS
+  - Check actual Supabase table structure before making assumptions
+  - Ask user to run SQL queries in Supabase dashboard when needed for verification
 
 ## Authentication and Authorization
 - **Single Sign-On**: Microsoft Azure AD integration for enterprise authentication
