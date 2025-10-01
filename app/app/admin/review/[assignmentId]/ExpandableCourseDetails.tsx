@@ -104,7 +104,7 @@ export default function ExpandableCourseDetails({ courses }: Props) {
     setExpandedCourses(newExpanded);
   };
   
-  const toggleModule = async (moduleId: string, courseId: string) => {
+  const toggleModule = async (moduleId: string, courseId: string, userId?: string) => {
     const newExpanded = new Set(expandedModules);
     if (newExpanded.has(moduleId)) {
       newExpanded.delete(moduleId);
@@ -113,22 +113,44 @@ export default function ExpandableCourseDetails({ courses }: Props) {
       // Load equipment data if not already loaded
       const equipmentKey = `${courseId}_${moduleId}`;
       if (!equipmentData.has(equipmentKey) && !loadingEquipment.has(equipmentKey)) {
-        await fetchEquipmentData(courseId, moduleId);
+        await fetchEquipmentData(courseId, moduleId, userId);
       }
     }
     setExpandedModules(newExpanded);
   };
   
-  const fetchEquipmentData = async (courseId: string, moduleId: string) => {
+  const fetchEquipmentData = async (courseId: string, moduleId: string, userId?: string) => {
     const equipmentKey = `${courseId}_${moduleId}`;
     setLoadingEquipment(prev => new Set(prev).add(equipmentKey));
     
     try {
-      const response = await fetch(`/api/courses/${courseId}/equipment`);
-      if (response.ok) {
-        const data = await response.json();
-        setEquipmentData(prev => new Map(prev).set(equipmentKey, data));
+      // Fetch equipment templates
+      const equipmentResponse = await fetch(`/api/courses/${courseId}/equipment`);
+      let equipmentTemplates = [];
+      if (equipmentResponse.ok) {
+        equipmentTemplates = await equipmentResponse.json();
       }
+      
+      // Fetch trainee responses if userId provided
+      let responses = {};
+      if (userId) {
+        const responsesResponse = await fetch(`/api/courses/${courseId}/equipment/responses?traineeId=${userId}`);
+        if (responsesResponse.ok) {
+          const responseData = await responsesResponse.json();
+          // Create a map of equipment_id to response
+          responseData.forEach((resp: any) => {
+            responses[resp.equipment_id] = resp;
+          });
+        }
+      }
+      
+      // Combine equipment templates with responses
+      const combinedData = equipmentTemplates.map((equipment: any) => ({
+        ...equipment,
+        response: responses[equipment.id] || null
+      }));
+      
+      setEquipmentData(prev => new Map(prev).set(equipmentKey, combinedData));
     } catch (error) {
       console.error('Failed to fetch equipment:', error);
     } finally {
@@ -220,7 +242,9 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                           onClick={() => {
                             if (module.module_title?.toLowerCase().includes('equipment') || 
                                 module.include_equipment_assessment) {
-                              toggleModule(module.module_id, course.course_id);
+                              // Pass the user_id from the assignment
+                              const userId = course.assignment?.user_id;
+                              toggleModule(module.module_id, course.course_id, userId);
                             }
                           }}
                         >
@@ -264,7 +288,11 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                     {equipmentData.get(`${course.course_id}_${module.module_id}`).map((equipment: any) => (
                                       <div 
                                         key={equipment.id} 
-                                        className="rounded-lg p-3 border bg-white border-gray-200"
+                                        className={`rounded-lg p-3 border ${
+                                          equipment.response 
+                                            ? 'bg-green-50 border-green-200' 
+                                            : 'bg-white border-gray-200'
+                                        }`}
                                       >
                                         <div className="space-y-1">
                                           <div className="flex items-start justify-between">
@@ -277,10 +305,31 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                                                 <p className="text-xs text-gray-500 mt-0.5">{equipment.description}</p>
                                               )}
                                             </div>
+                                            {equipment.response && (
+                                              <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                            )}
                                           </div>
-                                          <div className="text-sm text-gray-500 italic mt-1">
-                                            Equipment requirement
-                                          </div>
+                                          {/* Show trainee's response */}
+                                          {equipment.response ? (
+                                            <>
+                                              {equipment.response.response_text && (
+                                                <div className="bg-white p-2 rounded border border-gray-100 mt-2">
+                                                  <span className="text-sm text-gray-800">
+                                                    {equipment.response.response_text}
+                                                  </span>
+                                                </div>
+                                              )}
+                                              {equipment.response.response_date && (
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                  Submitted: {formatDateSafe(equipment.response.response_date)}
+                                                </div>
+                                              )}
+                                            </>
+                                          ) : (
+                                            <div className="text-sm text-gray-500 italic mt-1">
+                                              Not yet completed
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
                                     ))}
