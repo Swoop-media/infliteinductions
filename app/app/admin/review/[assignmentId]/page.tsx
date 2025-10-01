@@ -158,6 +158,21 @@ async function loadAssignmentDetails(assignmentId: string) {
     .in("module_id", modules?.map(m => m.id) || [])
     .order("order_index", { ascending: true });
 
+  // Fetch equipment templates for all courses
+  const { data: equipmentTemplates } = await supabase
+    .from("equipment_templates")
+    .select("*")
+    .in("course_id", courseIds)
+    .order("order_index", { ascending: true });
+
+  // Fetch trainee equipment responses for all courses
+  const { data: traineeEquipmentResponses } = await supabase
+    .from("trainee_equipment_responses")
+    .select("*")
+    .eq("user_id", assignment.user_id)
+    .in("course_id", courseIds)
+    .order("created_at", { ascending: true });
+
   // Get unique trainer IDs from requirement responses
   const trainerIds = [...new Set(requirementResponses?.map(rr => rr.trainer_id).filter(Boolean) || [])];
   
@@ -276,6 +291,32 @@ async function loadAssignmentDetails(assignmentId: string) {
         uploaded_at: d.created_at
       }));
 
+      // Get equipment requirements for this course and map with trainee responses
+      const courseEquipmentTemplates = equipmentTemplates?.filter(
+        eq => eq.course_id === ac.course_id
+      ) || [];
+      
+      const courseEquipmentResponses = traineeEquipmentResponses?.filter(
+        resp => resp.course_id === ac.course_id
+      ) || [];
+      
+      // Map equipment templates with trainee responses
+      const equipmentRequirements = courseEquipmentTemplates.map(equipment => {
+        const response = courseEquipmentResponses.find(r => r.equipment_id === equipment.id);
+        
+        return {
+          requirement_id: equipment.id,
+          requirement_label: equipment.equipment_name || equipment.name || "Equipment Item",
+          description: equipment.description || null,
+          response_text: response?.response_text || response?.name || response?.brand || response?.model || '',
+          response_date: response?.response_date || response?.created_at || null,
+          trainer_name: null, // Equipment responses don't have trainer info
+          field_type: 'text',
+          required: equipment.required !== false,
+          has_response: !!response
+        };
+      });
+
       // Check if this module should include equipment assessment
       const includeEquipmentAssessment = module.include_equipment_assessment || 
                                         module.title?.toLowerCase().includes('equipment');
@@ -287,6 +328,7 @@ async function loadAssignmentDetails(assignmentId: string) {
         completed: isCompleted,
         quiz_attempts: moduleQuizAttempts,
         onsite_responses: moduleOnsiteResponses,
+        equipment_requirements: includeEquipmentAssessment ? equipmentRequirements : undefined,
         has_onsite_requirements: moduleOnsiteResponses.length > 0,
         include_equipment_assessment: includeEquipmentAssessment,
         documents: moduleDocuments
