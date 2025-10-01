@@ -90,6 +90,9 @@ interface Props {
 
 export default function ExpandableCourseDetails({ courses }: Props) {
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const [equipmentData, setEquipmentData] = useState<Map<string, any>>(new Map());
+  const [loadingEquipment, setLoadingEquipment] = useState<Set<string>>(new Set());
 
   const toggleCourse = (courseId: string) => {
     const newExpanded = new Set(expandedCourses);
@@ -99,6 +102,42 @@ export default function ExpandableCourseDetails({ courses }: Props) {
       newExpanded.add(courseId);
     }
     setExpandedCourses(newExpanded);
+  };
+  
+  const toggleModule = async (moduleId: string, courseId: string) => {
+    const newExpanded = new Set(expandedModules);
+    if (newExpanded.has(moduleId)) {
+      newExpanded.delete(moduleId);
+    } else {
+      newExpanded.add(moduleId);
+      // Load equipment data if not already loaded
+      const equipmentKey = `${courseId}_${moduleId}`;
+      if (!equipmentData.has(equipmentKey) && !loadingEquipment.has(equipmentKey)) {
+        await fetchEquipmentData(courseId, moduleId);
+      }
+    }
+    setExpandedModules(newExpanded);
+  };
+  
+  const fetchEquipmentData = async (courseId: string, moduleId: string) => {
+    const equipmentKey = `${courseId}_${moduleId}`;
+    setLoadingEquipment(prev => new Set(prev).add(equipmentKey));
+    
+    try {
+      const response = await fetch(`/api/courses/${courseId}/equipment`);
+      if (response.ok) {
+        const data = await response.json();
+        setEquipmentData(prev => new Map(prev).set(equipmentKey, data));
+      }
+    } catch (error) {
+      console.error('Failed to fetch equipment:', error);
+    } finally {
+      setLoadingEquipment(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(equipmentKey);
+        return newSet;
+      });
+    }
   };
 
   const formatModuleType = (type: string) => {
@@ -172,8 +211,19 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                   {course.modules && course.modules.length > 0 ? (
                     course.modules.map((module) => (
                       <div key={module.module_id} className="bg-white rounded-lg p-4 border">
-                        {/* Module Header */}
-                        <div className="flex items-start justify-between mb-3">
+                        {/* Module Header - Make clickable for modules with equipment */}
+                        <div 
+                          className={`flex items-start justify-between mb-3 ${
+                            (module.module_title?.toLowerCase().includes('equipment') || 
+                             module.include_equipment_assessment) ? 'cursor-pointer hover:bg-gray-50 -m-4 p-4 rounded-lg' : ''
+                          }`}
+                          onClick={() => {
+                            if (module.module_title?.toLowerCase().includes('equipment') || 
+                                module.include_equipment_assessment) {
+                              toggleModule(module.module_id, course.course_id);
+                            }
+                          }}
+                        >
                           <div className="flex items-center gap-2">
                             {module.completed ? (
                               <CheckCircle className="w-5 h-5 text-green-600" />
@@ -185,12 +235,64 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                               <p className="text-sm text-gray-600">{formatModuleType(module.module_type)}</p>
                             </div>
                           </div>
+                          {/* Show expand/collapse icon for equipment modules */}
+                          {(module.module_title?.toLowerCase().includes('equipment') || 
+                            module.include_equipment_assessment) && (
+                            expandedModules.has(module.module_id) ? (
+                              <ChevronUp className="w-4 h-4 text-gray-500" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-gray-500" />
+                            )
+                          )}
                         </div>
 
                         {/* Module Content Based on Type */}
                         <div className="ml-7 space-y-2">
+                          {/* Show equipment items if module is expanded and has equipment */}
+                          {expandedModules.has(module.module_id) && 
+                           (module.module_title?.toLowerCase().includes('equipment') || 
+                            module.include_equipment_assessment) && (
+                            <div className="space-y-2 mt-4">
+                              {loadingEquipment.has(`${course.course_id}_${module.module_id}`) ? (
+                                <div className="text-sm text-gray-500 italic">Loading equipment items...</div>
+                              ) : equipmentData.has(`${course.course_id}_${module.module_id}`) ? (
+                                <div className="space-y-2 border rounded-lg p-3 bg-blue-50">
+                                  <p className="text-sm font-medium text-blue-900">
+                                    Equipment Assessment Items:
+                                  </p>
+                                  <div className="space-y-2">
+                                    {equipmentData.get(`${course.course_id}_${module.module_id}`).map((equipment: any) => (
+                                      <div 
+                                        key={equipment.id} 
+                                        className="rounded-lg p-3 border bg-white border-gray-200"
+                                      >
+                                        <div className="space-y-1">
+                                          <div className="flex items-start justify-between">
+                                            <div>
+                                              <span className="text-sm font-semibold text-gray-700">
+                                                {equipment.equipment_name}
+                                                {equipment.required && <span className="text-red-500 ml-1">*</span>}
+                                              </span>
+                                              {equipment.description && (
+                                                <p className="text-xs text-gray-500 mt-0.5">{equipment.description}</p>
+                                              )}
+                                            </div>
+                                          </div>
+                                          <div className="text-sm text-gray-500 italic mt-1">
+                                            Equipment requirement
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          )}
+                          
                           {/* Digital Training - Show completion status */}
-                          {module.module_type === "digital_training" && module.completed && (
+                          {module.module_type === "digital_training" && module.completed && 
+                           !module.module_title?.toLowerCase().includes('equipment') && (
                             <div className="text-sm text-gray-600">
                               <span className="text-green-600">✓</span> Module completed - All pages viewed
                             </div>

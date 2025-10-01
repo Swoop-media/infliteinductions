@@ -276,13 +276,6 @@ export async function GET(request: NextRequest) {
     const modulesWithDetails = modules.map(module => {
       const isCompleted = progressMap.has(module.id);
       
-      console.log('Processing module:', {
-        id: module.id,
-        title: module.title,
-        type: module.type,
-        include_equipment_assessment: module.include_equipment_assessment
-      });
-      
       // Get quiz attempts for this module
       const moduleQuizAttempts = quizAttempts?.filter(
         qa => (qa.quizzes as any)?.module_id === module.id
@@ -319,8 +312,6 @@ export async function GET(request: NextRequest) {
       
       // Check if this module has equipment assessment enabled (for onsite assessment modules)
       if (module.include_equipment_assessment && equipmentTemplates) {
-        console.log('Module has equipment assessment enabled:', module.title);
-        console.log('Equipment templates found:', equipmentTemplates.length);
         equipmentTemplates.forEach(equipment => {
           const response = equipmentResponseMap.get(equipment.id);
           equipmentFormResponses.push({
@@ -342,13 +333,8 @@ export async function GET(request: NextRequest) {
         block => block.module_id === module.id
       ) || [];
       
-      if (moduleEquipmentBlocks.length > 0) {
-        console.log('Found equipment blocks for module:', module.title, moduleEquipmentBlocks.length);
-      }
-      
       moduleEquipmentBlocks.forEach(block => {
         if (block.data?.equipment_templates && Array.isArray(block.data.equipment_templates)) {
-          console.log('Processing equipment templates from block:', block.data.equipment_templates.length);
           block.data.equipment_templates.forEach(equipment => {
             const response = equipmentResponseMap.get(equipment.id);
             // Avoid duplicates if already added from equipment_templates
