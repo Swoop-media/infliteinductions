@@ -1,0 +1,72 @@
+[
+  {
+    "id": "31fdaf8b-b95f-4c4f-9a82-8dba416250fc",
+    "title": "Onsite 25 jump check assessment",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451"
+  },
+  {
+    "id": "a0cdbc59-eb34-427f-905c-2f34c7caa218",
+    "title": "Trainee to perform a full load harnessing and group briefing",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b"
+  },
+  {
+    "id": "8d35ba59-bf35-4de8-a3ac-d8b7a6ddde1d",
+    "title": "Sigma assessment pack",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451"
+  },
+  {
+    "id": "1abfee81-e23e-410a-8546-1637db6837e1",
+    "title": "Oxygen use assessment",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "course_id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346"
+  },
+  {
+    "id": "6fc0726c-e4b0-45e8-bf9e-bf4275767f17",
+    "title": "Drop Pilot Bailout Training and Competency",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "course_id": "012fdaa6-9999-4b50-9217-4d81f6bd19e1"
+  },
+  {
+    "id": "e0b29e99-3b7a-436d-9f6e-6be9177942b4",
+    "title": "Supervision of GPU start",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "course_id": "a128e2fe-4e62-4dd8-b047-623fa6cc0f29"
+  },
+  {
+    "id": "e842ebc1-9fed-46cf-b81d-79a9b4aff7b4",
+    "title": "Driver assessment",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "course_id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e"
+  },
+  {
+    "id": "7c4890e5-88f6-47cc-8dd9-4ab276bb798c",
+    "title": "Tandem rules, responsibilities and documents assesment",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "course_id": "96191cc2-6519-4665-b1d5-e08707a9139c"
+  },
+  {
+    "id": "c209326d-9fca-4c5f-926a-397a2566838f",
+    "title": "Intro To Type",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "course_id": "15400a2c-8b6a-4112-99bc-fd01782d8165"
+  },
+  {
+    "id": "079c9fbc-3ce1-43c2-8812-7c973154f966",
+    "title": "Base Pilot Authorisation",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "course_id": "a128e2fe-4e62-4dd8-b047-623fa6cc0f29"
+  }
+]

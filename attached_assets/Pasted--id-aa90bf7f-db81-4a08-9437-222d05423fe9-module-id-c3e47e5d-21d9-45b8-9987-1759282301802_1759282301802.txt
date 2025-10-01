@@ -1,0 +1,62 @@
+[
+  {
+    "id": "aa90bf7f-db81-4a08-9437-222d05423fe9",
+    "module_id": "c3e47e5d-21d9-45b8-9987-4ae92c663545",
+    "role": "onsite_trainer",
+    "label": "Daily preflight procedures trained",
+    "field_type": "checkbox",
+    "options": [],
+    "required": true,
+    "order_index": 0,
+    "help_text": null,
+    "created_at": "2025-09-17 20:59:10.369168+00"
+  },
+  {
+    "id": "c5f92ecf-db7c-415c-9513-8f55b07e9057",
+    "module_id": "e0b29e99-3b7a-436d-9f6e-6be9177942b4",
+    "role": "onsite_trainer",
+    "label": "Candidate demonstrates competency during a supervised GPU start",
+    "field_type": "checkbox",
+    "options": [],
+    "required": true,
+    "order_index": 0,
+    "help_text": null,
+    "created_at": "2025-09-10 04:57:24.622984+00"
+  },
+  {
+    "id": "e91393b6-5225-4946-8eb9-34a66be50985",
+    "module_id": "9c9ca686-7aad-4908-9f8c-60183262d8bc",
+    "role": "onsite_trainer",
+    "label": "check trainee understands the process offinding last 25 jump check and items to be monitored",
+    "field_type": "checkbox",
+    "options": [],
+    "required": true,
+    "order_index": 0,
+    "help_text": null,
+    "created_at": "2025-08-20 05:07:47.053901+00"
+  },
+  {
+    "id": "0029237e-b5cb-43f3-b6f6-94aa7c60c14f",
+    "module_id": "31fdaf8b-b95f-4c4f-9a82-8dba416250fc",
+    "role": "onsite_assessor",
+    "label": "trainee to perform a full 25 jump check from beggining to end",
+    "field_type": "date",
+    "options": [],
+    "required": true,
+    "order_index": 0,
+    "help_text": null,
+    "created_at": "2025-08-20 05:27:54.172893+00"
+  },
+  {
+    "id": "8d3ca45c-08b3-4df7-a955-f004e97564ab",
+    "module_id": "9c9ca686-7aad-4908-9f8c-60183262d8bc",
+    "role": "onsite_trainer",
+    "label": "trainer to perform each item on a sigma 25 jump check explaing what and why they are checking",
+    "field_type": "checkbox",
+    "options": [],
+    "required": true,
+    "order_index": 2,
+    "help_text": null,
+    "created_at": "2025-08-20 05:26:09.392795+00"
+  }
+]

@@ -1,0 +1,162 @@
+[
+  {
+    "module_id": "00d27092-3afe-4625-825d-fd66871cde3f",
+    "module_title": "INFLITE General induction",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "0107fccc-1792-4f39-a1d6-5a11fff8b2f8",
+    "module_title": "NZ CPL-A",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "017ec867-13b9-4cab-9eea-d46d9937e997",
+    "module_title": "Esap, Operations area and dangerous goods",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "01898991-8e60-4c31-afd8-fd5390932b6f",
+    "module_title": "Notable Weather Considerations",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "01f6122b-5b78-4cdd-a750-0ecc35469ad0",
+    "module_title": "Dangerous good training",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "051b87bc-a23b-4dbe-85e0-5ddf7c845072",
+    "module_title": "Resident Operators",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "06d2a548-d0ff-4c9f-b84d-cd39922f94f0",
+    "module_title": "How to latch the front seatbelt on an AS350/AS355",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "079c9fbc-3ce1-43c2-8812-7c973154f966",
+    "module_title": "Base Pilot Authorisation",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "08c457b0-faea-4ba1-8a74-212d514e7f8a",
+    "module_title": "Videos for creators",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "09111309-89b8-4d01-95bd-6bd6bbd73f99",
+    "module_title": "Duties and responsibilities",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "0c2e5eb4-b918-4902-aef6-297a544020bc",
+    "module_title": "Approval",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "0d4f6f35-cd65-4171-8a7b-b0e81ecd2ac1",
+    "module_title": "pla",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "0dc8ad4f-4d74-41d9-bfd3-0af3aa1319e6",
+    "module_title": "Loading The Plane",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "0f0d92f1-c463-48c2-8464-eae44b25772a",
+    "module_title": "GPU Standard Operating Procedure",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "10628f82-5eed-41a1-b3c1-b05299cf8fba",
+    "module_title": "Approval",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "1081518e-e0c3-4a08-917a-7328ee9ff137",
+    "module_title": "Hazards",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "1225de75-1925-4093-a254-bfd88377af3d",
+    "module_title": "Media Options",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "12f43e8a-7789-4292-9e50-251e50284667",
+    "module_title": "Most recent BFR/OCA",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "136e7118-0e77-4dcc-9203-2724eccc04ef",
+    "module_title": "INFLITE high altitude presentation",
+    "type": "digital_training",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  },
+  {
+    "module_id": "141087ad-5227-444d-8b95-e6b57b18509e",
+    "module_title": "Differences Training",
+    "type": "onsite_assessment",
+    "include_equipment_assessment": false,
+    "equipment_template_count": 0,
+    "equipment_block_count": 0
+  }
+]
