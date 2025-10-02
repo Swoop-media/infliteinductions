@@ -79,15 +79,39 @@ async function loadMyDocs() {
     let url: string | null = null;
     if (filePath) {
       // Determine which bucket to use based on the file path
-      // Learner documents are stored with user ID as the first part of the path
-      const isLearnerDocument = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//.test(filePath);
-      const bucketName = isLearnerDocument ? 'learner-documents' : 'course-files';
+      // Files starting with UUID pattern are in learner-documents bucket
+      // Files starting with 'learner-documents/' are in course-files bucket
+      let bucketName = 'course-files'; // Default to course-files
       
-      const { data: signed } = await supabase
+      // Check if path starts with UUID pattern (user ID)
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//.test(filePath)) {
+        bucketName = 'learner-documents';
+      }
+      // Also check for paths that don't start with 'learner-documents/' or other known prefixes
+      // These might also be in learner-documents bucket
+      else if (!filePath.startsWith('learner-documents/') && 
+               !filePath.startsWith('module-') && 
+               !filePath.startsWith('course-') &&
+               !filePath.startsWith('test-')) {
+        // For backward compatibility, check if it might be a learner document
+        bucketName = 'learner-documents';
+      }
+      
+      const { data: signed, error } = await supabase
         .storage
         .from(bucketName)
         .createSignedUrl(filePath, 60 * 60);
-      url = signed?.signedUrl ?? null;
+        
+      if (error && bucketName === 'learner-documents') {
+        // If error with learner-documents, try course-files as fallback
+        const { data: fallbackSigned } = await supabase
+          .storage
+          .from('course-files')
+          .createSignedUrl(filePath, 60 * 60);
+        url = fallbackSigned?.signedUrl ?? null;
+      } else {
+        url = signed?.signedUrl ?? null;
+      }
     }
 
     items.push({
