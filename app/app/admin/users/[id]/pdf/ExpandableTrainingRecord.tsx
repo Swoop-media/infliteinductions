@@ -178,7 +178,7 @@ export default function ExpandableTrainingRecord({ profile, courses, authorizati
             <p><strong>Position:</strong> {profile.job_description || "Not specified"}</p>
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-4">Generated on: {formatDateSafe(new Date().toISOString())} at {formatTimeSafe(new Date().toISOString())}</p>
+        <p className="text-xs text-gray-500 mt-4 no-print">Report generated</p>
       </div>
 
       {/* Print Button */}
