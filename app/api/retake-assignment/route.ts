@@ -17,50 +17,103 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === "course") {
-      // Create a new course assignment for retaking
-      const { data: newAssignment, error: assignmentError } = await adminClient
+      // First check if an assignment already exists
+      const { data: existingAssignment, error: checkError } = await adminClient
         .from("course_assignments")
-        .insert({
-          user_id: user.id,
-          course_id: courseId,
-          role: 'trainee',
-          assignment_status: 'assigned',
-          created_by: user.id,
-          assigned_at: new Date().toISOString(),
-          created_at: new Date().toISOString()
-        })
-        .select()
+        .select("id, assignment_status")
+        .eq("user_id", user.id)
+        .eq("course_id", courseId)
+        .eq("role", 'trainee')
         .single();
 
-      if (assignmentError) {
-        // If unique constraint error, the user already has an active assignment
-        if (assignmentError.code === '23505') {
-          return NextResponse.json({ 
-            error: "An active assignment already exists for this course" 
-          }, { status: 400 });
-        }
-        console.error("Error creating course assignment:", assignmentError);
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows found
+        console.error("Error checking existing assignment:", checkError);
         return NextResponse.json({ 
-          error: "Failed to create new assignment",
-          details: assignmentError.message 
+          error: "Failed to check existing assignment",
+          details: checkError.message 
         }, { status: 500 });
       }
 
-      console.log("Created new course assignment for retake:", newAssignment.id);
+      let assignmentId: string;
+
+      if (existingAssignment) {
+        // If assignment exists and is completed, reset it for retaking
+        if (existingAssignment.assignment_status === 'completed') {
+          // Delete any existing progress records to start fresh
+          const { error: deleteProgressError } = await adminClient
+            .from("assignment_progress")
+            .delete()
+            .eq("assignment_id", existingAssignment.id);
+
+          if (deleteProgressError) {
+            console.error("Error deleting progress records:", deleteProgressError);
+          }
+
+          // Update the existing assignment to reset it
+          const { data: updatedAssignment, error: updateError } = await adminClient
+            .from("course_assignments")
+            .update({
+              assignment_status: 'assigned',
+              completed_at: null,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", existingAssignment.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error("Error updating course assignment:", updateError);
+            return NextResponse.json({ 
+              error: "Failed to reset assignment for retaking",
+              details: updateError.message 
+            }, { status: 500 });
+          }
+
+          console.log("Reset existing course assignment for retake:", updatedAssignment.id);
+          assignmentId = updatedAssignment.id;
+        } else {
+          // Assignment exists but is not completed, cannot retake
+          return NextResponse.json({ 
+            error: "Cannot retake - course is currently in progress" 
+          }, { status: 400 });
+        }
+      } else {
+        // No existing assignment, create a new one
+        const { data: newAssignment, error: createError } = await adminClient
+          .from("course_assignments")
+          .insert({
+            user_id: user.id,
+            course_id: courseId,
+            role: 'trainee',
+            assignment_status: 'assigned',
+            created_by: user.id,
+            assigned_at: new Date().toISOString(),
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error("Error creating course assignment:", createError);
+          return NextResponse.json({ 
+            error: "Failed to create new assignment",
+            details: createError.message 
+          }, { status: 500 });
+        }
+
+        console.log("Created new course assignment for retake:", newAssignment.id);
+        assignmentId = newAssignment.id;
+      }
 
       return NextResponse.json({ 
         success: true,
         type: 'course',
-        assignmentId: newAssignment.id,
+        assignmentId: assignmentId,
         courseId: courseId,
         message: "Course retake assignment created successfully"
       });
 
     } else if (type === "authorization") {
-      // For authorization retake, we need to:
-      // 1. Create a new authorization assignment
-      // 2. Create new course assignments for all courses in the authorization
-      
       // First, get all courses for this authorization
       const { data: authCourses, error: authCoursesError } = await adminClient
         .from("authorisation_courses")
@@ -82,80 +135,153 @@ export async function POST(request: NextRequest) {
         }, { status: 400 });
       }
 
-      // Create new authorization assignment
-      const { data: newAuthAssignment, error: authAssignmentError } = await adminClient
+      // Check if authorization assignment already exists
+      const { data: existingAuthAssignment, error: checkAuthError } = await adminClient
         .from("authorisation_assignments")
-        .insert({
-          user_id: user.id,
-          authorisation_id: authorizationId,
-          role: 'trainee',
-          assignment_status: 'assigned',
-          created_by: user.id,
-          assigned_at: new Date().toISOString(),
-          created_at: new Date().toISOString()
-        })
-        .select()
+        .select("id, assignment_status")
+        .eq("user_id", user.id)
+        .eq("authorisation_id", authorizationId)
+        .eq("role", 'trainee')
         .single();
 
-      if (authAssignmentError) {
-        if (authAssignmentError.code === '23505') {
-          return NextResponse.json({ 
-            error: "An active authorization assignment already exists" 
-          }, { status: 400 });
-        }
-        console.error("Error creating authorization assignment:", authAssignmentError);
+      if (checkAuthError && checkAuthError.code !== 'PGRST116') {
+        console.error("Error checking existing authorization assignment:", checkAuthError);
         return NextResponse.json({ 
-          error: "Failed to create new authorization assignment",
-          details: authAssignmentError.message 
+          error: "Failed to check existing authorization assignment",
+          details: checkAuthError.message 
         }, { status: 500 });
       }
 
-      // Create new course assignments for all courses in the authorization
-      const courseAssignments = authCourses.map(ac => ({
-        user_id: user.id,
-        course_id: ac.course_id,
-        role: 'trainee',
-        assignment_status: 'assigned',
-        created_by: user.id,
-        assigned_at: new Date().toISOString(),
-        created_at: new Date().toISOString()
-      }));
+      let authAssignmentId: string;
 
-      const { data: newCourseAssignments, error: courseAssignmentsError } = await adminClient
-        .from("course_assignments")
-        .insert(courseAssignments)
-        .select();
+      if (existingAuthAssignment) {
+        // If authorization assignment exists and is completed, reset it
+        if (existingAuthAssignment.assignment_status === 'completed') {
+          // Update the existing authorization assignment to reset it
+          const { data: updatedAuthAssignment, error: updateAuthError } = await adminClient
+            .from("authorisation_assignments")
+            .update({
+              assignment_status: 'assigned',
+              completed_at: null,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", existingAuthAssignment.id)
+            .select()
+            .single();
 
-      if (courseAssignmentsError) {
-        // If we fail to create course assignments, rollback the authorization assignment
-        await adminClient
+          if (updateAuthError) {
+            console.error("Error updating authorization assignment:", updateAuthError);
+            return NextResponse.json({ 
+              error: "Failed to reset authorization assignment for retaking",
+              details: updateAuthError.message 
+            }, { status: 500 });
+          }
+
+          console.log("Reset existing authorization assignment for retake:", updatedAuthAssignment.id);
+          authAssignmentId = updatedAuthAssignment.id;
+        } else {
+          // Authorization assignment exists but is not completed
+          return NextResponse.json({ 
+            error: "Cannot retake - authorization is currently in progress" 
+          }, { status: 400 });
+        }
+      } else {
+        // No existing authorization assignment, create a new one
+        const { data: newAuthAssignment, error: createAuthError } = await adminClient
           .from("authorisation_assignments")
-          .delete()
-          .eq("id", newAuthAssignment.id);
+          .insert({
+            user_id: user.id,
+            authorisation_id: authorizationId,
+            role: 'trainee',
+            assignment_status: 'assigned',
+            created_by: user.id,
+            assigned_at: new Date().toISOString(),
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
 
-        console.error("Error creating course assignments for authorization:", courseAssignmentsError);
-        
-        if (courseAssignmentsError.code === '23505') {
+        if (createAuthError) {
+          console.error("Error creating authorization assignment:", createAuthError);
           return NextResponse.json({ 
-            error: "One or more courses already have active assignments" 
-          }, { status: 400 });
+            error: "Failed to create new authorization assignment",
+            details: createAuthError.message 
+          }, { status: 500 });
         }
-        
-        return NextResponse.json({ 
-          error: "Failed to create course assignments for authorization",
-          details: courseAssignmentsError.message 
-        }, { status: 500 });
+
+        console.log("Created new authorization assignment for retake:", newAuthAssignment.id);
+        authAssignmentId = newAuthAssignment.id;
       }
 
-      console.log("Created new authorization assignment for retake:", newAuthAssignment.id);
-      console.log("Created course assignments:", newCourseAssignments.length);
+      // Now handle course assignments - reset or create each one
+      const resetCourseAssignments = [];
+      for (const authCourse of authCourses) {
+        // Check if course assignment exists
+        const { data: existingCourseAssignment, error: checkCourseError } = await adminClient
+          .from("course_assignments")
+          .select("id, assignment_status")
+          .eq("user_id", user.id)
+          .eq("course_id", authCourse.course_id)
+          .eq("role", 'trainee')
+          .single();
+
+        if (checkCourseError && checkCourseError.code !== 'PGRST116') {
+          console.error("Error checking course assignment:", checkCourseError);
+          continue;
+        }
+
+        if (existingCourseAssignment) {
+          // Delete any existing progress records
+          await adminClient
+            .from("assignment_progress")
+            .delete()
+            .eq("assignment_id", existingCourseAssignment.id);
+
+          // Update existing assignment
+          const { data: updated } = await adminClient
+            .from("course_assignments")
+            .update({
+              assignment_status: 'assigned',
+              completed_at: null,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", existingCourseAssignment.id)
+            .select()
+            .single();
+
+          if (updated) {
+            resetCourseAssignments.push(updated);
+          }
+        } else {
+          // Create new course assignment
+          const { data: newCourse } = await adminClient
+            .from("course_assignments")
+            .insert({
+              user_id: user.id,
+              course_id: authCourse.course_id,
+              role: 'trainee',
+              assignment_status: 'assigned',
+              created_by: user.id,
+              assigned_at: new Date().toISOString(),
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
+
+          if (newCourse) {
+            resetCourseAssignments.push(newCourse);
+          }
+        }
+      }
+
+      console.log("Reset/created course assignments:", resetCourseAssignments.length);
 
       return NextResponse.json({ 
         success: true,
         type: 'authorization',
-        assignmentId: newAuthAssignment.id,
+        assignmentId: authAssignmentId,
         authorizationId: authorizationId,
-        courseAssignments: newCourseAssignments,
+        courseAssignments: resetCourseAssignments,
         message: "Authorization retake assignment created successfully"
       });
     } else {
