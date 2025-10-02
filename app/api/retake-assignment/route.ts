@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
           course_id: courseId,
           role: 'trainee',
           assignment_status: 'assigned',
-          assigned_by: user.id,
+          created_by: user.id,
           assigned_at: new Date().toISOString(),
           created_at: new Date().toISOString()
         })
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
           authorisation_id: authorizationId,
           role: 'trainee',
           assignment_status: 'assigned',
-          assigned_by: user.id,
+          created_by: user.id,
           assigned_at: new Date().toISOString(),
           created_at: new Date().toISOString()
         })
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
         course_id: ac.course_id,
         role: 'trainee',
         assignment_status: 'assigned',
-        assigned_by: user.id,
+        created_by: user.id,
         assigned_at: new Date().toISOString(),
         created_at: new Date().toISOString()
       }));
