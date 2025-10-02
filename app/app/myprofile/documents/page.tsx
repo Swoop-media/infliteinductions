@@ -78,9 +78,14 @@ async function loadMyDocs() {
     // Create 1-hour signed URL if we have a path
     let url: string | null = null;
     if (filePath) {
+      // Determine which bucket to use based on the file path
+      // Learner documents are stored with user ID as the first part of the path
+      const isLearnerDocument = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//.test(filePath);
+      const bucketName = isLearnerDocument ? 'learner-documents' : 'course-files';
+      
       const { data: signed } = await supabase
         .storage
-        .from("course-files")
+        .from(bucketName)
         .createSignedUrl(filePath, 60 * 60);
       url = signed?.signedUrl ?? null;
     }
