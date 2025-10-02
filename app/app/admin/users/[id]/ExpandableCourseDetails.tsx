@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, CheckCircle, Circle, FileText, User, AlertCircle, BookOpen, Target, Calendar } from "lucide-react";
+import AdminRetakeButton from "./AdminRetakeButton";
 
 // Deterministic date formatting to prevent hydration mismatches
 function formatDateSafe(dateString: string | null | undefined): string {
@@ -209,6 +210,14 @@ export default function ExpandableCourseDetails({ courses, authorizations, userI
                     >
                       {getStatusText(course.assignment_status)}
                     </span>
+                    {course.assignment_status === 'completed' && (
+                      <AdminRetakeButton
+                        type="course"
+                        userId={userId}
+                        courseId={course.course_id}
+                        courseTitle={course.course_title}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
@@ -386,6 +395,14 @@ export default function ExpandableCourseDetails({ courses, authorizations, userI
                     >
                       {getStatusText(auth.assignment_status)}
                     </span>
+                    {auth.assignment_status === 'completed' && (
+                      <AdminRetakeButton
+                        type="authorization"
+                        userId={userId}
+                        authorizationId={auth.authorization_id}
+                        authTitle={auth.authorization_title}
+                      />
+                    )}
                   </div>
                 </div>
               </div>
