@@ -175,24 +175,31 @@ export async function POST(request: NextRequest) {
       console.error("Error logging rejection:", rejectionLogError);
     }
 
+    // Get admin's name and course title for notifications
+    const { data: adminProfile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", adminUser.id)
+      .single();
+
+    const { data: course } = await adminClient
+      .from("courses")
+      .select("title")
+      .eq("id", courseId)
+      .single();
+
+    // Get trainee's name for assessor notification
+    const { data: traineeProfile } = await adminClient
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", userId)
+      .single();
+
+    // Import notification dispatcher
+    const { notifyUser } = await import("@/lib/notifications/dispatcher");
+
     // Send notification to the trainee
     try {
-      // Get admin's name
-      const { data: adminProfile } = await supabase
-        .from("profiles")
-        .select("full_name")
-        .eq("id", adminUser.id)
-        .single();
-
-      // Get course title
-      const { data: course } = await adminClient
-        .from("courses")
-        .select("title")
-        .eq("id", courseId)
-        .single();
-
-      const { notifyUser } = await import("@/lib/notifications/dispatcher");
-      
       await notifyUser(userId, "module_rejected", {
         moduleTitle: moduleTitle || "Module",
         courseTitle: course?.title || "Course",
@@ -202,10 +209,59 @@ export async function POST(request: NextRequest) {
         url: `/app/train-assess`,
       });
 
-      console.log(`✅ Rejection notification sent to trainee ${userId}`);
+      console.log(`✅ Teams notification sent to trainee ${userId}`);
     } catch (notifyError) {
-      console.error("Failed to send rejection notification:", notifyError);
+      console.error("Failed to send trainee notification:", notifyError);
       // Don't block the rejection process if notification fails
+    }
+
+    // Check if course has onsite assessment modules and notify assessors
+    try {
+      // Check if the course has any onsite assessment modules
+      const { data: assessmentModules } = await adminClient
+        .from("course_modules")
+        .select("id")
+        .eq("course_id", courseId)
+        .eq("type", "onsite_assessment")
+        .limit(1);
+
+      if (assessmentModules && assessmentModules.length > 0) {
+        // Get all assessors for this course
+        const { data: assessors } = await adminClient
+          .from("course_assignments")
+          .select("user_id")
+          .eq("course_id", courseId)
+          .in("role", ["onsite_assessor", "assessor"])
+          .neq("user_id", adminUser.id); // Don't notify the admin who rejected it
+
+        if (assessors && assessors.length > 0) {
+          console.log(`📧 Found ${assessors.length} assessors to notify for course ${courseId}`);
+          
+          // Send notification to each assessor
+          for (const assessor of assessors) {
+            try {
+              await notifyUser(assessor.user_id, "module_rejected", {
+                moduleTitle: moduleTitle || "Module",
+                courseTitle: course?.title || "Course",
+                rejectionReason: rejectionReason,
+                rejectedBy: adminProfile?.full_name || adminUser.email,
+                moduleType: moduleType,
+                learnerName: traineeProfile?.full_name || traineeProfile?.email || "Trainee",
+                url: `/app/train-assess`,
+                isAssessorNotification: true, // Flag to potentially customize message
+              });
+
+              console.log(`✅ Teams notification sent to assessor ${assessor.user_id}`);
+            } catch (assessorNotifyError) {
+              console.error(`Failed to notify assessor ${assessor.user_id}:`, assessorNotifyError);
+              // Continue notifying other assessors even if one fails
+            }
+          }
+        }
+      }
+    } catch (assessorError) {
+      console.error("Failed to check/notify assessors:", assessorError);
+      // Don't block the rejection process if assessor notification fails
     }
 
     console.log(

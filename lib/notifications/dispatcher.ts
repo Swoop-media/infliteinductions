@@ -230,6 +230,37 @@ function formatTeamsText(
         .filter(Boolean)
         .join("\n");
 
+    case "module_rejected":
+      // Different message for assessors vs trainees
+      if (payload?.isAssessorNotification) {
+        return [
+          "❌ Module rejected - Trainee needs to resit",
+          payload?.learnerName ? `• Trainee: ${payload.learnerName}` : "",
+          payload?.moduleTitle ? `• Module: ${payload.moduleTitle}` : "",
+          payload?.courseTitle ? `• Course: ${payload.courseTitle}` : "",
+          payload?.rejectedBy ? `• Rejected by: ${payload.rejectedBy}` : "",
+          payload?.rejectionReason ? `• Reason: ${payload.rejectionReason}` : "",
+          "",
+          "ℹ️ The trainee will need to complete this module again.",
+          url ? `• Train/Assess dashboard: ${url}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+      } else {
+        return [
+          "❌ Module rejected - Resit required",
+          payload?.moduleTitle ? `• Module: ${payload.moduleTitle}` : "",
+          payload?.courseTitle ? `• Course: ${payload.courseTitle}` : "",
+          payload?.rejectedBy ? `• Rejected by: ${payload.rejectedBy}` : "",
+          payload?.rejectionReason ? `• Reason: ${payload.rejectionReason}` : "",
+          "",
+          "⚠️ You need to complete this module again.",
+          url ? `• Complete module: ${url}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n");
+      }
+
     default:
       return `🔔 ${title}`;
   }
