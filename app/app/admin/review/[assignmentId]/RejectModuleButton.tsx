@@ -128,7 +128,7 @@ export default function RejectModuleButton({
                   <br />
                   Type: <strong>{getModuleTypeDisplay(moduleType)}</strong>
                 </p>
-                <p className="text-xs text-yellow-700 mt-2">
+                <div className="text-xs text-yellow-700 mt-2">
                   This action will:
                   <ul className="list-disc ml-4 mt-1">
                     <li>Mark the module as incomplete</li>
@@ -136,7 +136,7 @@ export default function RejectModuleButton({
                     <li>Move the course back to their training page</li>
                     <li>Send a notification to the trainee</li>
                   </ul>
-                </p>
+                </div>
               </div>
 
               {/* Rejection Reason */}
