@@ -7,6 +7,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import TestMessageButton from "./TestMessageButton";
 import CollapsibleSection from "./_components/CollapsibleSection";
+import RetakeButton from "./_components/RetakeButton";
 
 
 /* ---------------- Types ---------------- */
@@ -433,7 +434,14 @@ export default async function MyProfilePage() {
                             </div>
                           )}
                         </div>
-                        <Pill tone="green">Completed</Pill>
+                        <div className="flex flex-col items-end gap-2">
+                          <Pill tone="green">Completed</Pill>
+                          <RetakeButton 
+                            type="authorization" 
+                            authorizationId={assignment.authorisation_id}
+                            authTitle={auth?.title}
+                          />
+                        </div>
                       </div>
                     </div>
                   );
@@ -470,6 +478,11 @@ export default async function MyProfilePage() {
                       >
                         View
                       </Link>
+                      <RetakeButton 
+                        type="course" 
+                        courseId={course?.id}
+                        courseTitle={course?.title}
+                      />
                     </div>
                   </div>
                 );
