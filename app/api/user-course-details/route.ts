@@ -15,9 +15,12 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createSupabaseServer();
     
-    // Check if user is authorized to view this data (must be admin or the user themselves)
-    const { data: { user } } = await supabase.auth.getUser();
+    // Try to get the user from the session
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    
     if (!user) {
+      console.log('Course details API - No authenticated user found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     
@@ -38,24 +41,43 @@ export async function GET(request: NextRequest) {
     // Use admin client for fetching data
     const adminClient = supabaseAdmin();
 
-    // Get course assignment
+    // Get course assignment - don't fail if not found (might be viewing completed course without active assignment)
     const { data: assignment } = await adminClient
       .from("course_assignments")
       .select("id, assignment_status, completed_at")
       .eq("user_id", userId)
       .eq("course_id", courseId)
       .eq("role", "trainee")
-      .single();
+      .maybeSingle();
+
+    console.log('Course details API - Assignment found:', {
+      courseId,
+      userId,
+      assignmentId: assignment?.id,
+      status: assignment?.assignment_status
+    });
 
     // Get all modules for the course (including equipment assessment flag)
-    const { data: modules } = await adminClient
+    const { data: modules, error: modulesError } = await adminClient
       .from("course_modules")
       .select("id, title, type, order_index, include_equipment_assessment")
       .eq("course_id", courseId)
       .order("order_index", { ascending: true });
 
+    console.log('Course details API - Modules query result:', {
+      found: modules?.length || 0,
+      error: modulesError
+    });
+
     if (!modules || modules.length === 0) {
-      return NextResponse.json({ modules: [] });
+      console.log('Course details API - No modules found for course:', courseId);
+      // Return an empty but valid response structure
+      return NextResponse.json({
+        course_id: courseId,
+        assignment_status: assignment?.assignment_status || 'completed',
+        completed_at: assignment?.completed_at || null,
+        modules: []
+      });
     }
 
     // Get module progress
