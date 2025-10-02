@@ -1,0 +1,218 @@
+[
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "4aa37fe8-021e-4c5a-bc52-3042e29d7a28",
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "role": "trainee",
+    "full_name": "Connor Johnston"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "c50da101-412c-414c-851a-78f358039d02",
+    "user_id": "8c7ae70e-2c9c-4600-a294-6ab49cc657dd",
+    "role": "trainee",
+    "full_name": "Dani Casey"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "5918baa7-fdaf-4e14-899e-c72033b84984",
+    "user_id": "01f30add-d090-4023-a944-7cc1ca09bf0c",
+    "role": "trainee",
+    "full_name": "Anthony Falconer"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "a7c117fd-c866-4de5-9d85-030e58bf8b9a",
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "role": "trainee",
+    "full_name": "Damien Ettema"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "23088bf9-5000-4b00-a06e-2fdc565ae168",
+    "user_id": "ea5adab2-4cdd-4a5b-8514-6d6a7cde1567",
+    "role": "trainee",
+    "full_name": "Troy Violet"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "0ade4853-b32e-4866-91ec-df8edbeaaa33",
+    "user_id": "7fbc87a5-0a5d-4108-88ca-309c614f4b57",
+    "role": "trainee",
+    "full_name": "Heidi Ettema"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "28184d0a-b8a5-4f62-bc82-3d90a1ebd2e7",
+    "user_id": "d00d5516-a1a6-4992-becf-cbd835d26bcc",
+    "role": "trainee",
+    "full_name": "Gabrielle Prevost"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "df78e540-81d0-4418-b017-6962d9887348",
+    "user_id": "c18c55f0-96b9-47af-b02c-02c493c13a01",
+    "role": "trainee",
+    "full_name": "Sam Mason"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "04eac17e-f152-49ea-80c7-258b332c3c63",
+    "user_id": "41acd744-a131-48f6-824a-0db4e78d075b",
+    "role": "trainee",
+    "full_name": "Matt Moore"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "2f155c8d-a2b0-4afe-a0b3-071c80a9f0a1",
+    "user_id": "cc31ea78-a293-4b2d-b927-5ac7b4a1e8b7",
+    "role": "trainee",
+    "full_name": "Ryan King"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "5ad091da-5831-4e3a-a43d-8aeb4440f4df",
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "role": "trainee",
+    "full_name": "Henry Morgan"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "89470f32-32a1-4c9a-ae0f-393a5d86e15c",
+    "user_id": "508e6f39-5fc4-4440-bed4-9e394d82de44",
+    "role": "trainee",
+    "full_name": "Rilee Lesperance"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "0eed2d67-cd82-4924-9a84-d430066bc860",
+    "user_id": "4853911d-3679-4b1e-a13e-a17854f2ba4e",
+    "role": "trainee",
+    "full_name": "Hamish Wilson"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "aa5b0dee-628d-4854-9398-17a28ba81569",
+    "user_id": "012dee13-24ce-48ce-a1bf-6737d87a003b",
+    "role": "trainee",
+    "full_name": "Will Scott"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "d4f336a7-8c7c-42cc-9f76-a373c1443434",
+    "user_id": "9fa77406-c504-4667-96a5-3c9a8e0a8108",
+    "role": "trainee",
+    "full_name": "nisha paytah"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "9d001ec4-11a3-491f-97d5-897d09281fac",
+    "user_id": "b44eb563-814c-4a48-942d-be48e5f113fe",
+    "role": "trainee",
+    "full_name": "Isa Roetzsch"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "f4d1f86a-49e1-4e52-9f4e-74be7512d62a",
+    "user_id": "a35b48cb-7008-4f33-b2f6-a5ad4684afe1",
+    "role": "trainee",
+    "full_name": "Kate larsen"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "59b2b112-df58-419d-99cd-4b3bbe5e3964",
+    "user_id": "121cb584-8ac1-4f33-a2a7-0438b6d29a6b",
+    "role": "trainee",
+    "full_name": "Peter Hansen"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "e7abf2aa-8cf7-40a3-8cac-28503c0c693e",
+    "user_id": "6bea57a3-2f70-4560-927c-59cafbb5a067",
+    "role": "trainee",
+    "full_name": "Sagar Motwani"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "dde0ae5c-2166-471e-8402-f22b23d263b3",
+    "user_id": "1fcbfc8e-09b0-4d19-b61c-6916c6f441a8",
+    "role": "trainee",
+    "full_name": "Kelly Carson"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "c44a66d5-a4ea-4750-bea4-0f49c6b3d9e7",
+    "user_id": "aaaf24e3-9b9b-41d2-ac52-220d1ee25551",
+    "role": "trainee",
+    "full_name": "test user not real :)"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "623276e5-4cac-4b2f-b4d0-9b2b1ae0c44c",
+    "user_id": "098d112e-121b-423b-bff7-ebf5d334fc3f",
+    "role": "trainee",
+    "full_name": "Linh An Hoang"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "423d8716-a700-4fa7-b0d3-af1810393e75",
+    "user_id": "f6baa70e-2ac0-40f7-a10a-ad7d1a97c1f2",
+    "role": "trainee",
+    "full_name": "oliver burgin"
+  },
+  {
+    "module_id": "fea04b84-fd86-4070-a00b-73a2f4ccc0fa",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "module_title": "equipment assessment",
+    "assignment_id": "d61857ae-c59a-4655-b951-47f5290da16b",
+    "user_id": "37c4c12d-602e-4689-896f-aad48ce74120",
+    "role": "trainee",
+    "full_name": "Javier Andres Rojas Sepulveda"
+  }
+]
