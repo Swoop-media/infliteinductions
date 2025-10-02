@@ -569,7 +569,11 @@ export default async function ReviewAssignmentPage({ params }: Props) {
         <p className="text-sm text-gray-600 mb-4">
           Click on a course to view detailed module completion information including quiz results and onsite training responses.
         </p>
-        <ExpandableCourseDetails courses={courses} />
+        <ExpandableCourseDetails 
+          courses={courses} 
+          assignmentId={resolvedParams.assignmentId}
+          userId={profile.id}
+        />
       </div>
 
       {/* Actions */}

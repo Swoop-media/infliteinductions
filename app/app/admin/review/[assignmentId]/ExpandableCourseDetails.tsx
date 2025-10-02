@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { ChevronDown, ChevronUp, CheckCircle, Circle, FileText, User, AlertCircle } from "lucide-react";
+import RejectModuleButton from "./RejectModuleButton";
 
 // Deterministic date formatting to prevent hydration mismatches
 function formatDateSafe(dateString: string | null | undefined): string {
@@ -86,9 +87,11 @@ interface CourseWithDetails {
 
 interface Props {
   courses: CourseWithDetails[];
+  assignmentId: string;
+  userId: string;
 }
 
-export default function ExpandableCourseDetails({ courses }: Props) {
+export default function ExpandableCourseDetails({ courses, assignmentId, userId }: Props) {
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [equipmentData, setEquipmentData] = useState<Map<string, any>>(new Map());
@@ -252,7 +255,11 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                             (module.module_title?.toLowerCase().includes('equipment') || 
                              module.include_equipment_assessment) ? 'cursor-pointer hover:bg-gray-50 -m-4 p-4 rounded-lg' : ''
                           }`}
-                          onClick={() => {
+                          onClick={(e) => {
+                            // Prevent click if clicking on reject button
+                            if ((e.target as HTMLElement).closest('button')) {
+                              return;
+                            }
                             if (module.module_title?.toLowerCase().includes('equipment') || 
                                 module.include_equipment_assessment) {
                               // Pass the user_id from the assignment
@@ -278,15 +285,31 @@ export default function ExpandableCourseDetails({ courses }: Props) {
                               <p className="text-sm text-gray-600">{formatModuleType(module.module_type)}</p>
                             </div>
                           </div>
-                          {/* Show expand/collapse icon for equipment modules */}
-                          {(module.module_title?.toLowerCase().includes('equipment') || 
-                            module.include_equipment_assessment) && (
-                            expandedModules.has(module.module_id) ? (
-                              <ChevronUp className="w-4 h-4 text-gray-500" />
-                            ) : (
-                              <ChevronDown className="w-4 h-4 text-gray-500" />
-                            )
-                          )}
+                          <div className="flex items-center gap-2">
+                            {/* Reject button - show for modules with any progress */}
+                            {(module.completed || 
+                              (module.quiz_attempts && module.quiz_attempts.length > 0) ||
+                              (module.onsite_responses && module.onsite_responses.some(r => r.has_response)) ||
+                              (module.equipment_requirements && module.equipment_requirements.some(r => r.has_response))) && (
+                              <RejectModuleButton
+                                assignmentId={assignmentId}
+                                courseId={course.course_id}
+                                moduleId={module.module_id}
+                                moduleTitle={module.module_title}
+                                moduleType={module.module_type}
+                                userId={userId}
+                              />
+                            )}
+                            {/* Show expand/collapse icon for equipment modules */}
+                            {(module.module_title?.toLowerCase().includes('equipment') || 
+                              module.include_equipment_assessment) && (
+                              expandedModules.has(module.module_id) ? (
+                                <ChevronUp className="w-4 h-4 text-gray-500" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-gray-500" />
+                              )
+                            )}
+                          </div>
                         </div>
 
                         {/* Module Content Based on Type */}
