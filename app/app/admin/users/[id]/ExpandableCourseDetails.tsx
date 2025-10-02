@@ -89,10 +89,6 @@ export default function ExpandableCourseDetails({ courses, authorizations, userI
   const [itemDetails, setItemDetails] = useState<Map<string, any>>(new Map());
 
   const toggleItem = async (itemId: string, isAuthorization: boolean = false) => {
-    console.log('Toggle item called:', itemId, 'isAuth:', isAuthorization);
-    console.log('Item details has key?', itemDetails.has(itemId));
-    console.log('Loading details has key?', loadingDetails.has(itemId));
-    
     const newExpanded = new Set(expandedItems);
     if (newExpanded.has(itemId)) {
       newExpanded.delete(itemId);
@@ -100,10 +96,7 @@ export default function ExpandableCourseDetails({ courses, authorizations, userI
       newExpanded.add(itemId);
       // Fetch details if not already loaded
       if (!itemDetails.has(itemId) && !loadingDetails.has(itemId)) {
-        console.log('Fetching item details for:', itemId);
         await fetchItemDetails(itemId, isAuthorization);
-      } else {
-        console.log('Not fetching - already has details or loading');
       }
     }
     setExpandedItems(newExpanded);
@@ -117,14 +110,10 @@ export default function ExpandableCourseDetails({ courses, authorizations, userI
         ? `/api/user-authorization-details?userId=${userId}&authorizationId=${itemId}`
         : `/api/user-course-details?userId=${userId}&courseId=${itemId}`;
         
-      console.log('Fetching details from:', endpoint);
       const response = await fetch(endpoint);
       if (response.ok) {
         const data = await response.json();
-        console.log('Received data:', data);
         setItemDetails(prev => new Map(prev).set(itemId, data));
-      } else {
-        console.error('API response not ok:', response.status, response.statusText);
       }
     } catch (error) {
       console.error('Failed to fetch details:', error);
