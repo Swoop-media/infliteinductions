@@ -54,17 +54,19 @@ export default async function TrainAssessPage() {
 
     // OPTIMIZATION: Fetch data in batches instead of in loops
     
-    // 1. Get all trainee assignments for relevant courses
+    // 1. Get all trainee assignments for relevant courses (exclude completed assignments)
     const { data: traineeAssignments } = await supabaseService
       .from("course_assignments")
       .select(`
         id,
         user_id,
         course_id,
-        created_at
+        created_at,
+        assignment_status
       `)
       .eq("role", "trainee")
-      .in("course_id", allCourseIds);
+      .in("course_id", allCourseIds)
+      .neq("assignment_status", "completed");
 
     if (!traineeAssignments || traineeAssignments.length === 0) {
       return renderPage(pendingTrainingItems, pendingAssessmentItems);
