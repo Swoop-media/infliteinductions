@@ -2,6 +2,33 @@
 -- Run these queries in your Supabase SQL Editor to diagnose the gradual degradation
 
 -- ============================================
+-- 0. QUICK CHECK - Does Henry Morgan have trainer assignments?
+-- ============================================
+-- Simple check for Henry Morgan's trainer/assessor roles
+SELECT 
+    ca.*,
+    c.title as course_title
+FROM course_assignments ca
+JOIN courses c ON ca.course_id = c.id
+WHERE ca.user_id IN (
+    SELECT id FROM profiles WHERE full_name LIKE '%Henry Morgan%'
+)
+AND ca.role IN ('onsite_trainer', 'onsite_assessor');
+
+-- Check specifically what's happening with Tandem OCA courses
+SELECT 
+    ca.role,
+    ca.user_id,
+    p.full_name,
+    c.title
+FROM course_assignments ca
+JOIN profiles p ON ca.user_id = p.id
+JOIN courses c ON ca.course_id = c.id
+WHERE c.title LIKE '%Tandem OCA%'
+AND ca.role IN ('onsite_trainer', 'onsite_assessor')
+LIMIT 10;
+
+-- ============================================
 -- 1. CHECK TRAINER/ASSESSOR ASSIGNMENTS
 -- ============================================
 -- See how many trainer/assessor assignments exist and their distribution
@@ -224,7 +251,7 @@ pending_training AS (
         SELECT 1 FROM assignment_progress ap
         WHERE ap.assignment_id = ca.id
         AND ap.module_id = cm.id
-        AND ap.is_complete = true
+        -- Record exists with completed_at means it's complete
     )
 )
 SELECT * FROM pending_training
