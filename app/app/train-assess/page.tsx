@@ -33,20 +33,11 @@ export default async function TrainAssessPage() {
   // Use admin client to bypass RLS since trainers need to see their trainer/assessor roles
   const supabaseServiceForTrainer = supabaseAdmin();
   
-  // TEMPORARY: Log to see if query is timing out
-  console.log('[Train-Assess] Starting trainer assignments query for user:', user.id);
-  
   const { data: trainerAssignments, error: trainerError } = await supabaseServiceForTrainer
     .from("course_assignments")
     .select("course_id, role")
     .eq("user_id", user.id)
     .in("role", ["onsite_trainer", "onsite_assessor"]);
-  
-  console.log('[Train-Assess] Trainer assignments result:', {
-    success: !trainerError,
-    count: trainerAssignments?.length || 0,
-    error: trainerError?.message
-  });
 
   // Build separate Sets for courses where user is trainer vs assessor
   const trainerCourseIds = new Set(
@@ -66,8 +57,6 @@ export default async function TrainAssessPage() {
 
     // OPTIMIZATION: Fetch data in batches instead of in loops
     
-    console.log('[Train-Assess] Fetching trainee assignments for courses:', allCourseIds.length);
-    
     // 1. Get all trainee assignments for relevant courses
     const { data: traineeAssignments, error: traineeError } = await supabaseService
       .from("course_assignments")
@@ -81,14 +70,7 @@ export default async function TrainAssessPage() {
       .eq("role", "trainee")
       .in("course_id", allCourseIds);
 
-    console.log('[Train-Assess] Trainee assignments result:', {
-      success: !traineeError,
-      count: traineeAssignments?.length || 0,
-      error: traineeError?.message
-    });
-
     if (!traineeAssignments || traineeAssignments.length === 0) {
-      console.log('[Train-Assess] No trainee assignments found, returning empty');
       return renderPage(pendingTrainingItems, pendingAssessmentItems);
     }
 
@@ -110,10 +92,8 @@ export default async function TrainAssessPage() {
 
     // 3. Get ALL progress for ALL assignments - BATCH to avoid timeout
     const assignmentIds = traineeAssignments.map(a => a.id);
-    const batchSize = 50; // Query 50 assignments at a time
+    const batchSize = 100; // Query 100 assignments at a time (increased from 50 for better performance)
     const allProgress = [];
-    
-    console.log('[Train-Assess] Fetching progress in batches for', assignmentIds.length, 'assignments');
     
     for (let i = 0; i < assignmentIds.length; i += batchSize) {
       const batch = assignmentIds.slice(i, i + batchSize);
@@ -122,14 +102,10 @@ export default async function TrainAssessPage() {
         .select("assignment_id, module_id")
         .in("assignment_id", batch);
       
-      if (progressError) {
-        console.log('[Train-Assess] Progress batch error at', i, ':', progressError.message);
-      } else if (batchProgress) {
+      if (batchProgress) {
         allProgress.push(...batchProgress);
       }
     }
-
-    console.log('[Train-Assess] Total progress records retrieved:', allProgress.length);
 
     // Group progress by assignment for easy lookup
     const progressByAssignment = new Map<string, Set<string>>();
@@ -138,8 +114,6 @@ export default async function TrainAssessPage() {
       moduleSet.add(progress.module_id);
       progressByAssignment.set(progress.assignment_id, moduleSet);
     });
-    
-    console.log('[Train-Assess] Assignments with progress:', progressByAssignment.size, 'out of', assignmentIds.length);
 
     // 4. Get ALL profiles for ALL trainees in ONE query
     const traineeUserIds = [...new Set(traineeAssignments.map(a => a.user_id))];
@@ -167,15 +141,6 @@ export default async function TrainAssessPage() {
     });
 
     // Now process each assignment using the pre-fetched data (no additional queries!)
-    console.log('[Train-Assess] Processing', traineeAssignments.length, 'assignments');
-    let skippedCompleted = 0;
-    let skippedNoModules = 0;
-    let processedCount = 0;
-    let notTrainerForCourse = 0;
-    let notAssessorForCourse = 0;
-    let digitalNotComplete = 0;
-    let noOnsiteModules = 0;
-    let allModulesComplete = 0;
     
     for (const assignment of traineeAssignments) {
       const courseId = assignment.course_id;
@@ -185,14 +150,12 @@ export default async function TrainAssessPage() {
       // Skip assignments that are already marked as completed at the assignment level
       // These are fully done and shouldn't appear in pending lists
       if (assignment.assignment_status === 'completed') {
-        skippedCompleted++;
         continue;
       }
       
       // Use pre-fetched data instead of making queries
       const courseModules = modulesByCourse.get(courseId) || [];
       if (courseModules.length === 0) {
-        skippedNoModules++;
         continue;
       }
 
@@ -226,35 +189,26 @@ export default async function TrainAssessPage() {
       const traineeEmail = traineeProfile?.email || "";
       const courseTitle = courseInfo?.title || "Unknown Course";
 
-      // Debug why assignments are filtered
-      const debugInfo = {
-        assignmentId: assignmentId.substring(0, 8),
-        courseTitle: courseTitle.substring(0, 30),
-        allDigitalComplete,
-        onsiteTrainingModules: onsiteTrainingModules.length,
-        onsiteTrainingComplete,
-        isTrainerForCourse: trainerCourseIds.has(courseId),
-        onsiteAssessmentModules: onsiteAssessmentModules.length,
-        isAssessorForCourse: assessorCourseIds.has(courseId),
-        trainingStageComplete
-      };
-      
-      // Track why assignments don't show
-      let wasProcessed = false;
-      
-      if (!allDigitalComplete) {
-        digitalNotComplete++;
-      } else if (onsiteTrainingModules.length === 0 && onsiteAssessmentModules.length === 0) {
-        noOnsiteModules++;
-      } else if (onsiteTrainingModules.length > 0 && onsiteTrainingComplete && 
-                 onsiteAssessmentModules.length > 0 && onsiteAssessmentModules.every(m => completedModuleIds.has(m.id))) {
-        allModulesComplete++;
+      // Add to pending training if digital complete but onsite training not done
+      if (allDigitalComplete && onsiteTrainingModules.length > 0 && !onsiteTrainingComplete && trainerCourseIds.has(courseId)) {
+        const trainingItem = {
+          id: assignmentId,
+          trainee_name: traineeName,
+          trainee_email: traineeEmail,
+          course_title: courseTitle,
+          course_id: courseId,
+          assignment_id: assignmentId,
+          created_at: assignment.created_at,
+          type: 'training' as const
+        };
+        pendingTrainingItems.push(trainingItem);
       }
 
-      // Add to pending training if digital complete but onsite training not done
-      if (allDigitalComplete && onsiteTrainingModules.length > 0 && !onsiteTrainingComplete) {
-        if (trainerCourseIds.has(courseId)) {
-          const trainingItem = {
+      // Add to pending assessment if training stage is complete but assessment not done
+      if (trainingStageComplete && onsiteAssessmentModules.length > 0 && assessorCourseIds.has(courseId)) {
+        const onsiteAssessmentComplete = onsiteAssessmentModules.every(m => completedModuleIds.has(m.id));
+        if (!onsiteAssessmentComplete) {
+          pendingAssessmentItems.push({
             id: assignmentId,
             trainee_name: traineeName,
             trainee_email: traineeEmail,
@@ -262,63 +216,11 @@ export default async function TrainAssessPage() {
             course_id: courseId,
             assignment_id: assignmentId,
             created_at: assignment.created_at,
-            type: 'training' as const
-          };
-          pendingTrainingItems.push(trainingItem);
-          processedCount++;
-          wasProcessed = true;
-        } else {
-          notTrainerForCourse++;
-        }
-      }
-
-      // Add to pending assessment if training stage is complete but assessment not done
-      if (trainingStageComplete && onsiteAssessmentModules.length > 0) {
-        const onsiteAssessmentComplete = onsiteAssessmentModules.every(m => completedModuleIds.has(m.id));
-        if (!onsiteAssessmentComplete) {
-          if (assessorCourseIds.has(courseId)) {
-            pendingAssessmentItems.push({
-              id: assignmentId,
-              trainee_name: traineeName,
-              trainee_email: traineeEmail,
-              course_title: courseTitle,
-              course_id: courseId,
-              assignment_id: assignmentId,
-              created_at: assignment.created_at,
-              type: 'assessment' as const
-            });
-            processedCount++;
-            wasProcessed = true;
-          } else {
-            notAssessorForCourse++;
-          }
+            type: 'assessment' as const
+          });
         }
       }
     }
-    
-    console.log('[Train-Assess] Processing complete:', {
-      totalAssignments: traineeAssignments.length,
-      skippedCompleted,
-      skippedNoModules,
-      digitalNotComplete,
-      noOnsiteModules,
-      allModulesComplete,
-      notTrainerForCourse,
-      notAssessorForCourse,
-      processedCount,
-      pendingTraining: pendingTrainingItems.length,
-      pendingAssessment: pendingAssessmentItems.length,
-      unaccounted: traineeAssignments.length - skippedCompleted - skippedNoModules - 
-                   digitalNotComplete - noOnsiteModules - allModulesComplete - 
-                   notTrainerForCourse - notAssessorForCourse - processedCount
-    });
-    
-    // Log unique courses in pending items
-    const uniqueCourses = new Set([
-      ...pendingTrainingItems.map(i => i.course_title),
-      ...pendingAssessmentItems.map(i => i.course_title)
-    ]);
-    console.log('[Train-Assess] Unique courses showing:', Array.from(uniqueCourses));
   }
 
   return renderPage(pendingTrainingItems, pendingAssessmentItems);
