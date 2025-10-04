@@ -1,0 +1,902 @@
+[
+  {
+    "assignment_id": "fe11c086-f3c7-4deb-8c91-bc7001c99e8a",
+    "trainee_name": "Anthony Falconer",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen use assessment",
+    "module_type": "onsite_assessment",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "fe11c086-f3c7-4deb-8c91-bc7001c99e8a",
+    "trainee_name": "Anthony Falconer",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE Parachute Operations Manual Rev 10 15 Mar 2024 use of oxygen",
+    "module_type": "digital_training",
+    "order_index": 0,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "fe11c086-f3c7-4deb-8c91-bc7001c99e8a",
+    "trainee_name": "Anthony Falconer",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Onsite Training High Altitude",
+    "module_type": "onsite_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "fe11c086-f3c7-4deb-8c91-bc7001c99e8a",
+    "trainee_name": "Anthony Falconer",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "High Altitude quiz",
+    "module_type": "digital_assessment_quiz",
+    "order_index": 0,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "fe11c086-f3c7-4deb-8c91-bc7001c99e8a",
+    "trainee_name": "Anthony Falconer",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE high altitude presentation",
+    "module_type": "digital_training",
+    "order_index": 1,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "fe11c086-f3c7-4deb-8c91-bc7001c99e8a",
+    "trainee_name": "Anthony Falconer",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "NZPIA high altitude course",
+    "module_type": "digital_training",
+    "order_index": 2,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "fe11c086-f3c7-4deb-8c91-bc7001c99e8a",
+    "trainee_name": "Anthony Falconer",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen system use and alarms",
+    "module_type": "digital_training",
+    "order_index": 3,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "fe11c086-f3c7-4deb-8c91-bc7001c99e8a",
+    "trainee_name": "Anthony Falconer",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Getting the most out of our oxygen systems when using a mask",
+    "module_type": "digital_training",
+    "order_index": 4,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "fe11c086-f3c7-4deb-8c91-bc7001c99e8a",
+    "trainee_name": "Anthony Falconer",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Equipment and procedures summary",
+    "module_type": "digital_training",
+    "order_index": 5,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "44005dcb-8cba-4e27-b7b5-8458ae4eeace",
+    "trainee_name": "Damien Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Onsite Training High Altitude",
+    "module_type": "onsite_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "44005dcb-8cba-4e27-b7b5-8458ae4eeace",
+    "trainee_name": "Damien Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "High Altitude quiz",
+    "module_type": "digital_assessment_quiz",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "44005dcb-8cba-4e27-b7b5-8458ae4eeace",
+    "trainee_name": "Damien Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE Parachute Operations Manual Rev 10 15 Mar 2024 use of oxygen",
+    "module_type": "digital_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "44005dcb-8cba-4e27-b7b5-8458ae4eeace",
+    "trainee_name": "Damien Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen use assessment",
+    "module_type": "onsite_assessment",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "44005dcb-8cba-4e27-b7b5-8458ae4eeace",
+    "trainee_name": "Damien Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE high altitude presentation",
+    "module_type": "digital_training",
+    "order_index": 1,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "44005dcb-8cba-4e27-b7b5-8458ae4eeace",
+    "trainee_name": "Damien Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "NZPIA high altitude course",
+    "module_type": "digital_training",
+    "order_index": 2,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "44005dcb-8cba-4e27-b7b5-8458ae4eeace",
+    "trainee_name": "Damien Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen system use and alarms",
+    "module_type": "digital_training",
+    "order_index": 3,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "44005dcb-8cba-4e27-b7b5-8458ae4eeace",
+    "trainee_name": "Damien Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Getting the most out of our oxygen systems when using a mask",
+    "module_type": "digital_training",
+    "order_index": 4,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "44005dcb-8cba-4e27-b7b5-8458ae4eeace",
+    "trainee_name": "Damien Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Equipment and procedures summary",
+    "module_type": "digital_training",
+    "order_index": 5,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "e927b173-2330-4f8c-899c-aa2254b7e3db",
+    "trainee_name": "Dani Casey",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE Parachute Operations Manual Rev 10 15 Mar 2024 use of oxygen",
+    "module_type": "digital_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "e927b173-2330-4f8c-899c-aa2254b7e3db",
+    "trainee_name": "Dani Casey",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "High Altitude quiz",
+    "module_type": "digital_assessment_quiz",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "e927b173-2330-4f8c-899c-aa2254b7e3db",
+    "trainee_name": "Dani Casey",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Onsite Training High Altitude",
+    "module_type": "onsite_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "e927b173-2330-4f8c-899c-aa2254b7e3db",
+    "trainee_name": "Dani Casey",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen use assessment",
+    "module_type": "onsite_assessment",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "e927b173-2330-4f8c-899c-aa2254b7e3db",
+    "trainee_name": "Dani Casey",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE high altitude presentation",
+    "module_type": "digital_training",
+    "order_index": 1,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "e927b173-2330-4f8c-899c-aa2254b7e3db",
+    "trainee_name": "Dani Casey",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "NZPIA high altitude course",
+    "module_type": "digital_training",
+    "order_index": 2,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "e927b173-2330-4f8c-899c-aa2254b7e3db",
+    "trainee_name": "Dani Casey",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen system use and alarms",
+    "module_type": "digital_training",
+    "order_index": 3,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "e927b173-2330-4f8c-899c-aa2254b7e3db",
+    "trainee_name": "Dani Casey",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Getting the most out of our oxygen systems when using a mask",
+    "module_type": "digital_training",
+    "order_index": 4,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "e927b173-2330-4f8c-899c-aa2254b7e3db",
+    "trainee_name": "Dani Casey",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Equipment and procedures summary",
+    "module_type": "digital_training",
+    "order_index": 5,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "288b5dbe-46bf-4b48-9bb8-186e613a6ce1",
+    "trainee_name": "Gabrielle Prevost",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Onsite Training High Altitude",
+    "module_type": "onsite_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "288b5dbe-46bf-4b48-9bb8-186e613a6ce1",
+    "trainee_name": "Gabrielle Prevost",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "High Altitude quiz",
+    "module_type": "digital_assessment_quiz",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "288b5dbe-46bf-4b48-9bb8-186e613a6ce1",
+    "trainee_name": "Gabrielle Prevost",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen use assessment",
+    "module_type": "onsite_assessment",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "288b5dbe-46bf-4b48-9bb8-186e613a6ce1",
+    "trainee_name": "Gabrielle Prevost",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE Parachute Operations Manual Rev 10 15 Mar 2024 use of oxygen",
+    "module_type": "digital_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "288b5dbe-46bf-4b48-9bb8-186e613a6ce1",
+    "trainee_name": "Gabrielle Prevost",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE high altitude presentation",
+    "module_type": "digital_training",
+    "order_index": 1,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "288b5dbe-46bf-4b48-9bb8-186e613a6ce1",
+    "trainee_name": "Gabrielle Prevost",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "NZPIA high altitude course",
+    "module_type": "digital_training",
+    "order_index": 2,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "288b5dbe-46bf-4b48-9bb8-186e613a6ce1",
+    "trainee_name": "Gabrielle Prevost",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen system use and alarms",
+    "module_type": "digital_training",
+    "order_index": 3,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "288b5dbe-46bf-4b48-9bb8-186e613a6ce1",
+    "trainee_name": "Gabrielle Prevost",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Getting the most out of our oxygen systems when using a mask",
+    "module_type": "digital_training",
+    "order_index": 4,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "288b5dbe-46bf-4b48-9bb8-186e613a6ce1",
+    "trainee_name": "Gabrielle Prevost",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Equipment and procedures summary",
+    "module_type": "digital_training",
+    "order_index": 5,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "89c4b6e6-4db5-4d3b-aa04-fc404655a714",
+    "trainee_name": "Hamish Wilson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "High Altitude quiz",
+    "module_type": "digital_assessment_quiz",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "89c4b6e6-4db5-4d3b-aa04-fc404655a714",
+    "trainee_name": "Hamish Wilson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE Parachute Operations Manual Rev 10 15 Mar 2024 use of oxygen",
+    "module_type": "digital_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "89c4b6e6-4db5-4d3b-aa04-fc404655a714",
+    "trainee_name": "Hamish Wilson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen use assessment",
+    "module_type": "onsite_assessment",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "89c4b6e6-4db5-4d3b-aa04-fc404655a714",
+    "trainee_name": "Hamish Wilson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Onsite Training High Altitude",
+    "module_type": "onsite_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "89c4b6e6-4db5-4d3b-aa04-fc404655a714",
+    "trainee_name": "Hamish Wilson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE high altitude presentation",
+    "module_type": "digital_training",
+    "order_index": 1,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "89c4b6e6-4db5-4d3b-aa04-fc404655a714",
+    "trainee_name": "Hamish Wilson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "NZPIA high altitude course",
+    "module_type": "digital_training",
+    "order_index": 2,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "89c4b6e6-4db5-4d3b-aa04-fc404655a714",
+    "trainee_name": "Hamish Wilson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen system use and alarms",
+    "module_type": "digital_training",
+    "order_index": 3,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "89c4b6e6-4db5-4d3b-aa04-fc404655a714",
+    "trainee_name": "Hamish Wilson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Getting the most out of our oxygen systems when using a mask",
+    "module_type": "digital_training",
+    "order_index": 4,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "89c4b6e6-4db5-4d3b-aa04-fc404655a714",
+    "trainee_name": "Hamish Wilson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Equipment and procedures summary",
+    "module_type": "digital_training",
+    "order_index": 5,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "bcfe4bfd-036a-4316-aa74-326402861587",
+    "trainee_name": "Heidi Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Onsite Training High Altitude",
+    "module_type": "onsite_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "bcfe4bfd-036a-4316-aa74-326402861587",
+    "trainee_name": "Heidi Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen use assessment",
+    "module_type": "onsite_assessment",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "bcfe4bfd-036a-4316-aa74-326402861587",
+    "trainee_name": "Heidi Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "High Altitude quiz",
+    "module_type": "digital_assessment_quiz",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "bcfe4bfd-036a-4316-aa74-326402861587",
+    "trainee_name": "Heidi Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE Parachute Operations Manual Rev 10 15 Mar 2024 use of oxygen",
+    "module_type": "digital_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "bcfe4bfd-036a-4316-aa74-326402861587",
+    "trainee_name": "Heidi Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE high altitude presentation",
+    "module_type": "digital_training",
+    "order_index": 1,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "bcfe4bfd-036a-4316-aa74-326402861587",
+    "trainee_name": "Heidi Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "NZPIA high altitude course",
+    "module_type": "digital_training",
+    "order_index": 2,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "bcfe4bfd-036a-4316-aa74-326402861587",
+    "trainee_name": "Heidi Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen system use and alarms",
+    "module_type": "digital_training",
+    "order_index": 3,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "bcfe4bfd-036a-4316-aa74-326402861587",
+    "trainee_name": "Heidi Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Getting the most out of our oxygen systems when using a mask",
+    "module_type": "digital_training",
+    "order_index": 4,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "bcfe4bfd-036a-4316-aa74-326402861587",
+    "trainee_name": "Heidi Ettema",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Equipment and procedures summary",
+    "module_type": "digital_training",
+    "order_index": 5,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "c04a20dc-fd05-40e2-8fed-3751e4174ae8",
+    "trainee_name": "Henry Morgan",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Onsite Training High Altitude",
+    "module_type": "onsite_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "c04a20dc-fd05-40e2-8fed-3751e4174ae8",
+    "trainee_name": "Henry Morgan",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "High Altitude quiz",
+    "module_type": "digital_assessment_quiz",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "c04a20dc-fd05-40e2-8fed-3751e4174ae8",
+    "trainee_name": "Henry Morgan",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen use assessment",
+    "module_type": "onsite_assessment",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "c04a20dc-fd05-40e2-8fed-3751e4174ae8",
+    "trainee_name": "Henry Morgan",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE Parachute Operations Manual Rev 10 15 Mar 2024 use of oxygen",
+    "module_type": "digital_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "c04a20dc-fd05-40e2-8fed-3751e4174ae8",
+    "trainee_name": "Henry Morgan",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE high altitude presentation",
+    "module_type": "digital_training",
+    "order_index": 1,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "c04a20dc-fd05-40e2-8fed-3751e4174ae8",
+    "trainee_name": "Henry Morgan",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "NZPIA high altitude course",
+    "module_type": "digital_training",
+    "order_index": 2,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "c04a20dc-fd05-40e2-8fed-3751e4174ae8",
+    "trainee_name": "Henry Morgan",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen system use and alarms",
+    "module_type": "digital_training",
+    "order_index": 3,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "c04a20dc-fd05-40e2-8fed-3751e4174ae8",
+    "trainee_name": "Henry Morgan",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Getting the most out of our oxygen systems when using a mask",
+    "module_type": "digital_training",
+    "order_index": 4,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "c04a20dc-fd05-40e2-8fed-3751e4174ae8",
+    "trainee_name": "Henry Morgan",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Equipment and procedures summary",
+    "module_type": "digital_training",
+    "order_index": 5,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "52ce0389-c6ab-4b2d-908f-b8b8a4ac47a4",
+    "trainee_name": "Javier Andres Rojas Sepulveda",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE Parachute Operations Manual Rev 10 15 Mar 2024 use of oxygen",
+    "module_type": "digital_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "52ce0389-c6ab-4b2d-908f-b8b8a4ac47a4",
+    "trainee_name": "Javier Andres Rojas Sepulveda",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen use assessment",
+    "module_type": "onsite_assessment",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "52ce0389-c6ab-4b2d-908f-b8b8a4ac47a4",
+    "trainee_name": "Javier Andres Rojas Sepulveda",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Onsite Training High Altitude",
+    "module_type": "onsite_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "52ce0389-c6ab-4b2d-908f-b8b8a4ac47a4",
+    "trainee_name": "Javier Andres Rojas Sepulveda",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "High Altitude quiz",
+    "module_type": "digital_assessment_quiz",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "52ce0389-c6ab-4b2d-908f-b8b8a4ac47a4",
+    "trainee_name": "Javier Andres Rojas Sepulveda",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE high altitude presentation",
+    "module_type": "digital_training",
+    "order_index": 1,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "52ce0389-c6ab-4b2d-908f-b8b8a4ac47a4",
+    "trainee_name": "Javier Andres Rojas Sepulveda",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "NZPIA high altitude course",
+    "module_type": "digital_training",
+    "order_index": 2,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "52ce0389-c6ab-4b2d-908f-b8b8a4ac47a4",
+    "trainee_name": "Javier Andres Rojas Sepulveda",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen system use and alarms",
+    "module_type": "digital_training",
+    "order_index": 3,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "52ce0389-c6ab-4b2d-908f-b8b8a4ac47a4",
+    "trainee_name": "Javier Andres Rojas Sepulveda",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Getting the most out of our oxygen systems when using a mask",
+    "module_type": "digital_training",
+    "order_index": 4,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "52ce0389-c6ab-4b2d-908f-b8b8a4ac47a4",
+    "trainee_name": "Javier Andres Rojas Sepulveda",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Equipment and procedures summary",
+    "module_type": "digital_training",
+    "order_index": 5,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "2f28c873-23d0-4168-b117-8818d1226752",
+    "trainee_name": "Kelly Carson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "High Altitude quiz",
+    "module_type": "digital_assessment_quiz",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "2f28c873-23d0-4168-b117-8818d1226752",
+    "trainee_name": "Kelly Carson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE Parachute Operations Manual Rev 10 15 Mar 2024 use of oxygen",
+    "module_type": "digital_training",
+    "order_index": 0,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "2f28c873-23d0-4168-b117-8818d1226752",
+    "trainee_name": "Kelly Carson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Onsite Training High Altitude",
+    "module_type": "onsite_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "2f28c873-23d0-4168-b117-8818d1226752",
+    "trainee_name": "Kelly Carson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen use assessment",
+    "module_type": "onsite_assessment",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "2f28c873-23d0-4168-b117-8818d1226752",
+    "trainee_name": "Kelly Carson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE high altitude presentation",
+    "module_type": "digital_training",
+    "order_index": 1,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "2f28c873-23d0-4168-b117-8818d1226752",
+    "trainee_name": "Kelly Carson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "NZPIA high altitude course",
+    "module_type": "digital_training",
+    "order_index": 2,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "2f28c873-23d0-4168-b117-8818d1226752",
+    "trainee_name": "Kelly Carson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen system use and alarms",
+    "module_type": "digital_training",
+    "order_index": 3,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "2f28c873-23d0-4168-b117-8818d1226752",
+    "trainee_name": "Kelly Carson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Getting the most out of our oxygen systems when using a mask",
+    "module_type": "digital_training",
+    "order_index": 4,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "2f28c873-23d0-4168-b117-8818d1226752",
+    "trainee_name": "Kelly Carson",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Equipment and procedures summary",
+    "module_type": "digital_training",
+    "order_index": 5,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "947b69f1-fade-44b4-a596-342ad3a653af",
+    "trainee_name": "nisha paytah",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "High Altitude quiz",
+    "module_type": "digital_assessment_quiz",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "947b69f1-fade-44b4-a596-342ad3a653af",
+    "trainee_name": "nisha paytah",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen use assessment",
+    "module_type": "onsite_assessment",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "947b69f1-fade-44b4-a596-342ad3a653af",
+    "trainee_name": "nisha paytah",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Onsite Training High Altitude",
+    "module_type": "onsite_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "947b69f1-fade-44b4-a596-342ad3a653af",
+    "trainee_name": "nisha paytah",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE Parachute Operations Manual Rev 10 15 Mar 2024 use of oxygen",
+    "module_type": "digital_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "947b69f1-fade-44b4-a596-342ad3a653af",
+    "trainee_name": "nisha paytah",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE high altitude presentation",
+    "module_type": "digital_training",
+    "order_index": 1,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "947b69f1-fade-44b4-a596-342ad3a653af",
+    "trainee_name": "nisha paytah",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "NZPIA high altitude course",
+    "module_type": "digital_training",
+    "order_index": 2,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "947b69f1-fade-44b4-a596-342ad3a653af",
+    "trainee_name": "nisha paytah",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen system use and alarms",
+    "module_type": "digital_training",
+    "order_index": 3,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "947b69f1-fade-44b4-a596-342ad3a653af",
+    "trainee_name": "nisha paytah",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Getting the most out of our oxygen systems when using a mask",
+    "module_type": "digital_training",
+    "order_index": 4,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "947b69f1-fade-44b4-a596-342ad3a653af",
+    "trainee_name": "nisha paytah",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Equipment and procedures summary",
+    "module_type": "digital_training",
+    "order_index": 5,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "e750c604-3e5e-4291-b5f1-640346c39a4b",
+    "trainee_name": "oliver burgin",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen use assessment",
+    "module_type": "onsite_assessment",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "e750c604-3e5e-4291-b5f1-640346c39a4b",
+    "trainee_name": "oliver burgin",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "High Altitude quiz",
+    "module_type": "digital_assessment_quiz",
+    "order_index": 0,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "e750c604-3e5e-4291-b5f1-640346c39a4b",
+    "trainee_name": "oliver burgin",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE Parachute Operations Manual Rev 10 15 Mar 2024 use of oxygen",
+    "module_type": "digital_training",
+    "order_index": 0,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "e750c604-3e5e-4291-b5f1-640346c39a4b",
+    "trainee_name": "oliver burgin",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Onsite Training High Altitude",
+    "module_type": "onsite_training",
+    "order_index": 0,
+    "module_status": "Not Completed"
+  },
+  {
+    "assignment_id": "e750c604-3e5e-4291-b5f1-640346c39a4b",
+    "trainee_name": "oliver burgin",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "INFLITE high altitude presentation",
+    "module_type": "digital_training",
+    "order_index": 1,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "e750c604-3e5e-4291-b5f1-640346c39a4b",
+    "trainee_name": "oliver burgin",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "NZPIA high altitude course",
+    "module_type": "digital_training",
+    "order_index": 2,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "e750c604-3e5e-4291-b5f1-640346c39a4b",
+    "trainee_name": "oliver burgin",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Oxygen system use and alarms",
+    "module_type": "digital_training",
+    "order_index": 3,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "e750c604-3e5e-4291-b5f1-640346c39a4b",
+    "trainee_name": "oliver burgin",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Getting the most out of our oxygen systems when using a mask",
+    "module_type": "digital_training",
+    "order_index": 4,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "e750c604-3e5e-4291-b5f1-640346c39a4b",
+    "trainee_name": "oliver burgin",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "Equipment and procedures summary",
+    "module_type": "digital_training",
+    "order_index": 5,
+    "module_status": "Completed"
+  },
+  {
+    "assignment_id": "866a1052-d31a-4a6c-8fa9-d091bea3f5a1",
+    "trainee_name": "Peter Hansen",
+    "course_title": "High Altitude Skydiving",
+    "module_title": "High Altitude quiz",
+    "module_type": "digital_assessment_quiz",
+    "order_index": 0,
+    "module_status": "Completed"
+  }
+]
