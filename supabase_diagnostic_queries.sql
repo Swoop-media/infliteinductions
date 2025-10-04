@@ -2,6 +2,34 @@
 -- Run these queries in your Supabase SQL Editor to diagnose the gradual degradation
 
 -- ============================================
+-- 0A. WHO HAS TRAINER ASSIGNMENTS FOR WHICH COURSES?
+-- ============================================
+-- Check which users are assigned as trainers to which courses
+SELECT 
+    c.title as course_name,
+    p.full_name as trainer_name,
+    ca.role,
+    COUNT(*) OVER (PARTITION BY c.id) as trainers_per_course,
+    COUNT(*) OVER (PARTITION BY p.id) as courses_per_trainer
+FROM course_assignments ca
+JOIN courses c ON ca.course_id = c.id
+JOIN profiles p ON ca.user_id = p.id
+WHERE ca.role IN ('onsite_trainer', 'onsite_assessor')
+ORDER BY c.title, p.full_name;
+
+-- Count how many courses each trainer is assigned to
+SELECT 
+    p.full_name,
+    COUNT(DISTINCT ca.course_id) as course_count,
+    STRING_AGG(DISTINCT c.title, ', ') as courses
+FROM course_assignments ca
+JOIN profiles p ON ca.user_id = p.id
+JOIN courses c ON ca.course_id = c.id
+WHERE ca.role IN ('onsite_trainer', 'onsite_assessor')
+GROUP BY p.id, p.full_name
+ORDER BY course_count DESC;
+
+-- ============================================
 -- 0. QUICK CHECK - Does Henry Morgan have trainer assignments?
 -- ============================================
 -- Simple check for Henry Morgan's trainer/assessor roles
