@@ -30,7 +30,9 @@ export default async function TrainAssessPage() {
   }
 
   // Get user's role assignments for training and assessment
-  const { data: trainerAssignments, error: trainerError } = await supabase
+  // Use admin client to bypass RLS since trainers need to see their trainer/assessor roles
+  const supabaseServiceForTrainer = supabaseAdmin();
+  const { data: trainerAssignments, error: trainerError } = await supabaseServiceForTrainer
     .from("course_assignments")
     .select("course_id, role")
     .eq("user_id", user.id)
