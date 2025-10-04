@@ -1,0 +1,702 @@
+[
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "role": "onsite_trainer",
+    "course_title": "High Altitude Skydiving",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "role": "onsite_assessor",
+    "course_title": "High Altitude Skydiving",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "5a1f7979-b5b4-49d5-99bc-68b77bde86fa",
+    "role": "onsite_assessor",
+    "course_title": "Jump Staff Plane Induction ZK-SEX",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "5a1f7979-b5b4-49d5-99bc-68b77bde86fa",
+    "role": "onsite_trainer",
+    "course_title": "Jump Staff Plane Induction ZK-SEX",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "role": "onsite_assessor",
+    "course_title": "Personal Camera rig and outside camera equipment",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "ff16966d-8e76-4be7-9358-92cfd0651c36",
+    "role": "onsite_trainer",
+    "course_title": "Revl editing system and filming customers",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "ff16966d-8e76-4be7-9358-92cfd0651c36",
+    "role": "onsite_assessor",
+    "course_title": "Revl editing system and filming customers",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "role": "onsite_assessor",
+    "course_title": "Sigma 25 jump checks",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "role": "onsite_trainer",
+    "course_title": "Sigma 25 jump checks",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "role": "onsite_trainer",
+    "course_title": "Sigma Packing",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "role": "onsite_assessor",
+    "course_title": "Sigma Packing",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "onsite_trainer",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "onsite_assessor",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "role": "onsite_trainer",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "role": "onsite_assessor",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "96191cc2-6519-4665-b1d5-e08707a9139c",
+    "role": "onsite_assessor",
+    "course_title": "Tandem documents, rules and responsibilities",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "96191cc2-6519-4665-b1d5-e08707a9139c",
+    "role": "onsite_trainer",
+    "course_title": "Tandem documents, rules and responsibilities",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "role": "onsite_assessor",
+    "course_title": "Tandem Instructor Camera",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "role": "onsite_trainer",
+    "course_title": "Tandem Instructor Camera",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7",
+    "role": "onsite_assessor",
+    "course_title": "Tandem Master equipment",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7",
+    "role": "onsite_trainer",
+    "course_title": "Tandem Master equipment",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "30950fba-e4cd-4fc3-8b72-cb7d27b02565",
+    "role": "onsite_trainer",
+    "course_title": "Tandem OCA - OPERATIONAL COMPETENCY ASSESSMENT",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "ffcf28b5-b9b2-4728-a382-43bb97e5968f",
+    "course_id": "30950fba-e4cd-4fc3-8b72-cb7d27b02565",
+    "role": "onsite_assessor",
+    "course_title": "Tandem OCA - OPERATIONAL COMPETENCY ASSESSMENT",
+    "trainer_name": "Connor Johnston"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "role": "onsite_trainer",
+    "course_title": "High Altitude Skydiving",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "role": "onsite_assessor",
+    "course_title": "High Altitude Skydiving",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "role": "onsite_assessor",
+    "course_title": "INFLITE Driver Training and Vehicle induction.",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "role": "onsite_trainer",
+    "course_title": "INFLITE Driver Training and Vehicle induction.",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "5a1f7979-b5b4-49d5-99bc-68b77bde86fa",
+    "role": "onsite_trainer",
+    "course_title": "Jump Staff Plane Induction ZK-SEX",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "5a1f7979-b5b4-49d5-99bc-68b77bde86fa",
+    "role": "onsite_assessor",
+    "course_title": "Jump Staff Plane Induction ZK-SEX",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "role": "onsite_assessor",
+    "course_title": "Personal Camera rig and outside camera equipment",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "cf3f90dd-c67b-4138-85d6-945680cba0a0",
+    "role": "onsite_assessor",
+    "course_title": "Pre employment Drug and Alcohol test",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "ff16966d-8e76-4be7-9358-92cfd0651c36",
+    "role": "onsite_assessor",
+    "course_title": "Revl editing system and filming customers",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "ff16966d-8e76-4be7-9358-92cfd0651c36",
+    "role": "onsite_trainer",
+    "course_title": "Revl editing system and filming customers",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "role": "onsite_trainer",
+    "course_title": "Sigma 25 jump checks",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "role": "onsite_assessor",
+    "course_title": "Sigma 25 jump checks",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "role": "onsite_assessor",
+    "course_title": "Sigma Packing",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "role": "onsite_trainer",
+    "course_title": "Sigma Packing",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "onsite_assessor",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "onsite_trainer",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "c7c67c89-dec9-4247-933f-3bff8b03d246",
+    "role": "onsite_assessor",
+    "course_title": "Skydive Abel Tasman General Induction",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "c7c67c89-dec9-4247-933f-3bff8b03d246",
+    "role": "onsite_trainer",
+    "course_title": "Skydive Abel Tasman General Induction",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "96191cc2-6519-4665-b1d5-e08707a9139c",
+    "role": "onsite_assessor",
+    "course_title": "Tandem documents, rules and responsibilities",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "96191cc2-6519-4665-b1d5-e08707a9139c",
+    "role": "onsite_trainer",
+    "course_title": "Tandem documents, rules and responsibilities",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "role": "onsite_assessor",
+    "course_title": "Tandem Instructor Camera",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "role": "onsite_trainer",
+    "course_title": "Tandem Instructor Camera",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7",
+    "role": "onsite_assessor",
+    "course_title": "Tandem Master equipment",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7",
+    "role": "onsite_trainer",
+    "course_title": "Tandem Master equipment",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "30950fba-e4cd-4fc3-8b72-cb7d27b02565",
+    "role": "onsite_assessor",
+    "course_title": "Tandem OCA - OPERATIONAL COMPETENCY ASSESSMENT",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "course_id": "30950fba-e4cd-4fc3-8b72-cb7d27b02565",
+    "role": "onsite_trainer",
+    "course_title": "Tandem OCA - OPERATIONAL COMPETENCY ASSESSMENT",
+    "trainer_name": "Damien Ettema"
+  },
+  {
+    "user_id": "9b51d6ca-22e7-45b3-abc6-33ef99befe2f",
+    "course_id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "role": "onsite_trainer",
+    "course_title": "INFLITE Driver Training and Vehicle induction.",
+    "trainer_name": "Emily Leask"
+  },
+  {
+    "user_id": "9b51d6ca-22e7-45b3-abc6-33ef99befe2f",
+    "course_id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "role": "onsite_assessor",
+    "course_title": "INFLITE Driver Training and Vehicle induction.",
+    "trainer_name": "Emily Leask"
+  },
+  {
+    "user_id": "9b51d6ca-22e7-45b3-abc6-33ef99befe2f",
+    "course_id": "cf3f90dd-c67b-4138-85d6-945680cba0a0",
+    "role": "onsite_assessor",
+    "course_title": "Pre employment Drug and Alcohol test",
+    "trainer_name": "Emily Leask"
+  },
+  {
+    "user_id": "9b51d6ca-22e7-45b3-abc6-33ef99befe2f",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "onsite_trainer",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "trainer_name": "Emily Leask"
+  },
+  {
+    "user_id": "9b51d6ca-22e7-45b3-abc6-33ef99befe2f",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "onsite_assessor",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "trainer_name": "Emily Leask"
+  },
+  {
+    "user_id": "9b51d6ca-22e7-45b3-abc6-33ef99befe2f",
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "role": "onsite_assessor",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "trainer_name": "Emily Leask"
+  },
+  {
+    "user_id": "9b51d6ca-22e7-45b3-abc6-33ef99befe2f",
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "role": "onsite_trainer",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "trainer_name": "Emily Leask"
+  },
+  {
+    "user_id": "d00d5516-a1a6-4992-becf-cbd835d26bcc",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "role": "onsite_assessor",
+    "course_title": "Sigma 25 jump checks",
+    "trainer_name": "Gabrielle Prevost"
+  },
+  {
+    "user_id": "d00d5516-a1a6-4992-becf-cbd835d26bcc",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "role": "onsite_trainer",
+    "course_title": "Sigma 25 jump checks",
+    "trainer_name": "Gabrielle Prevost"
+  },
+  {
+    "user_id": "d00d5516-a1a6-4992-becf-cbd835d26bcc",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "role": "onsite_assessor",
+    "course_title": "Sigma Packing",
+    "trainer_name": "Gabrielle Prevost"
+  },
+  {
+    "user_id": "d00d5516-a1a6-4992-becf-cbd835d26bcc",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "role": "onsite_trainer",
+    "course_title": "Sigma Packing",
+    "trainer_name": "Gabrielle Prevost"
+  },
+  {
+    "user_id": "2401b4eb-8b92-48c7-956a-f328f9af9969",
+    "course_id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "role": "onsite_assessor",
+    "course_title": "INFLITE Driver Training and Vehicle induction.",
+    "trainer_name": "Gemma Baty"
+  },
+  {
+    "user_id": "2401b4eb-8b92-48c7-956a-f328f9af9969",
+    "course_id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "role": "onsite_trainer",
+    "course_title": "INFLITE Driver Training and Vehicle induction.",
+    "trainer_name": "Gemma Baty"
+  },
+  {
+    "user_id": "2401b4eb-8b92-48c7-956a-f328f9af9969",
+    "course_id": "cf3f90dd-c67b-4138-85d6-945680cba0a0",
+    "role": "onsite_assessor",
+    "course_title": "Pre employment Drug and Alcohol test",
+    "trainer_name": "Gemma Baty"
+  },
+  {
+    "user_id": "2401b4eb-8b92-48c7-956a-f328f9af9969",
+    "course_id": "53e06ebc-2e61-4d78-90ac-9451e435155c",
+    "role": "onsite_trainer",
+    "course_title": "Skydive MT Cook General Induction",
+    "trainer_name": "Gemma Baty"
+  },
+  {
+    "user_id": "2401b4eb-8b92-48c7-956a-f328f9af9969",
+    "course_id": "53e06ebc-2e61-4d78-90ac-9451e435155c",
+    "role": "onsite_assessor",
+    "course_title": "Skydive MT Cook General Induction",
+    "trainer_name": "Gemma Baty"
+  },
+  {
+    "user_id": "4853911d-3679-4b1e-a13e-a17854f2ba4e",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "role": "onsite_assessor",
+    "course_title": "Personal Camera rig and outside camera equipment",
+    "trainer_name": "Hamish Wilson"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "role": "onsite_trainer",
+    "course_title": "High Altitude Skydiving",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "691e93b4-3a03-467b-9ef9-30d7f9bb3346",
+    "role": "onsite_assessor",
+    "course_title": "High Altitude Skydiving",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "role": "onsite_assessor",
+    "course_title": "INFLITE Driver Training and Vehicle induction.",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "role": "onsite_trainer",
+    "course_title": "INFLITE Driver Training and Vehicle induction.",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "5a1f7979-b5b4-49d5-99bc-68b77bde86fa",
+    "role": "onsite_assessor",
+    "course_title": "Jump Staff Plane Induction ZK-SEX",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "5a1f7979-b5b4-49d5-99bc-68b77bde86fa",
+    "role": "onsite_trainer",
+    "course_title": "Jump Staff Plane Induction ZK-SEX",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "86e21f3a-8cca-416c-96e6-93bc3f0314be",
+    "role": "onsite_assessor",
+    "course_title": "Personal Camera rig and outside camera equipment",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "cf3f90dd-c67b-4138-85d6-945680cba0a0",
+    "role": "onsite_assessor",
+    "course_title": "Pre employment Drug and Alcohol test",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "ff16966d-8e76-4be7-9358-92cfd0651c36",
+    "role": "onsite_trainer",
+    "course_title": "Revl editing system and filming customers",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "ff16966d-8e76-4be7-9358-92cfd0651c36",
+    "role": "onsite_assessor",
+    "course_title": "Revl editing system and filming customers",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "role": "onsite_trainer",
+    "course_title": "Sigma 25 jump checks",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "c7e65bae-bb3d-49d0-b992-fe4c09b15451",
+    "role": "onsite_assessor",
+    "course_title": "Sigma 25 jump checks",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "role": "onsite_trainer",
+    "course_title": "Sigma Packing",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "54e82b81-b2db-49ee-b644-27e6b0ad4451",
+    "role": "onsite_assessor",
+    "course_title": "Sigma Packing",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "onsite_assessor",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "bdc908f2-0346-4678-9b96-ba76a6dc591b",
+    "role": "onsite_trainer",
+    "course_title": "Sigma passenger Harnessing and Briefing.",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "c7c67c89-dec9-4247-933f-3bff8b03d246",
+    "role": "onsite_assessor",
+    "course_title": "Skydive Abel Tasman General Induction",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "c7c67c89-dec9-4247-933f-3bff8b03d246",
+    "role": "onsite_trainer",
+    "course_title": "Skydive Abel Tasman General Induction",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "role": "onsite_trainer",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "9c1f50cf-4413-4f3b-9eb8-f16526b837f6",
+    "role": "onsite_assessor",
+    "course_title": "Skydive Franz and Fox General Induction",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "53e06ebc-2e61-4d78-90ac-9451e435155c",
+    "role": "onsite_trainer",
+    "course_title": "Skydive MT Cook General Induction",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "53e06ebc-2e61-4d78-90ac-9451e435155c",
+    "role": "onsite_assessor",
+    "course_title": "Skydive MT Cook General Induction",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "ffb5cc4e-f6cf-4363-a6b5-154ee2361802",
+    "role": "onsite_assessor",
+    "course_title": "Tandem before jump procedures",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "ffb5cc4e-f6cf-4363-a6b5-154ee2361802",
+    "role": "onsite_trainer",
+    "course_title": "Tandem before jump procedures",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "96191cc2-6519-4665-b1d5-e08707a9139c",
+    "role": "onsite_assessor",
+    "course_title": "Tandem documents, rules and responsibilities",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "96191cc2-6519-4665-b1d5-e08707a9139c",
+    "role": "onsite_trainer",
+    "course_title": "Tandem documents, rules and responsibilities",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "role": "onsite_assessor",
+    "course_title": "Tandem Instructor Camera",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "11c99dcb-f0ae-414a-b8f3-af60205d6261",
+    "role": "onsite_trainer",
+    "course_title": "Tandem Instructor Camera",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7",
+    "role": "onsite_trainer",
+    "course_title": "Tandem Master equipment",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "adceacac-dac5-4c1d-8d47-3a0f2df8b3b7",
+    "role": "onsite_assessor",
+    "course_title": "Tandem Master equipment",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "30950fba-e4cd-4fc3-8b72-cb7d27b02565",
+    "role": "onsite_trainer",
+    "course_title": "Tandem OCA - OPERATIONAL COMPETENCY ASSESSMENT",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "course_id": "30950fba-e4cd-4fc3-8b72-cb7d27b02565",
+    "role": "onsite_assessor",
+    "course_title": "Tandem OCA - OPERATIONAL COMPETENCY ASSESSMENT",
+    "trainer_name": "Henry Morgan"
+  },
+  {
+    "user_id": "c2c629d3-b482-4904-9aeb-e3573ca5ec6a",
+    "course_id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "role": "onsite_trainer",
+    "course_title": "INFLITE Driver Training and Vehicle induction.",
+    "trainer_name": "Kelsie Hamilton"
+  },
+  {
+    "user_id": "c2c629d3-b482-4904-9aeb-e3573ca5ec6a",
+    "course_id": "4a25c12d-fc4f-4eae-8053-e1b0bff5d27e",
+    "role": "onsite_assessor",
+    "course_title": "INFLITE Driver Training and Vehicle induction.",
+    "trainer_name": "Kelsie Hamilton"
+  }
+]
