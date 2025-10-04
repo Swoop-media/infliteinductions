@@ -17,7 +17,7 @@ GROUP BY role;
 -- Check if Henry Morgan has trainer/assessor assignments
 SELECT * FROM course_assignments
 WHERE user_id IN (
-    SELECT id FROM profiles WHERE name LIKE '%Henry Morgan%'
+    SELECT id FROM profiles WHERE full_name LIKE '%Henry Morgan%'
 )
 AND role IN ('onsite_trainer', 'onsite_assessor');
 
@@ -26,7 +26,7 @@ AND role IN ('onsite_trainer', 'onsite_assessor');
 -- ============================================
 -- Courses that have trainees but no trainers/assessors
 SELECT 
-    c.name as course_name,
+    c.title as course_name,
     c.id as course_id,
     COUNT(DISTINCT ca_trainee.user_id) as trainee_count,
     COUNT(DISTINCT ca_trainer.user_id) as trainer_count,
@@ -36,7 +36,7 @@ LEFT JOIN course_assignments ca_trainee ON c.id = ca_trainee.course_id AND ca_tr
 LEFT JOIN course_assignments ca_trainer ON c.id = ca_trainer.course_id AND ca_trainer.role = 'onsite_trainer'
 LEFT JOIN course_assignments ca_assessor ON c.id = ca_assessor.course_id AND ca_assessor.role = 'onsite_assessor'
 WHERE ca_trainee.user_id IS NOT NULL
-GROUP BY c.id, c.name
+GROUP BY c.id, c.title
 HAVING COUNT(DISTINCT ca_trainer.user_id) = 0 OR COUNT(DISTINCT ca_assessor.user_id) = 0
 ORDER BY trainee_count DESC;
 
@@ -45,26 +45,26 @@ ORDER BY trainee_count DESC;
 -- ============================================
 -- See what's special about Tandem OCA courses
 SELECT 
-    c.name,
+    c.title,
     c.id,
     ca.role,
     COUNT(DISTINCT ca.user_id) as user_count
 FROM courses c
 INNER JOIN course_assignments ca ON c.id = ca.course_id
-WHERE c.name LIKE '%Tandem OCA%'
-GROUP BY c.id, c.name, ca.role;
+WHERE c.title LIKE '%Tandem OCA%'
+GROUP BY c.id, c.title, ca.role;
 
 -- Compare with other courses that should appear
 SELECT 
-    c.name,
+    c.title,
     c.id,
     ca.role,
     COUNT(DISTINCT ca.user_id) as user_count
 FROM courses c
 INNER JOIN course_assignments ca ON c.id = ca.course_id
-WHERE c.name NOT LIKE '%Tandem OCA%'
+WHERE c.title NOT LIKE '%Tandem OCA%'
 AND ca.role IN ('onsite_trainer', 'onsite_assessor')
-GROUP BY c.id, c.name, ca.role
+GROUP BY c.id, c.title, ca.role
 LIMIT 20;
 
 -- ============================================
@@ -73,9 +73,9 @@ LIMIT 20;
 -- Find assignments with incomplete progress tracking
 SELECT 
     ca.course_id,
-    c.name as course_name,
+    c.title as course_name,
     ca.user_id,
-    p.name as user_name,
+    p.full_name as user_name,
     ca.assignment_status,
     COUNT(ap.id) as progress_records,
     COUNT(DISTINCT ap.module_id) as modules_with_progress
@@ -85,9 +85,9 @@ JOIN profiles p ON ca.user_id = p.id
 LEFT JOIN assignment_progress ap ON ca.id = ap.assignment_id
 WHERE ca.role = 'trainee'
 AND ca.assignment_status IN ('in_progress', 'approved')
-GROUP BY ca.course_id, c.name, ca.user_id, p.name, ca.assignment_status
+GROUP BY ca.course_id, c.title, ca.user_id, p.full_name, ca.assignment_status
 HAVING COUNT(ap.id) = 0
-ORDER BY c.name
+ORDER BY c.title
 LIMIT 50;
 
 -- ============================================
@@ -199,7 +199,7 @@ WITH trainer_courses AS (
     SELECT DISTINCT course_id
     FROM course_assignments
     WHERE user_id IN (
-        SELECT id FROM profiles WHERE name LIKE '%Henry Morgan%'
+        SELECT id FROM profiles WHERE full_name LIKE '%Henry Morgan%'
     )
     AND role = 'onsite_trainer'
 ),
@@ -207,11 +207,11 @@ pending_training AS (
     SELECT 
         ca.id as assignment_id,
         ca.user_id,
-        p.name as user_name,
-        c.name as course_name,
+        p.full_name as user_name,
+        c.title as course_name,
         cm.id as module_id,
-        cm.name as module_name,
-        cm.module_type
+        cm.title as module_name,
+        cm.type as module_type
     FROM course_assignments ca
     JOIN profiles p ON ca.user_id = p.id
     JOIN courses c ON ca.course_id = c.id
@@ -219,7 +219,7 @@ pending_training AS (
     WHERE ca.course_id IN (SELECT course_id FROM trainer_courses)
     AND ca.role = 'trainee'
     AND ca.assignment_status IN ('approved', 'in_progress')
-    AND cm.module_type = 'onsite_training'
+    AND cm.type = 'onsite_training'
     AND NOT EXISTS (
         SELECT 1 FROM assignment_progress ap
         WHERE ap.assignment_id = ca.id
