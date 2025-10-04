@@ -153,6 +153,11 @@ export default async function TrainAssessPage() {
     let skippedCompleted = 0;
     let skippedNoModules = 0;
     let processedCount = 0;
+    let notTrainerForCourse = 0;
+    let notAssessorForCourse = 0;
+    let digitalNotComplete = 0;
+    let noOnsiteModules = 0;
+    let allModulesComplete = 0;
     
     for (const assignment of traineeAssignments) {
       const courseId = assignment.course_id;
@@ -203,27 +208,35 @@ export default async function TrainAssessPage() {
       const traineeEmail = traineeProfile?.email || "";
       const courseTitle = courseInfo?.title || "Unknown Course";
 
-      // Add to pending training if digital complete but onsite training not done
-      if (allDigitalComplete && onsiteTrainingModules.length > 0 && !onsiteTrainingComplete && trainerCourseIds.has(courseId)) {
-        const trainingItem = {
-          id: assignmentId,
-          trainee_name: traineeName,
-          trainee_email: traineeEmail,
-          course_title: courseTitle,
-          course_id: courseId,
-          assignment_id: assignmentId,
-          created_at: assignment.created_at,
-          type: 'training' as const
-        };
-        pendingTrainingItems.push(trainingItem);
-        processedCount++;
+      // Debug why assignments are filtered
+      const debugInfo = {
+        assignmentId: assignmentId.substring(0, 8),
+        courseTitle: courseTitle.substring(0, 30),
+        allDigitalComplete,
+        onsiteTrainingModules: onsiteTrainingModules.length,
+        onsiteTrainingComplete,
+        isTrainerForCourse: trainerCourseIds.has(courseId),
+        onsiteAssessmentModules: onsiteAssessmentModules.length,
+        isAssessorForCourse: assessorCourseIds.has(courseId),
+        trainingStageComplete
+      };
+      
+      // Track why assignments don't show
+      let wasProcessed = false;
+      
+      if (!allDigitalComplete) {
+        digitalNotComplete++;
+      } else if (onsiteTrainingModules.length === 0 && onsiteAssessmentModules.length === 0) {
+        noOnsiteModules++;
+      } else if (onsiteTrainingModules.length > 0 && onsiteTrainingComplete && 
+                 onsiteAssessmentModules.length > 0 && onsiteAssessmentModules.every(m => completedModuleIds.has(m.id))) {
+        allModulesComplete++;
       }
 
-      // Add to pending assessment if training stage is complete but assessment not done
-      if (trainingStageComplete && onsiteAssessmentModules.length > 0 && assessorCourseIds.has(courseId)) {
-        const onsiteAssessmentComplete = onsiteAssessmentModules.every(m => completedModuleIds.has(m.id));
-        if (!onsiteAssessmentComplete) {
-          pendingAssessmentItems.push({
+      // Add to pending training if digital complete but onsite training not done
+      if (allDigitalComplete && onsiteTrainingModules.length > 0 && !onsiteTrainingComplete) {
+        if (trainerCourseIds.has(courseId)) {
+          const trainingItem = {
             id: assignmentId,
             trainee_name: traineeName,
             trainee_email: traineeEmail,
@@ -231,9 +244,36 @@ export default async function TrainAssessPage() {
             course_id: courseId,
             assignment_id: assignmentId,
             created_at: assignment.created_at,
-            type: 'assessment' as const
-          });
+            type: 'training' as const
+          };
+          pendingTrainingItems.push(trainingItem);
           processedCount++;
+          wasProcessed = true;
+        } else {
+          notTrainerForCourse++;
+        }
+      }
+
+      // Add to pending assessment if training stage is complete but assessment not done
+      if (trainingStageComplete && onsiteAssessmentModules.length > 0) {
+        const onsiteAssessmentComplete = onsiteAssessmentModules.every(m => completedModuleIds.has(m.id));
+        if (!onsiteAssessmentComplete) {
+          if (assessorCourseIds.has(courseId)) {
+            pendingAssessmentItems.push({
+              id: assignmentId,
+              trainee_name: traineeName,
+              trainee_email: traineeEmail,
+              course_title: courseTitle,
+              course_id: courseId,
+              assignment_id: assignmentId,
+              created_at: assignment.created_at,
+              type: 'assessment' as const
+            });
+            processedCount++;
+            wasProcessed = true;
+          } else {
+            notAssessorForCourse++;
+          }
         }
       }
     }
@@ -242,10 +282,17 @@ export default async function TrainAssessPage() {
       totalAssignments: traineeAssignments.length,
       skippedCompleted,
       skippedNoModules,
+      digitalNotComplete,
+      noOnsiteModules,
+      allModulesComplete,
+      notTrainerForCourse,
+      notAssessorForCourse,
       processedCount,
       pendingTraining: pendingTrainingItems.length,
       pendingAssessment: pendingAssessmentItems.length,
-      unaccounted: traineeAssignments.length - skippedCompleted - skippedNoModules - processedCount
+      unaccounted: traineeAssignments.length - skippedCompleted - skippedNoModules - 
+                   digitalNotComplete - noOnsiteModules - allModulesComplete - 
+                   notTrainerForCourse - notAssessorForCourse - processedCount
     });
     
     // Log unique courses in pending items
