@@ -108,19 +108,28 @@ export default async function TrainAssessPage() {
       modulesByCourse.set(module.course_id, courseModules);
     });
 
-    // 3. Get ALL progress for ALL assignments in ONE query
+    // 3. Get ALL progress for ALL assignments - BATCH to avoid timeout
     const assignmentIds = traineeAssignments.map(a => a.id);
-    const { data: allProgress, error: progressError } = await supabaseService
-      .from("assignment_progress")
-      .select("assignment_id, module_id")
-      .in("assignment_id", assignmentIds);
+    const batchSize = 50; // Query 50 assignments at a time
+    const allProgress = [];
+    
+    console.log('[Train-Assess] Fetching progress in batches for', assignmentIds.length, 'assignments');
+    
+    for (let i = 0; i < assignmentIds.length; i += batchSize) {
+      const batch = assignmentIds.slice(i, i + batchSize);
+      const { data: batchProgress, error: progressError } = await supabaseService
+        .from("assignment_progress")
+        .select("assignment_id, module_id")
+        .in("assignment_id", batch);
+      
+      if (progressError) {
+        console.log('[Train-Assess] Progress batch error at', i, ':', progressError.message);
+      } else if (batchProgress) {
+        allProgress.push(...batchProgress);
+      }
+    }
 
-    console.log('[Train-Assess] Progress records:', {
-      success: !progressError,
-      count: allProgress?.length || 0,
-      forAssignments: assignmentIds.length,
-      error: progressError?.message
-    });
+    console.log('[Train-Assess] Total progress records retrieved:', allProgress.length);
 
     // Group progress by assignment for easy lookup
     const progressByAssignment = new Map<string, Set<string>>();
