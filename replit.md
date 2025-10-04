@@ -91,6 +91,24 @@ The architecture follows a hybrid approach with server-side rendering for perfor
 
 # Enhanced UI Features
 
+## Tabbed Interface for Train-Assess Page
+- **Location**: `/app/train-assess`
+- **Purpose**: Improves performance by separating Training and Assessment lists
+- **Components**:
+  - `page.tsx`: Server component that fetches all data initially
+  - `TrainAssessClient.tsx`: Client component with tabbed interface
+- **Features**:
+  - Separate tabs for Training and Assessment items
+  - Lazy rendering - only shows data for active tab
+  - Reduces DOM size and improves performance with large datasets
+  - Batch query processing (100 records per batch) prevents Supabase timeouts
+  - Clean UI with badge counts for each tab
+- **Performance Benefits**:
+  - Prevents query timeouts with batch processing
+  - Reduces initial render time by only showing one list
+  - Scales to thousands of assignments without degradation
+  - Addresses the "gradual degradation" issue from large IN clause queries
+
 ## Expandable Course Details Component
 - **Locations**: 
   - `/app/admin/review/[assignmentId]` - Admin review page
