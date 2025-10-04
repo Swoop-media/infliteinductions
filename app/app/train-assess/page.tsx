@@ -110,10 +110,17 @@ export default async function TrainAssessPage() {
 
     // 3. Get ALL progress for ALL assignments in ONE query
     const assignmentIds = traineeAssignments.map(a => a.id);
-    const { data: allProgress } = await supabaseService
+    const { data: allProgress, error: progressError } = await supabaseService
       .from("assignment_progress")
       .select("assignment_id, module_id")
       .in("assignment_id", assignmentIds);
+
+    console.log('[Train-Assess] Progress records:', {
+      success: !progressError,
+      count: allProgress?.length || 0,
+      forAssignments: assignmentIds.length,
+      error: progressError?.message
+    });
 
     // Group progress by assignment for easy lookup
     const progressByAssignment = new Map<string, Set<string>>();
@@ -122,6 +129,8 @@ export default async function TrainAssessPage() {
       moduleSet.add(progress.module_id);
       progressByAssignment.set(progress.assignment_id, moduleSet);
     });
+    
+    console.log('[Train-Assess] Assignments with progress:', progressByAssignment.size, 'out of', assignmentIds.length);
 
     // 4. Get ALL profiles for ALL trainees in ONE query
     const traineeUserIds = [...new Set(traineeAssignments.map(a => a.user_id))];
