@@ -1,0 +1,452 @@
+[
+  {
+    "assignment_id": "fe11c086-f3c7-4deb-8c91-bc7001c99e8a",
+    "user_id": "01f30add-d090-4023-a944-7cc1ca09bf0c",
+    "user_name": "Anthony Falconer",
+    "course_name": "High Altitude Skydiving",
+    "module_id": "0a011e0d-8a91-4aef-af2f-079f97462012",
+    "module_name": "Onsite Training High Altitude",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "2f28c873-23d0-4168-b117-8818d1226752",
+    "user_id": "1fcbfc8e-09b0-4d19-b61c-6916c6f441a8",
+    "user_name": "Kelly Carson",
+    "course_name": "High Altitude Skydiving",
+    "module_id": "0a011e0d-8a91-4aef-af2f-079f97462012",
+    "module_name": "Onsite Training High Altitude",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "e750c604-3e5e-4291-b5f1-640346c39a4b",
+    "user_id": "f6baa70e-2ac0-40f7-a10a-ad7d1a97c1f2",
+    "user_name": "oliver burgin",
+    "course_name": "High Altitude Skydiving",
+    "module_id": "0a011e0d-8a91-4aef-af2f-079f97462012",
+    "module_name": "Onsite Training High Altitude",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "866a1052-d31a-4a6c-8fa9-d091bea3f5a1",
+    "user_id": "121cb584-8ac1-4f33-a2a7-0438b6d29a6b",
+    "user_name": "Peter Hansen",
+    "course_name": "High Altitude Skydiving",
+    "module_id": "0a011e0d-8a91-4aef-af2f-079f97462012",
+    "module_name": "Onsite Training High Altitude",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "a7fc597d-8818-46c2-9ba1-71eaa74ee5d8",
+    "user_id": "cc31ea78-a293-4b2d-b927-5ac7b4a1e8b7",
+    "user_name": "Ryan King",
+    "course_name": "High Altitude Skydiving",
+    "module_id": "0a011e0d-8a91-4aef-af2f-079f97462012",
+    "module_name": "Onsite Training High Altitude",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "06d62e9b-9eb7-4939-acaa-cc5b8f8ee37d",
+    "user_id": "012dee13-24ce-48ce-a1bf-6737d87a003b",
+    "user_name": "Will Scott",
+    "course_name": "High Altitude Skydiving",
+    "module_id": "0a011e0d-8a91-4aef-af2f-079f97462012",
+    "module_name": "Onsite Training High Altitude",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "e54fffac-5a8c-402f-8fac-a9096a6d652c",
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "user_name": "Damien Ettema",
+    "course_name": "INFLITE Driver Training and Vehicle induction.",
+    "module_id": "e17d633c-44e9-49d1-aed8-165652ba3ed4",
+    "module_name": "Driver onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "0d6814e7-59dc-4fda-8999-08ff45e8c7b5",
+    "user_id": "9b51d6ca-22e7-45b3-abc6-33ef99befe2f",
+    "user_name": "Emily Leask",
+    "course_name": "INFLITE Driver Training and Vehicle induction.",
+    "module_id": "e17d633c-44e9-49d1-aed8-165652ba3ed4",
+    "module_name": "Driver onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "ac14c4ed-0433-4a5b-ade9-af8d2b6ceaff",
+    "user_id": "70306253-b3cd-4846-9feb-3c87043a2c04",
+    "user_name": "Fran Melfi",
+    "course_name": "INFLITE Driver Training and Vehicle induction.",
+    "module_id": "e17d633c-44e9-49d1-aed8-165652ba3ed4",
+    "module_name": "Driver onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "9f08cd58-4c92-4ffa-823f-f954b0db3b52",
+    "user_id": "f9e8ef1e-5f42-481c-9951-62a9d3d4fc0f",
+    "user_name": "Julie Perrett",
+    "course_name": "INFLITE Driver Training and Vehicle induction.",
+    "module_id": "e17d633c-44e9-49d1-aed8-165652ba3ed4",
+    "module_name": "Driver onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "a74e662a-7252-4816-88a2-419ddead584f",
+    "user_id": "1fcbfc8e-09b0-4d19-b61c-6916c6f441a8",
+    "user_name": "Kelly Carson",
+    "course_name": "INFLITE Driver Training and Vehicle induction.",
+    "module_id": "e17d633c-44e9-49d1-aed8-165652ba3ed4",
+    "module_name": "Driver onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "34c22551-8199-4e11-80fe-5e5d725cd692",
+    "user_id": "c2c629d3-b482-4904-9aeb-e3573ca5ec6a",
+    "user_name": "Kelsie Hamilton",
+    "course_name": "INFLITE Driver Training and Vehicle induction.",
+    "module_id": "e17d633c-44e9-49d1-aed8-165652ba3ed4",
+    "module_name": "Driver onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "3ad4165d-4cbc-431e-9276-ad0121ce7389",
+    "user_id": "f6baa70e-2ac0-40f7-a10a-ad7d1a97c1f2",
+    "user_name": "oliver burgin",
+    "course_name": "INFLITE Driver Training and Vehicle induction.",
+    "module_id": "e17d633c-44e9-49d1-aed8-165652ba3ed4",
+    "module_name": "Driver onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "55e35151-2422-4d82-b39d-f3cb3469aad5",
+    "user_id": "121cb584-8ac1-4f33-a2a7-0438b6d29a6b",
+    "user_name": "Peter Hansen",
+    "course_name": "INFLITE Driver Training and Vehicle induction.",
+    "module_id": "e17d633c-44e9-49d1-aed8-165652ba3ed4",
+    "module_name": "Driver onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "0c82be49-dbef-4104-a493-9b4b3c27c350",
+    "user_id": "508e6f39-5fc4-4440-bed4-9e394d82de44",
+    "user_name": "Rilee Lesperance",
+    "course_name": "INFLITE Driver Training and Vehicle induction.",
+    "module_id": "e17d633c-44e9-49d1-aed8-165652ba3ed4",
+    "module_name": "Driver onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "dc2e14e2-f92d-4b1a-bc69-fe510c836f33",
+    "user_id": "cc31ea78-a293-4b2d-b927-5ac7b4a1e8b7",
+    "user_name": "Ryan King",
+    "course_name": "INFLITE Driver Training and Vehicle induction.",
+    "module_id": "e17d633c-44e9-49d1-aed8-165652ba3ed4",
+    "module_name": "Driver onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "f3578000-656e-4680-86e6-066a6a4d9c90",
+    "user_id": "56e43d46-3612-4aaf-8582-4381596af366",
+    "user_name": "Summer Lewin",
+    "course_name": "INFLITE Driver Training and Vehicle induction.",
+    "module_id": "e17d633c-44e9-49d1-aed8-165652ba3ed4",
+    "module_name": "Driver onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "52b6652c-08a8-4fca-bcc9-8ca03242ed50",
+    "user_id": "012dee13-24ce-48ce-a1bf-6737d87a003b",
+    "user_name": "Will Scott",
+    "course_name": "INFLITE Driver Training and Vehicle induction.",
+    "module_id": "e17d633c-44e9-49d1-aed8-165652ba3ed4",
+    "module_name": "Driver onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "481a878d-141f-4b5f-8121-319b14251d5f",
+    "user_id": "01f30add-d090-4023-a944-7cc1ca09bf0c",
+    "user_name": "Anthony Falconer",
+    "course_name": "Jump Staff Plane Induction ZK-SEX",
+    "module_id": "a3b58de0-50fc-46fd-9342-a586b1aab598",
+    "module_name": "ZK-SEX onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "4cc96f60-fbe1-448f-b8e8-637d79cf7ee1",
+    "user_id": "f6baa70e-2ac0-40f7-a10a-ad7d1a97c1f2",
+    "user_name": "oliver burgin",
+    "course_name": "Jump Staff Plane Induction ZK-SEX",
+    "module_id": "a3b58de0-50fc-46fd-9342-a586b1aab598",
+    "module_name": "ZK-SEX onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "0736b138-9272-4701-bf0c-772058518c53",
+    "user_id": "4a27cfb7-055d-4239-95d2-3897d8cb44f3",
+    "user_name": "Satyajeet Akhilesh",
+    "course_name": "Jump Staff Plane Induction ZK-SEX",
+    "module_id": "a3b58de0-50fc-46fd-9342-a586b1aab598",
+    "module_name": "ZK-SEX onsite training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "1003050e-c55a-46ce-a09b-4f77de88f40c",
+    "user_id": "01f30add-d090-4023-a944-7cc1ca09bf0c",
+    "user_name": "Anthony Falconer",
+    "course_name": "Revl editing system and filming customers",
+    "module_id": "60ec0fc2-5d21-4c50-b090-d860992f0256",
+    "module_name": "Onsite training of using the revl system",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "15b89f45-5273-4778-ba51-0be3a89900c7",
+    "user_id": "b44eb563-814c-4a48-942d-be48e5f113fe",
+    "user_name": "Isa Roetzsch",
+    "course_name": "Revl editing system and filming customers",
+    "module_id": "60ec0fc2-5d21-4c50-b090-d860992f0256",
+    "module_name": "Onsite training of using the revl system",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "1f38fb3a-c875-4c2b-87df-74f055cae5da",
+    "user_id": "121cb584-8ac1-4f33-a2a7-0438b6d29a6b",
+    "user_name": "Peter Hansen",
+    "course_name": "Revl editing system and filming customers",
+    "module_id": "60ec0fc2-5d21-4c50-b090-d860992f0256",
+    "module_name": "Onsite training of using the revl system",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "75dcd0f5-dd8f-432e-aca0-4aa38abb7534",
+    "user_id": "cc31ea78-a293-4b2d-b927-5ac7b4a1e8b7",
+    "user_name": "Ryan King",
+    "course_name": "Revl editing system and filming customers",
+    "module_id": "60ec0fc2-5d21-4c50-b090-d860992f0256",
+    "module_name": "Onsite training of using the revl system",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "8754a87f-4db1-487f-b13d-128e99d932e9",
+    "user_id": "012dee13-24ce-48ce-a1bf-6737d87a003b",
+    "user_name": "Will Scott",
+    "course_name": "Revl editing system and filming customers",
+    "module_id": "60ec0fc2-5d21-4c50-b090-d860992f0256",
+    "module_name": "Onsite training of using the revl system",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "18987748-322d-4354-993c-d05f26624ece",
+    "user_id": "01f30add-d090-4023-a944-7cc1ca09bf0c",
+    "user_name": "Anthony Falconer",
+    "course_name": "Sigma 25 jump checks",
+    "module_id": "9c9ca686-7aad-4908-9f8c-60183262d8bc",
+    "module_name": "Onsite 25 jump check training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "27824007-4d60-4516-846b-32ba884eee09",
+    "user_id": "f0027617-b3a2-4d0f-b7e4-19948ac79888",
+    "user_name": "Cesar Brito",
+    "course_name": "Sigma 25 jump checks",
+    "module_id": "9c9ca686-7aad-4908-9f8c-60183262d8bc",
+    "module_name": "Onsite 25 jump check training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "adf000b9-7389-430b-8403-ce386910d0cf",
+    "user_id": "57bee71d-45ac-4e99-9765-1b1221b516b5",
+    "user_name": "Damien Ettema",
+    "course_name": "Sigma 25 jump checks",
+    "module_id": "9c9ca686-7aad-4908-9f8c-60183262d8bc",
+    "module_name": "Onsite 25 jump check training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "06e19224-67bf-4a1c-9462-8bbf79e46f2f",
+    "user_id": "b44eb563-814c-4a48-942d-be48e5f113fe",
+    "user_name": "Isa Roetzsch",
+    "course_name": "Sigma 25 jump checks",
+    "module_id": "9c9ca686-7aad-4908-9f8c-60183262d8bc",
+    "module_name": "Onsite 25 jump check training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "e9d45f11-792f-41fa-8bbd-559a7abbb738",
+    "user_id": "9fa77406-c504-4667-96a5-3c9a8e0a8108",
+    "user_name": "nisha paytah",
+    "course_name": "Sigma 25 jump checks",
+    "module_id": "9c9ca686-7aad-4908-9f8c-60183262d8bc",
+    "module_name": "Onsite 25 jump check training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "11db2fe7-9b83-4021-823c-bcfba8040737",
+    "user_id": "cc31ea78-a293-4b2d-b927-5ac7b4a1e8b7",
+    "user_name": "Ryan King",
+    "course_name": "Sigma 25 jump checks",
+    "module_id": "9c9ca686-7aad-4908-9f8c-60183262d8bc",
+    "module_name": "Onsite 25 jump check training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "81434c47-fcce-49b7-80a0-bd9dd977dee2",
+    "user_id": "4a27cfb7-055d-4239-95d2-3897d8cb44f3",
+    "user_name": "Satyajeet Akhilesh",
+    "course_name": "Sigma 25 jump checks",
+    "module_id": "9c9ca686-7aad-4908-9f8c-60183262d8bc",
+    "module_name": "Onsite 25 jump check training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "20c572b0-83d3-4019-af32-8241027ce7b9",
+    "user_id": "012dee13-24ce-48ce-a1bf-6737d87a003b",
+    "user_name": "Will Scott",
+    "course_name": "Sigma 25 jump checks",
+    "module_id": "9c9ca686-7aad-4908-9f8c-60183262d8bc",
+    "module_name": "Onsite 25 jump check training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "98629529-792a-49da-8d4a-eb86f8d62993",
+    "user_id": "01f30add-d090-4023-a944-7cc1ca09bf0c",
+    "user_name": "Anthony Falconer",
+    "course_name": "Sigma Packing",
+    "module_id": "40a4f806-825d-45cb-a211-ff01701e5d0a",
+    "module_name": "Sigma packing training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "990b428e-e79e-4534-8653-e6bfc9328c2f",
+    "user_id": "b44eb563-814c-4a48-942d-be48e5f113fe",
+    "user_name": "Isa Roetzsch",
+    "course_name": "Sigma Packing",
+    "module_id": "40a4f806-825d-45cb-a211-ff01701e5d0a",
+    "module_name": "Sigma packing training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "2b658a0f-3736-47f9-b3fe-1ddf1bda237e",
+    "user_id": "4a27cfb7-055d-4239-95d2-3897d8cb44f3",
+    "user_name": "Satyajeet Akhilesh",
+    "course_name": "Sigma Packing",
+    "module_id": "40a4f806-825d-45cb-a211-ff01701e5d0a",
+    "module_name": "Sigma packing training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "11ee4eda-b348-416e-8357-148e0e4a5626",
+    "user_id": "012dee13-24ce-48ce-a1bf-6737d87a003b",
+    "user_name": "Will Scott",
+    "course_name": "Sigma Packing",
+    "module_id": "40a4f806-825d-45cb-a211-ff01701e5d0a",
+    "module_name": "Sigma packing training",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "f6d2339e-ae99-48c3-9cbd-5432b9cc2982",
+    "user_id": "01f30add-d090-4023-a944-7cc1ca09bf0c",
+    "user_name": "Anthony Falconer",
+    "course_name": "Sigma passenger Harnessing and Briefing.",
+    "module_id": "46a0382e-b1ad-4b79-b88c-4658ba2ce524",
+    "module_name": "Briefing",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "f6d2339e-ae99-48c3-9cbd-5432b9cc2982",
+    "user_id": "01f30add-d090-4023-a944-7cc1ca09bf0c",
+    "user_name": "Anthony Falconer",
+    "course_name": "Sigma passenger Harnessing and Briefing.",
+    "module_id": "e50af008-7642-4467-8778-bd7f60d80e66",
+    "module_name": "Harnessing",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "9a67ebe1-2fa1-4050-9c1a-b9de9dfeb574",
+    "user_id": "f0027617-b3a2-4d0f-b7e4-19948ac79888",
+    "user_name": "Cesar Brito",
+    "course_name": "Sigma passenger Harnessing and Briefing.",
+    "module_id": "46a0382e-b1ad-4b79-b88c-4658ba2ce524",
+    "module_name": "Briefing",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "9a67ebe1-2fa1-4050-9c1a-b9de9dfeb574",
+    "user_id": "f0027617-b3a2-4d0f-b7e4-19948ac79888",
+    "user_name": "Cesar Brito",
+    "course_name": "Sigma passenger Harnessing and Briefing.",
+    "module_id": "e50af008-7642-4467-8778-bd7f60d80e66",
+    "module_name": "Harnessing",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "c29208cf-afdd-456b-892b-bc38056397f5",
+    "user_id": "9b51d6ca-22e7-45b3-abc6-33ef99befe2f",
+    "user_name": "Emily Leask",
+    "course_name": "Sigma passenger Harnessing and Briefing.",
+    "module_id": "e50af008-7642-4467-8778-bd7f60d80e66",
+    "module_name": "Harnessing",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "c29208cf-afdd-456b-892b-bc38056397f5",
+    "user_id": "9b51d6ca-22e7-45b3-abc6-33ef99befe2f",
+    "user_name": "Emily Leask",
+    "course_name": "Sigma passenger Harnessing and Briefing.",
+    "module_id": "46a0382e-b1ad-4b79-b88c-4658ba2ce524",
+    "module_name": "Briefing",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "73670d33-2f9f-4f90-bafb-c4ec036caf65",
+    "user_id": "70306253-b3cd-4846-9feb-3c87043a2c04",
+    "user_name": "Fran Melfi",
+    "course_name": "Sigma passenger Harnessing and Briefing.",
+    "module_id": "e50af008-7642-4467-8778-bd7f60d80e66",
+    "module_name": "Harnessing",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "73670d33-2f9f-4f90-bafb-c4ec036caf65",
+    "user_id": "70306253-b3cd-4846-9feb-3c87043a2c04",
+    "user_name": "Fran Melfi",
+    "course_name": "Sigma passenger Harnessing and Briefing.",
+    "module_id": "46a0382e-b1ad-4b79-b88c-4658ba2ce524",
+    "module_name": "Briefing",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "0e474370-c6f1-4337-a15d-77deddc58874",
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "user_name": "Henry Morgan",
+    "course_name": "Sigma passenger Harnessing and Briefing.",
+    "module_id": "46a0382e-b1ad-4b79-b88c-4658ba2ce524",
+    "module_name": "Briefing",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "0e474370-c6f1-4337-a15d-77deddc58874",
+    "user_id": "1b44c8f5-95aa-4f8c-8110-8f36106b4d10",
+    "user_name": "Henry Morgan",
+    "course_name": "Sigma passenger Harnessing and Briefing.",
+    "module_id": "e50af008-7642-4467-8778-bd7f60d80e66",
+    "module_name": "Harnessing",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "257a5d2f-3eb0-46f5-a383-4b6a7fb7646c",
+    "user_id": "c81980a0-31b6-43de-8afe-0464c745cb9a",
+    "user_name": "Jessica Buehe",
+    "course_name": "Sigma passenger Harnessing and Briefing.",
+    "module_id": "e50af008-7642-4467-8778-bd7f60d80e66",
+    "module_name": "Harnessing",
+    "module_type": "onsite_training"
+  },
+  {
+    "assignment_id": "257a5d2f-3eb0-46f5-a383-4b6a7fb7646c",
+    "user_id": "c81980a0-31b6-43de-8afe-0464c745cb9a",
+    "user_name": "Jessica Buehe",
+    "course_name": "Sigma passenger Harnessing and Briefing.",
+    "module_id": "46a0382e-b1ad-4b79-b88c-4658ba2ce524",
+    "module_name": "Briefing",
+    "module_type": "onsite_training"
+  }
+]
