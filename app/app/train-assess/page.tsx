@@ -149,6 +149,11 @@ export default async function TrainAssessPage() {
     });
 
     // Now process each assignment using the pre-fetched data (no additional queries!)
+    console.log('[Train-Assess] Processing', traineeAssignments.length, 'assignments');
+    let skippedCompleted = 0;
+    let skippedNoModules = 0;
+    let processedCount = 0;
+    
     for (const assignment of traineeAssignments) {
       const courseId = assignment.course_id;
       const traineeId = assignment.user_id;
@@ -157,12 +162,16 @@ export default async function TrainAssessPage() {
       // Skip assignments that are already marked as completed at the assignment level
       // These are fully done and shouldn't appear in pending lists
       if (assignment.assignment_status === 'completed') {
+        skippedCompleted++;
         continue;
       }
       
       // Use pre-fetched data instead of making queries
       const courseModules = modulesByCourse.get(courseId) || [];
-      if (courseModules.length === 0) continue;
+      if (courseModules.length === 0) {
+        skippedNoModules++;
+        continue;
+      }
 
       const digitalModules = courseModules.filter(m =>
         m.type === "digital_training" || m.type === "digital_assessment_quiz"
@@ -207,6 +216,7 @@ export default async function TrainAssessPage() {
           type: 'training' as const
         };
         pendingTrainingItems.push(trainingItem);
+        processedCount++;
       }
 
       // Add to pending assessment if training stage is complete but assessment not done
@@ -223,9 +233,27 @@ export default async function TrainAssessPage() {
             created_at: assignment.created_at,
             type: 'assessment' as const
           });
+          processedCount++;
         }
       }
     }
+    
+    console.log('[Train-Assess] Processing complete:', {
+      totalAssignments: traineeAssignments.length,
+      skippedCompleted,
+      skippedNoModules,
+      processedCount,
+      pendingTraining: pendingTrainingItems.length,
+      pendingAssessment: pendingAssessmentItems.length,
+      unaccounted: traineeAssignments.length - skippedCompleted - skippedNoModules - processedCount
+    });
+    
+    // Log unique courses in pending items
+    const uniqueCourses = new Set([
+      ...pendingTrainingItems.map(i => i.course_title),
+      ...pendingAssessmentItems.map(i => i.course_title)
+    ]);
+    console.log('[Train-Assess] Unique courses showing:', Array.from(uniqueCourses));
   }
 
   return renderPage(pendingTrainingItems, pendingAssessmentItems);
