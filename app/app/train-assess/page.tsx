@@ -2,23 +2,7 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { User, Calendar, BookOpen, ClipboardCheck, ArrowRight } from "lucide-react";
-import Link from "next/link";
-import { formatDateConsistent } from "@/lib/utils";
-
-interface PendingTrainingItem {
-  id: string;
-  trainee_name: string;
-  trainee_email: string;
-  course_title: string;
-  course_id: string;
-  assignment_id: string;
-  created_at: string;
-  type: 'training' | 'assessment';
-}
+import TrainAssessClient, { PendingItem } from "./TrainAssessClient";
 
 export default async function TrainAssessPage() {
   const supabase = await createSupabaseServer();
@@ -223,146 +207,10 @@ export default async function TrainAssessPage() {
     }
   }
 
-  return renderPage(pendingTrainingItems, pendingAssessmentItems);
-}
-
-// Extracted rendering logic to keep it clean
-function renderPage(pendingTrainingItems: PendingTrainingItem[], pendingAssessmentItems: PendingTrainingItem[]) {
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Training & Assessment</h1>
-        <p className="text-muted-foreground">
-          Manage onsite training and assessments for your assigned courses.
-        </p>
-      </div>
-
-      {/* Pending Onsite Training */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5" />
-            Pending Onsite Training
-            <Badge variant="secondary">{pendingTrainingItems.length}</Badge>
-          </CardTitle>
-          <CardDescription>
-            Trainees who have completed digital modules and are ready for onsite training.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {pendingTrainingItems.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No pending onsite training sessions.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {pendingTrainingItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{item.trainee_name}</span>
-                      <span className="text-sm text-muted-foreground">({item.trainee_email})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{item.course_title}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        Ready since {formatDateConsistent(item.created_at)}
-                      </span>
-                    </div>
-                  </div>
-                  <Link 
-                      href={`/app/train-assess/course/${item.course_id}?trainee=${item.assignment_id}&type=training`}
-                    >
-                      <Button size="sm">
-                        Start Training
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Pending Onsite Assessment */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardCheck className="h-5 w-5" />
-            Pending Onsite Assessment
-            <Badge variant="secondary">{pendingAssessmentItems.length}</Badge>
-          </CardTitle>
-          <CardDescription>
-            Trainees who have completed onsite training and are ready for assessment.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {pendingAssessmentItems.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No pending onsite assessments.
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {pendingAssessmentItems.map((item) => (
-                <div key={item.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium">{item.trainee_name}</span>
-                      <span className="text-sm text-muted-foreground">({item.trainee_email})</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">{item.course_title}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        Ready since {formatDateConsistent(item.created_at)}
-                      </span>
-                    </div>
-                  </div>
-                  <Link href={`/app/train-assess/course/${item.course_id}?trainee=${item.assignment_id}&type=assessment`}>
-                    <Button variant="outline">
-                      Start Assessment
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* How it works */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">How it works</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-              <span>Trainees appear in "Pending Training" after completing all digital modules</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>After onsite training is completed, they move to "Pending Assessment"</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-              <span>Complete the assessment to finish their course journey</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <TrainAssessClient 
+      initialTrainingItems={pendingTrainingItems}
+      initialAssessmentItems={pendingAssessmentItems}
+    />
   );
 }
