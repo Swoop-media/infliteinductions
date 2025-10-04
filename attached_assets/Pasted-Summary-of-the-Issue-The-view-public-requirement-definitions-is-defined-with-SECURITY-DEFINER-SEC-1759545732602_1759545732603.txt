@@ -1,0 +1,59 @@
+Summary of the Issue
+The view public.requirement_definitions is defined with SECURITY DEFINER.
+SECURITY DEFINER causes queries against the view to run with the privileges and RLS context of the view’s owner (creator), not the querying user.
+This can unintentionally bypass Row-Level Security or GRANT-based access controls, expanding data exposure beyond what a user should see.
+Why this matters
+If the view owner has broader permissions than end users, SECURITY DEFINER can leak rows that RLS would otherwise restrict.
+It complicates auditing and least-privilege principles because access is inherited from the creator’s role.
+Recommended Fixes
+Prefer SECURITY INVOKER for views
+Recreate the view as SECURITY INVOKER so it respects the permissions and RLS of the querying user.
+Postgres doesn’t support ALTER VIEW to switch security mode; you must recreate the view.
+High-level steps:
+
+Create a replacement view with INVOKER semantics.
+Ensure GRANTs are correct for roles that need access.
+Test with a few user roles to confirm RLS is enforced.
+Illustrative example (non-executable):
+
+SQL Query
+
+
+
+BEGIN;
+DROP VIEW IF EXISTS public.requirement_definitions;
+CREATE VIEW public.requirement_definitions
+-- SECURITY INVOKER is default for views; include explicitly for clarity
+WITH (security_invoker = on) AS
+SELECT ...
+FROM ...;
+-- Reapply privileges
+GRANT SELECT ON public.requirement_definitions TO authenticated;
+COMMIT;
+
+If SECURITY DEFINER is truly required, harden it
+Use a dedicated owner role with narrowly scoped privileges (not a superuser or service_role).
+Ensure the view definition enforces tenant/user filters explicitly to mimic RLS, e.g., WHERE tenant_id = get_user_tenant().
+Mark helper functions used in the view as STABLE and SECURITY DEFINER only when necessary, and REVOKE EXECUTE from public roles unless intended.
+Document why SECURITY DEFINER is needed and what protections exist.
+Example hardening patterns:
+
+Bind filters to auth context via safe helper functions that do not expose excess privileges.
+Ensure all sensitive columns/rows are filtered inside the view definition.
+Validate RLS coverage
+Confirm RLS is enabled on underlying tables and policies exist for expected roles.
+Index columns used in policy predicates (e.g., user_id, tenant_id) for performance.
+Test as anon, authenticated, and any custom roles to verify no unintended access.
+Safe Change Process
+Create a temporary INVOKER view name (e.g., requirement_definitions_invoker) for testing.
+Validate application queries and RLS behavior.
+Swap names during a short maintenance window to avoid dependency breakage.
+Reapply GRANTs after recreation.
+When to keep SECURITY DEFINER
+Rare cases where a view must aggregate across rows users cannot individually SELECT, but where the resulting projection is safe to expose.
+In such cases, ensure least-privilege owner, strict WHERE clauses, and thorough tests to prevent data leakage.
+Quick Checklist
+Is SECURITY DEFINER actually needed? If not, recreate as SECURITY INVOKER.
+Are GRANTs and RLS policies correct on underlying tables?
+Are helper functions secured and access-revoked where appropriate?
+Have you tested with multiple roles to confirm expected visibility?
