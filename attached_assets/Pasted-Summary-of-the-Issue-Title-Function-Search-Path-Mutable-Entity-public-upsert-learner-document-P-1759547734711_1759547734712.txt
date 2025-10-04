@@ -1,0 +1,68 @@
+Summary of the Issue
+Title: Function Search Path Mutable
+Entity: public.upsert_learner_document
+Problem: The function’s effective schema resolution depends on the caller’s search_path because it doesn’t explicitly set one. This is risky: if search_path is altered (intentionally or accidentally), the function may resolve object names (tables, functions, operators) from the wrong schema, leading to incorrect behavior or security issues.
+Why This Matters
+Unstable behavior: Different callers could run the same function and get different results.
+Security risk: Attackers could create similarly named objects in a schema earlier in search_path to hijack calls.
+Hard to debug: Behavior may vary across sessions/environments depending on search_path defaults.
+Recommended Fixes
+Choose one of the following approaches (A is preferred):
+
+A) Set a secure search_path in the function
+Explicitly constrain name resolution to safe schemas (e.g., public only, or pg_catalog, public).
+Also schema-qualify critical object references where possible for extra safety.
+Example (replace argument/types/body accordingly):
+
+SQL Query
+
+
+
+CREATE OR REPLACE FUNCTION public.upsert_learner_document(/* args */)
+RETURNS /* return type */
+LANGUAGE plpgsql
+SET search_path = public, pg_catalog
+AS $$
+BEGIN
+  -- Prefer schema-qualified references:
+  -- INSERT INTO public.learner_documents ...
+  -- SELECT public.some_helper(...)
+  RETURN /* ... */;
+END;
+$$;
+
+Notes:
+
+Include pg_catalog to ensure built-in functions/operators resolve correctly and safely.
+Keep the list minimal and intentional; avoid user-writable schemas.
+B) Fully qualify all object references and avoid changing search_path
+Schema-qualify every table, function, type, and sequence used in the function.
+This avoids mutable search_path entirely but can be verbose.
+Example:
+
+SQL Query
+
+
+
+CREATE OR REPLACE FUNCTION public.upsert_learner_document(/* args */)
+RETURNS /* return type */
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Every object fully qualified:
+  -- INSERT INTO public.learner_documents ...
+  RETURN /* ... */;
+END;
+$$;
+
+Additional Hardening (Recommended)
+If using SECURITY DEFINER:
+Add SET search_path in the function definition (approach A) to avoid privilege escalation via search_path.
+REVOKE EXECUTE from public roles not intended to run it.
+Add explicit function argument types in calls to avoid ambiguous function resolution.
+Consider marking the function as STABLE/IMMUTABLE/VOLATILE appropriately for planner safety and performance.
+Quick Validation Steps
+After applying changes, run:
+SHOW search_path; within a test call to verify the function’s effective path.
+EXPLAIN or a test invocation ensuring all referenced objects resolve from intended schemas.
+Confirm no unqualified references remain if you choose approach B.
