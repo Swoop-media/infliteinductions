@@ -32,11 +32,21 @@ export default async function TrainAssessPage() {
   // Get user's role assignments for training and assessment
   // Use admin client to bypass RLS since trainers need to see their trainer/assessor roles
   const supabaseServiceForTrainer = supabaseAdmin();
+  
+  // TEMPORARY: Log to see if query is timing out
+  console.log('[Train-Assess] Starting trainer assignments query for user:', user.id);
+  
   const { data: trainerAssignments, error: trainerError } = await supabaseServiceForTrainer
     .from("course_assignments")
     .select("course_id, role")
     .eq("user_id", user.id)
     .in("role", ["onsite_trainer", "onsite_assessor"]);
+  
+  console.log('[Train-Assess] Trainer assignments result:', {
+    success: !trainerError,
+    count: trainerAssignments?.length || 0,
+    error: trainerError?.message
+  });
 
   // Build separate Sets for courses where user is trainer vs assessor
   const trainerCourseIds = new Set(
@@ -56,8 +66,10 @@ export default async function TrainAssessPage() {
 
     // OPTIMIZATION: Fetch data in batches instead of in loops
     
+    console.log('[Train-Assess] Fetching trainee assignments for courses:', allCourseIds.length);
+    
     // 1. Get all trainee assignments for relevant courses
-    const { data: traineeAssignments } = await supabaseService
+    const { data: traineeAssignments, error: traineeError } = await supabaseService
       .from("course_assignments")
       .select(`
         id,
@@ -69,7 +81,14 @@ export default async function TrainAssessPage() {
       .eq("role", "trainee")
       .in("course_id", allCourseIds);
 
+    console.log('[Train-Assess] Trainee assignments result:', {
+      success: !traineeError,
+      count: traineeAssignments?.length || 0,
+      error: traineeError?.message
+    });
+
     if (!traineeAssignments || traineeAssignments.length === 0) {
+      console.log('[Train-Assess] No trainee assignments found, returning empty');
       return renderPage(pendingTrainingItems, pendingAssessmentItems);
     }
 
