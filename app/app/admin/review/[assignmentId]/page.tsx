@@ -436,6 +436,7 @@ async function approveAssignment(formData: FormData) {
     .select(`
       id,
       user_id,
+      authorisation_id,
       authorisations (
         title,
         valid_for_days
@@ -444,6 +445,10 @@ async function approveAssignment(formData: FormData) {
     .eq("id", assignmentId)
     .single();
 
+  if (!assignment) {
+    redirect(`/app/admin/review/${assignmentId}?banner=not_found`);
+  }
+
   // Get the approver's name
   const { data: approverProfile } = await supabase
     .from("profiles")
@@ -451,13 +456,58 @@ async function approveAssignment(formData: FormData) {
     .eq("id", user.id)
     .single();
 
+  // Calculate expiry date based on earliest of:
+  // 1. Authorization valid_for_days
+  // 2. Document expiry dates
+  // 3. Course valid_for_months
+  
+  // Import the calculation utility
+  const { calculateAuthorizationExpiry } = await import('@/lib/utils/calculateAuthorizationExpiry');
+  
+  // Get documents for this user and authorization's courses
+  const { data: authCourses } = await supabase
+    .from("authorisation_courses")
+    .select(`
+      course_id,
+      courses!inner(
+        id,
+        valid_for_months
+      )
+    `)
+    .eq("authorisation_id", assignment.authorisation_id);
+    
+  const courseIds = authCourses?.map(ac => ac.course_id) || [];
+  
+  // Get documents with expiry dates
+  const { data: documents } = await supabase
+    .from("learner_documents")
+    .select("expires_on")
+    .eq("user_id", assignment.user_id)
+    .in("course_id", courseIds);
+  
+  // Calculate the expiry date
+  const approvalDate = new Date();
+  const authorization = assignment.authorisations as any;
+  
+  const coursesData = authCourses?.map(ac => ({
+    valid_for_months: (ac.courses as any).valid_for_months
+  })) || [];
+  
+  const expiryDate = calculateAuthorizationExpiry(
+    approvalDate,
+    authorization?.valid_for_days || null,
+    documents || [],
+    coursesData
+  );
+
   // Update the authorisation assignment status to 'completed' and record approval details.
   const { error } = await supabase
     .from("authorisation_assignments")
     .update({ 
       assignment_status: "completed",
-      approved_at: new Date().toISOString(),
-      approved_by: user.id
+      approved_at: approvalDate.toISOString(),
+      approved_by: user.id,
+      expires_at: expiryDate ? expiryDate.toISOString() : null
     })
     .eq("id", assignmentId);
 
