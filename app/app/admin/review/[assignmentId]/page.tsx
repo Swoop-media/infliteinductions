@@ -7,6 +7,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import DocumentSummary from "./DocumentSummary";
 import ExpandableCourseDetails from "./ExpandableCourseDetails";
+import ExpiryPreview from "./ExpiryPreview";
 
 type Props = {
   params: Promise<{ assignmentId: string }>;
@@ -48,7 +49,8 @@ async function loadAssignmentDetails(assignmentId: string) {
       authorisations!inner(
         id,
         title,
-        description
+        description,
+        valid_for_days
       )
     `)
     .eq("id", assignmentId)
@@ -75,7 +77,8 @@ async function loadAssignmentDetails(assignmentId: string) {
       courses!inner(
         id,
         title,
-        description
+        description,
+        valid_for_months
       )
     `)
     .eq("authorisation_id", assignment.authorisation_id)
@@ -382,6 +385,7 @@ async function loadAssignmentDetails(assignmentId: string) {
       course_id: ac.course_id,
       course_title: courseData.title,
       course_description: courseData.description,
+      valid_for_months: courseData.valid_for_months,
       assignment: assignment,
       modules: moduleDetails
     };
@@ -575,6 +579,13 @@ export default async function ReviewAssignmentPage({ params }: Props) {
           userId={profile.id}
         />
       </div>
+
+      {/* Authorization Expiry Preview */}
+      <ExpiryPreview 
+        authValidForDays={authorisation.valid_for_days}
+        documents={documents}
+        courses={courses}
+      />
 
       {/* Actions */}
       <div className="rounded-xl border bg-white p-6">
