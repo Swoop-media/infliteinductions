@@ -389,7 +389,7 @@ type DocumentRow = {
   module_title: string | null;
 };
 
-async function loadUserDocuments(q: string | null) {
+async function loadUserDocuments(q: string | null, page: number = 1) {
   "use server";
   noStore();
   // Check authorization with regular client
@@ -401,7 +401,16 @@ async function loadUserDocuments(q: string | null) {
   const { supabaseAdmin } = await import("@/lib/supabase/admin");
   const supabase = supabaseAdmin();
 
-  // First fetch all user documents
+  const PAGE_SIZE = 50;
+  const offset = (page - 1) * PAGE_SIZE;
+
+  // First get total count
+  const { count: totalCount } = await supabase
+    .from("learner_documents")
+    .select("*", { count: "exact", head: true });
+
+  // Fetch documents with pagination
+  // Order by expires_on to show expired and expiring soon documents first
   const { data: documents, error: documentsError } = await supabase
     .from("learner_documents")
     .select(`
@@ -417,10 +426,11 @@ async function loadUserDocuments(q: string | null) {
       course_id,
       module_id
     `)
-    .order("expires_on", { ascending: true, nullsFirst: false });
+    .order("expires_on", { ascending: true, nullsFirst: false })
+    .range(offset, offset + PAGE_SIZE - 1);
 
   if (documentsError) throw new Error(documentsError.message);
-  if (!documents || documents.length === 0) return [];
+  if (!documents || documents.length === 0) return { documents: [], totalPages: 0, currentPage: page, totalCount: totalCount || 0 };
 
   console.log(`Found ${documents.length} documents in database`);
 
@@ -493,8 +503,15 @@ async function loadUserDocuments(q: string | null) {
     console.log(`Filtered documents from ${beforeFilter} to ${formattedDocuments.length} for search term: "${q}"`);
   }
 
-  console.log(`Returning ${formattedDocuments.length} documents total`);
-  return formattedDocuments;
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
+  
+  console.log(`Returning ${formattedDocuments.length} documents total (page ${page} of ${totalPages})`);
+  return { 
+    documents: formattedDocuments, 
+    totalPages, 
+    currentPage: page, 
+    totalCount: totalCount || 0 
+  };
 }
 
 
@@ -518,6 +535,9 @@ export default async function AdminPage({
 
   const q =
     (Array.isArray(resolvedSearchParams?.q) ? resolvedSearchParams?.q[0] : resolvedSearchParams?.q) ?? null;
+
+  const page = 
+    parseInt((Array.isArray(resolvedSearchParams?.page) ? resolvedSearchParams?.page[0] : resolvedSearchParams?.page) ?? "1");
 
   const tabs: { key: TabKey; label: string; href: string }[] = [
     { key: "due_dates_courses", label: "Due Dates - Courses", href: "/app/admin?tab=due_dates_courses" },
@@ -583,7 +603,7 @@ export default async function AdminPage({
         ) : tab === "course_progress" ? (
           <CourseProgressSection q={q} />
         ) : tab === "documents" ? (
-          <DocumentsSection q={q} />
+          <DocumentsSection q={q} page={page} />
         ) : tab === "users" ? (
           <UsersSection q={q} />
         ) : (
@@ -815,13 +835,19 @@ async function UsersSection({ q }: { q: string | null }) {
   );
 }
 
-async function DocumentsSection({ q }: { q: string | null }) {
-  const documents = await loadUserDocuments(q);
+async function DocumentsSection({ q, page = 1 }: { q: string | null; page?: number }) {
+  const result = await loadUserDocuments(q, page);
+  const { documents, totalPages, currentPage, totalCount } = result;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">User Documents</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg font-semibold">User Documents</h2>
+          <span className="text-sm text-gray-600">
+            {totalCount} total documents
+          </span>
+        </div>
         <form method="get" action="/app/admin" className="flex items-center gap-2">
           <input type="hidden" name="tab" value="documents" />
           <input
@@ -834,25 +860,106 @@ async function DocumentsSection({ q }: { q: string | null }) {
         </form>
       </div>
 
-      {documents.length === 0 ? (
+      {documents.length === 0 && currentPage === 1 ? (
         <p className="text-sm text-gray-600">No documents found.</p>
       ) : (
-        <SortableDocumentsTable documents={documents.map(doc => ({
-          id: doc.id,
-          title: doc.document_name,
-          expires_on: doc.expires_on,
-          created_at: doc.upload_date,
-          profiles: {
-            full_name: doc.full_name,
-            email: doc.email
-          },
-          courses: {
-            title: doc.course_title
-          },
-          course_modules: {
-            title: doc.module_title
-          }
-        }))} />
+        <>
+          <SortableDocumentsTable documents={documents.map(doc => ({
+            id: doc.id,
+            title: doc.document_name,
+            expires_on: doc.expires_on,
+            created_at: doc.upload_date,
+            profiles: {
+              full_name: doc.full_name,
+              email: doc.email
+            },
+            courses: {
+              title: doc.course_title
+            },
+            course_modules: {
+              title: doc.module_title
+            }
+          }))} />
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+              <div className="flex flex-1 justify-between sm:hidden">
+                {currentPage > 1 && (
+                  <a
+                    href={`/app/admin?tab=documents&page=${currentPage - 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                    className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Previous
+                  </a>
+                )}
+                {currentPage < totalPages && (
+                  <a
+                    href={`/app/admin?tab=documents&page=${currentPage + 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                    className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Next
+                  </a>
+                )}
+              </div>
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{((currentPage - 1) * 50) + 1}</span> to{' '}
+                    <span className="font-medium">{Math.min(currentPage * 50, totalCount)}</span> of{' '}
+                    <span className="font-medium">{totalCount}</span> results
+                  </p>
+                </div>
+                <div>
+                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    {currentPage > 1 && (
+                      <a
+                        href={`/app/admin?tab=documents&page=${currentPage - 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                        className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                      >
+                        <span className="sr-only">Previous</span>
+                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                        </svg>
+                      </a>
+                    )}
+                    
+                    {/* Page numbers */}
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                      const pageNum = i + 1;
+                      const isCurrentPage = pageNum === currentPage;
+                      return (
+                        <a
+                          key={pageNum}
+                          href={`/app/admin?tab=documents&page=${pageNum}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                          className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                            isCurrentPage
+                              ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+                              : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
+                          }`}
+                        >
+                          {pageNum}
+                        </a>
+                      );
+                    })}
+                    
+                    {currentPage < totalPages && (
+                      <a
+                        href={`/app/admin?tab=documents&page=${currentPage + 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                        className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                      >
+                        <span className="sr-only">Next</span>
+                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                        </svg>
+                      </a>
+                    )}
+                  </nav>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
