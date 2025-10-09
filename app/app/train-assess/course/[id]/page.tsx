@@ -12,6 +12,7 @@ import Link from "next/link";
 import InteractiveRequirements from "./InteractiveRequirements";
 import EquipmentAssessmentView from "@/components/EquipmentAssessmentView";
 import CompleteCourseButton from "./CompleteCourseButton";
+import CourseDocuments from "./CourseDocuments";
 
 async function saveRequirementResponses(moduleId: string, assignmentId: string, responses: Record<string, any>) {
   "use server";
@@ -285,6 +286,12 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
           </CardContent>
         </Card>
       </div>
+
+      {/* Course Documents - Show for both training and assessment sessions */}
+      <CourseDocuments 
+        courseId={courseId}
+        traineeId={assignment.user_id}
+      />
 
       {/* Modules */}
       <Card>
