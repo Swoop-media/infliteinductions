@@ -177,3 +177,30 @@ The architecture follows a hybrid approach with server-side rendering for perfor
   - Consistent UI across admin pages for better user experience
   - Improved visibility into learner progress and completion status
   - Comprehensive training records with full module details in PDF exports
+
+## Paginated Admin Data Views
+- **Purpose**: Efficient loading and display of large datasets in admin dashboard
+- **Affected Sections**:
+  - Due Dates - Courses
+  - Due Dates - Authorisations  
+  - Due Dates - Documents
+- **Features**:
+  - **Page Size**: 50 items per page for optimal performance
+  - **Smart Ordering**:
+    - Courses: Sorted by due date (soonest first)
+    - Authorisations: Sorted by expiry date (soonest first)
+    - Documents: Sorted by expiry date (expired first, then expiring soon)
+  - **Navigation Controls**:
+    - Previous/Next buttons for quick navigation
+    - Direct page number links (up to 5 pages shown)
+    - Results counter showing current range and total count
+  - **Search Integration**: Search queries preserved across page navigation
+- **Performance Benefits**:
+  - Prevents loading all records at once
+  - Reduces server query load
+  - Eliminates UI freezing with large datasets
+  - Consistent 50-record batches ensure predictable performance
+- **User Experience**:
+  - Most urgent items (expiring soon) always appear first
+  - Total count displayed for each section
+  - Clean pagination controls matching modern web standards
