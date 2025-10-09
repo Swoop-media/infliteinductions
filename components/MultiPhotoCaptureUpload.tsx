@@ -10,16 +10,18 @@ interface MultiPhotoCaptureUploadProps {
   maxPhotos?: number;
   className?: string;
   label?: string;
+  suggestedName?: string;
 }
 
 export default function MultiPhotoCaptureUpload({
   onFileSelect,
   maxPhotos = 10,
   className = '',
-  label = 'Document Upload'
+  label = 'Document Upload',
+  suggestedName = ''
 }: MultiPhotoCaptureUploadProps) {
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
-  const [documentName, setDocumentName] = useState('');
+  const [documentName, setDocumentName] = useState(suggestedName);
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
