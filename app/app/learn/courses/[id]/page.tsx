@@ -1398,6 +1398,11 @@ export default async function LearnerCoursePage(props: {
                                       moduleId={currentModule.id}
                                       courseId={courseId}
                                       authorizationId={authorizationId}
+                                      hasDocumentRequirements={blocks?.some(b => b.kind === 'request_document')}
+                                      hasMissingDocuments={blocks?.some(b => 
+                                        b.kind === 'request_document' && 
+                                        !userDocuments?.find(doc => doc.block_id === b.id)
+                                      )}
                                     />
                                   )
                                 )}

@@ -10,18 +10,32 @@ interface CompleteModuleButtonProps {
   moduleId: string;
   courseId: string;
   authorizationId?: string;
+  hasDocumentRequirements?: boolean;
+  hasMissingDocuments?: boolean;
 }
 
 export default function CompleteModuleButton({ 
   assignmentId, 
   moduleId, 
   courseId, 
-  authorizationId 
+  authorizationId,
+  hasDocumentRequirements = false,
+  hasMissingDocuments = false
 }: CompleteModuleButtonProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleComplete = async () => {
+    // Check if there are missing documents and show confirmation
+    if (hasDocumentRequirements && hasMissingDocuments) {
+      const confirmed = window.confirm(
+        "You haven't uploaded the requested document. Do you wish to continue?"
+      );
+      if (!confirmed) {
+        return; // User cancelled, don't complete the module
+      }
+    }
+
     setLoading(true);
 
     try {
