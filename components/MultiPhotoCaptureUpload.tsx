@@ -240,7 +240,7 @@ export default function MultiPhotoCaptureUpload({
             type="text"
             value={documentName}
             onChange={(e) => setDocumentName(e.target.value)}
-            placeholder="Enter document name (e.g., Driver License)"
+            placeholder="e.g., Driver License, Passport"
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             disabled={isProcessing}
           />

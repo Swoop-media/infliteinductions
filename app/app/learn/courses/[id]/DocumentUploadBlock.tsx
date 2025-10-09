@@ -289,7 +289,7 @@ export default function DocumentUploadBlock({
                 onFileSelect={handleFileSelection}
                 maxPhotos={10}
                 label="Capture Multiple Photos"
-                suggestedName={label ? label.slice(0, 50) : 'Document'}
+                suggestedName=""
               />
               <button
                 type="button"
