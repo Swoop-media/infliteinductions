@@ -4,8 +4,9 @@
 import { useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import CameraCaptureUpload from '@/components/CameraCaptureUpload';
+import MultiPhotoCaptureUpload from '@/components/MultiPhotoCaptureUpload';
 import { hasCamera } from '@/lib/utils/device';
-import { Camera } from 'lucide-react';
+import { Camera, Images } from 'lucide-react';
 import { validateSelectedFile, getFileSizeLimitText } from '@/lib/utils/fileValidation';
 import { formatDateConsistent } from '@/lib/utils';
 
@@ -41,6 +42,7 @@ export default function DocumentUploadBlock({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [showCameraUpload, setShowCameraUpload] = useState(false);
+  const [showMultiPhotoUpload, setShowMultiPhotoUpload] = useState(false);
   const [deviceHasCamera, setDeviceHasCamera] = useState(false);
 
   // Check for camera only on client side after mount
@@ -51,6 +53,7 @@ export default function DocumentUploadBlock({
   const handleFileSelection = (selectedFile: File) => {
     setFile(selectedFile);
     setShowCameraUpload(false);
+    setShowMultiPhotoUpload(false);
     setError(null);
   };
 
@@ -280,7 +283,22 @@ export default function DocumentUploadBlock({
         </div>
       ) : (
         <form onSubmit={handleUpload} className="space-y-4">
-          {showCameraUpload ? (
+          {showMultiPhotoUpload ? (
+            <div className="space-y-2">
+              <MultiPhotoCaptureUpload
+                onFileSelect={handleFileSelection}
+                maxPhotos={10}
+                label="Capture Multiple Photos"
+              />
+              <button
+                type="button"
+                onClick={() => setShowMultiPhotoUpload(false)}
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                ← Back to file selection
+              </button>
+            </div>
+          ) : showCameraUpload ? (
             <div className="space-y-2">
               <CameraCaptureUpload
                 onFileSelect={handleFileSelection}
@@ -301,14 +319,24 @@ export default function DocumentUploadBlock({
               <label className="block text-sm font-medium mb-2">Choose file:</label>
               <div className="space-y-2">
                 {deviceHasCamera && (
-                  <button
-                    type="button"
-                    onClick={() => setShowCameraUpload(true)}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center justify-center gap-2"
-                  >
-                    <Camera size={16} />
-                    Take Photo
-                  </button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowCameraUpload(true)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center justify-center gap-2"
+                    >
+                      <Camera size={16} />
+                      Take Photo
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowMultiPhotoUpload(true)}
+                      className="px-4 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700 flex items-center justify-center gap-2"
+                    >
+                      <Images size={16} />
+                      Multiple Photos
+                    </button>
+                  </div>
                 )}
                 <div className="relative">
                   <input
