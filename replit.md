@@ -97,14 +97,21 @@ The architecture follows a hybrid approach with server-side rendering for perfor
 - **Features**:
   - Capture up to 10 photos per document
   - Real-time preview of all captured photos
+  - Custom document naming before saving
   - Automatic PDF generation from multiple images
   - Support for both camera capture and file selection
   - Grid view showing numbered photos in capture order
   - Individual photo removal before final upload
+  - Document name is saved and displayed in the system
+  - Suggested document name based on requirement label
 - **Use Cases**:
   - Multi-page licenses or certificates
   - Documents requiring multiple angles
   - Long documents that span multiple pages
+- **User Experience**:
+  - Enter custom document name (required)
+  - Name is preserved when document is saved
+  - Confirmation shows the saved document name
 - **Technology**: jsPDF library for client-side PDF generation
 
 ## Tabbed Interface for Train-Assess Page
