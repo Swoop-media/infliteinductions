@@ -19,9 +19,11 @@ export default function MultiPhotoCaptureUpload({
   label = 'Document Upload'
 }: MultiPhotoCaptureUploadProps) {
   const [capturedImages, setCapturedImages] = useState<string[]>([]);
+  const [documentName, setDocumentName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [finalDocumentName, setFinalDocumentName] = useState('');
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const deviceHasCamera = hasCamera();
@@ -97,6 +99,11 @@ export default function MultiPhotoCaptureUpload({
       return;
     }
 
+    if (!documentName.trim()) {
+      setError('Please enter a name for your document');
+      return;
+    }
+
     setIsProcessing(true);
     setError(null);
 
@@ -105,20 +112,25 @@ export default function MultiPhotoCaptureUpload({
       const imageDataPromises = capturedImages.map(dataUrl => loadImageData(dataUrl));
       const imagesData = await Promise.all(imageDataPromises);
 
-      // Generate PDF from images
-      const pdfFile = await imagesToPdf(imagesData, `document_${Date.now()}.pdf`);
+      // Generate PDF from images with custom name
+      const fileName = `${documentName.trim().replace(/[^a-zA-Z0-9-_ ]/g, '')}.pdf`;
+      const pdfFile = await imagesToPdf(imagesData, fileName);
       
       // Pass the PDF file to the parent component
       onFileSelect(pdfFile);
       
+      // Store the final document name for confirmation message
+      setFinalDocumentName(documentName.trim());
+      
       // Show confirmation
       setShowConfirmation(true);
       
-      // Clear captured images after successful upload
+      // Clear captured images and name after successful upload
       setTimeout(() => {
         setCapturedImages([]);
+        setDocumentName('');
         setShowConfirmation(false);
-      }, 2000);
+      }, 3000);
       
     } catch (err) {
       console.error('Error generating PDF:', err);
@@ -130,6 +142,7 @@ export default function MultiPhotoCaptureUpload({
 
   const reset = () => {
     setCapturedImages([]);
+    setDocumentName('');
     setError(null);
     setShowConfirmation(false);
   };
@@ -141,7 +154,10 @@ export default function MultiPhotoCaptureUpload({
           <Check className="h-12 w-12 text-green-600" />
           <p className="font-medium text-green-800">Document Created Successfully!</p>
           <p className="text-sm text-green-600">
-            {capturedImages.length} photo{capturedImages.length !== 1 ? 's' : ''} combined into PDF
+            "{finalDocumentName}" saved as PDF
+          </p>
+          <p className="text-xs text-green-600">
+            Combined from {capturedImages.length || 1} photo{(capturedImages.length || 1) !== 1 ? 's' : ''}
           </p>
         </div>
       </div>
@@ -211,13 +227,34 @@ export default function MultiPhotoCaptureUpload({
         )}
       </div>
 
+      {/* Document Name Input */}
+      {capturedImages.length > 0 && (
+        <div>
+          <label htmlFor="document-name" className="block text-sm font-medium text-gray-700 mb-1">
+            Document Name
+          </label>
+          <input
+            id="document-name"
+            type="text"
+            value={documentName}
+            onChange={(e) => setDocumentName(e.target.value)}
+            placeholder="Enter document name (e.g., Driver License)"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={isProcessing}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            This name will be saved with your document
+          </p>
+        </div>
+      )}
+
       {/* Action Buttons */}
       {capturedImages.length > 0 && (
         <div className="flex gap-2">
           <button
             type="button"
             onClick={generatePdfAndUpload}
-            disabled={isProcessing}
+            disabled={isProcessing || !documentName.trim()}
             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
           >
             {isProcessing ? (
@@ -256,6 +293,7 @@ export default function MultiPhotoCaptureUpload({
           <p>• Take multiple photos to capture all pages/sides of your document</p>
           <p>• Photos will be combined into a single PDF document</p>
           <p>• You can capture up to {maxPhotos} photos</p>
+          <p>• You'll be able to name your document before saving</p>
         </div>
       )}
 
