@@ -91,6 +91,22 @@ The architecture follows a hybrid approach with server-side rendering for perfor
 
 # Enhanced UI Features
 
+## Multi-Photo Document Capture
+- **Purpose**: Allow learners to capture multiple photos and combine them into a single PDF document
+- **Location**: Document upload blocks throughout the course modules
+- **Features**:
+  - Capture up to 10 photos per document
+  - Real-time preview of all captured photos
+  - Automatic PDF generation from multiple images
+  - Support for both camera capture and file selection
+  - Grid view showing numbered photos in capture order
+  - Individual photo removal before final upload
+- **Use Cases**:
+  - Multi-page licenses or certificates
+  - Documents requiring multiple angles
+  - Long documents that span multiple pages
+- **Technology**: jsPDF library for client-side PDF generation
+
 ## Tabbed Interface for Train-Assess Page
 - **Location**: `/app/train-assess`
 - **Purpose**: Improves performance by separating Training and Assessment lists
