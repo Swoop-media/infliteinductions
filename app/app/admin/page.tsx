@@ -70,24 +70,34 @@ type CompletedCourseRow = {
   trainee_name: string;
 };
 
-async function loadCompletedCoursesWithDueDates(q: string | null) {
+async function loadCompletedCoursesWithDueDates(q: string | null, page: number = 1) {
   "use server";
   noStore();
   const supabase = await createSupabaseServer();
   const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
   if (!allowed) redirect("/app/home?banner=no_access");
 
-  // First get the completed course assignments
+  const PAGE_SIZE = 50;
+  const offset = (page - 1) * PAGE_SIZE;
+
+  // First get total count
+  const { count: totalCount } = await supabase
+    .from("course_assignments")
+    .select("*", { count: "exact", head: true })
+    .eq("assignment_status", "completed")
+    .not("completed_at", "is", null);
+
+  // Get the completed course assignments with pagination
   const { data: assignments, error: assignError } = await supabase
     .from("course_assignments")
     .select("id, user_id, course_id, completed_at")
     .eq("assignment_status", "completed")
     .not("completed_at", "is", null)
     .order("completed_at", { ascending: false })
-    .limit(100);
+    .range(offset, offset + PAGE_SIZE - 1);
 
   if (assignError) throw new Error(assignError.message);
-  if (!assignments || assignments.length === 0) return [];
+  if (!assignments || assignments.length === 0) return { courses: [], totalPages: 0, currentPage: page, totalCount: totalCount || 0 };
 
   // Get unique user and course IDs
   const userIds = [...new Set(assignments.map(a => a.user_id))];
@@ -153,6 +163,13 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
     };
   });
 
+  // Sort by due date (soonest first)
+  completedCourses.sort((a, b) => {
+    const dateA = new Date(a.new_due_date).getTime();
+    const dateB = new Date(b.new_due_date).getTime();
+    return dateA - dateB; // Ascending order (soonest first)
+  });
+
   // Apply search filter if provided
   if (q && q.trim()) {
     const searchTerm = q.trim().toLowerCase();
@@ -163,7 +180,14 @@ async function loadCompletedCoursesWithDueDates(q: string | null) {
     );
   }
 
-  return completedCourses;
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
+  
+  return {
+    courses: completedCourses,
+    totalPages,
+    currentPage: page,
+    totalCount: totalCount || 0
+  };
 }
 
 /* --------------------------
@@ -597,9 +621,9 @@ export default async function AdminPage({
 
       <div className="rounded-xl border bg-white p-4">
         {tab === "due_dates_courses" ? (
-          <DueDatesCourseSection q={q} />
+          <DueDatesCourseSection q={q} page={page} />
         ) : tab === "due_dates_authorisations" ? (
-          <DueDatesAuthorisationSection q={q} />
+          <DueDatesAuthorisationSection q={q} page={page} />
         ) : tab === "course_progress" ? (
           <CourseProgressSection q={q} />
         ) : tab === "documents" ? (
@@ -618,13 +642,19 @@ export default async function AdminPage({
    SUBSECTIONS
 ---------------------------*/
 
-async function DueDatesCourseSection({ q }: { q: string | null }) {
-  const completedCourses = await loadCompletedCoursesWithDueDates(q);
+async function DueDatesCourseSection({ q, page = 1 }: { q: string | null; page?: number }) {
+  const result = await loadCompletedCoursesWithDueDates(q, page);
+  const { courses: completedCourses, totalPages, currentPage, totalCount } = result;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Course Due Dates</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg font-semibold">Course Due Dates</h2>
+          <span className="text-sm text-gray-600">
+            {totalCount} total courses (sorted by due date)
+          </span>
+        </div>
         <form method="get" action="/app/admin" className="flex items-center gap-2">
           <input type="hidden" name="tab" value="due_dates_courses" />
           <input
@@ -638,17 +668,102 @@ async function DueDatesCourseSection({ q }: { q: string | null }) {
       </div>
 
       <SortableDueDatesTable completedCourses={completedCourses} />
+      
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+          <div className="flex flex-1 justify-between sm:hidden">
+            {currentPage > 1 && (
+              <a
+                href={`/app/admin?tab=due_dates_courses&page=${currentPage - 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Previous
+              </a>
+            )}
+            {currentPage < totalPages && (
+              <a
+                href={`/app/admin?tab=due_dates_courses&page=${currentPage + 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Next
+              </a>
+            )}
+          </div>
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Showing <span className="font-medium">{((currentPage - 1) * 50) + 1}</span> to{' '}
+                <span className="font-medium">{Math.min(currentPage * 50, totalCount)}</span> of{' '}
+                <span className="font-medium">{totalCount}</span> results
+              </p>
+            </div>
+            <div>
+              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                {currentPage > 1 && (
+                  <a
+                    href={`/app/admin?tab=due_dates_courses&page=${currentPage - 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                  >
+                    <span className="sr-only">Previous</span>
+                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                    </svg>
+                  </a>
+                )}
+                
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  const pageNum = i + 1;
+                  const isCurrentPage = pageNum === currentPage;
+                  return (
+                    <a
+                      key={pageNum}
+                      href={`/app/admin?tab=due_dates_courses&page=${pageNum}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                      className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                        isCurrentPage
+                          ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+                          : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
+                      }`}
+                    >
+                      {pageNum}
+                    </a>
+                  );
+                })}
+                
+                {currentPage < totalPages && (
+                  <a
+                    href={`/app/admin?tab=due_dates_courses&page=${currentPage + 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                  >
+                    <span className="sr-only">Next</span>
+                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                    </svg>
+                  </a>
+                )}
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-async function DueDatesAuthorisationSection({ q }: { q: string | null }) {
-  const completedAuthorisations = await loadCompletedAuthorisationsWithDueDates(q);
+async function DueDatesAuthorisationSection({ q, page = 1 }: { q: string | null; page?: number }) {
+  const result = await loadCompletedAuthorisationsWithDueDates(q, page);
+  const { authorisations: completedAuthorisations, totalPages, currentPage, totalCount } = result;
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Authorisation Due Dates</h2>
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg font-semibold">Authorisation Due Dates</h2>
+          <span className="text-sm text-gray-600">
+            {totalCount} total authorisations (sorted by expiry date)
+          </span>
+        </div>
         <form method="get" action="/app/admin" className="flex items-center gap-2">
           <input type="hidden" name="tab" value="due_dates_authorisations" />
           <input
@@ -662,6 +777,85 @@ async function DueDatesAuthorisationSection({ q }: { q: string | null }) {
       </div>
 
       <SortableAuthorisationsTable completedAuthorisations={completedAuthorisations} />
+      
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+          <div className="flex flex-1 justify-between sm:hidden">
+            {currentPage > 1 && (
+              <a
+                href={`/app/admin?tab=due_dates_authorisations&page=${currentPage - 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Previous
+              </a>
+            )}
+            {currentPage < totalPages && (
+              <a
+                href={`/app/admin?tab=due_dates_authorisations&page=${currentPage + 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Next
+              </a>
+            )}
+          </div>
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Showing <span className="font-medium">{((currentPage - 1) * 50) + 1}</span> to{' '}
+                <span className="font-medium">{Math.min(currentPage * 50, totalCount)}</span> of{' '}
+                <span className="font-medium">{totalCount}</span> results
+              </p>
+            </div>
+            <div>
+              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                {currentPage > 1 && (
+                  <a
+                    href={`/app/admin?tab=due_dates_authorisations&page=${currentPage - 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                    className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                  >
+                    <span className="sr-only">Previous</span>
+                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                    </svg>
+                  </a>
+                )}
+                
+                {/* Page numbers */}
+                {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                  const pageNum = i + 1;
+                  const isCurrentPage = pageNum === currentPage;
+                  return (
+                    <a
+                      key={pageNum}
+                      href={`/app/admin?tab=due_dates_authorisations&page=${pageNum}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                      className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                        isCurrentPage
+                          ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+                          : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
+                      }`}
+                    >
+                      {pageNum}
+                    </a>
+                  );
+                })}
+                
+                {currentPage < totalPages && (
+                  <a
+                    href={`/app/admin?tab=due_dates_authorisations&page=${currentPage + 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                    className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                  >
+                    <span className="sr-only">Next</span>
+                    <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                    </svg>
+                  </a>
+                )}
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -690,14 +884,24 @@ async function CourseProgressSection({ q }: { q: string | null }) {
   );
 }
 
-async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
+async function loadCompletedAuthorisationsWithDueDates(q: string | null, page: number = 1) {
   "use server";
   noStore();
   const supabase = await createSupabaseServer();
   const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
   if (!allowed) redirect("/app/home?banner=no_access");
 
-  // Get the authorisation assignments first
+  const PAGE_SIZE = 50;
+  const offset = (page - 1) * PAGE_SIZE;
+
+  // First get total count
+  const { count: totalCount } = await supabase
+    .from("authorisation_assignments")
+    .select("*", { count: "exact", head: true })
+    .eq("assignment_status", "completed")
+    .not("approved_at", "is", null);
+
+  // Get the authorisation assignments with pagination
   let query = supabase
     .from("authorisation_assignments")
     .select(`
@@ -705,15 +909,17 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
       user_id,
       authorisation_id,
       approved_at,
+      expires_at,
       authorisations!inner(title, valid_for_days, department)
     `)
     .eq("assignment_status", "completed")
     .not("approved_at", "is", null)
-    .order("approved_at", { ascending: false });
+    .order("expires_at", { ascending: true, nullsFirst: false }) // Order by expires_at (soonest first)
+    .range(offset, offset + PAGE_SIZE - 1);
 
-  const { data: assignments, error: assignError } = await query.limit(100);
+  const { data: assignments, error: assignError } = await query;
   if (assignError) throw new Error(assignError.message);
-  if (!assignments || assignments.length === 0) return [];
+  if (!assignments || assignments.length === 0) return { authorisations: [], totalPages: 0, currentPage: page, totalCount: totalCount || 0 };
 
   // Get user profiles separately to avoid relationship ambiguity
   const userIds = [...new Set(assignments.map(a => a.user_id))];
@@ -734,9 +940,10 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
   }));
 
   // Apply search filter if provided
+  let filteredRows = rows;
   if (q && q.trim()) {
     const searchTerm = q.trim().toLowerCase();
-    const filteredRows = rows.filter(row => {
+    filteredRows = rows.filter(row => {
       const profile = row.profiles;
       return (
         (profile?.full_name?.toLowerCase().includes(searchTerm) ?? false) ||
@@ -744,28 +951,15 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
         ((row as any).authorisations?.title?.toLowerCase().includes(searchTerm) ?? false)
       );
     });
-
-    const { data: filteredData, error } = { data: filteredRows, error: null };
-
-  return filteredData.map((row: any) => ({
-      assignment_id: row.id,
-      user_id: row.user_id,
-      authorisation_id: row.authorisation_id,
-      approved_at: row.approved_at,
-      full_name: row.profiles?.full_name ?? null,
-      email: row.profiles?.email ?? null,
-      authorisation_title: row.authorisations?.title ?? null,
-      department: row.authorisations?.department ?? null,
-      valid_for_days: row.authorisations?.valid_for_days ?? null,
-    }));
   }
 
   // Map to the expected format
-  const completedAuthorisations: AuthorisationCompletionRow[] = rows.map((row: any) => ({
+  const completedAuthorisations: AuthorisationCompletionRow[] = filteredRows.map((row: any) => ({
     assignment_id: row.id,
     user_id: row.user_id,
     authorisation_id: row.authorisation_id,
     approved_at: row.approved_at,
+    expires_at: row.expires_at,
     full_name: row.profiles?.full_name ?? null,
     email: row.profiles?.email ?? null,
     authorisation_title: row.authorisations?.title ?? null,
@@ -773,7 +967,14 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null) {
     valid_for_days: row.authorisations?.valid_for_days ?? null,
   }));
 
-  return completedAuthorisations;
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
+  
+  return {
+    authorisations: completedAuthorisations,
+    totalPages,
+    currentPage: page,
+    totalCount: totalCount || 0
+  };
 }
 
 type AuthorisationCompletionRow = {
@@ -781,6 +982,7 @@ type AuthorisationCompletionRow = {
   user_id: string;
   authorisation_id: string;
   approved_at: string;
+  expires_at: string | null;
   full_name: string | null;
   email: string | null;
   authorisation_title: string | null;
