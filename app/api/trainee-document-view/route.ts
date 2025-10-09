@@ -14,27 +14,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is admin, senior management, or trainer/assessor
-    const isAdmin = await hasRole('Admin') || await hasRole('Senior management');
-    
-    // For trainer/assessor, we'll verify they have access to the course
-    // But since the filePath doesn't directly contain courseId, we'll rely on role check
-    const { data: trainerAssignments } = await supabase
-      .from("course_assignments")
-      .select("course_id")
-      .eq("user_id", user.id)
-      .in("role", ["onsite_trainer", "onsite_assessor"]);
-    
-    const isTrainerOrAssessor = trainerAssignments && trainerAssignments.length > 0;
-
-    if (!isAdmin && !isTrainerOrAssessor) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-
-    const { filePath } = await request.json();
+    const { filePath, courseId, traineeId } = await request.json();
 
     if (!filePath) {
       return NextResponse.json({ error: 'File path is required' }, { status: 400 });
+    }
+
+    if (!courseId || !traineeId) {
+      return NextResponse.json({ error: 'Course ID and Trainee ID are required' }, { status: 400 });
+    }
+
+    // Check if user is admin, senior management, or has access to this specific course
+    const isAdmin = await hasRole('Admin') || await hasRole('Senior management');
+    
+    if (!isAdmin) {
+      // Check if user is trainer/assessor for this specific course
+      const { data: trainerAssignments } = await supabase
+        .from("course_assignments")
+        .select("course_id")
+        .eq("user_id", user.id)
+        .eq("course_id", courseId)
+        .in("role", ["onsite_trainer", "onsite_assessor"]);
+      
+      const hasAccessToCourse = trainerAssignments && trainerAssignments.length > 0;
+
+      if (!hasAccessToCourse) {
+        return NextResponse.json({ error: 'Unauthorized - no access to this course' }, { status: 403 });
+      }
+    }
+
+    // Verify the document belongs to the trainee and course
+    const { data: document } = await supabase
+      .from('learner_documents')
+      .select('id, file_path')
+      .eq('user_id', traineeId)
+      .eq('course_id', courseId)
+      .eq('file_path', filePath)
+      .single();
+
+    if (!document) {
+      return NextResponse.json({ error: 'Document not found or unauthorized' }, { status: 404 });
     }
 
     // Determine which bucket to use based on the file path
@@ -43,7 +62,7 @@ export async function POST(request: NextRequest) {
     const isLearnerDocument = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\//.test(filePath);
     const bucketName = isLearnerDocument ? 'learner-documents' : 'course-files';
 
-    console.log('Creating signed URL for trainee document:', { filePath, bucketName });
+    console.log('Creating signed URL for trainee document:', { filePath, bucketName, courseId, traineeId });
 
     // Create a 1-hour signed URL for the document
     const { data, error } = await supabase.storage

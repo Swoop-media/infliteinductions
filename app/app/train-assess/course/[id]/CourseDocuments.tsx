@@ -64,6 +64,8 @@ export default function CourseDocuments({ courseId, traineeId }: CourseDocuments
         },
         body: JSON.stringify({
           filePath: doc.file_path,
+          courseId: courseId,
+          traineeId: traineeId,
         }),
       });
 
