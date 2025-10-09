@@ -181,9 +181,20 @@ export default function SortableDocumentsTable({ documents }: Props) {
                     {doc.expires_on ? new Date(doc.expires_on).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'No expiry'}
                   </td>
                   <td className="px-3 py-2">
-                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${className}`}>
-                      {status}
-                    </span>
+                    <div className="flex flex-col gap-1">
+                      <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${className}`}>
+                        {status}
+                      </span>
+                      {doc.expires_on && (
+                        <span className="text-xs text-gray-600">
+                          {new Date(doc.expires_on).toLocaleDateString('en-US', { 
+                            year: 'numeric', 
+                            month: 'short', 
+                            day: 'numeric' 
+                          })}
+                        </span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               );
