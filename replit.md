@@ -89,6 +89,27 @@ The architecture follows a hybrid approach with server-side rendering for perfor
 - The tools provide read-only diagnostics with optional fix capabilities
 - No need to remove these tools when publishing - they provide valuable debugging capabilities for admins
 
+# Authorization Expiry Calculation
+
+## Smart Expiry Date System
+- **Purpose**: Automatically calculates authorization expiry date based on earliest limiting factor
+- **Calculation Logic**: The authorization expires on the **earliest** of:
+  1. Document expiry dates (from uploaded documents)
+  2. Course expiry dates (based on course valid_for_months field)
+  3. Authorization validity period (valid_for_days field)
+- **Features**:
+  - Visual preview on review page showing when authorization will expire if approved
+  - Shows which factor determines the expiry (document, course, or authorization validity)
+  - Color-coded status indicators (green=current, yellow=expiring soon, red=expired)
+  - Expiry date stored in database on approval for tracking and reporting
+- **Database Changes**:
+  - Added `expires_at` field to `authorisation_assignments` table
+  - Automatically calculated and stored on approval
+- **Benefits**:
+  - Ensures authorizations don't outlive their supporting qualifications
+  - Provides transparency in expiry calculations
+  - Helps administrators make informed approval decisions
+
 # Enhanced UI Features
 
 ## Multi-Photo Document Capture
