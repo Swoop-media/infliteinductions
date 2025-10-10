@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Search, Filter } from 'lucide-react';
 
 export interface PendingItem {
   id: string;
@@ -13,21 +13,57 @@ export interface PendingItem {
   assignment_id: string;
   created_at: string;
   type: 'training' | 'assessment';
+  department?: string;
 }
 
 interface TrainAssessClientProps {
   initialTrainingItems: PendingItem[];
   initialAssessmentItems: PendingItem[];
+  departments: string[];
 }
 
 export default function TrainAssessClient({ 
   initialTrainingItems, 
-  initialAssessmentItems 
+  initialAssessmentItems,
+  departments 
 }: TrainAssessClientProps) {
   const [activeTab, setActiveTab] = useState<'training' | 'assessment'>('training');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
   
-  const currentItems = activeTab === 'training' ? initialTrainingItems : initialAssessmentItems;
+  // Filter items based on search query and department
+  const filteredTrainingItems = useMemo(() => {
+    return filterItems(initialTrainingItems, searchQuery, selectedDepartment);
+  }, [initialTrainingItems, searchQuery, selectedDepartment]);
+
+  const filteredAssessmentItems = useMemo(() => {
+    return filterItems(initialAssessmentItems, searchQuery, selectedDepartment);
+  }, [initialAssessmentItems, searchQuery, selectedDepartment]);
+  
+  // Helper function to filter items
+  function filterItems(items: PendingItem[], query: string, department: string) {
+    return items.filter(item => {
+      // Search filter - check if query matches any of the searchable fields
+      const searchMatch = query === '' || 
+        item.trainee_name.toLowerCase().includes(query.toLowerCase()) ||
+        item.trainee_email.toLowerCase().includes(query.toLowerCase()) ||
+        item.course_title.toLowerCase().includes(query.toLowerCase());
+      
+      // Department filter
+      const deptMatch = department === 'all' || item.department === department;
+      
+      return searchMatch && deptMatch;
+    });
+  }
+  
+  const currentItems = activeTab === 'training' ? filteredTrainingItems : filteredAssessmentItems;
   const itemCount = {
+    training: filteredTrainingItems.length,
+    assessment: filteredAssessmentItems.length
+  };
+  
+  // Get total counts (unfiltered) for display
+  const totalCount = {
     training: initialTrainingItems.length,
     assessment: initialAssessmentItems.length
   };
@@ -45,6 +81,64 @@ export default function TrainAssessClient({
     <div className="container mx-auto px-4 py-6">
       <h1 className="text-2xl font-bold mb-6">Training & Assessment</h1>
       <p className="text-gray-600 mb-8">Manage onsite training and assessments for your assigned courses.</p>
+      
+      {/* Search and Filter Bar */}
+      <div className="bg-white border rounded-lg p-4 mb-6">
+        <div className="flex gap-4 items-center flex-wrap">
+          {/* Search Input */}
+          <div className="flex-1 min-w-[300px]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by trainee name, email, or course name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          
+          {/* Department Filter */}
+          <div className="min-w-[200px]">
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-400" />
+              <select
+                value={selectedDepartment}
+                onChange={(e) => setSelectedDepartment(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Departments</option>
+                {departments.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          {/* Clear Filters Button */}
+          {(searchQuery || selectedDepartment !== 'all') && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedDepartment('all');
+              }}
+              className="px-4 py-2 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+            >
+              Clear Filters
+            </button>
+          )}
+        </div>
+        
+        {/* Filter Status */}
+        {(searchQuery || selectedDepartment !== 'all') && (
+          <div className="mt-3 text-sm text-gray-600">
+            Showing {itemCount[activeTab]} of {totalCount[activeTab]} {activeTab === 'training' ? 'training' : 'assessment'} items
+            {searchQuery && <span className="ml-2">• Searching for: "{searchQuery}"</span>}
+            {selectedDepartment !== 'all' && <span className="ml-2">• Department: {selectedDepartment}</span>}
+          </div>
+        )}
+      </div>
       
       {/* Tab Navigation */}
       <div className="border-b border-gray-200 mb-6">
@@ -96,8 +190,23 @@ export default function TrainAssessClient({
         {currentItems.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <p className="text-gray-500">
-              No pending onsite {activeTab === 'training' ? 'training' : 'assessment'} sessions.
+              {(searchQuery || selectedDepartment !== 'all') ? (
+                <>No {activeTab === 'training' ? 'training' : 'assessment'} sessions match your filters.</>
+              ) : (
+                <>No pending onsite {activeTab === 'training' ? 'training' : 'assessment'} sessions.</>
+              )}
             </p>
+            {(searchQuery || selectedDepartment !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedDepartment('all');
+                }}
+                className="mt-4 text-sm text-blue-600 hover:text-blue-700"
+              >
+                Clear filters to see all items
+              </button>
+            )}
           </div>
         ) : (
           <>
@@ -124,6 +233,12 @@ export default function TrainAssessClient({
                           <span className="text-sm">📚</span>
                           <span className="text-sm text-gray-600">{item.course_title}</span>
                         </div>
+                        {item.department && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm">🏢</span>
+                            <span className="text-sm text-gray-600">{item.department}</span>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2">
                           <span className="text-sm">📅</span>
                           <span className="text-sm text-gray-500">
