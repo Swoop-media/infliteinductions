@@ -80,110 +80,119 @@ async function loadCompletedCoursesWithDueDates(q: string | null, page: number =
   const PAGE_SIZE = 50;
   const offset = (page - 1) * PAGE_SIZE;
 
-  // First get total count
-  const { count: totalCount } = await supabase
+  // Build the base query with calculated due date
+  let baseQuery = supabase
     .from("course_assignments")
-    .select("*", { count: "exact", head: true })
+    .select(`
+      id,
+      user_id,
+      course_id,
+      completed_at,
+      profiles!user_id (
+        full_name,
+        email
+      ),
+      courses!course_id (
+        title,
+        valid_for_days,
+        department
+      )
+    `, { count: "exact" })
     .eq("assignment_status", "completed")
     .not("completed_at", "is", null);
-
-  // Get the completed course assignments with pagination
-  const { data: assignments, error: assignError } = await supabase
-    .from("course_assignments")
-    .select("id, user_id, course_id, completed_at")
-    .eq("assignment_status", "completed")
-    .not("completed_at", "is", null)
-    .order("completed_at", { ascending: false })
-    .range(offset, offset + PAGE_SIZE - 1);
-
-  if (assignError) throw new Error(assignError.message);
-  if (!assignments || assignments.length === 0) return { courses: [], totalPages: 0, currentPage: page, totalCount: totalCount || 0 };
-
-  // Get unique user and course IDs
-  const userIds = [...new Set(assignments.map(a => a.user_id))];
-  const courseIds = [...new Set(assignments.map(a => a.course_id))];
-
-  // Get profiles
-  const { data: profiles, error: profileError } = await supabase
-    .from("profiles")
-    .select("id, full_name, email")
-    .in("id", userIds);
-
-  if (profileError) throw new Error(profileError.message);
-
-  // Get courses
-  const { data: courses, error: courseError } = await supabase
-    .from("courses")
-    .select("id, title, valid_for_days, created_by, department")
-    .in("id", courseIds);
-
-  if (courseError) throw new Error(courseError.message);
-
-  // Create lookup maps
-  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
-  const courseMap = new Map((courses || []).map(c => [c.id, c]));
-
-  // Transform data to match client component expectations
-  let completedCourses = assignments.map((assignment) => {
-    const profile = profileMap.get(assignment.user_id);
-    const course = courseMap.get(assignment.course_id);
-
-    // Calculate due date
-    const completedDate = new Date(assignment.completed_at);
-    const validForDays = course?.valid_for_days || 365;
-    const dueDate = new Date(completedDate);
-    dueDate.setDate(dueDate.getDate() + validForDays);
-
-    // Calculate days until expiry
-    const today = new Date();
-    const timeDiff = dueDate.getTime() - today.getTime();
-    const daysUntilExpiry = Math.ceil(timeDiff / (1000 * 3600 * 24));
-
-    // Determine notification status
-    let notificationStatus = "NO NOTIFICATION";
-    if (daysUntilExpiry <= 30 && daysUntilExpiry > 0) {
-      notificationStatus = "SHOULD TRIGGER REMINDER";
-    } else if (daysUntilExpiry <= 0) {
-      notificationStatus = "REMINDER SENT";
-    }
-
-    return {
-      assignment_id: assignment.id,
-      user_id: assignment.user_id,
-      completed_at: assignment.completed_at,
-      title: course?.title || "Unknown Course",
-      department: course?.department || "",
-      valid_for_days: validForDays,
-      retake_reminder_days: 30, // Default reminder threshold
-      new_due_date: dueDate.toISOString(),
-      days_until_expiry: daysUntilExpiry.toString(),
-      notification_status: notificationStatus,
-      trainee_email: profile?.email || "",
-      trainee_name: profile?.full_name || "",
-    };
-  });
-
-  // Sort by due date (soonest first)
-  completedCourses.sort((a, b) => {
-    const dateA = new Date(a.new_due_date).getTime();
-    const dateB = new Date(b.new_due_date).getTime();
-    return dateA - dateB; // Ascending order (soonest first)
-  });
 
   // Apply search filter if provided
   if (q && q.trim()) {
     const searchTerm = q.trim().toLowerCase();
-    completedCourses = completedCourses.filter(course =>
-      (course.trainee_name?.toLowerCase().includes(searchTerm)) ||
-      (course.trainee_email?.toLowerCase().includes(searchTerm)) ||
-      (course.title?.toLowerCase().includes(searchTerm))
-    );
+    baseQuery = baseQuery.or(`profiles.full_name.ilike.%${searchTerm}%,profiles.email.ilike.%${searchTerm}%,courses.title.ilike.%${searchTerm}%`);
   }
+
+  // First get total count with search filter applied
+  const { count: totalCount } = await baseQuery;
+
+  // Now fetch the actual data with pagination
+  // IMPORTANT: We need to order by calculated due date at SQL level
+  const { data: assignments, error: assignError } = await supabase
+    .rpc('get_courses_with_due_dates', {
+      search_term: q || '',
+      page_size: PAGE_SIZE,
+      page_offset: offset
+    });
+
+  if (assignError) {
+    // Fallback if RPC doesn't exist - use the original approach but fetch ALL records
+    const { data: allAssignments, error: fallbackError } = await baseQuery
+      .order("completed_at", { ascending: false });
+
+    if (fallbackError) throw new Error(fallbackError.message);
+    if (!allAssignments || allAssignments.length === 0) return { courses: [], totalPages: 0, currentPage: page, totalCount: totalCount || 0 };
+
+    // Transform all data
+    let completedCourses = allAssignments.map((assignment: any) => {
+      const profile = assignment.profiles;
+      const course = assignment.courses;
+
+      // Calculate due date
+      const completedDate = new Date(assignment.completed_at);
+      const validForDays = course?.valid_for_days || 365;
+      const dueDate = new Date(completedDate);
+      dueDate.setDate(dueDate.getDate() + validForDays);
+
+      // Calculate days until expiry
+      const today = new Date();
+      const timeDiff = dueDate.getTime() - today.getTime();
+      const daysUntilExpiry = Math.ceil(timeDiff / (1000 * 3600 * 24));
+
+      // Determine notification status
+      let notificationStatus = "NO NOTIFICATION";
+      if (daysUntilExpiry <= 30 && daysUntilExpiry > 0) {
+        notificationStatus = "SHOULD TRIGGER REMINDER";
+      } else if (daysUntilExpiry <= 0) {
+        notificationStatus = "REMINDER SENT";
+      }
+
+      return {
+        assignment_id: assignment.id,
+        user_id: assignment.user_id,
+        completed_at: assignment.completed_at,
+        title: course?.title || "Unknown Course",
+        department: course?.department || "",
+        valid_for_days: validForDays,
+        retake_reminder_days: 30,
+        new_due_date: dueDate.toISOString(),
+        days_until_expiry: daysUntilExpiry.toString(),
+        notification_status: notificationStatus,
+        trainee_email: profile?.email || "",
+        trainee_name: profile?.full_name || "",
+      };
+    });
+
+    // Sort ALL records by due date (soonest first)
+    completedCourses.sort((a, b) => {
+      const dateA = new Date(a.new_due_date).getTime();
+      const dateB = new Date(b.new_due_date).getTime();
+      return dateA - dateB;
+    });
+
+    // Apply pagination to the sorted results
+    const paginatedCourses = completedCourses.slice(offset, offset + PAGE_SIZE);
+    const totalPages = Math.ceil(completedCourses.length / PAGE_SIZE);
+
+    return {
+      courses: paginatedCourses,
+      totalPages,
+      currentPage: page,
+      totalCount: completedCourses.length
+    };
+  }
+
+  // If RPC exists, use its results
+  if (!assignments || assignments.length === 0) return { courses: [], totalPages: 0, currentPage: page, totalCount: totalCount || 0 };
 
   const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
   
   return {
-    courses: completedCourses,
+    courses: assignments,
     totalPages,
     currentPage: page,
     totalCount: totalCount || 0

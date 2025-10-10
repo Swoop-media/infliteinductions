@@ -178,7 +178,13 @@ export default function SortableDocumentsTable({ documents }: Props) {
                     </div>
                   </td>
                   <td className="px-3 py-2 text-gray-600">
-                    {doc.expires_on ? new Date(doc.expires_on).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' }) : 'No expiry'}
+                    {doc.expires_on ? (() => {
+                      const date = new Date(doc.expires_on);
+                      const year = date.getFullYear();
+                      const month = String(date.getMonth() + 1).padStart(2, '0');
+                      const day = String(date.getDate()).padStart(2, '0');
+                      return `${day}/${month}/${year}`;
+                    })() : 'No expiry'}
                   </td>
                   <td className="px-3 py-2">
                     <div className="flex flex-col gap-1">
@@ -187,11 +193,13 @@ export default function SortableDocumentsTable({ documents }: Props) {
                       </span>
                       {doc.expires_on && (
                         <span className="text-xs text-gray-600">
-                          {new Date(doc.expires_on).toLocaleDateString('en-US', { 
-                            year: 'numeric', 
-                            month: 'short', 
-                            day: 'numeric' 
-                          })}
+                          {(() => {
+                            const date = new Date(doc.expires_on);
+                            const year = date.getFullYear();
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const day = String(date.getDate()).padStart(2, '0');
+                            return `${day}/${month}/${year}`;
+                          })()}
                         </span>
                       )}
                     </div>

@@ -24,15 +24,15 @@ interface Props {
   completedAuthorisations: AuthorisationCompletionRow[];
 }
 
-// Consistent date formatting function
+// Consistent date formatting function - avoid hydration errors
 function formatDate(dateString: string): string {
   try {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-AU', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
+    // Use fixed format to avoid locale and timezone differences between server and client
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${day}/${month}/${year}`;
   } catch {
     return dateString;
   }
