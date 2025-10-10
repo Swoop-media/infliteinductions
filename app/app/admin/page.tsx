@@ -891,86 +891,101 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null, page: n
   const PAGE_SIZE = 50;
   const offset = (page - 1) * PAGE_SIZE;
 
-  // First get total count
-  const { count: totalCount } = await supabase
+  // Get ALL authorisation assignments (no pagination yet) to properly sort
+  const { data: allAssignments, error: assignError } = await supabase
     .from("authorisation_assignments")
-    .select("*", { count: "exact", head: true })
+    .select("id, user_id, authorisation_id, approved_at")
     .eq("assignment_status", "completed")
     .not("approved_at", "is", null);
 
-  // Get the authorisation assignments with pagination
-  let query = supabase
-    .from("authorisation_assignments")
-    .select(`
-      id,
-      user_id,
-      authorisation_id,
-      approved_at,
-      expires_at,
-      authorisations!inner(title, valid_for_days, department)
-    `)
-    .eq("assignment_status", "completed")
-    .not("approved_at", "is", null)
-    .order("expires_at", { ascending: true, nullsFirst: false }) // Order by expires_at (soonest first)
-    .range(offset, offset + PAGE_SIZE - 1);
-
-  const { data: assignments, error: assignError } = await query;
   if (assignError) throw new Error(assignError.message);
-  if (!assignments || assignments.length === 0) return { authorisations: [], totalPages: 0, currentPage: page, totalCount: totalCount || 0 };
+  if (!allAssignments || allAssignments.length === 0) {
+    return { authorisations: [], totalPages: 0, currentPage: page, totalCount: 0 };
+  }
 
-  // Get user profiles separately to avoid relationship ambiguity
-  const userIds = [...new Set(assignments.map(a => a.user_id))];
-  const { data: profiles, error: profilesError } = await supabase
+  // Get unique authorisation IDs and user IDs
+  const authIds = [...new Set(allAssignments.map(a => a.authorisation_id))];
+  const userIds = [...new Set(allAssignments.map(a => a.user_id))];
+
+  // Get authorisations
+  const { data: authorisations, error: authError } = await supabase
+    .from("authorisations")
+    .select("id, title, valid_for_days, department")
+    .in("id", authIds);
+
+  if (authError) throw new Error(authError.message);
+
+  // Get profiles
+  const { data: profiles, error: profileError } = await supabase
     .from("profiles")
     .select("id, full_name, email")
     .in("id", userIds);
 
-  if (profilesError) throw new Error(profilesError.message);
+  if (profileError) throw new Error(profileError.message);
 
-  // Create a lookup map for profiles
+  // Create lookup maps
+  const authMap = new Map((authorisations || []).map(a => [a.id, a]));
   const profileMap = new Map((profiles || []).map(p => [p.id, p]));
 
-  // Combine the data
-  const rows = assignments.map(assignment => ({
-    ...assignment,
-    profiles: profileMap.get(assignment.user_id)
-  }));
+  // Transform all data with calculated expiry dates
+  let completedAuthorisations = allAssignments.map(assignment => {
+    const auth = authMap.get(assignment.authorisation_id);
+    const profile = profileMap.get(assignment.user_id);
 
-  // Apply search filter if provided
-  let filteredRows = rows;
+    // Calculate expiry date based on valid_for_days
+    let expires_at = null;
+    if (auth?.valid_for_days && assignment.approved_at) {
+      const approvedDate = new Date(assignment.approved_at);
+      const expiryDate = new Date(approvedDate);
+      expiryDate.setDate(expiryDate.getDate() + auth.valid_for_days);
+      expires_at = expiryDate.toISOString();
+    }
+
+    return {
+      assignment_id: assignment.id,
+      user_id: assignment.user_id,
+      authorisation_id: assignment.authorisation_id,
+      approved_at: assignment.approved_at,
+      expires_at: expires_at,
+      full_name: profile?.full_name ?? null,
+      email: profile?.email ?? null,
+      authorisation_title: auth?.title ?? null,
+      department: auth?.department ?? null,
+      valid_for_days: auth?.valid_for_days ?? null,
+    };
+  });
+
+  // Apply search filter if provided BEFORE sorting
   if (q && q.trim()) {
     const searchTerm = q.trim().toLowerCase();
-    filteredRows = rows.filter(row => {
-      const profile = row.profiles;
-      return (
-        (profile?.full_name?.toLowerCase().includes(searchTerm) ?? false) ||
-        (profile?.email?.toLowerCase().includes(searchTerm) ?? false) ||
-        ((row as any).authorisations?.title?.toLowerCase().includes(searchTerm) ?? false)
-      );
-    });
+    completedAuthorisations = completedAuthorisations.filter(auth =>
+      (auth.full_name?.toLowerCase().includes(searchTerm)) ||
+      (auth.email?.toLowerCase().includes(searchTerm)) ||
+      (auth.authorisation_title?.toLowerCase().includes(searchTerm))
+    );
   }
 
-  // Map to the expected format
-  const completedAuthorisations: AuthorisationCompletionRow[] = filteredRows.map((row: any) => ({
-    assignment_id: row.id,
-    user_id: row.user_id,
-    authorisation_id: row.authorisation_id,
-    approved_at: row.approved_at,
-    expires_at: row.expires_at,
-    full_name: row.profiles?.full_name ?? null,
-    email: row.profiles?.email ?? null,
-    authorisation_title: row.authorisations?.title ?? null,
-    department: row.authorisations?.department ?? null,
-    valid_for_days: row.authorisations?.valid_for_days ?? null,
-  }));
+  // Sort ALL filtered records by expiry date (soonest first, null values last)
+  completedAuthorisations.sort((a, b) => {
+    if (!a.expires_at && !b.expires_at) return 0;
+    if (!a.expires_at) return 1; // null values go to the end
+    if (!b.expires_at) return -1;
+    
+    const dateA = new Date(a.expires_at).getTime();
+    const dateB = new Date(b.expires_at).getTime();
+    return dateA - dateB;
+  });
 
-  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
-  
+  // Now apply pagination to the sorted results
+  const totalCount = completedAuthorisations.length;
+  const paginatedAuthorisations = completedAuthorisations.slice(offset, offset + PAGE_SIZE);
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE);
+
   return {
-    authorisations: completedAuthorisations,
+    authorisations: paginatedAuthorisations,
     totalPages,
     currentPage: page,
-    totalCount: totalCount || 0
+    totalCount
   };
 }
 
