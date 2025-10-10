@@ -179,10 +179,17 @@ export default function SortableDocumentsTable({ documents }: Props) {
                   </td>
                   <td className="px-3 py-2 text-gray-600">
                     {doc.expires_on ? (() => {
+                      // Parse ISO date string directly without timezone conversion
+                      const match = doc.expires_on.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                      if (match) {
+                        const [, year, month, day] = match;
+                        return `${day}/${month}/${year}`;
+                      }
+                      // Fallback for non-ISO strings
                       const date = new Date(doc.expires_on);
-                      const year = date.getFullYear();
-                      const month = String(date.getMonth() + 1).padStart(2, '0');
-                      const day = String(date.getDate()).padStart(2, '0');
+                      const year = date.getUTCFullYear();
+                      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+                      const day = String(date.getUTCDate()).padStart(2, '0');
                       return `${day}/${month}/${year}`;
                     })() : 'No expiry'}
                   </td>
@@ -194,10 +201,17 @@ export default function SortableDocumentsTable({ documents }: Props) {
                       {doc.expires_on && (
                         <span className="text-xs text-gray-600">
                           {(() => {
+                            // Parse ISO date string directly without timezone conversion
+                            const match = doc.expires_on.match(/^(\d{4})-(\d{2})-(\d{2})/);
+                            if (match) {
+                              const [, year, month, day] = match;
+                              return `${day}/${month}/${year}`;
+                            }
+                            // Fallback for non-ISO strings
                             const date = new Date(doc.expires_on);
-                            const year = date.getFullYear();
-                            const month = String(date.getMonth() + 1).padStart(2, '0');
-                            const day = String(date.getDate()).padStart(2, '0');
+                            const year = date.getUTCFullYear();
+                            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+                            const day = String(date.getUTCDate()).padStart(2, '0');
                             return `${day}/${month}/${year}`;
                           })()}
                         </span>

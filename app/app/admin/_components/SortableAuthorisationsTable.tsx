@@ -27,11 +27,18 @@ interface Props {
 // Consistent date formatting function - avoid hydration errors
 function formatDate(dateString: string): string {
   try {
+    // Parse ISO date string directly without timezone conversion
+    // This ensures consistent formatting between server and client
+    const match = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+      const [, year, month, day] = match;
+      return `${day}/${month}/${year}`;
+    }
+    // Fallback for non-ISO strings
     const date = new Date(dateString);
-    // Use fixed format to avoid locale and timezone differences between server and client
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
     return `${day}/${month}/${year}`;
   } catch {
     return dateString;
