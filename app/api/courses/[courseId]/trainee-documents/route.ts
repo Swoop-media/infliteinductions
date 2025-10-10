@@ -6,10 +6,13 @@ import { hasRole } from '@/lib/roles';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { courseId: string } }
+  { params }: { params: Promise<{ courseId: string }> }
 ) {
   try {
     const supabase = await createSupabaseServer();
+    
+    // Await params to get courseId (Next.js 15 requirement)
+    const { courseId } = await params;
     
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -25,7 +28,7 @@ export async function GET(
       .from("course_assignments")
       .select("role")
       .eq("user_id", user.id)
-      .eq("course_id", params.courseId)
+      .eq("course_id", courseId)
       .in("role", ["onsite_trainer", "onsite_assessor"]);
     
     const isTrainerOrAssessor = trainerAssignments && trainerAssignments.length > 0;
@@ -56,7 +59,7 @@ export async function GET(
         module_id
       `)
       .eq('user_id', traineeId)
-      .eq('course_id', params.courseId)
+      .eq('course_id', courseId)
       .order('created_at', { ascending: false });
 
     if (error) {

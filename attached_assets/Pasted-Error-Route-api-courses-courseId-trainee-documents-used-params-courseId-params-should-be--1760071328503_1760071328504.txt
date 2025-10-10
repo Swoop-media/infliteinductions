@@ -1,0 +1,39 @@
+Error: Route "/api/courses/[courseId]/trainee-documents" used `params.courseId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (app/api/courses/[courseId]/trainee-documents/route.ts:28:30)
+  26 |       .select("role")
+  27 |       .eq("user_id", user.id)
+> 28 |       .eq("course_id", params.courseId)
+     |                              ^
+  29 |       .in("role", ["onsite_trainer", "onsite_assessor"]);
+  30 |     
+  31 |     const isTrainerOrAssessor = trainerAssignments && trainerAssignments.length > 0;
+Error: Route "/api/courses/[courseId]/trainee-documents" used `params.courseId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (app/api/courses/[courseId]/trainee-documents/route.ts:59:30)
+  57 |       `)
+  58 |       .eq('user_id', traineeId)
+> 59 |       .eq('course_id', params.courseId)
+     |                              ^
+  60 |       .order('created_at', { ascending: false });
+  61 |
+  62 |     if (error) {
+ GET /api/courses/4a25c12d-fc4f-4eae-8053-e1b0bff5d27e/trainee-documents?trainee_id=1b44c8f5-95aa-4f8c-8110-8f36106b4d10 200 in 3321ms
+Error: Route "/api/courses/[courseId]/trainee-documents" used `params.courseId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (app/api/courses/[courseId]/trainee-documents/route.ts:28:30)
+  26 |       .select("role")
+  27 |       .eq("user_id", user.id)
+> 28 |       .eq("course_id", params.courseId)
+     |                              ^
+  29 |       .in("role", ["onsite_trainer", "onsite_assessor"]);
+  30 |     
+  31 |     const isTrainerOrAssessor = trainerAssignments && trainerAssignments.length > 0;
+Error: Route "/api/courses/[courseId]/trainee-documents" used `params.courseId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at GET (app/api/courses/[courseId]/trainee-documents/route.ts:59:30)
+  57 |       `)
+  58 |       .eq('user_id', traineeId)
+> 59 |       .eq('course_id', params.courseId)
+     |                              ^
+  60 |       .order('created_at', { ascending: false });
+  61 |
+  62 |     if (error) {
+ GET /api/courses/4a25c12d-fc4f-4eae-8053-e1b0bff5d27e/trainee-documents?trainee_id=1b44c8f5-95aa-4f8c-8110-8f36106b4d10 200 in 1780ms
+ GET /app/train-assess 200 in 2754ms
