@@ -32,8 +32,9 @@ export default async function TrainAssessPage() {
   );
   const allCourseIds = [...new Set([...trainerCourseIds, ...assessorCourseIds])];
 
-  let pendingTrainingItems: PendingTrainingItem[] = [];
-  let pendingAssessmentItems: PendingTrainingItem[] = [];
+  let pendingTrainingItems: PendingItem[] = [];
+  let pendingAssessmentItems: PendingItem[] = [];
+  let uniqueDepartments: Set<string> = new Set();
 
   if (allCourseIds.length > 0) {
     // Use service role client to bypass RLS
@@ -55,7 +56,13 @@ export default async function TrainAssessPage() {
       .in("course_id", allCourseIds);
 
     if (!traineeAssignments || traineeAssignments.length === 0) {
-      return renderPage(pendingTrainingItems, pendingAssessmentItems);
+      return (
+        <TrainAssessClient 
+          initialTrainingItems={pendingTrainingItems}
+          initialAssessmentItems={pendingAssessmentItems}
+          departments={[]}
+        />
+      );
     }
 
     // 2. Get ALL modules for ALL relevant courses in ONE query
@@ -103,7 +110,7 @@ export default async function TrainAssessPage() {
     const traineeUserIds = [...new Set(traineeAssignments.map(a => a.user_id))];
     const { data: allProfiles } = await supabaseService
       .from("profiles")
-      .select("id, full_name, email")
+      .select("id, full_name, email, department")
       .in("id", traineeUserIds);
 
     // Create lookup map for profiles
@@ -112,16 +119,19 @@ export default async function TrainAssessPage() {
       profilesMap.set(profile.id, profile);
     });
 
-    // 5. Get ALL courses info in ONE query
+    // 5. Get ALL courses info in ONE query - include department
     const { data: allCourses } = await supabaseService
       .from("courses")
-      .select("id, title")
+      .select("id, title, department")
       .in("id", allCourseIds);
 
-    // Create lookup map for courses
+    // Create lookup map for courses and collect departments
     const coursesMap = new Map<string, any>();
     allCourses?.forEach(course => {
       coursesMap.set(course.id, course);
+      if (course.department && course.department.trim() !== '') {
+        uniqueDepartments.add(course.department);
+      }
     });
 
     // Now process each assignment using the pre-fetched data (no additional queries!)
@@ -172,10 +182,15 @@ export default async function TrainAssessPage() {
       const traineeName = traineeProfile?.full_name || traineeProfile?.email || "Unknown";
       const traineeEmail = traineeProfile?.email || "";
       const courseTitle = courseInfo?.title || "Unknown Course";
+      const courseDepartment = courseInfo?.department || "";
+      const traineeDepartment = traineeProfile?.department || "";
+      
+      // Use trainee's department if available, otherwise use course department
+      const itemDepartment = traineeDepartment || courseDepartment || "";
 
       // Add to pending training if digital complete but onsite training not done
       if (allDigitalComplete && onsiteTrainingModules.length > 0 && !onsiteTrainingComplete && trainerCourseIds.has(courseId)) {
-        const trainingItem = {
+        const trainingItem: PendingItem = {
           id: assignmentId,
           trainee_name: traineeName,
           trainee_email: traineeEmail,
@@ -183,7 +198,8 @@ export default async function TrainAssessPage() {
           course_id: courseId,
           assignment_id: assignmentId,
           created_at: assignment.created_at,
-          type: 'training' as const
+          type: 'training' as const,
+          department: itemDepartment
         };
         pendingTrainingItems.push(trainingItem);
       }
@@ -200,17 +216,22 @@ export default async function TrainAssessPage() {
             course_id: courseId,
             assignment_id: assignmentId,
             created_at: assignment.created_at,
-            type: 'assessment' as const
+            type: 'assessment' as const,
+            department: itemDepartment
           });
         }
       }
     }
   }
 
+  // Convert Set to sorted array for departments
+  const departmentList = Array.from(uniqueDepartments).sort();
+
   return (
     <TrainAssessClient 
       initialTrainingItems={pendingTrainingItems}
       initialAssessmentItems={pendingAssessmentItems}
+      departments={departmentList}
     />
   );
 }
