@@ -69,12 +69,18 @@ export default function TrainAssessClient({
   };
 
   const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-NZ', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
+    // Parse ISO string directly to avoid timezone issues
+    const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return dateStr;
+    
+    const [, year, month, day] = match;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
+    
+    const monthIndex = parseInt(month, 10) - 1;
+    const dayNum = parseInt(day, 10);
+    
+    return `${dayNum} ${monthNames[monthIndex]} ${year}`;
   };
 
   return (

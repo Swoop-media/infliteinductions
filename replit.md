@@ -132,6 +132,7 @@ The architecture follows a hybrid approach with server-side rendering for perfor
   - Department shown for each item (uses trainee department if available, otherwise course department)
 - **Performance**: Client-side filtering for instant results
 - **User Experience**: Maintains search state across tab switches between Training and Assessment views
+- **Date Formatting**: Uses timezone-independent date parsing (DD/MM/YYYY format) to prevent hydration errors
 
 ## Multi-Photo Document Capture
 - **Purpose**: Allow learners to capture multiple photos and combine them into a single PDF document
