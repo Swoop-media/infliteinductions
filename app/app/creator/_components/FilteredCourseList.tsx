@@ -180,6 +180,7 @@ export default function FilteredCourseList({
                 >
                   Edit
                 </Link>
+                {/* Duplicate functionality temporarily disabled
                 <form action={duplicateCourseAction} className="inline">
                   <input type="hidden" name="courseId" value={c.id} />
                   <button
@@ -189,6 +190,7 @@ export default function FilteredCourseList({
                     Duplicate
                   </button>
                 </form>
+                */}
                 <Link
                   href={`/app/creator/courses/${c.id}/delete`}
                   className="rounded-md border px-3 py-1.5 text-sm border-red-300 bg-red-50 text-red-700 hover:bg-red-100"
