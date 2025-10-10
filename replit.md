@@ -112,6 +112,27 @@ The architecture follows a hybrid approach with server-side rendering for perfor
 
 # Enhanced UI Features
 
+## Train/Assess Page Search and Filter
+- **Location**: `/app/train-assess`
+- **Purpose**: Quickly find specific training and assessment items with powerful search and filtering
+- **Search Capabilities**:
+  - Search by trainee name (partial match supported)
+  - Search by trainee email
+  - Search by course name
+  - Real-time filtering as you type
+- **Department Filter**:
+  - Filter by department dropdown
+  - Shows all unique departments from courses
+  - Option to view "All Departments"
+- **Features**:
+  - Combined search and filter work together
+  - Clear filters button for quick reset
+  - Shows filtered count vs total count
+  - Empty state messages when no matches found
+  - Department shown for each item (uses trainee department if available, otherwise course department)
+- **Performance**: Client-side filtering for instant results
+- **User Experience**: Maintains search state across tab switches between Training and Assessment views
+
 ## Multi-Photo Document Capture
 - **Purpose**: Allow learners to capture multiple photos and combine them into a single PDF document
 - **Location**: Document upload blocks throughout the course modules
