@@ -89,6 +89,11 @@ The architecture follows a hybrid approach with server-side rendering for perfor
 - The tools provide read-only diagnostics with optional fix capabilities
 - No need to remove these tools when publishing - they provide valuable debugging capabilities for admins
 
+# Authorization Approval System
+
+## Fixed Issues
+- **Authorization Approval Loop Fix** (October 2025): Fixed issue where authorization approvals were failing due to schema cache issues. Resolution: Updated approval function to use supabaseAdmin() client to bypass RLS policies and ensure proper database access. The `expires_at` column already exists in the database.
+
 # Authorization Expiry Calculation
 
 ## Smart Expiry Date System
