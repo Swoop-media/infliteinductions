@@ -1,0 +1,26 @@
+react-dom-client.development.js:25581 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 1427ms
+layout-router.tsx:139  Skipping auto-scroll behavior due to `position: sticky` or `position: fixed` on element: <div class=​"fixed inset-0 z-50 flex items-center justify-center bg-white/​80 backdrop-blur-sm">​…​</div>​
+shouldSkipElement @ layout-router.tsx:139
+layout-router.tsx:139  Skipping auto-scroll behavior due to `position: sticky` or `position: fixed` on element: <div class=​"fixed inset-0 z-50 flex items-center justify-center bg-white/​80 backdrop-blur-sm">​…​</div>​
+shouldSkipElement @ layout-router.tsx:139
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 716ms
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 1109ms
+hot-reloader-app.tsx:278 [Fast Refresh] rebuilding
+report-hmr-latency.ts:26 [Fast Refresh] done in 1977ms
+page.tsx:377  Server  Course assignment data: Object
+ExpandableCourseDetails.tsx:102 ExpandableCourseDetails - courses received: Array(1)
+ExpandableCourseDetails.tsx:102 ExpandableCourseDetails - courses received: Array(1)
+[NEW] Explain Console errors by using Copilot in Edge: click
+         
+         to explain an error. 
+        Learn more
+        Don't show again
+page.tsx:377  Server  Course assignment data: {course_id: 'a39bd260-be4e-4875-bed9-e8d10cf24970', assignment_id: 'dc835e12-42c9-4123-8e78-561add9eebe1', equipment_count: 0, equipment_responses: 0}
+page.tsx:377  Server  Course assignment data: {course_id: 'a39bd260-be4e-4875-bed9-e8d10cf24970', assignment_id: 'dc835e12-42c9-4123-8e78-561add9eebe1', equipment_count: 0, equipment_responses: 0}
+page.tsx:377  Server  Course assignment data: {course_id: 'a39bd260-be4e-4875-bed9-e8d10cf24970', assignment_id: 'dc835e12-42c9-4123-8e78-561add9eebe1', equipment_count: 0, equipment_responses: 0}
+ExpandableCourseDetails.tsx:102 ExpandableCourseDetails - courses received: [{…}]
+ExpandableCourseDetails.tsx:102 ExpandableCourseDetails - courses received: [{…}]
