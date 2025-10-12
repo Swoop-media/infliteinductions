@@ -423,6 +423,8 @@ async function approveAssignment(formData: FormData) {
 
   const assignmentId = formData.get("assignmentId") as string;
   const supabase = await createSupabaseServer();
+  const { supabaseAdmin } = await import('@/lib/supabase/admin');
+  const supabaseService = supabaseAdmin();
 
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -501,7 +503,8 @@ async function approveAssignment(formData: FormData) {
   );
 
   // Update the authorisation assignment status to 'completed' and record approval details.
-  const { error } = await supabase
+  // Use admin client to bypass RLS and ensure schema cache is up to date
+  const { error } = await supabaseService
     .from("authorisation_assignments")
     .update({ 
       assignment_status: "completed",
