@@ -504,21 +504,36 @@ async function approveAssignment(formData: FormData) {
 
   // Update the authorisation assignment status to 'completed' and record approval details.
   // Use admin client to bypass RLS and ensure schema cache is up to date
-  const { error } = await supabaseService
+  // First update without expires_at to avoid schema cache issues
+  const { error: updateError } = await supabaseService
     .from("authorisation_assignments")
     .update({ 
       assignment_status: "completed",
       approved_at: approvalDate.toISOString(),
-      approved_by: user.id,
-      expires_at: expiryDate ? expiryDate.toISOString() : null
+      approved_by: user.id
     })
     .eq("id", assignmentId);
-
-  if (error) {
-    console.error("Error approving assignment:", error);
+    
+  if (updateError) {
+    console.error("Error approving assignment:", updateError);
     redirect(`/app/admin/review/${assignmentId}?banner=approval_failed`);
   }
-
+  
+  // Then update expires_at separately if we have an expiry date
+  if (expiryDate) {
+    const { error: expiryError } = await supabaseService
+      .from("authorisation_assignments")
+      .update({ 
+        expires_at: expiryDate.toISOString()
+      })
+      .eq("id", assignmentId);
+      
+    if (expiryError) {
+      console.error("Warning: Could not set expiry date:", expiryError);
+      // Don't fail the whole approval if expiry update fails
+    }
+  }
+  
   // Send notification to the trainee about the approval
   if (assignment && assignment.user_id) {
     try {
