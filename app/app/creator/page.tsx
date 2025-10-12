@@ -369,12 +369,12 @@ export default async function CreatorHome({
         .from("courses")
         .select("id,title,status,updated_at,created_at,tags,department")
         .order("updated_at", { ascending: false })
-        .limit(100),
+        .limit(500),
       supabase
         .from("authorisations")
         .select("id,title,status,updated_at,created_at,department")
         .order("updated_at", { ascending: false })
-        .limit(25),
+        .limit(500),
     ]);
 
   return (
