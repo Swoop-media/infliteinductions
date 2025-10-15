@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { 
   calculateAuthorizationExpiry, 
   formatExpiryDate, 
@@ -25,8 +25,20 @@ export default function ExpiryPreview({
   documents, 
   courses 
 }: ExpiryPreviewProps) {
+  // Use state to ensure the date is calculated only once on the client
+  const [isClient, setIsClient] = useState(false);
+  
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+  
   const expiryInfo = useMemo(() => {
-    // Use UTC date to ensure consistency between server and client
+    // For server rendering, return null to avoid date mismatch
+    if (!isClient) {
+      return null;
+    }
+    
+    // Use a consistent UTC date
     const now = new Date();
     const approvalDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     
@@ -83,7 +95,25 @@ export default function ExpiryPreview({
       status,
       reason: expiryReasons[0] || 'Unknown'
     };
-  }, [authValidForDays, documents, courses]);
+  }, [authValidForDays, documents, courses, isClient]);
+  
+  // Show loading state during server render and initial client render
+  if (!isClient) {
+    return (
+      <div className="rounded-lg bg-gray-50 border border-gray-200 p-4">
+        <div className="flex items-center gap-2">
+          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h3 className="font-medium text-gray-900">Authorization Expiry Preview</h3>
+        </div>
+        <p className="text-sm text-gray-600 mt-2">
+          Calculating expiry date...
+        </p>
+      </div>
+    );
+  }
   
   if (!expiryInfo) {
     return (
