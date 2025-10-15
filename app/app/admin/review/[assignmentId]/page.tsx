@@ -135,7 +135,7 @@ async function loadAssignmentDetails(assignmentId: string) {
     .select("assignment_id, module_id, completed_at")
     .in("assignment_id", courseAssignmentIds);
 
-  // Fetch quiz attempts for the user with quiz questions
+  // Fetch quiz attempts for the user with quiz details
   const { data: quizAttempts } = await supabase
     .from("quiz_attempts")
     .select(`
@@ -147,10 +147,50 @@ async function loadAssignmentDetails(assignmentId: string) {
       created_at,
       quizzes!inner(
         module_id,
-        questions
+        pass_mark
       )
     `)
     .eq("user_id", assignment.user_id);
+    
+  // Fetch quiz questions and options for the modules
+  const moduleIds = modules?.map(m => m.id) || [];
+  const { data: quizzes } = await supabase
+    .from("quizzes")
+    .select(`
+      id,
+      module_id,
+      pass_mark
+    `)
+    .in("module_id", moduleIds);
+    
+  const quizIds = quizzes?.map(q => q.id) || [];
+  
+  // Fetch quiz questions with their options
+  const { data: quizQuestions } = await supabase
+    .from("quiz_questions")
+    .select(`
+      id,
+      quiz_id,
+      body_md,
+      points,
+      order_index
+    `)
+    .in("quiz_id", quizIds)
+    .order("order_index", { ascending: true });
+    
+  // Fetch quiz options
+  const questionIds = quizQuestions?.map(q => q.id) || [];
+  const { data: quizOptions } = await supabase
+    .from("quiz_options")
+    .select(`
+      id,
+      question_id,
+      label,
+      is_correct,
+      order_index
+    `)
+    .in("question_id", questionIds)
+    .order("order_index", { ascending: true });
 
   // Fetch onsite training and assessment responses with trainer info
   const { data: requirementResponses } = await supabase
@@ -294,28 +334,45 @@ async function loadAssignmentDetails(assignmentId: string) {
         mp => mp.module_id === module.id && mp.completed_at
       );
 
-      // Get quiz attempts for this module with questions
+      // Find quiz for this module
+      const moduleQuiz = quizzes?.find(q => q.module_id === module.id);
+      
+      // Get quiz questions for this module
+      const moduleQuizQuestions = moduleQuiz ? 
+        (quizQuestions || []).filter(q => q.quiz_id === moduleQuiz.id) : [];
+      
+      // Map questions with their options
+      const questionsWithOptions = moduleQuizQuestions.map(question => {
+        const options = (quizOptions || [])
+          .filter(opt => opt.question_id === question.id)
+          .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+        
+        return {
+          id: question.id,
+          question_text: question.body_md || `Question ${(question.order_index || 0) + 1}`,
+          points: question.points || 1,
+          options: options.map(opt => ({
+            id: opt.id,
+            label: opt.label || '',
+            is_correct: opt.is_correct || false
+          }))
+        };
+      });
+      
+      // Get quiz attempts for this module
       const moduleQuizAttempts = quizAttempts?.filter(
         qa => (qa.quizzes as any)?.module_id === module.id
       ).map(qa => {
         const quiz = qa.quizzes as any;
-        const questions = quiz?.questions || [];
         const userAnswers = qa.answers || {};
-        
-        // Map questions with user's answers
-        const questionsWithAnswers = questions.map((q: any, index: number) => ({
-          question: q.question || `Question ${index + 1}`,
-          options: q.options || [],
-          correct_answer: q.correct_answer,
-          user_answer: userAnswers[`question_${index}`] || userAnswers[index] || null
-        }));
         
         return {
           score_pct: qa.score_pct,
           passed: qa.passed,
+          pass_mark: quiz?.pass_mark || 70, // Default to 70% if not set
           answers: qa.answers,
           created_at: qa.created_at,
-          questions_with_answers: questionsWithAnswers
+          questions_with_answers: questionsWithOptions // Include the actual questions
         };
       });
 
@@ -405,6 +462,11 @@ async function loadAssignmentDetails(assignmentId: string) {
         module_title: module.title || `Module ${module.order_index + 1}`,
         completed: isCompleted,
         quiz_attempts: moduleQuizAttempts,
+        quiz_info: moduleQuiz ? {
+          quiz_id: moduleQuiz.id,
+          pass_mark: moduleQuiz.pass_mark || 70,
+          questions: questionsWithOptions
+        } : undefined,
         onsite_responses: moduleOnsiteResponses,
         equipment_requirements: includeEquipmentAssessment && equipmentRequirements.length > 0 ? equipmentRequirements : undefined,
         has_onsite_requirements: moduleOnsiteResponses.length > 0,

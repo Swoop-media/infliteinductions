@@ -45,15 +45,34 @@ interface ModuleProgress {
   quiz_attempts?: Array<{
     score_pct: number;
     passed: boolean;
+    pass_mark?: number;
     answers?: any;
     created_at: string;
     questions_with_answers?: Array<{
-      question: string;
-      options: string[];
-      correct_answer: number;
-      user_answer: number | null;
+      id?: string;
+      question_text?: string;
+      points?: number;
+      options?: Array<{
+        id: string;
+        label: string;
+        is_correct: boolean;
+      }>;
     }>;
   }>;
+  quiz_info?: {
+    quiz_id: string;
+    pass_mark: number;
+    questions: Array<{
+      id: string;
+      question_text: string;
+      points: number;
+      options: Array<{
+        id: string;
+        label: string;
+        is_correct: boolean;
+      }>;
+    }>;
+  };
   onsite_responses?: Array<{
     requirement_id: string;
     requirement_label: string;
@@ -396,115 +415,96 @@ export default function ExpandableCourseDetails({ courses, assignmentId, userId 
                             </div>
                           )}
 
-                          {/* Digital Quiz - Show attempts and results with questions */}
-                          {module.module_type === "digital_assessment_quiz" && module.quiz_attempts && module.quiz_attempts.length > 0 && (
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium text-gray-700">Quiz Results:</p>
-                              {module.quiz_attempts.map((attempt, idx) => {
-                                const attemptId = `${module.module_id}-${idx}`;
-                                const isExpanded = expandedQuizAttempts.has(attemptId);
-                                
-                                return (
-                                  <div key={idx} className="bg-gray-50 rounded p-2 text-sm">
-                                    <div 
-                                      className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 -m-1 rounded"
-                                      onClick={() => {
-                                        const newExpanded = new Set(expandedQuizAttempts);
-                                        if (isExpanded) {
-                                          newExpanded.delete(attemptId);
-                                        } else {
-                                          newExpanded.add(attemptId);
-                                        }
-                                        setExpandedQuizAttempts(newExpanded);
-                                      }}
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <span>Attempt {idx + 1}</span>
-                                        {isExpanded ? (
-                                          <ChevronUp className="w-3 h-3 text-gray-500" />
-                                        ) : (
-                                          <ChevronDown className="w-3 h-3 text-gray-500" />
+                          {/* Digital Quiz - Show quiz info and attempts */}
+                          {module.module_type === "digital_assessment_quiz" && (
+                            <div className="space-y-3">
+                              {/* Show quiz info if available */}
+                              {module.quiz_info && (
+                                <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-sm font-medium text-blue-900">Quiz Information</p>
+                                    <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
+                                      Pass Mark: {module.quiz_info.pass_mark}%
+                                    </span>
+                                  </div>
+                                  
+                                  {/* Show quiz questions */}
+                                  <div className="space-y-2 mt-3">
+                                    <p className="text-xs font-medium text-gray-600 uppercase">Questions ({module.quiz_info.questions.length}):</p>
+                                    {module.quiz_info.questions.map((question, qIdx) => (
+                                      <div key={question.id} className="bg-white rounded p-2 border border-blue-100">
+                                        <div className="text-sm font-medium text-gray-700 mb-1">
+                                          Q{qIdx + 1}: {question.question_text}
+                                        </div>
+                                        {question.points > 1 && (
+                                          <div className="text-xs text-gray-500 mb-1">Points: {question.points}</div>
                                         )}
-                                      </div>
-                                      <span className={attempt.passed ? "text-green-600" : "text-red-600"}>
-                                        Score: {attempt.score_pct}% {attempt.passed ? "(Passed)" : "(Failed)"}
-                                      </span>
-                                    </div>
-                                    {attempt.created_at && (
-                                      <div className="text-xs text-gray-500 mt-1">
-                                        {formatDateTimeSafe(attempt.created_at)}
-                                      </div>
-                                    )}
-                                    
-                                    {/* Show quiz questions and answers when expanded */}
-                                    {isExpanded && attempt.questions_with_answers && (
-                                      <div className="mt-3 space-y-3 border-t pt-3">
-                                        <p className="text-xs font-medium text-gray-600 uppercase tracking-wider">
-                                          Quiz Questions and Answers:
-                                        </p>
-                                        {attempt.questions_with_answers.map((qa, qIdx) => (
-                                          <div key={qIdx} className="bg-white rounded-lg p-3 border">
-                                            <div className="space-y-2">
-                                              <div className="font-medium text-gray-800">
-                                                Q{qIdx + 1}: {qa.question}
-                                              </div>
-                                              
-                                              {/* Show options if they exist */}
-                                              {qa.options && qa.options.length > 0 && (
-                                                <div className="space-y-1 ml-4">
-                                                  {qa.options.map((option, optIdx) => {
-                                                    const isUserAnswer = qa.user_answer === optIdx;
-                                                    const isCorrectAnswer = qa.correct_answer === optIdx;
-                                                    
-                                                    return (
-                                                      <div 
-                                                        key={optIdx} 
-                                                        className={`p-2 rounded text-sm flex items-start gap-2 ${
-                                                          isUserAnswer && isCorrectAnswer
-                                                            ? "bg-green-50 border border-green-300"
-                                                            : isUserAnswer && !isCorrectAnswer
-                                                            ? "bg-red-50 border border-red-300"
-                                                            : isCorrectAnswer
-                                                            ? "bg-green-50 border border-green-200 border-dashed"
-                                                            : "bg-gray-50"
-                                                        }`}
-                                                      >
-                                                        <span className="font-medium">
-                                                          {String.fromCharCode(65 + optIdx)}:
-                                                        </span>
-                                                        <span className="flex-1">{option}</span>
-                                                        {isUserAnswer && (
-                                                          <span className={`text-xs font-medium ${
-                                                            isCorrectAnswer ? "text-green-700" : "text-red-700"
-                                                          }`}>
-                                                            {isCorrectAnswer ? "✓ Your Answer (Correct)" : "✗ Your Answer (Incorrect)"}
-                                                          </span>
-                                                        )}
-                                                        {!isUserAnswer && isCorrectAnswer && (
-                                                          <span className="text-xs font-medium text-green-700">
-                                                            ✓ Correct Answer
-                                                          </span>
-                                                        )}
-                                                      </div>
-                                                    );
-                                                  })}
-                                                </div>
-                                              )}
-                                              
-                                              {/* Show if user didn't answer */}
-                                              {qa.user_answer === null && (
-                                                <div className="text-sm text-gray-500 italic ml-4">
-                                                  Not answered
-                                                </div>
+                                        <div className="space-y-1 ml-3">
+                                          {question.options.map((option, optIdx) => (
+                                            <div 
+                                              key={option.id}
+                                              className={`text-xs p-1 rounded flex items-center gap-2 ${
+                                                option.is_correct ? 'bg-green-50 text-green-700' : 'bg-gray-50 text-gray-600'
+                                              }`}
+                                            >
+                                              <span className="font-medium">
+                                                {String.fromCharCode(65 + optIdx)}:
+                                              </span>
+                                              <span>{option.label}</span>
+                                              {option.is_correct && (
+                                                <span className="ml-auto text-green-600">✓ Correct</span>
                                               )}
                                             </div>
-                                          </div>
-                                        ))}
+                                          ))}
+                                        </div>
                                       </div>
-                                    )}
+                                    ))}
                                   </div>
-                                );
-                              })}
+                                </div>
+                              )}
+                              
+                              {/* Show attempts if any */}
+                              {module.quiz_attempts && module.quiz_attempts.length > 0 && (
+                                <div className="space-y-2">
+                                  <p className="text-sm font-medium text-gray-700">Quiz Attempts:</p>
+                                  {module.quiz_attempts.map((attempt, idx) => (
+                                    <div key={idx} className="bg-gray-50 rounded p-3 text-sm">
+                                      <div className="flex items-center justify-between">
+                                        <span>Attempt {idx + 1}</span>
+                                        <div className="flex items-center gap-3">
+                                          <span className={attempt.passed ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+                                            Score: {attempt.score_pct}%
+                                          </span>
+                                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                            attempt.passed 
+                                              ? "bg-green-100 text-green-800" 
+                                              : "bg-red-100 text-red-800"
+                                          }`}>
+                                            {attempt.passed ? "Passed" : "Failed"}
+                                          </span>
+                                          {attempt.pass_mark && (
+                                            <span className="text-xs text-gray-500">
+                                              (Required: {attempt.pass_mark}%)
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {attempt.created_at && (
+                                        <div className="text-xs text-gray-500 mt-1">
+                                          Completed: {formatDateTimeSafe(attempt.created_at)}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* Show no attempts message if quiz exists but no attempts */}
+                              {module.quiz_info && (!module.quiz_attempts || module.quiz_attempts.length === 0) && (
+                                <div className="text-sm text-gray-500 italic">
+                                  No quiz attempts recorded
+                                </div>
+                              )}
                             </div>
                           )}
 
