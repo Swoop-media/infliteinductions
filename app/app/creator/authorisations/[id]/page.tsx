@@ -76,18 +76,18 @@ async function loadResponsiblePersons() {
   
   // Get all users with Senior Person or Admin roles
   const { data: roleAssignments, error } = await supabase
-    .from("role_assignments")
+    .from("user_roles")
     .select(`
       user_id,
-      role,
+      role_name,
       profiles!inner(
         id,
         full_name,
         email
       )
     `)
-    .in("role", ["Senior Person", "Admin"])
-    .order("role", { ascending: true });
+    .in("role_name", ["Senior Person", "Admin"])
+    .order("role_name", { ascending: true });
   
   if (error) {
     console.error("Error loading responsible persons:", error);
@@ -99,7 +99,7 @@ async function loadResponsiblePersons() {
     id: assignment.user_id,
     name: (assignment.profiles as any).full_name || 'Unknown',
     email: (assignment.profiles as any).email || '',
-    role: assignment.role
+    role: assignment.role_name
   }));
   
   // Remove duplicates in case someone has multiple roles
