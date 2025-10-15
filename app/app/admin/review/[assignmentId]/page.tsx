@@ -159,24 +159,35 @@ async function loadAssignmentDetails(assignmentId: string) {
     .select(`
       id,
       module_id,
+      course_id,
       pass_mark
     `)
-    .in("module_id", moduleIds);
+    .or(`module_id.in.(${moduleIds.join(',')}),course_id.in.(${courseIds.join(',')})`);
     
   const quizIds = quizzes?.map(q => q.id) || [];
   
-  // Fetch quiz questions with their options
-  const { data: quizQuestions } = await supabase
+  // Fetch quiz questions - they can be linked by quiz_id, module_id, or course_id
+  let quizQuestionsQuery = supabase
     .from("quiz_questions")
     .select(`
       id,
       quiz_id,
+      module_id, 
+      course_id,
       body_md,
       points,
       order_index
-    `)
-    .in("quiz_id", quizIds)
-    .order("order_index", { ascending: true });
+    `);
+  
+  // Build OR condition for all possible links
+  const conditions = [];
+  if (quizIds.length > 0) conditions.push(`quiz_id.in.(${quizIds.join(',')})`);
+  if (moduleIds.length > 0) conditions.push(`module_id.in.(${moduleIds.join(',')})`);
+  if (courseIds.length > 0) conditions.push(`course_id.in.(${courseIds.join(',')})`);
+  
+  const { data: quizQuestions } = conditions.length > 0
+    ? await quizQuestionsQuery.or(conditions.join(',')).order("order_index", { ascending: true })
+    : await quizQuestionsQuery.in('id', []); // Empty result if no conditions
     
   // Fetch quiz options
   const questionIds = quizQuestions?.map(q => q.id) || [];
@@ -334,12 +345,18 @@ async function loadAssignmentDetails(assignmentId: string) {
         mp => mp.module_id === module.id && mp.completed_at
       );
 
-      // Find quiz for this module
-      const moduleQuiz = quizzes?.find(q => q.module_id === module.id);
+      // Find quiz for this module (could be linked by module_id or course_id)
+      const moduleQuiz = quizzes?.find(q => 
+        q.module_id === module.id || 
+        (!q.module_id && q.course_id === ac.course_id)
+      );
       
-      // Get quiz questions for this module
-      const moduleQuizQuestions = moduleQuiz ? 
-        (quizQuestions || []).filter(q => q.quiz_id === moduleQuiz.id) : [];
+      // Get quiz questions for this module (can be linked by quiz_id, module_id, or course_id)
+      const moduleQuizQuestions = (quizQuestions || []).filter(q => 
+        (moduleQuiz && q.quiz_id === moduleQuiz.id) ||
+        q.module_id === module.id ||
+        (!q.module_id && !q.quiz_id && q.course_id === ac.course_id)
+      ).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
       
       // Map questions with their options
       const questionsWithOptions = moduleQuizQuestions.map(question => {
