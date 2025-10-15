@@ -69,30 +69,50 @@ async function loadAuth(authId: string) {
   return { user, auth: data, err: null as string | null };
 }
 
-/** Load users with Senior Person or Admin roles */
+/** Load users with Senior Management or Admin roles */
 async function loadResponsiblePersons() {
   "use server";
   const supabase = await createSupabaseServer();
   
-  // First get user IDs with Senior Person or Admin roles
-  const { data: roleAssignments, error: rolesError } = await supabase
-    .from("user_roles")
-    .select("user_id, role_name")
-    .in("role_name", ["Senior Person", "Admin"]);
+  // First get the role IDs for "Senior Management" and "Admin"
+  const { data: roles, error: rolesError } = await supabase
+    .from("roles")
+    .select("id, name")
+    .in("name", ["Senior Management", "Admin"]);
   
   if (rolesError) {
     console.error("Error loading roles:", rolesError);
     return [];
   }
   
-  if (!roleAssignments || roleAssignments.length === 0) {
+  if (!roles || roles.length === 0) {
+    console.log("No Senior Management or Admin roles found");
+    return [];
+  }
+  
+  const roleIds = roles.map(r => r.id);
+  const roleMap = new Map(roles.map(r => [r.id, r.name]));
+  
+  // Get user_ids who have these roles
+  const { data: userRoles, error: userRolesError } = await supabase
+    .from("user_roles")
+    .select("user_id, role_id")
+    .in("role_id", roleIds);
+  
+  if (userRolesError) {
+    console.error("Error loading user roles:", userRolesError);
+    return [];
+  }
+  
+  if (!userRoles || userRoles.length === 0) {
+    console.log("No users with Senior Management or Admin roles found");
     return [];
   }
   
   // Get unique user IDs
-  const userIds = [...new Set(roleAssignments.map(r => r.user_id))];
+  const userIds = [...new Set(userRoles.map(ur => ur.user_id))];
   
-  // Then get the profiles for those users
+  // Get the profiles for those users
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
     .select("id, full_name, email")
@@ -105,11 +125,14 @@ async function loadResponsiblePersons() {
   
   // Create a map of user roles
   const userRolesMap = new Map();
-  roleAssignments.forEach(assignment => {
-    if (!userRolesMap.has(assignment.user_id)) {
-      userRolesMap.set(assignment.user_id, []);
+  userRoles.forEach(ur => {
+    if (!userRolesMap.has(ur.user_id)) {
+      userRolesMap.set(ur.user_id, []);
     }
-    userRolesMap.get(assignment.user_id).push(assignment.role_name);
+    const roleName = roleMap.get(ur.role_id);
+    if (roleName && !userRolesMap.get(ur.user_id).includes(roleName)) {
+      userRolesMap.get(ur.user_id).push(roleName);
+    }
   });
   
   // Transform the data to a simple format
