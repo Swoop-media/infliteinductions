@@ -135,7 +135,7 @@ async function loadAssignmentDetails(assignmentId: string) {
     .select("assignment_id, module_id, completed_at")
     .in("assignment_id", courseAssignmentIds);
 
-  // Fetch quiz attempts for the user
+  // Fetch quiz attempts for the user with quiz questions
   const { data: quizAttempts } = await supabase
     .from("quiz_attempts")
     .select(`
@@ -146,7 +146,8 @@ async function loadAssignmentDetails(assignmentId: string) {
       answers,
       created_at,
       quizzes!inner(
-        module_id
+        module_id,
+        questions
       )
     `)
     .eq("user_id", assignment.user_id);
@@ -293,15 +294,30 @@ async function loadAssignmentDetails(assignmentId: string) {
         mp => mp.module_id === module.id && mp.completed_at
       );
 
-      // Get quiz attempts for this module
+      // Get quiz attempts for this module with questions
       const moduleQuizAttempts = quizAttempts?.filter(
         qa => (qa.quizzes as any)?.module_id === module.id
-      ).map(qa => ({
-        score_pct: qa.score_pct,
-        passed: qa.passed,
-        answers: qa.answers,
-        created_at: qa.created_at
-      }));
+      ).map(qa => {
+        const quiz = qa.quizzes as any;
+        const questions = quiz?.questions || [];
+        const userAnswers = qa.answers || {};
+        
+        // Map questions with user's answers
+        const questionsWithAnswers = questions.map((q: any, index: number) => ({
+          question: q.question || `Question ${index + 1}`,
+          options: q.options || [],
+          correct_answer: q.correct_answer,
+          user_answer: userAnswers[`question_${index}`] || userAnswers[index] || null
+        }));
+        
+        return {
+          score_pct: qa.score_pct,
+          passed: qa.passed,
+          answers: qa.answers,
+          created_at: qa.created_at,
+          questions_with_answers: questionsWithAnswers
+        };
+      });
 
       // Get all requirements for this module
       const moduleRequirements = allOnsiteRequirements?.filter(
