@@ -50,7 +50,8 @@ async function loadAssignmentDetails(assignmentId: string) {
         id,
         title,
         description,
-        valid_for_days
+        valid_for_days,
+        responsible_person
       )
     `)
     .eq("id", assignmentId)
@@ -216,33 +217,32 @@ async function loadAssignmentDetails(assignmentId: string) {
   // Get unique trainer IDs from requirement responses
   const trainerIds = [...new Set(requirementResponses?.map(rr => rr.trainer_id).filter(Boolean) || [])];
   
-  // Get unique creator IDs from course assignments
-  const creatorIds = [...new Set(courseAssignments?.map(ca => ca.created_by).filter(Boolean) || [])];
-  
-  // Combine all user IDs to fetch in one query
-  const allUserIds = [...new Set([...trainerIds, ...creatorIds])];
-  
-  // Fetch trainer/assessor and creator profiles
+  // Fetch trainer/assessor profiles
   const trainerProfilesMap = new Map();
-  const creatorProfilesMap = new Map();
-  
-  if (allUserIds.length > 0) {
-    const { data: userProfiles } = await supabase
+  if (trainerIds.length > 0) {
+    const { data: trainerProfiles } = await supabase
       .from("profiles")
-      .select("id, full_name, email")
-      .in("id", allUserIds);
+      .select("id, full_name")
+      .in("id", trainerIds);
     
-    userProfiles?.forEach(profile => {
-      if (trainerIds.includes(profile.id)) {
-        trainerProfilesMap.set(profile.id, profile.full_name);
-      }
-      if (creatorIds.includes(profile.id)) {
-        creatorProfilesMap.set(profile.id, {
-          name: profile.full_name,
-          email: profile.email
-        });
-      }
+    trainerProfiles?.forEach(profile => {
+      trainerProfilesMap.set(profile.id, profile.full_name);
     });
+  }
+  
+  // Get responsible person details if it exists
+  let responsiblePersonDetails = null;
+  const authorisation = assignment.authorisations as any;
+  if (authorisation.responsible_person) {
+    const { data: responsiblePerson } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, department")
+      .eq("id", authorisation.responsible_person)
+      .single();
+    
+    if (responsiblePerson) {
+      responsiblePersonDetails = responsiblePerson;
+    }
   }
 
   // Map course assignments by course_id
@@ -405,17 +405,12 @@ async function loadAssignmentDetails(assignmentId: string) {
       equipment_responses: courseEquipmentResponses.length
     });
     
-    // Get creator information for this course assignment
-    const creatorInfo = assignment?.created_by ? creatorProfilesMap.get(assignment.created_by) : null;
-    
     return {
       course_id: ac.course_id,
       course_title: courseData.title,
       course_description: courseData.description,
       valid_for_months: courseData.valid_for_months,
       assignment: assignment,
-      assignedBy: creatorInfo,
-      assignedAt: assignment?.assigned_at,
       modules: moduleDetails
     };
   });
@@ -441,7 +436,8 @@ async function loadAssignmentDetails(assignmentId: string) {
     assignment,
     profile,
     courses: coursesWithDetails,
-    documents: documentsWithContext
+    documents: documentsWithContext,
+    responsiblePerson: responsiblePersonDetails
   };
 }
 
@@ -598,7 +594,7 @@ export default async function ReviewAssignmentPage({ params }: Props) {
   }
 
   const resolvedParams = await params;
-  const { assignment, profile, courses, documents } = await loadAssignmentDetails(resolvedParams.assignmentId);
+  const { assignment, profile, courses, documents, responsiblePerson } = await loadAssignmentDetails(resolvedParams.assignmentId);
 
   const authorisation = assignment.authorisations as any;
 
@@ -660,36 +656,22 @@ export default async function ReviewAssignmentPage({ params }: Props) {
           </p>
         </div>
         
-        {/* Course Creators/Assigners */}
+        {/* Responsible Person */}
         <div className="mt-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Course Assignments Created By</label>
-          <div className="space-y-2">
-            {courses.map((course) => {
-              const assignedBy = course.assignedBy;
-              const assignedAt = course.assignedAt;
-              
-              return (
-                <div key={course.course_id} className="flex items-start space-x-2 text-sm">
-                  <span className="font-medium text-gray-900">{course.course_title}:</span>
-                  {assignedBy ? (
-                    <div className="flex-1">
-                      <span className="text-gray-700">
-                        {assignedBy.name || 'Unknown'} 
-                        {assignedBy.email && <span className="text-gray-500"> ({assignedBy.email})</span>}
-                      </span>
-                      {assignedAt && (
-                        <span className="text-gray-500 ml-2">
-                          on {new Date(assignedAt).toLocaleDateString()}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-gray-500 italic">Not recorded</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <label className="block text-sm font-medium text-gray-700">Responsible Person</label>
+          {responsiblePerson ? (
+            <div className="mt-1 text-sm text-gray-900">
+              <p className="font-medium">{responsiblePerson.full_name || 'Unknown'}</p>
+              {responsiblePerson.email && (
+                <p className="text-gray-600">{responsiblePerson.email}</p>
+              )}
+              {responsiblePerson.department && (
+                <p className="text-gray-500">Department: {responsiblePerson.department}</p>
+              )}
+            </div>
+          ) : (
+            <p className="mt-1 text-sm text-gray-500 italic">No responsible person assigned</p>
+          )}
         </div>
       </div>
 

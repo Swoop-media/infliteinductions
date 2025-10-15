@@ -69,6 +69,49 @@ async function loadAuth(authId: string) {
   return { user, auth: data, err: null as string | null };
 }
 
+/** Load users with Senior Person or Admin roles */
+async function loadResponsiblePersons() {
+  "use server";
+  const supabase = await createSupabaseServer();
+  
+  // Get all users with Senior Person or Admin roles
+  const { data: roleAssignments, error } = await supabase
+    .from("role_assignments")
+    .select(`
+      user_id,
+      role,
+      profiles!inner(
+        id,
+        full_name,
+        email
+      )
+    `)
+    .in("role", ["Senior Person", "Admin"])
+    .order("role", { ascending: true });
+  
+  if (error) {
+    console.error("Error loading responsible persons:", error);
+    return [];
+  }
+  
+  // Transform the data to a simple format
+  const users = (roleAssignments || []).map(assignment => ({
+    id: assignment.user_id,
+    name: (assignment.profiles as any).full_name || 'Unknown',
+    email: (assignment.profiles as any).email || '',
+    role: assignment.role
+  }));
+  
+  // Remove duplicates in case someone has multiple roles
+  const uniqueUsers = Array.from(
+    new Map(users.map(u => [u.id, u])).values()
+  );
+  
+  return uniqueUsers.sort((a, b) => 
+    (a.name || '').localeCompare(b.name || '')
+  );
+}
+
 /** Chosen courses for this authorisation (with joined course fields) */
 async function loadChosenCourses(authId: string) {
   "use server";
@@ -126,6 +169,7 @@ async function saveDetailsAction(form: FormData) {
   const validForStr = String(form.get("valid_for_days") || "");
   const retakeReminderStr = String(form.get("retake_reminder_days") || "");
   const department = String(form.get("department_select") || "").trim() || null;
+  const responsiblePerson = String(form.get("responsible_person") || "").trim() || null;
   
   const tagsCsv = String(form.get("tags_csv") || "").trim();
   const tags =
@@ -133,7 +177,7 @@ async function saveDetailsAction(form: FormData) {
       ? []
       : Array.from(new Set(tagsCsv.split(",").map((t) => t.trim()).filter(Boolean)));
 
-  const patch: Record<string, any> = { description, department, tags };
+  const patch: Record<string, any> = { description, department, tags, responsible_person: responsiblePerson };
   if (title) patch.title = title;
   if (validForStr !== "") {
     const n = Number(validForStr);
@@ -360,10 +404,14 @@ export default async function Page(props: {
     );
   }
 
-  // Load departments for details and courses tabs
+  // Load departments and responsible persons for details and courses tabs
   let allDepartments: string[] = [];
+  let responsiblePersons: any[] = [];
   if (activeTab === "details" || activeTab === "courses") {
     allDepartments = await loadAllDepartments();
+  }
+  if (activeTab === "details") {
+    responsiblePersons = await loadResponsiblePersons();
   }
 
   // Preload depending on tab
@@ -440,7 +488,7 @@ export default async function Page(props: {
       </div>
 
       <div className="rounded-xl border p-4">
-        {activeTab === "details" && <DetailsTab auth={auth} allDepartments={allDepartments} />}
+        {activeTab === "details" && <DetailsTab auth={auth} allDepartments={allDepartments} responsiblePersons={responsiblePersons} />}
 
         {activeTab === "courses" && (
           <CoursesTab authId={id} chosen={chosenCourses} results={searchResults} search={search} allDepartments={allDepartments} />
@@ -479,7 +527,7 @@ async function loadAllDepartments() {
   return departments?.map(dept => dept.name).filter(Boolean) || [];
 }
 
-function DetailsTab({ auth, allDepartments }: { auth: any; allDepartments: string[] }) {
+function DetailsTab({ auth, allDepartments, responsiblePersons }: { auth: any; allDepartments: string[]; responsiblePersons: any[] }) {
   const tagsCsv = Array.isArray(auth.tags) ? (auth.tags as string[]).join(", ") : "";
   return (
     <div className="space-y-8">
@@ -541,6 +589,25 @@ function DetailsTab({ auth, allDepartments }: { auth: any; allDepartments: strin
             <option value="">— Select department —</option>
             {allDepartments.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
+        </div>
+
+        <div className="grid gap-2">
+          <label className="text-sm">Responsible Person</label>
+          <select
+            name="responsible_person"
+            defaultValue={auth.responsible_person ?? ""}
+            className="w-full rounded-md border px-3 py-2"
+          >
+            <option value="">— Select responsible person —</option>
+            {responsiblePersons.map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.name} ({person.email}) - {person.role}
+              </option>
+            ))}
+          </select>
+          <div className="text-xs text-gray-500">
+            Select a senior person or admin who is responsible for this authorisation.
+          </div>
         </div>
 
         <div className="grid gap-1">
