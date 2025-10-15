@@ -23,7 +23,7 @@ export function calculateAuthorizationExpiry(
   // 1. Authorization validity period
   if (authValidForDays && authValidForDays > 0) {
     const authExpiry = new Date(approvalDate);
-    authExpiry.setDate(authExpiry.getDate() + authValidForDays);
+    authExpiry.setUTCDate(authExpiry.getUTCDate() + authValidForDays);
     expiryDates.push(authExpiry);
   }
   
@@ -41,7 +41,7 @@ export function calculateAuthorizationExpiry(
   courses.forEach(course => {
     if (course.valid_for_months && course.valid_for_months > 0) {
       const courseExpiry = new Date(approvalDate);
-      courseExpiry.setMonth(courseExpiry.getMonth() + course.valid_for_months);
+      courseExpiry.setUTCMonth(courseExpiry.getUTCMonth() + course.valid_for_months);
       expiryDates.push(courseExpiry);
     }
   });
@@ -55,11 +55,12 @@ export function calculateAuthorizationExpiry(
 }
 
 export function formatExpiryDate(date: Date): string {
+  // Use UTC methods to ensure consistent rendering between server and client
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const month = months[date.getMonth()];
-  const day = date.getDate();
-  const year = date.getFullYear();
+  const month = months[date.getUTCMonth()];
+  const day = date.getUTCDate();
+  const year = date.getUTCFullYear();
   
   return `${month} ${day}, ${year}`;
 }

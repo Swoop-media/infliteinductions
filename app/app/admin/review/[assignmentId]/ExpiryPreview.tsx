@@ -26,7 +26,9 @@ export default function ExpiryPreview({
   courses 
 }: ExpiryPreviewProps) {
   const expiryInfo = useMemo(() => {
-    const approvalDate = new Date(); // Today's date as approval date
+    // Use UTC date to ensure consistency between server and client
+    const now = new Date();
+    const approvalDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     
     const expiryDate = calculateAuthorizationExpiry(
       approvalDate,
@@ -48,7 +50,7 @@ export default function ExpiryPreview({
     // Check authorization validity
     if (authValidForDays && authValidForDays > 0) {
       const authExpiry = new Date(approvalDate);
-      authExpiry.setDate(authExpiry.getDate() + authValidForDays);
+      authExpiry.setUTCDate(authExpiry.getUTCDate() + authValidForDays);
       if (Math.abs(authExpiry.getTime() - expiryDate.getTime()) < 86400000) { // within 1 day
         expiryReasons.push(`Authorization validity (${authValidForDays} days)`);
       }
@@ -68,7 +70,7 @@ export default function ExpiryPreview({
     courses.forEach(course => {
       if (course.valid_for_months && course.valid_for_months > 0) {
         const courseExpiry = new Date(approvalDate);
-        courseExpiry.setMonth(courseExpiry.getMonth() + course.valid_for_months);
+        courseExpiry.setUTCMonth(courseExpiry.getUTCMonth() + course.valid_for_months);
         if (Math.abs(courseExpiry.getTime() - expiryDate.getTime()) < 86400000) { // within 1 day
           expiryReasons.push(`Course: ${course.course_title} (${course.valid_for_months} months)`);
         }
