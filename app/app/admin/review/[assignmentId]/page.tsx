@@ -88,10 +88,17 @@ async function loadAssignmentDetails(assignmentId: string) {
 
   const courseIds = (authCourses || []).map(ac => ac.course_id);
 
-  // Get user's course assignments for these courses
+  // Get user's course assignments for these courses with creator information
   const { data: courseAssignments, error: courseAssignError } = await supabase
     .from("course_assignments")
-    .select("id, course_id, assignment_status, completed_at")
+    .select(`
+      id, 
+      course_id, 
+      assignment_status, 
+      completed_at,
+      created_by,
+      assigned_at
+    `)
     .eq("user_id", assignment.user_id)
     .eq("role", "trainee")
     .in("course_id", courseIds);
@@ -209,16 +216,32 @@ async function loadAssignmentDetails(assignmentId: string) {
   // Get unique trainer IDs from requirement responses
   const trainerIds = [...new Set(requirementResponses?.map(rr => rr.trainer_id).filter(Boolean) || [])];
   
-  // Fetch trainer/assessor profiles
+  // Get unique creator IDs from course assignments
+  const creatorIds = [...new Set(courseAssignments?.map(ca => ca.created_by).filter(Boolean) || [])];
+  
+  // Combine all user IDs to fetch in one query
+  const allUserIds = [...new Set([...trainerIds, ...creatorIds])];
+  
+  // Fetch trainer/assessor and creator profiles
   const trainerProfilesMap = new Map();
-  if (trainerIds.length > 0) {
-    const { data: trainerProfiles } = await supabase
+  const creatorProfilesMap = new Map();
+  
+  if (allUserIds.length > 0) {
+    const { data: userProfiles } = await supabase
       .from("profiles")
-      .select("id, full_name")
-      .in("id", trainerIds);
+      .select("id, full_name, email")
+      .in("id", allUserIds);
     
-    trainerProfiles?.forEach(profile => {
-      trainerProfilesMap.set(profile.id, profile.full_name);
+    userProfiles?.forEach(profile => {
+      if (trainerIds.includes(profile.id)) {
+        trainerProfilesMap.set(profile.id, profile.full_name);
+      }
+      if (creatorIds.includes(profile.id)) {
+        creatorProfilesMap.set(profile.id, {
+          name: profile.full_name,
+          email: profile.email
+        });
+      }
     });
   }
 
@@ -381,12 +404,18 @@ async function loadAssignmentDetails(assignmentId: string) {
       equipment_count: equipmentRequirements.length,
       equipment_responses: courseEquipmentResponses.length
     });
+    
+    // Get creator information for this course assignment
+    const creatorInfo = assignment?.created_by ? creatorProfilesMap.get(assignment.created_by) : null;
+    
     return {
       course_id: ac.course_id,
       course_title: courseData.title,
       course_description: courseData.description,
       valid_for_months: courseData.valid_for_months,
       assignment: assignment,
+      assignedBy: creatorInfo,
+      assignedAt: assignment?.assigned_at,
       modules: moduleDetails
     };
   });
@@ -629,6 +658,38 @@ export default async function ReviewAssignmentPage({ params }: Props) {
           <p className="mt-1 text-sm text-gray-900">
             {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : "Not completed"}
           </p>
+        </div>
+        
+        {/* Course Creators/Assigners */}
+        <div className="mt-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Course Assignments Created By</label>
+          <div className="space-y-2">
+            {courses.map((course) => {
+              const assignedBy = course.assignedBy;
+              const assignedAt = course.assignedAt;
+              
+              return (
+                <div key={course.course_id} className="flex items-start space-x-2 text-sm">
+                  <span className="font-medium text-gray-900">{course.course_title}:</span>
+                  {assignedBy ? (
+                    <div className="flex-1">
+                      <span className="text-gray-700">
+                        {assignedBy.name || 'Unknown'} 
+                        {assignedBy.email && <span className="text-gray-500"> ({assignedBy.email})</span>}
+                      </span>
+                      {assignedAt && (
+                        <span className="text-gray-500 ml-2">
+                          on {new Date(assignedAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-500 italic">Not recorded</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
 
