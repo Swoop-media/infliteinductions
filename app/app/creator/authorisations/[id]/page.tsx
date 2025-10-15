@@ -74,40 +74,53 @@ async function loadResponsiblePersons() {
   "use server";
   const supabase = await createSupabaseServer();
   
-  // Get all users with Senior Person or Admin roles
-  const { data: roleAssignments, error } = await supabase
+  // First get user IDs with Senior Person or Admin roles
+  const { data: roleAssignments, error: rolesError } = await supabase
     .from("user_roles")
-    .select(`
-      user_id,
-      role_name,
-      profiles!inner(
-        id,
-        full_name,
-        email
-      )
-    `)
-    .in("role_name", ["Senior Person", "Admin"])
-    .order("role_name", { ascending: true });
+    .select("user_id, role_name")
+    .in("role_name", ["Senior Person", "Admin"]);
   
-  if (error) {
-    console.error("Error loading responsible persons:", error);
+  if (rolesError) {
+    console.error("Error loading roles:", rolesError);
     return [];
   }
   
+  if (!roleAssignments || roleAssignments.length === 0) {
+    return [];
+  }
+  
+  // Get unique user IDs
+  const userIds = [...new Set(roleAssignments.map(r => r.user_id))];
+  
+  // Then get the profiles for those users
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", userIds);
+  
+  if (profilesError) {
+    console.error("Error loading profiles:", profilesError);
+    return [];
+  }
+  
+  // Create a map of user roles
+  const userRolesMap = new Map();
+  roleAssignments.forEach(assignment => {
+    if (!userRolesMap.has(assignment.user_id)) {
+      userRolesMap.set(assignment.user_id, []);
+    }
+    userRolesMap.get(assignment.user_id).push(assignment.role_name);
+  });
+  
   // Transform the data to a simple format
-  const users = (roleAssignments || []).map(assignment => ({
-    id: assignment.user_id,
-    name: (assignment.profiles as any).full_name || 'Unknown',
-    email: (assignment.profiles as any).email || '',
-    role: assignment.role_name
+  const users = (profiles || []).map(profile => ({
+    id: profile.id,
+    name: profile.full_name || 'Unknown',
+    email: profile.email || '',
+    role: userRolesMap.get(profile.id)?.join(', ') || 'Unknown'
   }));
   
-  // Remove duplicates in case someone has multiple roles
-  const uniqueUsers = Array.from(
-    new Map(users.map(u => [u.id, u])).values()
-  );
-  
-  return uniqueUsers.sort((a, b) => 
+  return users.sort((a, b) => 
     (a.name || '').localeCompare(b.name || '')
   );
 }
