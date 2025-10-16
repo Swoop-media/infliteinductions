@@ -78,24 +78,35 @@ export default function ContinueToNextCourseButton({
     return null;
   }
 
-  // Only hide if we've finished loading and found nothing
-  // Keep showing while loading or if we have a destination
-  if (!loading && nextDestination.type === 'none' && !nextCourseInAuth) {
-    // Still show a helpful message for onsite modules
-    if (isModuleOnsite) {
-      return (
-        <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-sm text-gray-600">
-              Complete this onsite session to continue your training
+  // For onsite modules, always show a button to explore other courses
+  // Even if we don't have a specific next course from the API
+  if (isModuleOnsite && !loading && nextDestination.type === 'none' && !nextCourseInAuth) {
+    // Show a button to go back to profile to see other courses
+    return (
+      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <h4 className="font-medium text-blue-900">While waiting for your session...</h4>
+            <p className="text-sm text-blue-700">
+              View your other training courses
             </p>
           </div>
+          <button
+            onClick={() => router.push('/app/myprofile')}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium transition-colors"
+          >
+            View My Courses
+            <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
-      );
-    }
+      </div>
+    );
+  }
+  
+  // Only completely hide if not loading, no destination, and not an onsite module
+  if (!loading && nextDestination.type === 'none' && !nextCourseInAuth && !isModuleOnsite) {
     return null;
   }
 

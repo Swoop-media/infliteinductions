@@ -16,6 +16,8 @@ export async function POST(request: Request) {
       currentAuthorizationId?: string;
     };
 
+    console.log('Finding next course for:', { currentCourseId, currentAuthorizationId });
+
     // First, check if there are other courses in the current authorization
     if (currentAuthorizationId) {
       const { data: authCourses } = await supabase
@@ -30,7 +32,27 @@ export async function POST(request: Request) {
         .order('order_index', { ascending: true });
 
       if (authCourses && authCourses.length > 0) {
-        // Get all course assignments for this user
+        console.log('Authorization courses found:', authCourses.length);
+        console.log('Auth courses:', authCourses.map((ac: any) => ({ id: ac.course_id, title: ac.courses?.title })));
+        
+        // Find the current course index
+        const currentCourseIndex = authCourses.findIndex(
+          (ac: any) => ac.course_id === currentCourseId
+        );
+        console.log('Current course index:', currentCourseIndex);
+
+        // If we found the current course and there's a next one, return it
+        if (currentCourseIndex !== -1 && currentCourseIndex + 1 < authCourses.length) {
+          const nextCourse = authCourses[currentCourseIndex + 1] as any;
+          console.log('Next course found:', nextCourse.courses?.title);
+          return NextResponse.json({
+            type: 'course',
+            id: nextCourse.course_id,
+            title: nextCourse.courses?.title || 'Next Course'
+          });
+        }
+
+        // If we're at the last course, try to find an incomplete course in this authorization
         const { data: courseAssignments } = await supabase
           .from('course_assignments')
           .select(`
@@ -40,40 +62,20 @@ export async function POST(request: Request) {
           `)
           .eq('user_id', user.id);
 
-        // Find the next course that either:
-        // 1. Hasn't been started yet (no assignment)
-        // 2. Is in progress but not completed
-        // Skip the current course
         for (const authCourse of authCourses as any[]) {
           if (authCourse.course_id === currentCourseId) continue;
 
-          // Check if user has an assignment for this course
           const courseAssignment = courseAssignments?.find(
             (ca: any) => ca.course_id === authCourse.course_id
           );
 
-          // If no assignment or assignment is not completed, this is a valid next course
+          // If no assignment or assignment is not completed, suggest this course
           if (!courseAssignment || !courseAssignment.completed_at) {
-            // Get the first module to check if it's accessible
-            const { data: modules } = await supabase
-              .from('course_modules')
-              .select('id, type')
-              .eq('course_id', authCourse.course_id)
-              .order('order_index', { ascending: true })
-              .limit(1);
-
-            // Only suggest courses that have digital modules the user can work on
-            // Skip if the first module is onsite training/assessment
-            const firstModule = modules?.[0];
-            if (firstModule && 
-                firstModule.type !== 'onsite_training' && 
-                firstModule.type !== 'onsite_assessment') {
-              return NextResponse.json({
-                type: 'course',
-                id: authCourse.course_id,
-                title: authCourse.courses?.title || 'Next Course'
-              });
-            }
+            return NextResponse.json({
+              type: 'course',
+              id: authCourse.course_id,
+              title: authCourse.courses?.title || 'Next Course'
+            });
           }
         }
       }

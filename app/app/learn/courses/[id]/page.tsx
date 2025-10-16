@@ -733,6 +733,9 @@ export default async function LearnerCoursePage(props: {
   let authorizationContext = null;
   let nextCourseInAuth = null;
 
+  console.log('Authorization ID from URL:', authorizationId);
+  console.log('Course ID:', courseId);
+
   if (authorizationId) {
     // Load authorization details
     const { data: auth } = await supabase
@@ -754,9 +757,20 @@ export default async function LearnerCoursePage(props: {
         .order("order_index", { ascending: true });
 
       if (authCourses) {
+        console.log('Authorization courses:', authCourses.map(ac => ({ 
+          id: ac.course_id, 
+          title: ac.courses?.title 
+        })));
+        console.log('Current course ID:', courseId);
+        
         const currentIndex = authCourses.findIndex(ac => ac.course_id === courseId);
+        console.log('Current index:', currentIndex, 'Total courses:', authCourses.length);
+        
         if (currentIndex !== -1 && currentIndex + 1 < authCourses.length) {
           nextCourseInAuth = authCourses[currentIndex + 1];
+          console.log('Next course in auth:', nextCourseInAuth.courses?.title);
+        } else {
+          console.log('No next course - either last course or not found');
         }
 
         authorizationContext = {
