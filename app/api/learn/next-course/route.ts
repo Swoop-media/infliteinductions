@@ -67,10 +67,10 @@ export async function POST(request: Request) {
 
           const courseAssignment = courseAssignments?.find(
             (ca: any) => ca.course_id === authCourse.course_id
-          );
+          ) as any;
 
           // If no assignment or assignment is not completed, suggest this course
-          if (!courseAssignment || !courseAssignment.completed_at) {
+          if (!courseAssignment || !courseAssignment?.completed_at) {
             return NextResponse.json({
               type: 'course',
               id: authCourse.course_id,
@@ -127,10 +127,10 @@ export async function POST(request: Request) {
         // Check if user has an assignment for this course
         const courseAssignment = allCourseAssignments?.find(
           (ca: any) => ca.course_id === (authCourse as any).course_id
-        );
+        ) as any;
 
         // If no assignment or assignment is not completed, check if it's accessible
-        if (!courseAssignment || !courseAssignment.completed_at) {
+        if (!courseAssignment || !courseAssignment?.completed_at) {
           // Get the first module to check if it's accessible
           const { data: modules } = await supabase
             .from('course_modules')
@@ -140,10 +140,10 @@ export async function POST(request: Request) {
             .limit(1);
 
           // Only suggest courses that have digital modules the user can work on
-          const firstModule = modules?.[0];
+          const firstModule = modules?.[0] as any;
           if (firstModule && 
-              firstModule.type !== 'onsite_training' && 
-              firstModule.type !== 'onsite_assessment') {
+              firstModule?.type !== 'onsite_training' && 
+              firstModule?.type !== 'onsite_assessment') {
             return NextResponse.json({
               type: 'course',
               id: (authCourse as any).course_id,
@@ -199,10 +199,10 @@ export async function POST(request: Request) {
         .limit(1);
 
       // Only suggest courses that have digital modules the user can work on
-      const firstModule = modules?.[0];
+      const firstModule = modules?.[0] as any;
       if (firstModule && 
-          firstModule.type !== 'onsite_training' && 
-          firstModule.type !== 'onsite_assessment') {
+          firstModule?.type !== 'onsite_training' && 
+          firstModule?.type !== 'onsite_assessment') {
         return NextResponse.json({
           type: 'course',
           id: (courseAssign as any).course_id,
