@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import CompleteModuleButton from './CompleteModuleButton';
+import ContinueToNextCourseButton from './ContinueToNextCourseButton';
 import UnifiedVideoPlayer from "@/components/UnifiedVideoPlayer";
 import DocumentUploadBlock from './DocumentUploadBlock';
 import EquipmentFormBlock from '@/components/EquipmentFormBlock';
@@ -1260,6 +1261,17 @@ export default async function LearnerCoursePage(props: {
                             </div>
                           </div>
                         )}
+                        
+                        {/* Continue to Next Course button for onsite training */}
+                        {!preview && (
+                          <ContinueToNextCourseButton
+                            currentCourseId={courseId}
+                            authorizationId={authorizationId}
+                            nextCourseInAuth={nextCourseInAuth}
+                            isModuleOnsite={true}
+                            isCourseComplete={false}
+                          />
+                        )}
                       </div>
                     )}
 
@@ -1305,6 +1317,17 @@ export default async function LearnerCoursePage(props: {
                             </div>
                           </div>
                         )}
+                        
+                        {/* Continue to Next Course button for onsite assessment */}
+                        {!preview && (
+                          <ContinueToNextCourseButton
+                            currentCourseId={courseId}
+                            authorizationId={authorizationId}
+                            nextCourseInAuth={nextCourseInAuth}
+                            isModuleOnsite={true}
+                            isCourseComplete={false}
+                          />
+                        )}
                       </div>
                     )}
 
@@ -1340,7 +1363,13 @@ export default async function LearnerCoursePage(props: {
                                         Next Module →
                                       </Link>
                                     ) : (
-                                      <span className="text-sm text-green-600 font-medium">Course Complete! 🎉</span>
+                                      <ContinueToNextCourseButton
+                                        currentCourseId={courseId}
+                                        authorizationId={authorizationId}
+                                        nextCourseInAuth={nextCourseInAuth}
+                                        isModuleOnsite={false}
+                                        isCourseComplete={true}
+                                      />
                                     )
                                   ) : (
                                     <Link
@@ -1361,7 +1390,13 @@ export default async function LearnerCoursePage(props: {
                                         Next Module →
                                       </Link>
                                     ) : (
-                                      <span className="text-sm text-green-600 font-medium">Course Complete! 🎉</span>
+                                      <ContinueToNextCourseButton
+                                        currentCourseId={courseId}
+                                        authorizationId={authorizationId}
+                                        nextCourseInAuth={nextCourseInAuth}
+                                        isModuleOnsite={false}
+                                        isCourseComplete={true}
+                                      />
                                     )
                                   ) : (
                                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -1390,7 +1425,13 @@ export default async function LearnerCoursePage(props: {
                                         Next Module →
                                       </Link>
                                     ) : (
-                                      <span className="text-sm text-green-600 font-medium">Course Complete! 🎉</span>
+                                      <ContinueToNextCourseButton
+                                        currentCourseId={courseId}
+                                        authorizationId={authorizationId}
+                                        nextCourseInAuth={nextCourseInAuth}
+                                        isModuleOnsite={false}
+                                        isCourseComplete={true}
+                                      />
                                     )
                                   ) : (
                                     <CompleteModuleButton
