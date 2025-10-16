@@ -22,7 +22,7 @@ export default function ContinueToNextCourseButton({
   isModuleOnsite,
   isCourseComplete
 }: ContinueToNextCourseButtonProps) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start as loading
   const [nextDestination, setNextDestination] = useState<{
     type: 'course' | 'authorization' | 'none';
     id?: string;
@@ -34,6 +34,8 @@ export default function ContinueToNextCourseButton({
     // Only check for next destination if we need to show the button
     if (isModuleOnsite || isCourseComplete) {
       checkNextDestination();
+    } else {
+      setLoading(false);
     }
   }, [currentCourseId, authorizationId, isModuleOnsite, isCourseComplete]);
 
@@ -76,8 +78,24 @@ export default function ContinueToNextCourseButton({
     return null;
   }
 
-  // Don't show if there's no next destination
-  if (nextDestination.type === 'none' && !loading && !nextCourseInAuth) {
+  // Only hide if we've finished loading and found nothing
+  // Keep showing while loading or if we have a destination
+  if (!loading && nextDestination.type === 'none' && !nextCourseInAuth) {
+    // Still show a helpful message for onsite modules
+    if (isModuleOnsite) {
+      return (
+        <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p className="text-sm text-gray-600">
+              Complete this onsite session to continue your training
+            </p>
+          </div>
+        </div>
+      );
+    }
     return null;
   }
 
