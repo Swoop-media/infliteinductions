@@ -333,8 +333,8 @@ function formatTeamsText(
         .join("\n");
 
     case "document_expiry_daily":
-      const daysLeft = payload?.daysUntilExpiry || 0;
-      const urgency = daysLeft <= 0 ? "🚨 Document EXPIRED" : `🚨 Document expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+      const daysRemaining = payload?.daysUntilExpiry || 0;
+      const urgency = daysRemaining <= 0 ? "🚨 Document EXPIRED" : `🚨 Document expires in ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''}`;
       return [
         urgency,
         payload?.documentName ? `• Document: ${payload.documentName}` : "",
