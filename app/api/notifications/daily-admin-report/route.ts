@@ -69,37 +69,18 @@ export async function POST(request: NextRequest) {
         id,
         authorisation_id,
         user_id,
-        approved_at,
-        valid_for_days
+        expires_at
       `)
       .eq("assignment_status", "approved")
-      .not("valid_for_days", "is", null)
-      .not("approved_at", "is", null);
+      .not("expires_at", "is", null)
+      .order("expires_at", { ascending: true })
+      .limit(25);
 
-    // Calculate expiry dates for authorizations and sort to get next 25
+    // Get authorisations and profiles for the next 25
     let authDetails = [];
     if (authAssignments && authAssignments.length > 0) {
-      // Calculate expiry dates for all assignments
-      const assignmentsWithExpiry = authAssignments.map(assignment => {
-        const approvedDate = new Date(assignment.approved_at);
-        const expiryDate = new Date(approvedDate);
-        expiryDate.setDate(expiryDate.getDate() + assignment.valid_for_days);
-        return {
-          ...assignment,
-          expires_at: expiryDate.toISOString()
-        };
-      });
-      
-      // Sort by expiry date and take first 25
-      assignmentsWithExpiry.sort((a, b) => 
-        new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime()
-      );
-      
-      const next25 = assignmentsWithExpiry.slice(0, 25);
-      
-      // Get authorisations and profiles for the next 25
-      const authIds = [...new Set(next25.map(a => a.authorisation_id))];
-      const userIds = [...new Set(next25.map(a => a.user_id))];
+      const authIds = [...new Set(authAssignments.map(a => a.authorisation_id))];
+      const userIds = [...new Set(authAssignments.map(a => a.user_id))];
       
       const { data: auths } = await supabase
         .from("authorisations")
@@ -114,7 +95,7 @@ export async function POST(request: NextRequest) {
       const authMap = new Map(auths?.map(a => [a.id, a]) || []);
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
       
-      authDetails = next25.map(exp => ({
+      authDetails = authAssignments.map(exp => ({
         ...exp,
         authorisations: authMap.get(exp.authorisation_id),
         profiles: profileMap.get(exp.user_id)
