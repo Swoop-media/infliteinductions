@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Fetch all authorization assignments with expiry dates
+    // Fetch all authorization assignments with approved dates and valid_for_days
     const { data: assignments, error } = await supabase
       .from("authorisation_assignments")
       .select(`
@@ -39,11 +39,12 @@ export async function POST(request: NextRequest) {
         user_id,
         authorisation_id,
         assignment_status,
-        expires_at
+        approved_at,
+        valid_for_days
       `)
       .eq("assignment_status", "approved")
-      .not("expires_at", "is", null)
-      .order("expires_at", { ascending: true });
+      .not("valid_for_days", "is", null)
+      .not("approved_at", "is", null);
     
     // Get authorizations separately
     const authIds = [...new Set((assignments || []).map(a => a.authorisation_id))];
@@ -75,7 +76,10 @@ export async function POST(request: NextRequest) {
     let notificationsRetakeReminder = 0;
 
     for (const assignment of assignments || []) {
-      const expiryDate = new Date(assignment.expires_at);
+      // Calculate expiry date from approved_at + valid_for_days
+      const approvedDate = new Date(assignment.approved_at);
+      const expiryDate = new Date(approvedDate);
+      expiryDate.setDate(expiryDate.getDate() + assignment.valid_for_days);
       expiryDate.setHours(0, 0, 0, 0);
       
       const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -166,4 +170,9 @@ export async function POST(request: NextRequest) {
       details: error.message 
     }, { status: 500 });
   }
+}
+
+export async function GET(request: NextRequest) {
+  // Allow GET for testing
+  return POST(request);
 }

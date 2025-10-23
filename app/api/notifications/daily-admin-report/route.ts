@@ -30,9 +30,6 @@ export async function POST(request: NextRequest) {
     const supabase = supabaseAdmin();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    const thirtyDaysFromNow = new Date(today);
-    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
     // Get all admin users
     const { data: adminRoles, error: adminError } = await supabase
@@ -65,26 +62,44 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Fetch upcoming authorization expiries (next 50)
-    const { data: authExpiries, error: authError } = await supabase
+    // Fetch upcoming authorization expiries (next 25 regardless of proximity)
+    const { data: authAssignments, error: authError } = await supabase
       .from("authorisation_assignments")
       .select(`
         id,
-        expires_at,
         authorisation_id,
-        user_id
+        user_id,
+        approved_at,
+        valid_for_days
       `)
       .eq("assignment_status", "approved")
-      .not("expires_at", "is", null)
-      .lte("expires_at", thirtyDaysFromNow.toISOString())
-      .order("expires_at", { ascending: true })
-      .limit(50);
+      .not("valid_for_days", "is", null)
+      .not("approved_at", "is", null);
 
-    // Get authorisations and profiles for auth expiries
+    // Calculate expiry dates for authorizations and sort to get next 25
     let authDetails = [];
-    if (authExpiries && authExpiries.length > 0) {
-      const authIds = [...new Set(authExpiries.map(a => a.authorisation_id))];
-      const userIds = [...new Set(authExpiries.map(a => a.user_id))];
+    if (authAssignments && authAssignments.length > 0) {
+      // Calculate expiry dates for all assignments
+      const assignmentsWithExpiry = authAssignments.map(assignment => {
+        const approvedDate = new Date(assignment.approved_at);
+        const expiryDate = new Date(approvedDate);
+        expiryDate.setDate(expiryDate.getDate() + assignment.valid_for_days);
+        return {
+          ...assignment,
+          expires_at: expiryDate.toISOString()
+        };
+      });
+      
+      // Sort by expiry date and take first 25
+      assignmentsWithExpiry.sort((a, b) => 
+        new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime()
+      );
+      
+      const next25 = assignmentsWithExpiry.slice(0, 25);
+      
+      // Get authorisations and profiles for the next 25
+      const authIds = [...new Set(next25.map(a => a.authorisation_id))];
+      const userIds = [...new Set(next25.map(a => a.user_id))];
       
       const { data: auths } = await supabase
         .from("authorisations")
@@ -99,7 +114,7 @@ export async function POST(request: NextRequest) {
       const authMap = new Map(auths?.map(a => [a.id, a]) || []);
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
       
-      authDetails = authExpiries.map(exp => ({
+      authDetails = next25.map(exp => ({
         ...exp,
         authorisations: authMap.get(exp.authorisation_id),
         profiles: profileMap.get(exp.user_id)
@@ -110,7 +125,7 @@ export async function POST(request: NextRequest) {
       console.error("Error fetching authorization expiries:", authError);
     }
 
-    // Fetch upcoming document expiries (next 50)
+    // Fetch upcoming document expiries (next 25 regardless of proximity)
     const { data: docExpiries, error: docError } = await supabase
       .from("learner_documents")
       .select(`
@@ -120,9 +135,8 @@ export async function POST(request: NextRequest) {
         user_id
       `)
       .not("expires_on", "is", null)
-      .lte("expires_on", thirtyDaysFromNow.toISOString())
       .order("expires_on", { ascending: true })
-      .limit(50);
+      .limit(25);
     
     // Get profiles for document expiries
     let docDetails = [];
