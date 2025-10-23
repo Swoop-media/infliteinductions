@@ -132,126 +132,186 @@ export default function NotificationsBell() {
 }
 
 function labelFor(type: string, p: any) {
-  // Helper to get course title
+  // Helper functions to extract data
   const getCourseTitle = () => p?.courseTitle || p?.course_title || p?.course_name || "";
   const getAuthTitle = () => p?.authorizationTitle || p?.authorization_title || "";
-  const getLearnerName = () => p?.learnerName || p?.learner_name || p?.learner_email || "";
+  const getLearnerInfo = () => {
+    const name = p?.learnerName || p?.learner_name || "";
+    const email = p?.learner_email || "";
+    if (name && email) return `${name} (${email})`;
+    if (name) return name;
+    if (email) return email;
+    return "";
+  };
   
   switch (type) {
     case "authorisation_pending_approval":
     case "authorization_pending_approval": {
       const authTitle = getAuthTitle();
-      const learner = getLearnerName();
-      const parts = ["🔔 Authorization pending approval"];
-      if (authTitle) parts.push(`: ${authTitle}`);
-      if (learner) parts.push(` (Learner: ${learner})`);
-      return parts.join("");
+      const learner = getLearnerInfo();
+      let message = "🔔 Authorization pending approval";
+      if (authTitle) message += `: ${authTitle}`;
+      if (learner) message += ` - Learner: ${learner}`;
+      return message;
     }
     
     case "enrolment_request": {
       const course = getCourseTitle();
-      const learner = getLearnerName();
-      const parts = ["📥 Enrollment request"];
-      if (course) parts.push(`: ${course}`);
-      if (learner) parts.push(` (from ${learner})`);
-      return parts.join("");
+      const learner = getLearnerInfo();
+      let message = "📥 Enrollment request";
+      if (course) message += `: ${course}`;
+      if (learner) message += ` - From: ${learner}`;
+      return message;
     }
     
     case "enrolment_approved": {
       const course = getCourseTitle();
-      return course ? `✅ Enrollment approved: ${course}` : "✅ Enrollment approved";
+      const learner = getLearnerInfo();
+      let message = "✅ Enrollment approved";
+      if (course) message += `: ${course}`;
+      if (learner) message += ` - For: ${learner}`;
+      return message;
     }
     
     case "enrolment_revoked": {
       const course = getCourseTitle();
-      return course ? `⚠️ Enrollment revoked: ${course}` : "⚠️ Enrollment revoked";
+      const learner = getLearnerInfo();
+      let message = "⚠️ Enrollment revoked";
+      if (course) message += `: ${course}`;
+      if (learner) message += ` - For: ${learner}`;
+      return message;
     }
     
     case "authorization_approved": {
       const authTitle = getAuthTitle();
-      return authTitle ? `✅ Authorization approved: ${authTitle}` : "✅ Authorization approved";
+      const learner = getLearnerInfo();
+      let message = "✅ Authorization approved";
+      if (authTitle) message += `: ${authTitle}`;
+      if (learner) message += ` - For: ${learner}`;
+      return message;
     }
     
     case "authorization_revoked": {
       const authTitle = getAuthTitle();
-      return authTitle ? `⚠️ Authorization revoked: ${authTitle}` : "⚠️ Authorization revoked";
+      const learner = getLearnerInfo();
+      let message = "⚠️ Authorization revoked";
+      if (authTitle) message += `: ${authTitle}`;
+      if (learner) message += ` - For: ${learner}`;
+      return message;
     }
     
     case "course_assigned": {
       const course = getCourseTitle();
-      return course ? `📚 Course assigned: ${course}` : "📚 Course assigned";
+      const learner = getLearnerInfo();
+      let message = "📚 Course assigned";
+      if (course) message += `: ${course}`;
+      if (learner) message += ` - To: ${learner}`;
+      return message;
     }
     
     case "authorization_assigned": {
       const authTitle = getAuthTitle();
-      return authTitle ? `📋 Authorization assigned: ${authTitle}` : "📋 Authorization assigned";
+      const learner = getLearnerInfo();
+      let message = "📋 Authorization assigned";
+      if (authTitle) message += `: ${authTitle}`;
+      if (learner) message += ` - To: ${learner}`;
+      return message;
     }
     
     case "quiz_passed": {
       const course = getCourseTitle();
       const score = p?.score;
-      const parts = ["🎉 Quiz passed"];
-      if (course) parts.push(`: ${course}`);
-      if (score) parts.push(` (Score: ${score}%)`);
-      return parts.join("");
+      const learner = getLearnerInfo();
+      let message = "🎉 Quiz passed";
+      if (course) message += `: ${course}`;
+      if (score) message += ` (Score: ${score}%)`;
+      if (learner) message += ` - By: ${learner}`;
+      return message;
     }
     
     case "role_granted": {
       const role = p?.role_name || p?.roleName || "";
-      return role ? `👤 Role granted: ${role}` : "👤 Role granted";
+      const targetUser = p?.targetUserName || p?.target_user_name || "";
+      let message = "👤 Role granted";
+      if (role) message += `: ${role}`;
+      if (targetUser) message += ` - To: ${targetUser}`;
+      return message;
     }
     
     case "role_revoked": {
       const role = p?.role_name || p?.roleName || "";
-      return role ? `👤 Role revoked: ${role}` : "👤 Role revoked";
+      const targetUser = p?.targetUserName || p?.target_user_name || "";
+      let message = "👤 Role revoked";
+      if (role) message += `: ${role}`;
+      if (targetUser) message += ` - From: ${targetUser}`;
+      return message;
     }
     
     case "onsite_training_ready": {
       const course = getCourseTitle();
-      const learner = getLearnerName();
-      const parts = ["🎯 Ready for onsite training"];
-      if (course) parts.push(`: ${course}`);
-      if (learner) parts.push(` (${learner})`);
-      return parts.join("");
+      const learner = getLearnerInfo();
+      let message = "🎯 Ready for onsite training";
+      if (course) message += `: ${course}`;
+      if (learner) message += ` - Learner: ${learner}`;
+      return message;
     }
     
     case "onsite_assessment_ready": {
       const course = getCourseTitle();
-      const learner = getLearnerName();
-      const parts = ["📝 Ready for onsite assessment"];
-      if (course) parts.push(`: ${course}`);
-      if (learner) parts.push(` (${learner})`);
-      return parts.join("");
+      const learner = getLearnerInfo();
+      let message = "📝 Ready for onsite assessment";
+      if (course) message += `: ${course}`;
+      if (learner) message += ` - Learner: ${learner}`;
+      return message;
     }
     
     case "course_expiry_reminder": {
       const course = getCourseTitle();
-      const days = p?.daysUntilExpiry || 0;
-      const parts = [`⏰ Course expiring in ${days} day${days !== 1 ? 's' : ''}`];
-      if (course) parts.push(`: ${course}`);
-      return parts.join("");
+      const daysLeft = p?.daysUntilExpiry;
+      const learner = getLearnerInfo();
+      let message = "⏰ Course expiring soon";
+      if (daysLeft !== undefined) message = `⏰ Course expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+      if (course) message += `: ${course}`;
+      if (learner) message += ` - For: ${learner}`;
+      return message;
     }
     
     case "course_expired": {
       const course = getCourseTitle();
-      const days = p?.daysOverdue || 0;
-      const parts = [`🚨 Course expired${days > 0 ? ` ${days} day${days !== 1 ? 's' : ''} ago` : ""}`];
-      if (course) parts.push(`: ${course}`);
-      return parts.join("");
+      const daysOverdue = p?.daysOverdue;
+      const learner = getLearnerInfo();
+      let message = "🚨 Course expired";
+      if (daysOverdue) message += ` ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''} ago`;
+      if (course) message += `: ${course}`;
+      if (learner) message += ` - For: ${learner}`;
+      return message;
     }
     
     case "issue_report": {
       const reporter = p?.reporter_name || p?.reporterName || "";
-      const message = p?.message || "";
-      const parts = ["🚨 Issue reported"];
-      if (reporter) parts.push(` by ${reporter}`);
-      if (message) parts.push(`: ${message.substring(0, 100)}${message.length > 100 ? "..." : ""}`);
-      return parts.join("");
+      const reporterEmail = p?.reporter_email || "";
+      const message_text = p?.message || "";
+      let message = "🚨 Issue reported";
+      if (reporter && reporterEmail) {
+        message += ` by ${reporter} (${reporterEmail})`;
+      } else if (reporter) {
+        message += ` by ${reporter}`;
+      } else if (reporterEmail) {
+        message += ` by ${reporterEmail}`;
+      }
+      if (message_text) {
+        message += `: "${message_text.substring(0, 100)}${message_text.length > 100 ? '...' : ''}"`;
+      }
+      return message;
     }
     
     case "status_change": {
       const details = p?.details || p?.status || "";
-      return details ? `📊 Status changed: ${details}` : "📊 Status changed";
+      const learner = getLearnerInfo();
+      let message = "📊 Status changed";
+      if (details) message += `: ${details}`;
+      if (learner) message += ` - For: ${learner}`;
+      return message;
     }
     
     case "course_published": {
