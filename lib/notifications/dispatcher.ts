@@ -19,19 +19,34 @@ function supabaseAdmin() {
 }
 
 export type NotificationType =
-  | "enrolment_request"
-  | "enrolment_approved"
-  | "enrolment_revoked"
+  | "enrolment_request" // OBSOLETE - kept for backwards compatibility
+  | "enrolment_approved" // OBSOLETE - kept for backwards compatibility
+  | "enrolment_revoked" // OBSOLETE - kept for backwards compatibility
   | "course_assigned"
   | "course_updated"
   | "authorization_assigned"
   | "authorization_approved"
   | "authorization_revoked"
+  | "authorization_expired"
+  | "authorization_published"
   | "authorisation_pending_approval"
   | "role_granted"
   | "role_revoked"
   | "status_change"
   | "quiz_passed"
+  | "module_rejected"
+  | "retake_reminder"
+  | "document_expiry_30"
+  | "document_expiry_10"
+  | "document_expiry_daily"
+  | "daily_auth_expiry_report"
+  | "daily_doc_expiry_report"
+  | "onsite_training_ready"
+  | "onsite_assessment_ready"
+  | "course_completed"
+  | "course_expiry_reminder"
+  | "course_expired"
+  | "issue_report"
   | string;
 
 function formatTeamsText(
@@ -260,6 +275,97 @@ function formatTeamsText(
           .filter(Boolean)
           .join("\n");
       }
+
+    case "authorization_expired":
+      return [
+        "⚠️ Authorization expired",
+        payload?.authorizationTitle ? `• Authorization: ${payload.authorizationTitle}` : "",
+        payload?.expiredDate ? `• Expired on: ${payload.expiredDate}` : "",
+        payload?.daysOverdue ? `• Days overdue: ${payload.daysOverdue}` : "",
+        url ? `• Retake authorization: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "authorization_published":
+      return [
+        "📢 Authorization published",
+        payload?.authorizationTitle ? `• Authorization: ${payload.authorizationTitle}` : "",
+        payload?.publishedBy ? `• Published by: ${payload.publishedBy}` : "",
+        url ? `• View authorization: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "retake_reminder":
+      const type_label = payload?.type || "Item";
+      const days_until = payload?.daysUntilExpiry || 0;
+      return [
+        `⏰ Retake reminder - ${type_label} expiring soon`,
+        payload?.itemTitle ? `• ${type_label}: ${payload.itemTitle}` : "",
+        `• Expires in ${days_until} day${days_until !== 1 ? 's' : ''}`,
+        payload?.expiryDate ? `• Expiry date: ${payload.expiryDate}` : "",
+        url ? `• Retake now: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "document_expiry_30":
+      return [
+        "📄 Document expiring in 30 days",
+        payload?.documentName ? `• Document: ${payload.documentName}` : "",
+        payload?.expiryDate ? `• Expires on: ${payload.expiryDate}` : "",
+        learner ? `• For: ${learner}` : "",
+        url ? `• Upload replacement: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "document_expiry_10":
+      return [
+        "⚠️ Document expiring in 10 days",
+        payload?.documentName ? `• Document: ${payload.documentName}` : "",
+        payload?.expiryDate ? `• Expires on: ${payload.expiryDate}` : "",
+        learner ? `• For: ${learner}` : "",
+        url ? `• Upload replacement urgently: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "document_expiry_daily":
+      const daysLeft = payload?.daysUntilExpiry || 0;
+      const urgency = daysLeft <= 0 ? "🚨 Document EXPIRED" : `🚨 Document expires in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`;
+      return [
+        urgency,
+        payload?.documentName ? `• Document: ${payload.documentName}` : "",
+        payload?.expiryDate ? `• Expiry date: ${payload.expiryDate}` : "",
+        learner ? `• For: ${learner}` : "",
+        url ? `• Upload replacement NOW: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "daily_auth_expiry_report":
+      const authCount = payload?.count || 0;
+      return [
+        "📊 Daily Authorization Expiry Report",
+        `• Total expiring soon: ${authCount} authorization${authCount !== 1 ? 's' : ''}`,
+        payload?.summary ? `• Summary:\n${payload.summary}` : "",
+        url ? `• View full report: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "daily_doc_expiry_report":
+      const docCount = payload?.count || 0;
+      return [
+        "📊 Daily Document Expiry Report", 
+        `• Total expiring soon: ${docCount} document${docCount !== 1 ? 's' : ''}`,
+        payload?.summary ? `• Summary:\n${payload.summary}` : "",
+        url ? `• View full report: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
 
     default:
       return `🔔 ${title}`;
