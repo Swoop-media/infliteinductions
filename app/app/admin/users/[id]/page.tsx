@@ -9,6 +9,7 @@ import { PDFExportButton } from "./PDFExportButton";
 import { DocumentViewButton } from "./DocumentViewButton";
 import ExpandableCourseDetails from "./ExpandableCourseDetails";
 import AdminRetakeButton from "./AdminRetakeButton";
+import UserNotifications from "./UserNotifications";
 
 
 
@@ -476,6 +477,9 @@ export default async function EditUserPage({
               </Link>
             </div>
           </form>
+          
+          {/* Notifications */}
+          <UserNotifications userId={resolvedParams.id} />
           
           {/* Onsite Training Assignments */}
           <div className="rounded-lg border bg-white p-4">
