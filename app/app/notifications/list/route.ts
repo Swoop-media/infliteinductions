@@ -67,33 +67,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch notifications" }, { status: 500 });
     }
 
-    // Transform notifications to a consistent format
+    // Return notifications with minimal transformation to preserve payload
     const transformedNotifications = (notifications || []).map(notification => {
-      // Handle both new and old schema
-      if (notification.title) {
-        // New schema
-        return {
-          id: notification.id,
-          type: notification.type,
-          title: notification.title,
-          body: notification.body,
-          data: notification.data || {},
-          read: notification.read_at ? true : (notification.is_read || false),
-          created_at: notification.created_at
-        };
-      } else {
-        // Old schema with payload
-        const payload = notification.payload || {};
-        return {
-          id: notification.id,
-          type: notification.type,
-          title: payload.title || "Notification",
-          body: payload.body || "",
-          data: payload,
-          read: notification.read_at ? true : (notification.read || notification.is_read || false),
-          created_at: notification.created_at
-        };
-      }
+      // Simply return the notification with the original payload intact
+      return {
+        id: notification.id,
+        type: notification.type,
+        payload: notification.payload || notification.data || {},
+        read: notification.read_at ? true : (notification.read || notification.is_read || false),
+        created_at: notification.created_at
+      };
     });
 
     return NextResponse.json({ notifications: transformedNotifications });
