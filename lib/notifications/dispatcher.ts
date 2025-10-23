@@ -347,33 +347,33 @@ function formatTeamsText(
 
     case "daily_auth_expiry_report":
       const authCount = payload?.count || 0;
-      // Handle summary as array or string
+      // Handle summary as array or string - use double newlines for Teams formatting
       const authSummary = Array.isArray(payload?.summary) 
-        ? payload.summary.join("\n") 
+        ? payload.summary.join("\n\n") 
         : payload?.summary || "";
       return [
         "📊 Daily Authorization Expiry Report",
         `• Total expiring soon: ${authCount} authorization${authCount !== 1 ? 's' : ''}`,
-        authSummary ? `• Summary:\n${authSummary}` : "",
+        authSummary ? `• Summary:\n\n${authSummary}` : "",
         url ? `• View full report: ${url}` : "",
       ]
         .filter(Boolean)
-        .join("\n");
+        .join("\n\n");
 
     case "daily_doc_expiry_report":
       const docCount = payload?.count || 0;
-      // Handle summary as array or string
+      // Handle summary as array or string - use double newlines for Teams formatting
       const docSummary = Array.isArray(payload?.summary) 
-        ? payload.summary.join("\n") 
+        ? payload.summary.join("\n\n") 
         : payload?.summary || "";
       return [
         "📊 Daily Document Expiry Report", 
         `• Total expiring soon: ${docCount} document${docCount !== 1 ? 's' : ''}`,
-        docSummary ? `• Summary:\n${docSummary}` : "",
+        docSummary ? `• Summary:\n\n${docSummary}` : "",
         url ? `• View full report: ${url}` : "",
       ]
         .filter(Boolean)
-        .join("\n");
+        .join("\n\n");
 
     default:
       return `🔔 ${title}`;
