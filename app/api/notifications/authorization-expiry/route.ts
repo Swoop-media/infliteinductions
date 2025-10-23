@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Fetch all authorization assignments that are approved
+    // Fetch all authorization assignments that are completed
     const { data: assignments, error } = await supabase
       .from("authorisation_assignments")
       .select(`
@@ -39,10 +39,10 @@ export async function POST(request: NextRequest) {
         user_id,
         authorisation_id,
         assignment_status,
-        approved_at
+        completed_at
       `)
-      .eq("assignment_status", "approved")
-      .not("approved_at", "is", null);
+      .eq("assignment_status", "completed")
+      .not("completed_at", "is", null);
     
     // Get authorizations separately
     const authIds = [...new Set((assignments || []).map(a => a.authorisation_id))];
@@ -79,9 +79,9 @@ export async function POST(request: NextRequest) {
       // Skip if no authorization found or no valid_for_days
       if (!auth?.valid_for_days) continue;
       
-      // Calculate expiry date from approved_at + valid_for_days
-      const approvedDate = new Date(assignment.approved_at);
-      const expiryDate = new Date(approvedDate);
+      // Calculate expiry date from completed_at + valid_for_days
+      const completedDate = new Date(assignment.completed_at);
+      const expiryDate = new Date(completedDate);
       expiryDate.setDate(expiryDate.getDate() + auth.valid_for_days);
       expiryDate.setHours(0, 0, 0, 0);
       

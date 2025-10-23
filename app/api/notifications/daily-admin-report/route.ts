@@ -62,17 +62,17 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Fetch all approved authorization assignments
+    // Fetch all completed authorization assignments
     const { data: authAssignments, error: authError } = await supabase
       .from("authorisation_assignments")
       .select(`
         id,
         authorisation_id,
         user_id,
-        approved_at
+        completed_at
       `)
-      .eq("assignment_status", "approved")
-      .not("approved_at", "is", null);
+      .eq("assignment_status", "completed")
+      .not("completed_at", "is", null);
 
     // Get authorisations with valid_for_days
     let authDetails = [];
@@ -92,8 +92,8 @@ export async function POST(request: NextRequest) {
           const auth = authMap.get(assignment.authorisation_id);
           if (!auth?.valid_for_days) return null;
           
-          const approvedDate = new Date(assignment.approved_at);
-          const expiryDate = new Date(approvedDate);
+          const completedDate = new Date(assignment.completed_at);
+          const expiryDate = new Date(completedDate);
           expiryDate.setDate(expiryDate.getDate() + auth.valid_for_days);
           
           return {
@@ -165,27 +165,27 @@ export async function POST(request: NextRequest) {
       console.error("Error fetching document expiries:", docError);
     }
 
-    // Prepare authorization summary
-    let authSummary = "";
+    // Prepare authorization summary as an array
+    let authSummaryLines = [];
     if (authDetails.length > 0) {
-      authSummary = "Top 5 expiring authorizations:\n";
+      authSummaryLines.push("Top 5 expiring authorizations:");
       authDetails.slice(0, 5).forEach(auth => {
         const expiryDate = new Date(auth.expires_at);
         const daysUntil = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         const status = daysUntil <= 0 ? "EXPIRED" : `${daysUntil} days`;
-        authSummary += `  • ${auth.authorisations?.title || 'Authorization'} - ${auth.profiles?.full_name || 'User'} (${status})\n`;
+        authSummaryLines.push(`• ${auth.authorisations?.title || 'Authorization'} - ${auth.profiles?.full_name || 'User'} (${status})`);
       });
     }
 
-    // Prepare document summary
-    let docSummary = "";
+    // Prepare document summary as an array
+    let docSummaryLines = [];
     if (docDetails.length > 0) {
-      docSummary = "Top 5 expiring documents:\n";
+      docSummaryLines.push("Top 5 expiring documents:");
       docDetails.slice(0, 5).forEach(doc => {
         const expiryDate = new Date(doc.expires_on);
         const daysUntil = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         const status = daysUntil <= 0 ? "EXPIRED" : `${daysUntil} days`;
-        docSummary += `  • ${doc.title || 'Document'} - ${doc.profiles?.full_name || 'User'} (${status})\n`;
+        docSummaryLines.push(`• ${doc.title || 'Document'} - ${doc.profiles?.full_name || 'User'} (${status})`);
       });
     }
 
@@ -203,7 +203,7 @@ export async function POST(request: NextRequest) {
           "daily_auth_expiry_report",
           {
             count: authDetails.length,
-            summary: authSummary,
+            summary: authSummaryLines,
             adminName: adminName,
             url: `/app/admin?tab=due-dates-authorisations`
           },
@@ -222,7 +222,7 @@ export async function POST(request: NextRequest) {
           "daily_doc_expiry_report",
           {
             count: docDetails.length,
-            summary: docSummary,
+            summary: docSummaryLines,
             adminName: adminName,
             url: `/app/admin?tab=due-dates-documents`
           },

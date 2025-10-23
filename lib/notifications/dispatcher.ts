@@ -347,10 +347,14 @@ function formatTeamsText(
 
     case "daily_auth_expiry_report":
       const authCount = payload?.count || 0;
+      // Handle summary as array or string
+      const authSummary = Array.isArray(payload?.summary) 
+        ? payload.summary.join("\n") 
+        : payload?.summary || "";
       return [
         "📊 Daily Authorization Expiry Report",
         `• Total expiring soon: ${authCount} authorization${authCount !== 1 ? 's' : ''}`,
-        payload?.summary ? `• Summary:\n${payload.summary}` : "",
+        authSummary ? `• Summary:\n${authSummary}` : "",
         url ? `• View full report: ${url}` : "",
       ]
         .filter(Boolean)
@@ -358,10 +362,14 @@ function formatTeamsText(
 
     case "daily_doc_expiry_report":
       const docCount = payload?.count || 0;
+      // Handle summary as array or string
+      const docSummary = Array.isArray(payload?.summary) 
+        ? payload.summary.join("\n") 
+        : payload?.summary || "";
       return [
         "📊 Daily Document Expiry Report", 
         `• Total expiring soon: ${docCount} document${docCount !== 1 ? 's' : ''}`,
-        payload?.summary ? `• Summary:\n${payload.summary}` : "",
+        docSummary ? `• Summary:\n${docSummary}` : "",
         url ? `• View full report: ${url}` : "",
       ]
         .filter(Boolean)
