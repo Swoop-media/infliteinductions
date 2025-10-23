@@ -168,8 +168,9 @@ export async function POST(request: NextRequest) {
     // Prepare authorization summary as an array
     let authSummaryLines = [];
     if (authDetails.length > 0) {
-      authSummaryLines.push("Top 5 expiring authorizations:");
-      authDetails.slice(0, 5).forEach(auth => {
+      const itemCount = Math.min(authDetails.length, 25);
+      authSummaryLines.push(`Top ${itemCount} expiring authorizations:`);
+      authDetails.slice(0, 25).forEach(auth => {
         const expiryDate = new Date(auth.expires_at);
         const daysUntil = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         const status = daysUntil <= 0 ? "EXPIRED" : `${daysUntil} days`;
@@ -180,8 +181,9 @@ export async function POST(request: NextRequest) {
     // Prepare document summary as an array
     let docSummaryLines = [];
     if (docDetails.length > 0) {
-      docSummaryLines.push("Top 5 expiring documents:");
-      docDetails.slice(0, 5).forEach(doc => {
+      const itemCount = Math.min(docDetails.length, 25);
+      docSummaryLines.push(`Top ${itemCount} expiring documents:`);
+      docDetails.slice(0, 25).forEach(doc => {
         const expiryDate = new Date(doc.expires_on);
         const daysUntil = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         const status = daysUntil <= 0 ? "EXPIRED" : `${daysUntil} days`;
