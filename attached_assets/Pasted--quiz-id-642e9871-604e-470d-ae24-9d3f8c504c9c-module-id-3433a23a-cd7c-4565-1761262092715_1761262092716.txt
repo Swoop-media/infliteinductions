@@ -1,0 +1,72 @@
+[
+  {
+    "quiz_id": "642e9871-604e-470d-ae24-9d3f8c504c9c",
+    "module_id": "3433a23a-cd7c-4565-a934-9307f261149e",
+    "course_id": "012fdaa6-9999-4b50-9217-4d81f6bd19e1",
+    "module_title": "Parachute Rigging and Safety Procedures",
+    "course_title": "Pilot emergency Parachute and Bailout Training."
+  },
+  {
+    "quiz_id": "0e482b4d-2255-4746-89de-600be27d6fd6",
+    "module_id": "94adc125-9f67-42cb-8dd5-6c9ad9bf7bf0",
+    "course_id": "6df3ad18-5192-4f76-83a3-4d4df95269a9",
+    "module_title": "INFLITE Helicopter Operations Quiz",
+    "course_title": "INFLITE Helicopter Operations Manual"
+  },
+  {
+    "quiz_id": "5c5642cf-8c74-40d2-9dab-08bb4364de87",
+    "module_id": "a57cc691-8668-41d7-b090-5e6fd38aedb9",
+    "course_id": "3f321cc8-0a83-44d9-a839-6b1f824b030d",
+    "module_title": "Refuelling Quiz",
+    "course_title": "Refuelling the Pilatus PC6 Porter- Waiting video"
+  },
+  {
+    "quiz_id": "ba4f38ce-1185-4f86-bd07-c47c717a4206",
+    "module_id": "8210e0ce-9a1f-4bdb-aeb0-4d170fb3a7df",
+    "course_id": "4de34d6d-e0a1-44f8-8a15-0f48bb0319b0",
+    "module_title": "Dangerous Goods Quiz",
+    "course_title": "Dangerous goods awareness for all staff"
+  },
+  {
+    "quiz_id": "42754fd7-ac8d-4747-a231-477f4f5056c8",
+    "module_id": "18c63a60-7f6e-4041-acf2-8fc96372c8a1",
+    "course_id": "2c0153c4-820d-4cae-a8a3-43678ab2884b",
+    "module_title": "SMS Fundamentals Quiz",
+    "course_title": "Reporting Training"
+  },
+  {
+    "quiz_id": "ee8076ab-3395-426a-a76e-b91008a5c2eb",
+    "module_id": "9e593677-e87d-44ec-97ff-f9a5a47f12a1",
+    "course_id": "d902b535-c90f-4b8e-9176-98fd91517fbb",
+    "module_title": "Entering an SMS Report in QAOSH via Desktop\" quiz",
+    "course_title": "QAOSH - Entering a Report (Desktop)"
+  },
+  {
+    "quiz_id": "827c115f-812f-4d05-8649-fb608e05c3c0",
+    "module_id": "dc41541d-3b4c-42cf-b9f4-b35462a08848",
+    "course_id": "cd0c373a-9d5b-4768-b62e-934e8d4bb97c",
+    "module_title": "SMS Fundamentals Quiz",
+    "course_title": "INFLITE SMS Fundamentals"
+  },
+  {
+    "quiz_id": "f72e08dd-d0f8-4092-8d6f-9cadcfdaf9f7",
+    "module_id": "be48a070-d204-47b5-85af-f43a883098b5",
+    "course_id": "474af291-b43d-4ea3-a4b6-37b833cf6306",
+    "module_title": "Heletranz Site Induction Quiz",
+    "course_title": "Heletranz Site Induction"
+  },
+  {
+    "quiz_id": "0f3b9ee5-7a4b-4f76-b79d-c22a8a975f6e",
+    "module_id": "fffaa067-5e9f-44cb-a43b-a15ddc3a5854",
+    "course_id": "ed6d7e62-b6e4-478b-8aa1-cc4dff834c1a",
+    "module_title": "135 ESAP quiz",
+    "course_title": "135 Emergency Situation Action Plan for Aviation Operations"
+  },
+  {
+    "quiz_id": "8e65f9bd-8122-4f2d-9f61-8e40e1604886",
+    "module_id": "0a36cf4b-5348-431e-94a7-5b533fdf83f1",
+    "course_id": "c86ec003-e8d8-4409-ba10-43f4e8598878",
+    "module_title": "Rotorcraft Flight Manual AS 355 F1",
+    "course_title": "AS355 F1 flight manual - NEEDS PDF MANUAL ADDED"
+  }
+]

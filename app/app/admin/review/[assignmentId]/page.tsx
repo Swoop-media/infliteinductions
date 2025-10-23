@@ -185,25 +185,26 @@ async function loadAssignmentDetails(assignmentId: string) {
     
   const quizIds = quizzes?.map(q => q.id) || [];
   
-  // Fetch quiz questions - they can be linked by quiz_id, module_id, or course_id
+  // Fetch quiz questions - they can be linked by quiz_id or module_id
   let quizQuestionsQuery = supabase
     .from("quiz_questions")
     .select(`
       id,
       quiz_id,
-      module_id, 
-      course_id,
-      question,
+      module_id,
+      stem,
+      prompt,
       explanation,
       points,
-      order_index
+      order_index,
+      kind,
+      type
     `);
   
-  // Build OR condition for all possible links
+  // Build OR condition for quiz_id and module_id links only (no course_id in quiz_questions)
   const conditions = [];
   if (quizIds.length > 0) conditions.push(`quiz_id.in.(${quizIds.join(',')})`);
   if (moduleIds.length > 0) conditions.push(`module_id.in.(${moduleIds.join(',')})`);
-  if (courseIds.length > 0) conditions.push(`course_id.in.(${courseIds.join(',')})`);
   
   const { data: quizQuestions } = conditions.length > 0
     ? await quizQuestionsQuery.or(conditions.join(',')).order("order_index", { ascending: true })
@@ -370,11 +371,10 @@ async function loadAssignmentDetails(assignmentId: string) {
         (!q.module_id && q.course_id === ac.course_id)
       );
       
-      // Get quiz questions for this module (can be linked by quiz_id, module_id, or course_id)
+      // Get quiz questions for this module (can be linked by quiz_id or module_id)
       const moduleQuizQuestions = (quizQuestions || []).filter(q => 
         (moduleQuiz && q.quiz_id === moduleQuiz.id) ||
-        q.module_id === module.id ||
-        (!q.module_id && !q.quiz_id && q.course_id === ac.course_id)
+        q.module_id === module.id
       ).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
       
       // Map questions with their options
@@ -385,7 +385,7 @@ async function loadAssignmentDetails(assignmentId: string) {
         
         return {
           id: question.id,
-          question_text: question.question || `Question ${(question.order_index || 0) + 1}`,
+          question_text: question.stem || question.prompt || `Question ${(question.order_index || 0) + 1}`,
           points: question.points || 1,
           options: options.map(opt => ({
             id: opt.id,

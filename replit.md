@@ -63,3 +63,24 @@ Preferred communication style: Simple, everyday language.
 - **SharePoint**: Video content embedding.
 - **Supabase**: Backend-as-a-Service for database, authentication, and storage.
 - **Microsoft Graph API**: User profile and organizational data access.
+
+# Recent Changes (December 2024)
+
+## Notification System Enhancements
+- **Enhanced notification system** with detailed notification displays on admin user pages
+- **Improved in-app notifications dropdown** with comprehensive information and emoji icons
+- **Implemented all notification types**: course/authorization assignments, module rejections, document/authorization expiries, retake reminders, daily admin reports
+- **Automated scheduled notification jobs** listing top 25 upcoming items for daily reports
+- **Teams message formatting** as clean, readable lists with double line breaks for proper display
+- **Daily cron job** configured via external service (cron-job.org) with CRON_SECRET authentication
+
+## Data Display Improvements
+- **Authorization page pagination**: Shows 50 records per page with smart pagination controls
+- **Enhanced search functionality**: Combined search across user names, emails, and authorization titles  
+- **Fixed department filtering**: Properly filters authorizations by department using user ID lookup
+- **Quiz review display fix**: Correctly fetches quiz questions using 'stem'/'prompt' fields instead of 'question'
+
+## Database Query Optimizations
+- **Authorization expiry calculations**: Uses completed_at + valid_for_days from authorisations table
+- **Document queries**: Uses learner_documents table with separate profile fetches to avoid conflicts
+- **Quiz data structure**: Updated to handle quiz_questions linked by quiz_id or module_id (no course_id)
