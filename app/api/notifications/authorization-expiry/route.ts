@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Fetch all authorization assignments with expiry dates
+    // Fetch all authorization assignments that are approved
     const { data: assignments, error } = await supabase
       .from("authorisation_assignments")
       .select(`
@@ -39,10 +39,10 @@ export async function POST(request: NextRequest) {
         user_id,
         authorisation_id,
         assignment_status,
-        expires_at
+        approved_at
       `)
       .eq("assignment_status", "approved")
-      .not("expires_at", "is", null);
+      .not("approved_at", "is", null);
     
     // Get authorizations separately
     const authIds = [...new Set((assignments || []).map(a => a.authorisation_id))];
@@ -74,8 +74,15 @@ export async function POST(request: NextRequest) {
     let notificationsRetakeReminder = 0;
 
     for (const assignment of assignments || []) {
-      // Use the pre-calculated expires_at field
-      const expiryDate = new Date(assignment.expires_at);
+      const auth = authMap.get(assignment.authorisation_id);
+      
+      // Skip if no authorization found or no valid_for_days
+      if (!auth?.valid_for_days) continue;
+      
+      // Calculate expiry date from approved_at + valid_for_days
+      const approvedDate = new Date(assignment.approved_at);
+      const expiryDate = new Date(approvedDate);
+      expiryDate.setDate(expiryDate.getDate() + auth.valid_for_days);
       expiryDate.setHours(0, 0, 0, 0);
       
       const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
@@ -87,10 +94,9 @@ export async function POST(request: NextRequest) {
         year: 'numeric'
       });
 
-      const auth = authMap.get(assignment.authorisation_id);
       const profile = profileMap.get(assignment.user_id);
-      const authTitle = auth?.title || "Authorization";
-      const retakeReminderDays = auth?.retake_reminder_days || 30; // Default to 30 days
+      const authTitle = auth.title || "Authorization";
+      const retakeReminderDays = auth.retake_reminder_days || 30; // Default to 30 days
 
       // Check if authorization has expired
       if (daysUntilExpiry <= 0) {

@@ -62,42 +62,66 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    // Fetch upcoming authorization expiries (next 25 regardless of proximity)
+    // Fetch all approved authorization assignments
     const { data: authAssignments, error: authError } = await supabase
       .from("authorisation_assignments")
       .select(`
         id,
         authorisation_id,
         user_id,
-        expires_at
+        approved_at
       `)
       .eq("assignment_status", "approved")
-      .not("expires_at", "is", null)
-      .order("expires_at", { ascending: true })
-      .limit(25);
+      .not("approved_at", "is", null);
 
-    // Get authorisations and profiles for the next 25
+    // Get authorisations with valid_for_days
     let authDetails = [];
     if (authAssignments && authAssignments.length > 0) {
       const authIds = [...new Set(authAssignments.map(a => a.authorisation_id))];
-      const userIds = [...new Set(authAssignments.map(a => a.user_id))];
       
       const { data: auths } = await supabase
         .from("authorisations")
-        .select("id, title")
+        .select("id, title, valid_for_days")
         .in("id", authIds);
       
+      const authMap = new Map(auths?.map(a => [a.id, a]) || []);
+      
+      // Calculate expiry dates and filter only those with valid_for_days
+      const assignmentsWithExpiry = authAssignments
+        .map(assignment => {
+          const auth = authMap.get(assignment.authorisation_id);
+          if (!auth?.valid_for_days) return null;
+          
+          const approvedDate = new Date(assignment.approved_at);
+          const expiryDate = new Date(approvedDate);
+          expiryDate.setDate(expiryDate.getDate() + auth.valid_for_days);
+          
+          return {
+            ...assignment,
+            expires_at: expiryDate.toISOString(),
+            authorisations: auth
+          };
+        })
+        .filter(Boolean);
+      
+      // Sort by expiry date and take first 25
+      assignmentsWithExpiry.sort((a, b) => 
+        new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime()
+      );
+      
+      const next25 = assignmentsWithExpiry.slice(0, 25);
+      
+      // Get profiles for the next 25
+      const userIds = [...new Set(next25.map(a => a.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name")
         .in("id", userIds);
       
-      const authMap = new Map(auths?.map(a => [a.id, a]) || []);
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
       
-      authDetails = authAssignments.map(exp => ({
+      authDetails = next25.map(exp => ({
         ...exp,
-        authorisations: authMap.get(exp.authorisation_id),
         profiles: profileMap.get(exp.user_id)
       }));
     }
