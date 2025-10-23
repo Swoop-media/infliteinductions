@@ -4,6 +4,20 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
+export async function GET(request: NextRequest) {
+  // GET handler for easy testing via browser
+  return NextResponse.json({ 
+    message: "This endpoint accepts POST requests to run all notification jobs",
+    usage: "Send a POST request with Authorization header if CRON_SECRET is set",
+    endpoints: [
+      "/api/notifications/document-expiry",
+      "/api/notifications/authorization-expiry", 
+      "/api/notifications/retake-reminders",
+      "/api/notifications/daily-admin-report"
+    ]
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Verify the request is authorized

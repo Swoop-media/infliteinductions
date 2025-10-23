@@ -17,6 +17,33 @@ function supabaseAdmin() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
+export async function GET(request: NextRequest) {
+  // GET handler for easy testing via browser
+  return NextResponse.json({ 
+    message: "This endpoint accepts POST requests to test notifications",
+    usage: "Send a POST request with JSON body containing userId and notificationType",
+    example: {
+      userId: "c1e9d86d-2dcc-4c31-a0d9-b3c54f59f936",
+      notificationType: "course_assigned"
+    },
+    availableTypes: [
+      "course_assigned",
+      "authorization_assigned",
+      "module_rejected",
+      "authorization_expired",
+      "retake_reminder",
+      "document_expiry_30",
+      "document_expiry_10",
+      "document_expiry_daily",
+      "daily_auth_expiry_report",
+      "daily_doc_expiry_report",
+      "authorization_published",
+      "onsite_training_ready",
+      "onsite_assessment_ready"
+    ]
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { userId, notificationType } = await request.json();
