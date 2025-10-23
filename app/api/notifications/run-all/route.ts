@@ -28,9 +28,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_URL ?? 
-                   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 
-                   'http://localhost:3000');
+    // Use relative URLs for internal API calls in Replit environment
+    const host = request.headers.get('host');
+    const protocol = request.headers.get('x-forwarded-proto') || 'https';
+    const baseUrl = `${protocol}://${host}`;
 
     const results = {};
     const errors = [];
