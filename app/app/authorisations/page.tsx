@@ -21,10 +21,13 @@ type AuthorisationCompletionRow = {
   valid_for_days: number | null;
 };
 
+const ITEMS_PER_PAGE = 50;
+
 async function loadCompletedAuthorisationsWithFilters(
   q: string | null,
   departmentFilter: string | null,
-  authorisationFilter: string | null
+  authorisationFilter: string | null,
+  page: number = 1
 ) {
   "use server";
   noStore();
@@ -35,6 +38,9 @@ async function loadCompletedAuthorisationsWithFilters(
   const hasAdminRole = await hasRole("Admin");
   if (!hasGeneralRole && !hasAdminRole) redirect("/app/home?banner=no_access");
 
+  const offset = (page - 1) * ITEMS_PER_PAGE;
+
+  // Build base query for data
   let query = supabase
     .from("authorisation_assignments")
     .select(`
@@ -44,32 +50,50 @@ async function loadCompletedAuthorisationsWithFilters(
       completed_at,
       profiles!authorisation_assignments_user_id_fkey(full_name, email, department),
       authorisations!inner(title, valid_for_days)
-    `)
+    `, { count: 'exact' })
     .eq("assignment_status", "completed")
-    .not("completed_at", "is", null)
-    .order("completed_at", { ascending: false });
+    .not("completed_at", "is", null);
 
-  // Apply search filter if provided (search user name or email)
+  // Build count query (same filters but only count)
+  let countQuery = supabase
+    .from("authorisation_assignments")
+    .select('*', { count: 'exact', head: true })
+    .eq("assignment_status", "completed")
+    .not("completed_at", "is", null);
+
+  // Apply search filter if provided (search user name, email, or authorisation title)
   if (q && q.trim()) {
     const searchTerm = `%${q.trim()}%`;
-    query = query.or(`profiles!authorisation_assignments_user_id_fkey.full_name.ilike.${searchTerm},profiles!authorisation_assignments_user_id_fkey.email.ilike.${searchTerm}`);
+    // Search in user names, emails, and authorisation titles
+    query = query.or(`profiles!authorisation_assignments_user_id_fkey.full_name.ilike.${searchTerm},profiles!authorisation_assignments_user_id_fkey.email.ilike.${searchTerm},authorisations!inner.title.ilike.${searchTerm}`);
+    countQuery = countQuery.or(`profiles!authorisation_assignments_user_id_fkey.full_name.ilike.${searchTerm},profiles!authorisation_assignments_user_id_fkey.email.ilike.${searchTerm},authorisations!inner.title.ilike.${searchTerm}`);
   }
 
   // Apply department filter if provided
   if (departmentFilter && departmentFilter.trim() && departmentFilter !== "all") {
     query = query.eq("profiles!authorisation_assignments_user_id_fkey.department", departmentFilter);
+    countQuery = countQuery.eq("profiles!authorisation_assignments_user_id_fkey.department", departmentFilter);
   }
 
   // Apply authorisation filter if provided  
   if (authorisationFilter && authorisationFilter.trim() && authorisationFilter !== "all") {
     query = query.eq("authorisation_id", authorisationFilter);
+    countQuery = countQuery.eq("authorisation_id", authorisationFilter);
   }
 
-  const { data: rows, error } = await query.limit(100);
+  // Apply pagination and ordering to main query
+  query = query
+    .order("completed_at", { ascending: false })
+    .range(offset, offset + ITEMS_PER_PAGE - 1);
+
+  const [{ data: rows, error, count }, { count: totalCount }] = await Promise.all([
+    query,
+    countQuery
+  ]);
 
   if (error) {
     console.log("Authorisation query error:", error);
-    return [];
+    return { data: [], totalCount: 0 };
   }
 
   const completedAuthorisations: AuthorisationCompletionRow[] = (rows ?? []).map((row: any) => ({
@@ -84,7 +108,10 @@ async function loadCompletedAuthorisationsWithFilters(
     valid_for_days: row.authorisations?.valid_for_days ?? null,
   }));
 
-  return completedAuthorisations;
+  return {
+    data: completedAuthorisations,
+    totalCount: totalCount || 0
+  };
 }
 
 async function loadDepartments() {
@@ -138,6 +165,119 @@ function getDaysUntilDue(completedAt: string, validForDays: number | null): numb
   return diffDays;
 }
 
+function PaginationControls({ 
+  currentPage, 
+  totalPages, 
+  baseUrl,
+  searchParams 
+}: { 
+  currentPage: number; 
+  totalPages: number;
+  baseUrl: string;
+  searchParams: URLSearchParams;
+}) {
+  if (totalPages <= 1) return null;
+
+  // Create page links with existing search params
+  const createPageUrl = (page: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('page', page.toString());
+    return `${baseUrl}?${params.toString()}`;
+  };
+
+  // Calculate which page numbers to show
+  const pageNumbers: (number | string)[] = [];
+  const maxVisible = 7; // Maximum number of page buttons to show
+
+  if (totalPages <= maxVisible) {
+    // Show all pages if total is small
+    for (let i = 1; i <= totalPages; i++) {
+      pageNumbers.push(i);
+    }
+  } else {
+    // Show first, last, and pages around current
+    pageNumbers.push(1);
+    
+    if (currentPage > 3) {
+      pageNumbers.push('...');
+    }
+    
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      if (!pageNumbers.includes(i)) {
+        pageNumbers.push(i);
+      }
+    }
+    
+    if (currentPage < totalPages - 2) {
+      pageNumbers.push('...');
+    }
+    
+    if (!pageNumbers.includes(totalPages)) {
+      pageNumbers.push(totalPages);
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-center space-x-2 mt-6">
+      {/* Previous Button */}
+      {currentPage > 1 ? (
+        <Link
+          href={createPageUrl(currentPage - 1)}
+          className="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Previous
+        </Link>
+      ) : (
+        <span className="px-3 py-2 rounded-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
+          Previous
+        </span>
+      )}
+
+      {/* Page Numbers */}
+      {pageNumbers.map((pageNum, index) => {
+        if (pageNum === '...') {
+          return (
+            <span key={`ellipsis-${index}`} className="px-3 py-2 text-sm text-gray-700">
+              ...
+            </span>
+          );
+        }
+        
+        const page = pageNum as number;
+        const isActive = page === currentPage;
+        
+        return (
+          <Link
+            key={page}
+            href={createPageUrl(page)}
+            className={`px-3 py-2 rounded-md text-sm font-medium ${
+              isActive
+                ? 'border border-blue-500 bg-blue-50 text-blue-600'
+                : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            {page}
+          </Link>
+        );
+      })}
+
+      {/* Next Button */}
+      {currentPage < totalPages ? (
+        <Link
+          href={createPageUrl(currentPage + 1)}
+          className="px-3 py-2 rounded-md border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Next
+        </Link>
+      ) : (
+        <span className="px-3 py-2 rounded-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed">
+          Next
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default async function AuthorisationsPage({
   searchParams,
 }: {
@@ -152,12 +292,24 @@ export default async function AuthorisationsPage({
   const q = (Array.isArray(resolvedSearchParams?.q) ? resolvedSearchParams?.q[0] : resolvedSearchParams?.q) ?? null;
   const departmentFilter = (Array.isArray(resolvedSearchParams?.department) ? resolvedSearchParams?.department[0] : resolvedSearchParams?.department) ?? null;
   const authorisationFilter = (Array.isArray(resolvedSearchParams?.authorisation) ? resolvedSearchParams?.authorisation[0] : resolvedSearchParams?.authorisation) ?? null;
+  const pageParam = Array.isArray(resolvedSearchParams?.page) ? resolvedSearchParams?.page[0] : resolvedSearchParams?.page;
+  const currentPage = Math.max(1, parseInt(pageParam || '1', 10));
 
-  const [completedAuthorisations, departments, authorisations] = await Promise.all([
-    loadCompletedAuthorisationsWithFilters(q, departmentFilter, authorisationFilter),
+  const [{ data: completedAuthorisations, totalCount }, departments, authorisations] = await Promise.all([
+    loadCompletedAuthorisationsWithFilters(q, departmentFilter, authorisationFilter, currentPage),
     loadDepartments(),
     loadAuthorisations()
   ]);
+
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const startItem = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalCount);
+
+  // Create URLSearchParams for pagination links
+  const urlSearchParams = new URLSearchParams();
+  if (q) urlSearchParams.set('q', q);
+  if (departmentFilter && departmentFilter !== 'all') urlSearchParams.set('department', departmentFilter);
+  if (authorisationFilter && authorisationFilter !== 'all') urlSearchParams.set('authorisation', authorisationFilter);
 
   return (
     <div className="p-6 space-y-6">
@@ -172,16 +324,16 @@ export default async function AuthorisationsPage({
       <div className="rounded-xl border bg-white p-4">
         <form method="get" action="/app/authorisations" className="space-y-4">
           <div className="flex flex-wrap items-end gap-4">
-            {/* User Search */}
+            {/* User/Authorisation Search */}
             <div className="flex-1 min-w-60">
               <label htmlFor="q" className="block text-sm font-medium text-gray-700 mb-1">
-                Search User
+                Search
               </label>
               <input
                 id="q"
                 name="q"
                 defaultValue={q ?? ""}
-                placeholder="Search by name or email..."
+                placeholder="Search by user name, email, or authorisation..."
                 className="w-full rounded-md border px-3 py-2 text-sm"
               />
             </div>
@@ -209,7 +361,7 @@ export default async function AuthorisationsPage({
             {/* Authorisation Filter */}
             <div className="min-w-48">
               <label htmlFor="authorisation" className="block text-sm font-medium text-gray-700 mb-1">
-                Authorisation
+                Authorisation Type
               </label>
               <select
                 id="authorisation"
@@ -238,7 +390,7 @@ export default async function AuthorisationsPage({
           </div>
 
           {/* Clear Filters */}
-          {(q || departmentFilter !== "all" || authorisationFilter !== "all") && (
+          {(q || (departmentFilter && departmentFilter !== "all") || (authorisationFilter && authorisationFilter !== "all")) && (
             <div>
               <Link
                 href="/app/authorisations"
@@ -253,9 +405,20 @@ export default async function AuthorisationsPage({
 
       {/* Results Table */}
       <div className="rounded-xl border bg-white p-4">
-        <h2 className="text-lg font-semibold mb-4">
-          Completed Authorisations ({completedAuthorisations.length})
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">
+            {totalCount > 0 ? (
+              <>Showing {startItem}-{endItem} of {totalCount} Authorisations</>
+            ) : (
+              "No Results"
+            )}
+          </h2>
+          {totalCount > ITEMS_PER_PAGE && (
+            <div className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages}
+            </div>
+          )}
+        </div>
         
         {completedAuthorisations.length === 0 ? (
           <p className="text-sm text-gray-600">
@@ -264,65 +427,75 @@ export default async function AuthorisationsPage({
               : "No completed authorisations found."}
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="border-b px-4 py-2 text-left text-sm font-medium">User Name</th>
-                  <th className="border-b px-4 py-2 text-left text-sm font-medium">Department</th>
-                  <th className="border-b px-4 py-2 text-left text-sm font-medium">Authorisation</th>
-                  <th className="border-b px-4 py-2 text-left text-sm font-medium">Completed</th>
-                  <th className="border-b px-4 py-2 text-left text-sm font-medium">Expiry Date</th>
-                  <th className="border-b px-4 py-2 text-left text-sm font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {completedAuthorisations.map((auth) => {
-                  const completedDate = new Date(auth.completed_at).toLocaleDateString();
-                  const dueDate = calculateDueDate(auth.completed_at, auth.valid_for_days);
-                  const daysUntilDue = getDaysUntilDue(auth.completed_at, auth.valid_for_days);
-                  
-                  let statusColor = "text-green-600";
-                  let statusText = "Current";
-                  
-                  if (daysUntilDue !== null) {
-                    if (daysUntilDue < 0) {
-                      statusColor = "text-red-600";
-                      statusText = `Expired (${Math.abs(daysUntilDue)} days ago)`;
-                    } else if (daysUntilDue <= 30) {
-                      statusColor = "text-yellow-600";
-                      statusText = `Expires in ${daysUntilDue} days`;
-                    } else {
-                      statusText = `Expires in ${daysUntilDue} days`;
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="border-b px-4 py-2 text-left text-sm font-medium">User Name</th>
+                    <th className="border-b px-4 py-2 text-left text-sm font-medium">Department</th>
+                    <th className="border-b px-4 py-2 text-left text-sm font-medium">Authorisation</th>
+                    <th className="border-b px-4 py-2 text-left text-sm font-medium">Completed</th>
+                    <th className="border-b px-4 py-2 text-left text-sm font-medium">Expiry Date</th>
+                    <th className="border-b px-4 py-2 text-left text-sm font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {completedAuthorisations.map((auth) => {
+                    const completedDate = new Date(auth.completed_at).toLocaleDateString();
+                    const dueDate = calculateDueDate(auth.completed_at, auth.valid_for_days);
+                    const daysUntilDue = getDaysUntilDue(auth.completed_at, auth.valid_for_days);
+                    
+                    let statusColor = "text-green-600";
+                    let statusText = "Current";
+                    
+                    if (daysUntilDue !== null) {
+                      if (daysUntilDue < 0) {
+                        statusColor = "text-red-600";
+                        statusText = `Expired (${Math.abs(daysUntilDue)} days ago)`;
+                      } else if (daysUntilDue <= 30) {
+                        statusColor = "text-yellow-600";
+                        statusText = `Expires in ${daysUntilDue} days`;
+                      } else {
+                        statusText = `Expires in ${daysUntilDue} days`;
+                      }
                     }
-                  }
 
-                  return (
-                    <tr key={auth.assignment_id} className="hover:bg-gray-50">
-                      <td className="border-b px-4 py-3">
-                        <div className="font-medium">{auth.full_name ?? "Unknown"}</div>
-                        <div className="text-xs text-gray-500">{auth.email}</div>
-                      </td>
-                      <td className="border-b px-4 py-3 text-sm">
-                        {auth.department ?? "Not specified"}
-                      </td>
-                      <td className="border-b px-4 py-3">
-                        <div className="font-medium">{auth.authorisation_title}</div>
-                        <div className="text-xs text-gray-500">
-                          Valid for: {auth.valid_for_days ? `${auth.valid_for_days} day${auth.valid_for_days > 1 ? 's' : ''}` : 'No expiry'}
-                        </div>
-                      </td>
-                      <td className="border-b px-4 py-3 text-sm">{completedDate}</td>
-                      <td className="border-b px-4 py-3 text-sm">{dueDate}</td>
-                      <td className={`border-b px-4 py-3 text-sm font-medium ${statusColor}`}>
-                        {statusText}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                    return (
+                      <tr key={auth.assignment_id} className="hover:bg-gray-50">
+                        <td className="border-b px-4 py-3">
+                          <div className="font-medium">{auth.full_name ?? "Unknown"}</div>
+                          <div className="text-xs text-gray-500">{auth.email}</div>
+                        </td>
+                        <td className="border-b px-4 py-3 text-sm">
+                          {auth.department ?? "Not specified"}
+                        </td>
+                        <td className="border-b px-4 py-3">
+                          <div className="font-medium">{auth.authorisation_title}</div>
+                          <div className="text-xs text-gray-500">
+                            Valid for: {auth.valid_for_days ? `${auth.valid_for_days} day${auth.valid_for_days > 1 ? 's' : ''}` : 'No expiry'}
+                          </div>
+                        </td>
+                        <td className="border-b px-4 py-3 text-sm">{completedDate}</td>
+                        <td className="border-b px-4 py-3 text-sm">{dueDate}</td>
+                        <td className={`border-b px-4 py-3 text-sm font-medium ${statusColor}`}>
+                          {statusText}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Controls */}
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              baseUrl="/app/authorisations"
+              searchParams={urlSearchParams}
+            />
+          </>
         )}
       </div>
     </div>
