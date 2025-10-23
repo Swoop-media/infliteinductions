@@ -39,20 +39,29 @@ export async function POST(request: NextRequest) {
         user_id,
         authorisation_id,
         assignment_status,
-        expires_at,
-        authorisations!inner(
-          title,
-          valid_for_days,
-          retake_reminder_days
-        ),
-        profiles!inner(
-          full_name,
-          email
-        )
+        expires_at
       `)
       .eq("assignment_status", "approved")
       .not("expires_at", "is", null)
       .order("expires_at", { ascending: true });
+    
+    // Get authorizations separately
+    const authIds = [...new Set((assignments || []).map(a => a.authorisation_id))];
+    const { data: authorisations } = await supabase
+      .from("authorisations")
+      .select("id, title, valid_for_days, retake_reminder_days")
+      .in("id", authIds);
+    
+    const authMap = new Map(authorisations?.map(a => [a.id, a]) || []);
+    
+    // Get user profiles separately
+    const userIds = [...new Set((assignments || []).map(a => a.user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", userIds);
+    
+    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
     if (error) {
       console.error("Error fetching authorization assignments:", error);
@@ -78,8 +87,10 @@ export async function POST(request: NextRequest) {
         year: 'numeric'
       });
 
-      const authTitle = assignment.authorisations?.title || "Authorization";
-      const retakeReminderDays = assignment.authorisations?.retake_reminder_days || 30; // Default to 30 days
+      const auth = authMap.get(assignment.authorisation_id);
+      const profile = profileMap.get(assignment.user_id);
+      const authTitle = auth?.title || "Authorization";
+      const retakeReminderDays = auth?.retake_reminder_days || 30; // Default to 30 days
 
       // Check if authorization has expired
       if (daysUntilExpiry <= 0) {
@@ -92,8 +103,8 @@ export async function POST(request: NextRequest) {
             authorizationId: assignment.authorisation_id,
             expiredDate: formattedExpiryDate,
             daysOverdue: Math.abs(daysUntilExpiry),
-            learnerName: assignment.profiles?.full_name,
-            learner_email: assignment.profiles?.email,
+            learnerName: profile?.full_name,
+            learner_email: profile?.email,
             url: `/app/my-training`
           },
           { 
@@ -121,8 +132,8 @@ export async function POST(request: NextRequest) {
             authorizationId: assignment.authorisation_id,
             daysUntilExpiry: daysUntilExpiry,
             expiryDate: formattedExpiryDate,
-            learnerName: assignment.profiles?.full_name,
-            learner_email: assignment.profiles?.email,
+            learnerName: profile?.full_name,
+            learner_email: profile?.email,
             url: `/app/my-training`
           },
           { 

@@ -31,28 +31,37 @@ export async function POST(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Fetch all completed course assignments with courses that have valid_for_months
+    // Fetch all completed course assignments 
     const { data: assignments, error } = await supabase
       .from("course_assignments")
       .select(`
         id,
         user_id,
         course_id,
-        completed_at,
-        courses!inner(
-          title,
-          valid_for_months,
-          retake_reminder_days
-        ),
-        profiles!inner(
-          full_name,
-          email
-        )
+        completed_at
       `)
       .eq("assignment_status", "completed")
       .not("completed_at", "is", null)
-      .not("courses.valid_for_months", "is", null)
       .order("completed_at", { ascending: true });
+    
+    // Get courses separately
+    const courseIds = [...new Set((assignments || []).map(a => a.course_id))];
+    const { data: courses } = await supabase
+      .from("courses")
+      .select("id, title, valid_for_months, retake_reminder_days")
+      .in("id", courseIds)
+      .not("valid_for_months", "is", null);
+    
+    const courseMap = new Map(courses?.map(c => [c.id, c]) || []);
+    
+    // Get user profiles separately
+    const userIds = [...new Set((assignments || []).map(a => a.user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", userIds);
+    
+    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
     if (error) {
       console.error("Error fetching course assignments:", error);
@@ -66,9 +75,12 @@ export async function POST(request: NextRequest) {
     let notificationsExpired = 0;
 
     for (const assignment of assignments || []) {
+      const course = courseMap.get(assignment.course_id);
+      if (!course) continue;
+      
       const completedDate = new Date(assignment.completed_at);
-      const validForMonths = assignment.courses?.valid_for_months;
-      const retakeReminderDays = assignment.courses?.retake_reminder_days || 30; // Default to 30 days
+      const validForMonths = course.valid_for_months;
+      const retakeReminderDays = course.retake_reminder_days || 30; // Default to 30 days
       
       if (!validForMonths) continue;
       
@@ -86,7 +98,8 @@ export async function POST(request: NextRequest) {
         year: 'numeric'
       });
 
-      const courseTitle = assignment.courses?.title || "Course";
+      const courseTitle = course.title || "Course";
+      const profile = profileMap.get(assignment.user_id);
 
       // Check if course has expired
       if (daysUntilExpiry <= 0) {
@@ -99,8 +112,8 @@ export async function POST(request: NextRequest) {
             courseId: assignment.course_id,
             daysOverdue: Math.abs(daysUntilExpiry),
             dueDate: formattedExpiryDate,
-            learnerName: assignment.profiles?.full_name,
-            learner_email: assignment.profiles?.email,
+            learnerName: profile?.full_name,
+            learner_email: profile?.email,
             url: `/app/my-training`
           },
           { 
@@ -122,8 +135,8 @@ export async function POST(request: NextRequest) {
             courseId: assignment.course_id,
             daysUntilExpiry: daysUntilExpiry,
             expiryDate: formattedExpiryDate,
-            learnerName: assignment.profiles?.full_name,
-            learner_email: assignment.profiles?.email,
+            learnerName: profile?.full_name,
+            learner_email: profile?.email,
             url: `/app/my-training`
           },
           { 
@@ -144,8 +157,8 @@ export async function POST(request: NextRequest) {
             courseId: assignment.course_id,
             daysUntilExpiry: daysUntilExpiry,
             dueDate: formattedExpiryDate,
-            learnerName: assignment.profiles?.full_name,
-            learner_email: assignment.profiles?.email,
+            learnerName: profile?.full_name,
+            learner_email: profile?.email,
             url: `/app/my-training`
           },
           { 

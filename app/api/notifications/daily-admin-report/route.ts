@@ -35,20 +35,27 @@ export async function POST(request: NextRequest) {
     thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
 
     // Get all admin users
-    const { data: adminUsers, error: adminError } = await supabase
+    const { data: adminRoles, error: adminError } = await supabase
       .from("user_roles")
       .select(`
         user_id,
-        profiles!inner(
-          id,
-          full_name,
-          email
-        ),
-        roles!inner(
-          name
-        )
-      `)
-      .eq("roles.name", "Admin");
+        role_id
+      `);
+    
+    // Get role IDs for Admin role
+    const { data: roles } = await supabase
+      .from("roles")
+      .select("id, name")
+      .eq("name", "Admin");
+    
+    const adminRoleId = roles?.[0]?.id;
+    const adminUserIds = adminRoles?.filter(ur => ur.role_id === adminRoleId).map(ur => ur.user_id) || [];
+    
+    // Get profiles for admin users
+    const { data: adminProfiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", adminUserIds);
 
     if (adminError) {
       console.error("Error fetching admin users:", adminError);
@@ -64,13 +71,8 @@ export async function POST(request: NextRequest) {
       .select(`
         id,
         expires_at,
-        authorisations!inner(
-          title
-        ),
-        profiles!inner(
-          full_name,
-          email
-        )
+        authorisation_id,
+        user_id
       `)
       .eq("assignment_status", "approved")
       .not("expires_at", "is", null)
@@ -78,26 +80,67 @@ export async function POST(request: NextRequest) {
       .order("expires_at", { ascending: true })
       .limit(50);
 
+    // Get authorisations and profiles for auth expiries
+    let authDetails = [];
+    if (authExpiries && authExpiries.length > 0) {
+      const authIds = [...new Set(authExpiries.map(a => a.authorisation_id))];
+      const userIds = [...new Set(authExpiries.map(a => a.user_id))];
+      
+      const { data: auths } = await supabase
+        .from("authorisations")
+        .select("id, title")
+        .in("id", authIds);
+      
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      
+      const authMap = new Map(auths?.map(a => [a.id, a]) || []);
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      
+      authDetails = authExpiries.map(exp => ({
+        ...exp,
+        authorisations: authMap.get(exp.authorisation_id),
+        profiles: profileMap.get(exp.user_id)
+      }));
+    }
+
     if (authError) {
       console.error("Error fetching authorization expiries:", authError);
     }
 
     // Fetch upcoming document expiries (next 50)
     const { data: docExpiries, error: docError } = await supabase
-      .from("documents")
+      .from("learner_documents")
       .select(`
         id,
-        name,
+        title,
         expires_on,
-        profiles!inner(
-          full_name,
-          email
-        )
+        user_id
       `)
       .not("expires_on", "is", null)
       .lte("expires_on", thirtyDaysFromNow.toISOString())
       .order("expires_on", { ascending: true })
       .limit(50);
+    
+    // Get profiles for document expiries
+    let docDetails = [];
+    if (docExpiries && docExpiries.length > 0) {
+      const userIds = [...new Set(docExpiries.map(d => d.user_id))];
+      
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", userIds);
+      
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      
+      docDetails = docExpiries.map(doc => ({
+        ...doc,
+        profiles: profileMap.get(doc.user_id)
+      }));
+    }
 
     if (docError) {
       console.error("Error fetching document expiries:", docError);
@@ -105,42 +148,42 @@ export async function POST(request: NextRequest) {
 
     // Prepare authorization summary
     let authSummary = "";
-    if (authExpiries && authExpiries.length > 0) {
+    if (authDetails.length > 0) {
       authSummary = "Top 5 expiring authorizations:\n";
-      authExpiries.slice(0, 5).forEach(auth => {
+      authDetails.slice(0, 5).forEach(auth => {
         const expiryDate = new Date(auth.expires_at);
         const daysUntil = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         const status = daysUntil <= 0 ? "EXPIRED" : `${daysUntil} days`;
-        authSummary += `  • ${auth.authorisations.title} - ${auth.profiles.full_name} (${status})\n`;
+        authSummary += `  • ${auth.authorisations?.title || 'Authorization'} - ${auth.profiles?.full_name || 'User'} (${status})\n`;
       });
     }
 
     // Prepare document summary
     let docSummary = "";
-    if (docExpiries && docExpiries.length > 0) {
+    if (docDetails.length > 0) {
       docSummary = "Top 5 expiring documents:\n";
-      docExpiries.slice(0, 5).forEach(doc => {
+      docDetails.slice(0, 5).forEach(doc => {
         const expiryDate = new Date(doc.expires_on);
         const daysUntil = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         const status = daysUntil <= 0 ? "EXPIRED" : `${daysUntil} days`;
-        docSummary += `  • ${doc.name} - ${doc.profiles.full_name} (${status})\n`;
+        docSummary += `  • ${doc.title || 'Document'} - ${doc.profiles?.full_name || 'User'} (${status})\n`;
       });
     }
 
     let notificationsSent = 0;
 
     // Send daily reports to each admin
-    for (const admin of adminUsers || []) {
-      const adminId = admin.user_id;
-      const adminName = admin.profiles?.full_name || admin.profiles?.email;
+    for (const admin of adminProfiles || []) {
+      const adminId = admin.id;
+      const adminName = admin.full_name || admin.email;
 
       // Send authorization expiry report
-      if (authExpiries && authExpiries.length > 0) {
+      if (authDetails.length > 0) {
         await notifyUser(
           adminId,
           "daily_auth_expiry_report",
           {
-            count: authExpiries.length,
+            count: authDetails.length,
             summary: authSummary,
             adminName: adminName,
             url: `/app/admin?tab=due-dates-authorisations`
@@ -154,12 +197,12 @@ export async function POST(request: NextRequest) {
       }
 
       // Send document expiry report
-      if (docExpiries && docExpiries.length > 0) {
+      if (docDetails.length > 0) {
         await notifyUser(
           adminId,
           "daily_doc_expiry_report",
           {
-            count: docExpiries.length,
+            count: docDetails.length,
             summary: docSummary,
             adminName: adminName,
             url: `/app/admin?tab=due-dates-documents`
@@ -174,9 +217,9 @@ export async function POST(request: NextRequest) {
     }
 
     const summary = {
-      adminUsers: adminUsers?.length || 0,
-      authorizationExpiries: authExpiries?.length || 0,
-      documentExpiries: docExpiries?.length || 0,
+      adminUsers: adminProfiles?.length || 0,
+      authorizationExpiries: authDetails.length,
+      documentExpiries: docDetails.length,
       notificationsSent,
       timestamp: new Date().toISOString()
     };

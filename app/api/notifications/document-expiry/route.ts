@@ -38,21 +38,26 @@ export async function POST(request: NextRequest) {
     const tenDaysFromNow = new Date(today);
     tenDaysFromNow.setDate(tenDaysFromNow.getDate() + 10);
 
-    // Fetch all documents with expiry dates
+    // Fetch all documents with expiry dates from learner_documents table
     const { data: documents, error } = await supabase
-      .from("documents")
+      .from("learner_documents")
       .select(`
         id,
-        name,
+        title,
         expires_on,
-        user_id,
-        profiles!inner(
-          full_name,
-          email
-        )
+        user_id
       `)
       .not("expires_on", "is", null)
       .order("expires_on", { ascending: true });
+    
+    // Get user profiles separately to avoid relationship conflicts
+    const userIds = [...new Set((documents || []).map(d => d.user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", userIds);
+    
+    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
 
     if (error) {
       console.error("Error fetching documents:", error);
@@ -105,18 +110,19 @@ export async function POST(request: NextRequest) {
       }
 
       if (notificationType) {
+        const profile = profileMap.get(doc.user_id);
         // Send notification to document owner
         await notifyUser(
           doc.user_id,
           notificationType,
           {
-            documentName: doc.name,
+            documentName: doc.title || "Document",
             documentId: doc.id,
             expiryDate: formattedExpiryDate,
             daysUntilExpiry: Math.max(0, daysUntilExpiry),
-            learnerName: doc.profiles?.full_name,
-            learner_email: doc.profiles?.email,
-            url: `/app/profile`
+            learnerName: profile?.full_name,
+            learner_email: profile?.email,
+            url: `/app/myprofile/documents`
           },
           { 
             eventId: `document_expiry_${doc.id}${eventIdSuffix}`,
