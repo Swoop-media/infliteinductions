@@ -43,12 +43,18 @@ async function loadCompletedAuthorisationsWithFilters(
   // First, get the filtered user IDs if department filter is applied
   let userIds: string[] | null = null;
   if (departmentFilter && departmentFilter.trim() && departmentFilter !== "all") {
-    const { data: filteredUsers } = await supabase
+    console.log("Filtering by department:", departmentFilter);
+    const { data: filteredUsers, error: deptError } = await supabase
       .from("profiles")
       .select("id")
       .eq("department", departmentFilter);
     
+    if (deptError) {
+      console.error("Error filtering by department:", deptError);
+    }
+    
     userIds = filteredUsers ? filteredUsers.map(u => u.id) : [];
+    console.log(`Found ${userIds.length} users in department ${departmentFilter}`);
     
     // If no users found for this department, return empty results
     if (userIds.length === 0) {
