@@ -40,6 +40,25 @@ async function loadCompletedAuthorisationsWithFilters(
 
   const offset = (page - 1) * ITEMS_PER_PAGE;
 
+  // First, get the filtered user IDs if department filter is applied
+  let userIds: string[] | null = null;
+  if (departmentFilter && departmentFilter.trim() && departmentFilter !== "all") {
+    const { data: filteredUsers } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("department", departmentFilter);
+    
+    userIds = filteredUsers ? filteredUsers.map(u => u.id) : [];
+    
+    // If no users found for this department, return empty results
+    if (userIds.length === 0) {
+      return {
+        data: [],
+        totalCount: 0
+      };
+    }
+  }
+
   // Build base query for data
   let query = supabase
     .from("authorisation_assignments")
@@ -61,18 +80,18 @@ async function loadCompletedAuthorisationsWithFilters(
     .eq("assignment_status", "completed")
     .not("completed_at", "is", null);
 
+  // Apply department filter using user IDs
+  if (userIds && userIds.length > 0) {
+    query = query.in("user_id", userIds);
+    countQuery = countQuery.in("user_id", userIds);
+  }
+
   // Apply search filter if provided (search user name, email, or authorisation title)
   if (q && q.trim()) {
     const searchTerm = `%${q.trim()}%`;
     // Search in user names, emails, and authorisation titles
     query = query.or(`profiles!authorisation_assignments_user_id_fkey.full_name.ilike.${searchTerm},profiles!authorisation_assignments_user_id_fkey.email.ilike.${searchTerm},authorisations!inner.title.ilike.${searchTerm}`);
     countQuery = countQuery.or(`profiles!authorisation_assignments_user_id_fkey.full_name.ilike.${searchTerm},profiles!authorisation_assignments_user_id_fkey.email.ilike.${searchTerm},authorisations!inner.title.ilike.${searchTerm}`);
-  }
-
-  // Apply department filter if provided
-  if (departmentFilter && departmentFilter.trim() && departmentFilter !== "all") {
-    query = query.eq("profiles!authorisation_assignments_user_id_fkey.department", departmentFilter);
-    countQuery = countQuery.eq("profiles!authorisation_assignments_user_id_fkey.department", departmentFilter);
   }
 
   // Apply authorisation filter if provided  
