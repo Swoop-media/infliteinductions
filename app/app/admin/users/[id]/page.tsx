@@ -10,6 +10,7 @@ import { DocumentViewButton } from "./DocumentViewButton";
 import ExpandableCourseDetails from "./ExpandableCourseDetails";
 import AdminRetakeButton from "./AdminRetakeButton";
 import UserNotifications from "./UserNotifications";
+import NotificationSubscriptions from "./NotificationSubscriptions";
 
 
 
@@ -477,6 +478,9 @@ export default async function EditUserPage({
               </Link>
             </div>
           </form>
+          
+          {/* Notification Subscriptions */}
+          <NotificationSubscriptions userId={resolvedParams.id} />
           
           {/* Notifications */}
           <UserNotifications userId={resolvedParams.id} />
