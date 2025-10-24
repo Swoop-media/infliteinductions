@@ -53,6 +53,7 @@ export default function FilteredAuthorisationList({
   authorisations: AuthzRow[];
 }) {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Extract unique departments from authorisations
   const departments = useMemo(() => {
@@ -65,16 +66,27 @@ export default function FilteredAuthorisationList({
     return Array.from(deptSet).sort();
   }, [authorisations]);
 
-  // Filter authorisations based on selected department
+  // Filter authorisations based on selected department and search query
   const filteredAuthorisations = useMemo(() => {
-    if (selectedDepartment === "all") {
-      return authorisations;
-    }
+    let filtered = authorisations;
+    
+    // Apply department filter
     if (selectedDepartment === "none") {
-      return authorisations.filter(a => !a.department);
+      filtered = filtered.filter(a => !a.department);
+    } else if (selectedDepartment !== "all") {
+      filtered = filtered.filter(a => a.department === selectedDepartment);
     }
-    return authorisations.filter(a => a.department === selectedDepartment);
-  }, [authorisations, selectedDepartment]);
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(a => 
+        a.title?.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  }, [authorisations, selectedDepartment, searchQuery]);
 
   return (
     <section className="space-y-4">
@@ -103,12 +115,26 @@ export default function FilteredAuthorisationList({
                 </>
               )}
             </select>
-            {selectedDepartment !== "all" && (
+          </div>
+
+          {/* Search Box */}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search authorisations..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 w-64"
+            />
+            {(selectedDepartment !== "all" || searchQuery) && (
               <button
-                onClick={() => setSelectedDepartment("all")}
+                onClick={() => {
+                  setSelectedDepartment("all");
+                  setSearchQuery("");
+                }}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                Clear
+                Clear all
               </button>
             )}
           </div>
@@ -123,10 +149,12 @@ export default function FilteredAuthorisationList({
       </div>
 
       {/* Results count */}
-      {selectedDepartment !== "all" && (
+      {(selectedDepartment !== "all" || searchQuery) && (
         <p className="text-sm text-gray-600">
           Showing {filteredAuthorisations.length} of {authorisations.length} authorisations
-          {selectedDepartment === "none" ? " (no department assigned)" : ` in ${selectedDepartment}`}
+          {selectedDepartment === "none" && " (no department assigned)"}
+          {selectedDepartment !== "all" && selectedDepartment !== "none" && ` in ${selectedDepartment}`}
+          {searchQuery && ` matching "${searchQuery}"`}
         </p>
       )}
 

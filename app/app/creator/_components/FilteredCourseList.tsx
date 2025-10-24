@@ -55,6 +55,7 @@ export default function FilteredCourseList({
   duplicateCourseAction: any;
 }) {
   const [selectedDepartment, setSelectedDepartment] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Extract unique departments from courses
   const departments = useMemo(() => {
@@ -67,16 +68,28 @@ export default function FilteredCourseList({
     return Array.from(deptSet).sort();
   }, [courses]);
 
-  // Filter courses based on selected department
+  // Filter courses based on selected department and search query
   const filteredCourses = useMemo(() => {
-    if (selectedDepartment === "all") {
-      return courses;
-    }
+    let filtered = courses;
+    
+    // Apply department filter
     if (selectedDepartment === "none") {
-      return courses.filter(c => !c.department);
+      filtered = filtered.filter(c => !c.department);
+    } else if (selectedDepartment !== "all") {
+      filtered = filtered.filter(c => c.department === selectedDepartment);
     }
-    return courses.filter(c => c.department === selectedDepartment);
-  }, [courses, selectedDepartment]);
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(c => 
+        c.title?.toLowerCase().includes(query) ||
+        c.tags?.some(tag => tag.toLowerCase().includes(query))
+      );
+    }
+    
+    return filtered;
+  }, [courses, selectedDepartment, searchQuery]);
 
   return (
     <section className="space-y-4">
@@ -105,12 +118,26 @@ export default function FilteredCourseList({
                 </>
               )}
             </select>
-            {selectedDepartment !== "all" && (
+          </div>
+
+          {/* Search Box */}
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Search courses..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 w-64"
+            />
+            {(selectedDepartment !== "all" || searchQuery) && (
               <button
-                onClick={() => setSelectedDepartment("all")}
+                onClick={() => {
+                  setSelectedDepartment("all");
+                  setSearchQuery("");
+                }}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                Clear
+                Clear all
               </button>
             )}
           </div>
@@ -125,10 +152,12 @@ export default function FilteredCourseList({
       </div>
 
       {/* Results count */}
-      {selectedDepartment !== "all" && (
+      {(selectedDepartment !== "all" || searchQuery) && (
         <p className="text-sm text-gray-600">
           Showing {filteredCourses.length} of {courses.length} courses
-          {selectedDepartment === "none" ? " (no department assigned)" : ` in ${selectedDepartment}`}
+          {selectedDepartment === "none" && " (no department assigned)"}
+          {selectedDepartment !== "all" && selectedDepartment !== "none" && ` in ${selectedDepartment}`}
+          {searchQuery && ` matching "${searchQuery}"`}
         </p>
       )}
 
