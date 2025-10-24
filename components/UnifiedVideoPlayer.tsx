@@ -22,6 +22,20 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
   const [hasAuthenticatedInPopup, setHasAuthenticatedInPopup] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
 
+  // Early return if videoUrl is empty or invalid
+  if (!videoUrl || videoUrl.trim() === "") {
+    return (
+      <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center space-y-2">
+            <AlertTriangle className="w-8 h-8 text-gray-400 mx-auto" />
+            <p className="text-gray-500">No video URL provided</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Extract URL from iframe HTML if provided
   const extractUrl = useCallback((input: string): string => {
     if (input.includes("<iframe")) {
@@ -304,16 +318,18 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
               </div>
             )}
             
-            <iframe
-              key={iframeKey}
-              src={embedUrl}
-              className="absolute inset-0 w-full h-full"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-              allowFullScreen
-              onLoad={handleIframeLoad}
-              onError={handleIframeError}
-              title={title || "Course video"}
-            />
+            {embedUrl && embedUrl.trim() !== "" && (
+              <iframe
+                key={iframeKey}
+                src={embedUrl}
+                className="absolute inset-0 w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+                allowFullScreen
+                onLoad={handleIframeLoad}
+                onError={handleIframeError}
+                title={title || "Course video"}
+              />
+            )}
           </>
         )}
       </div>
