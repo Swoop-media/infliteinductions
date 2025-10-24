@@ -79,6 +79,7 @@ Preferred communication style: Simple, everyday language.
 - **Enhanced search functionality**: Combined search across user names, emails, and authorization titles  
 - **Fixed department filtering**: Properly filters authorizations by department using user ID lookup
 - **Quiz review display fix**: Correctly fetches quiz questions using 'stem'/'prompt' fields instead of 'question'
+- **Teams connection status column**: Added "Teams" column to admin users table showing green tick (✓) or red cross (✗) for Teams bot connection status
 
 ## Database Query Optimizations
 - **Authorization expiry calculations**: Uses completed_at + valid_for_days from authorisations table

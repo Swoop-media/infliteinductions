@@ -16,6 +16,7 @@ type Profile = {
 
 type Role = { id: string; name: string };
 type UR = { user_id: string; role_id: string };
+type TeamsLink = { user_id: string; teams_user_id: string; };
 
 const ROLE_ORDER = [
   "General",
@@ -52,6 +53,7 @@ async function fetchData(search: string | null) {
   }
 
   let userRoles: UR[] = [];
+  let teamsLinks: TeamsLink[] = [];
   if (profiles.length) {
     const userIds = profiles.map((p) => p.id);
     const { data: urData, error: urErr } = await supabase
@@ -59,12 +61,19 @@ async function fetchData(search: string | null) {
       .select("user_id, role_id")
       .in("user_id", userIds);
     if (urErr) {
-      return { roles, profiles, userRoles: [], error: urErr.message };
+      return { roles, profiles, userRoles: [], teamsLinks: [], error: urErr.message };
     }
     userRoles = urData ?? [];
+
+    // Fetch Teams links for all users
+    const { data: teamsData } = await supabase
+      .from("teams_links")
+      .select("user_id, teams_user_id")
+      .in("user_id", userIds);
+    teamsLinks = teamsData ?? [];
   }
 
-  return { roles, profiles, userRoles, error: null as string | null };
+  return { roles, profiles, userRoles, teamsLinks, error: null as string | null };
 }
 
 export default async function AdminUsersPage({
@@ -80,13 +89,19 @@ export default async function AdminUsersPage({
     (Array.isArray(params?.q) ? params?.q[0] : params?.q) ??
     null;
 
-  const { roles, profiles, userRoles, error } = await fetchData(search);
+  const { roles, profiles, userRoles, teamsLinks, error } = await fetchData(search);
 
   const safeRoles: Role[] = roles ?? [];
   const assigned = new Map<string, Set<string>>();
   (userRoles ?? []).forEach((ur) => {
     if (!assigned.has(ur.user_id)) assigned.set(ur.user_id, new Set());
     assigned.get(ur.user_id)!.add(ur.role_id);
+  });
+
+  // Create a Set of user IDs that have Teams connected
+  const teamsConnected = new Set<string>();
+  (teamsLinks ?? []).forEach((tl) => {
+    teamsConnected.add(tl.user_id);
   });
 
   const sortedRoles = [...safeRoles].sort((a, b) => {
@@ -146,6 +161,7 @@ export default async function AdminUsersPage({
                   {r.name}
                 </th>
               ))}
+              <th className="px-3 py-2 text-left font-medium">Teams</th>
               <th className="px-3 py-2 text-left font-medium">Edit</th>
               <th className="px-3 py-2 text-left font-medium">Actions</th>
             </tr>
@@ -194,6 +210,13 @@ export default async function AdminUsersPage({
                       </td>
                     );
                   })}
+                  <td className="px-3 py-2 text-center">
+                    {teamsConnected.has(p.id) ? (
+                      <span className="text-green-600 font-bold text-lg" title="Teams connected">✓</span>
+                    ) : (
+                      <span className="text-red-600 font-bold text-lg" title="Teams not connected">✗</span>
+                    )}
+                  </td>
                   <td className="px-3 py-2">
                     <Link
                       href={`/app/admin/users/${p.id}`}
