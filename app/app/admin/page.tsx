@@ -332,14 +332,30 @@ async function loadRoleCatalog() {
   return items as RoleCatalogItem[];
 }
 
-async function loadUsersAndRoles(q: string | null) {
+async function loadUsersAndRoles(q: string | null, page: number = 1) {
   "use server";
   noStore();
   const supabase = await createSupabaseServer();
   const isAdmin = await hasRole("Admin");
   if (!isAdmin) redirect("/app/home?banner=no_access");
 
-  // Profiles (exclude archived users)
+  const PAGE_SIZE = 50;
+  const offset = (page - 1) * PAGE_SIZE;
+
+  // First get total count
+  let countQuery = supabase
+    .from("profiles")
+    .select("*", { count: "exact", head: true })
+    .is("archived_at", null);
+
+  if (q && q.trim()) {
+    const like = `%${q.trim()}%`;
+    countQuery = countQuery.or(`full_name.ilike.${like},email.ilike.${like}`);
+  }
+
+  const { count: totalCount } = await countQuery;
+
+  // Profiles (exclude archived users) with pagination
   let profs: Profile[] = [];
   if (q && q.trim()) {
     const like = `%${q.trim()}%`;
@@ -349,7 +365,7 @@ async function loadUsersAndRoles(q: string | null) {
       .or(`full_name.ilike.${like},email.ilike.${like}`)
       .is("archived_at", null)
       .order("full_name", { ascending: true })
-      .limit(50);
+      .range(offset, offset + PAGE_SIZE - 1);
     if (error) throw new Error(error.message);
     profs = (data ?? []) as Profile[];
   } else {
@@ -358,7 +374,7 @@ async function loadUsersAndRoles(q: string | null) {
       .select("id, full_name, email, department, job_description")
       .is("archived_at", null)
       .order("created_at", { ascending: false })
-      .limit(50);
+      .range(offset, offset + PAGE_SIZE - 1);
     if (error) throw new Error(error.message);
     profs = (data ?? []) as Profile[];
   }
@@ -390,7 +406,16 @@ async function loadUsersAndRoles(q: string | null) {
   const offeredNames = preferred.filter(n => namesInCatalog.has(n));
   const grantablePool = offeredNames.length ? offeredNames : Array.from(namesInCatalog);
 
-  return { profiles: profs, roleMap, grantablePool };
+  const totalPages = Math.ceil((totalCount || 0) / PAGE_SIZE);
+
+  return { 
+    profiles: profs, 
+    roleMap, 
+    grantablePool, 
+    totalPages, 
+    currentPage: page, 
+    totalCount: totalCount || 0 
+  };
 }
 
 /* --------------------------
@@ -626,7 +651,7 @@ export default async function AdminPage({
         ) : tab === "documents" ? (
           <DocumentsSection q={q} page={page} />
         ) : tab === "users" ? (
-          <UsersSection q={q} />
+          <UsersSection q={q} page={page} />
         ) : (
           <PendingAuthorisationsSection q={q} />
         )}
@@ -1002,13 +1027,18 @@ type AuthorisationCompletionRow = {
   valid_for_days: number | null;
 };
 
-async function UsersSection({ q }: { q: string | null }) {
-  const { profiles, roleMap, grantablePool } = await loadUsersAndRoles(q);
+async function UsersSection({ q, page = 1 }: { q: string | null; page?: number }) {
+  const { profiles, roleMap, grantablePool, totalPages, currentPage, totalCount } = await loadUsersAndRoles(q, page);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-medium">Users & Roles</h3>
+        <div className="flex items-center gap-4">
+          <h3 className="text-lg font-medium">Users & Roles</h3>
+          <span className="text-sm text-gray-600">
+            {totalCount} total users
+          </span>
+        </div>
         <div className="flex gap-2">
           <Link
             href="/app/admin/users/archived"
@@ -1036,14 +1066,95 @@ async function UsersSection({ q }: { q: string | null }) {
         <button className="rounded-md border px-3 py-2 text-sm">Search</button>
       </form>
 
-      {profiles.length === 0 ? (
+      {profiles.length === 0 && currentPage === 1 ? (
         <p className="text-sm text-gray-600">No users found.</p>
       ) : (
-        <SortableUsersTable
-          profiles={profiles}
-          roleMap={roleMap}
-          grantablePool={grantablePool}
-        />
+        <>
+          <SortableUsersTable
+            profiles={profiles}
+            roleMap={roleMap}
+            grantablePool={grantablePool}
+          />
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6">
+              <div className="flex flex-1 justify-between sm:hidden">
+                {currentPage > 1 && (
+                  <a
+                    href={`/app/admin?tab=users&page=${currentPage - 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                    className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Previous
+                  </a>
+                )}
+                {currentPage < totalPages && (
+                  <a
+                    href={`/app/admin?tab=users&page=${currentPage + 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                    className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    Next
+                  </a>
+                )}
+              </div>
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{((currentPage - 1) * 50) + 1}</span> to{' '}
+                    <span className="font-medium">{Math.min(currentPage * 50, totalCount)}</span> of{' '}
+                    <span className="font-medium">{totalCount}</span> results
+                  </p>
+                </div>
+                <div>
+                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    {currentPage > 1 && (
+                      <a
+                        href={`/app/admin?tab=users&page=${currentPage - 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                        className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                      >
+                        <span className="sr-only">Previous</span>
+                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+                        </svg>
+                      </a>
+                    )}
+                    
+                    {/* Page numbers */}
+                    {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                      const pageNum = i + 1;
+                      const isCurrentPage = pageNum === currentPage;
+                      return (
+                        <a
+                          key={pageNum}
+                          href={`/app/admin?tab=users&page=${pageNum}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                          className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
+                            isCurrentPage
+                              ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+                              : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
+                          }`}
+                        >
+                          {pageNum}
+                        </a>
+                      );
+                    })}
+                    
+                    {currentPage < totalPages && (
+                      <a
+                        href={`/app/admin?tab=users&page=${currentPage + 1}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+                        className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
+                      >
+                        <span className="sr-only">Next</span>
+                        <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+                        </svg>
+                      </a>
+                    )}
+                  </nav>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
