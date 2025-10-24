@@ -21,7 +21,6 @@ interface Props {
   profiles: Profile[];
   roleMap: Map<string, string[]>;
   grantablePool: string[];
-  teamsConnected?: Set<string>;
 }
 
 function getSortIcon(column: SortField, sortField: SortField | null, sortDirection: SortDirection) {
@@ -33,7 +32,7 @@ function getSortIcon(column: SortField, sortField: SortField | null, sortDirecti
     : <ChevronDown className="h-4 w-4 text-blue-600" />;
 }
 
-export default function SortableUsersTable({ profiles, roleMap, grantablePool, teamsConnected }: Props) {
+export default function SortableUsersTable({ profiles, roleMap, grantablePool }: Props) {
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const router = useRouter();
@@ -140,9 +139,6 @@ export default function SortableUsersTable({ profiles, roleMap, grantablePool, t
               Grant Role
             </th>
             <th className="px-3 py-2 text-left font-medium">
-              Teams
-            </th>
-            <th className="px-3 py-2 text-left font-medium">
               Actions
             </th>
           </tr>
@@ -224,13 +220,6 @@ export default function SortableUsersTable({ profiles, roleMap, grantablePool, t
                       Grant
                     </button>
                   </form>
-                </td>
-                <td className="px-3 py-2 text-center">
-                  {teamsConnected?.has(p.id) ? (
-                    <span className="text-green-600 font-bold text-lg" title="Teams connected">✓</span>
-                  ) : (
-                    <span className="text-red-600 font-bold text-lg" title="Teams not connected">✗</span>
-                  )}
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex gap-1">

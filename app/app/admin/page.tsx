@@ -390,18 +390,7 @@ async function loadUsersAndRoles(q: string | null) {
   const offeredNames = preferred.filter(n => namesInCatalog.has(n));
   const grantablePool = offeredNames.length ? offeredNames : Array.from(namesInCatalog);
 
-  // Fetch Teams links for all users
-  const { data: teamsLinks } = await supabase
-    .from("teams_links")
-    .select("user_id, teams_user_id")
-    .in("user_id", ids);
-  
-  const teamsConnected = new Set<string>();
-  (teamsLinks ?? []).forEach((tl: any) => {
-    teamsConnected.add(tl.user_id);
-  });
-
-  return { profiles: profs, roleMap, grantablePool, teamsConnected };
+  return { profiles: profs, roleMap, grantablePool };
 }
 
 /* --------------------------
@@ -1014,7 +1003,7 @@ type AuthorisationCompletionRow = {
 };
 
 async function UsersSection({ q }: { q: string | null }) {
-  const { profiles, roleMap, grantablePool, teamsConnected } = await loadUsersAndRoles(q);
+  const { profiles, roleMap, grantablePool } = await loadUsersAndRoles(q);
 
   return (
     <div className="space-y-4">
@@ -1054,7 +1043,6 @@ async function UsersSection({ q }: { q: string | null }) {
           profiles={profiles}
           roleMap={roleMap}
           grantablePool={grantablePool}
-          teamsConnected={teamsConnected}
         />
       )}
     </div>
