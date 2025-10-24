@@ -1,5 +1,5 @@
 // @ts-nocheck
-// @ts-nocheck
+// Force recompilation
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
@@ -49,7 +49,7 @@ async function fetchData(search: string | null) {
   const { data: profilesData, error: profilesErr } = await profQuery;
   const profiles: Profile[] = profilesData ?? [];
   if (profilesErr) {
-    return { roles, profiles: [], userRoles: [], error: profilesErr.message };
+    return { roles, profiles: [], userRoles: [], teamsLinks: [], error: profilesErr.message };
   }
 
   let userRoles: UR[] = [];
