@@ -1,0 +1,44 @@
+Summary of the Issue
+The view public.requirement_definitions is defined with SECURITY DEFINER.
+SECURITY DEFINER causes queries against the view to run with the privileges and RLS context of the view’s owner/creator, not the caller.
+This can unintentionally bypass Row-Level Security (RLS) and grants, allowing users to see or modify data they shouldn’t, depending on how the view is used and who owns it.
+Why This Is Risky
+Bypasses caller’s RLS: Data visibility may be broader than intended.
+Privilege escalation: If the view owner has elevated grants, callers inherit those during view execution.
+Hard to audit: Behavior depends on view owner and search_path at creation time.
+Recommended Fixes
+Choose one approach based on your intended behavior:
+
+Prefer SECURITY INVOKER (Safer default)
+Redefine the view without SECURITY DEFINER so it runs under the caller’s privileges and RLS.
+Action:
+Recreate the view omitting SECURITY DEFINER. If it’s currently set via ALTER VIEW, revert it:
+DROP and CREATE the view again without specifying SECURITY DEFINER, or use ALTER VIEW ... SET (security_invoker = true) if you’re on a Postgres version that supports it (PG 15+).
+Verify:
+Ensure correct RLS policies exist on underlying tables so legitimate users can read what they should.
+If you truly need SECURITY DEFINER
+Lock it down strictly to mitigate risk:
+Set a secure, fixed search_path inside the view definition using SET LOCAL search_path or by creating the underlying function with a stable search_path.
+Ensure the view owner is a minimal-privilege role created specifically for this purpose (not postgres, not supabase_admin).
+Limit exposure: Grant SELECT only to the specific roles that require this view.
+Ensure underlying queries are read-only and cannot perform writes.
+If RLS bypass is intended, document the rationale and scope clearly and add tests validating expected exposure.
+Alternative: Use a SECURITY DEFINER function + SECURITY INVOKER view
+Encapsulate any privileged logic in a SECURITY DEFINER function owned by a restricted role.
+Call it from a SECURITY INVOKER view to keep most interactions within caller context.
+Carefully REVOKE EXECUTE on the function from public roles and GRANT only to the roles that need it.
+Practical Steps
+Inspect ownership:
+Ensure the view is owned by a least-privilege role if you keep SECURITY DEFINER.
+Review grants:
+REVOKE all on public.requirement_definitions from PUBLIC and GRANT only to intended roles (e.g., authenticated).
+Validate RLS:
+Confirm RLS policies on underlying tables align with your data access rules if switching to SECURITY INVOKER.
+Test as different roles:
+Verify result sets differ appropriately per user/tenant when using SECURITY INVOKER.
+When to Keep SECURITY DEFINER
+You have a clear, documented need to aggregate or expose data that must bypass RLS, and you’ve minimized risk via strict ownership, grants, and a fixed search_path.
+If you want, I can check the current owner, grants, and RLS dependencies and provide the exact SQL to safely recreate the view as SECURITY INVOKER or harden it under SECURITY DEFINER.
+
+
+
