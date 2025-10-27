@@ -13,7 +13,13 @@ export const dynamic = "force-dynamic";
 function pick<T = any>(obj: any, keys: string[], fallback: T | null = null): T | null {
   for (const k of keys) {
     const v = obj?.[k];
-    if (v !== undefined && v !== null) return v as T;
+    if (v !== undefined && v !== null) {
+      // Convert string "true"/"false" to actual boolean if expecting boolean type
+      if (typeof fallback === 'boolean' && typeof v === 'string') {
+        return (v.toLowerCase() === 'true') as T;
+      }
+      return v as T;
+    }
   }
   return fallback;
 }
@@ -813,12 +819,12 @@ export default async function QuizEditorPage(props: {
           </label>
 
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="shuffle" defaultChecked={!!pick(quiz, ["shuffle"], true)} />
+            <input type="checkbox" name="shuffle" defaultChecked={Boolean(pick(quiz, ["shuffle"], true))} />
             Shuffle questions
           </label>
 
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="show_feedback" defaultChecked={!!pick(quiz, ["show_feedback"], true)} />
+            <input type="checkbox" name="show_feedback" defaultChecked={Boolean(pick(quiz, ["show_feedback"], true))} />
             Show answer feedback after submit
           </label>
 

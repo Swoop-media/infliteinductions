@@ -628,7 +628,7 @@ export default async function ModuleEditorPage(props: {
                           <input
                             type="checkbox"
                             name="require_expiry"
-                            defaultChecked={!!b.data?.require_expiry}
+                            defaultChecked={Boolean(b.data?.require_expiry)}
                           />
                           Require expiry date
                         </label>
