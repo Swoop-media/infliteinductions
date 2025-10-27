@@ -86,6 +86,16 @@ interface CompletedAuthorization {
   status: 'current' | 'expiring_soon' | 'expired' | 'no_expiry';
 }
 
+interface RevokedAuthorization {
+  assignment_id: string;
+  authorization_title: string;
+  completed_at?: string;
+  revoked_at?: string;
+  revoked_by?: string;
+  revoked_reason?: string;
+  status: 'revoked';
+}
+
 interface Props {
   profile: {
     id: string;
@@ -96,9 +106,10 @@ interface Props {
   };
   courses: CompletedCourse[];
   authorizations: CompletedAuthorization[];
+  revokedAuthorizations?: RevokedAuthorization[];
 }
 
-export default function ExpandableTrainingRecord({ profile, courses, authorizations }: Props) {
+export default function ExpandableTrainingRecord({ profile, courses, authorizations, revokedAuthorizations }: Props) {
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
   const [courseDetails, setCourseDetails] = useState<Map<string, any>>(new Map());
   const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set());
@@ -225,6 +236,38 @@ export default function ExpandableTrainingRecord({ profile, courses, authorizati
           </div>
         )}
       </div>
+
+      {/* Revoked Authorizations */}
+      {revokedAuthorizations && revokedAuthorizations.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-bold text-red-900 mb-4 border-b border-red-300 pb-2">
+            Revoked Authorizations ({revokedAuthorizations.length})
+          </h2>
+          <div className="space-y-3">
+            {revokedAuthorizations.map((auth) => (
+              <div key={auth.assignment_id} className="border border-red-300 rounded-lg p-4 bg-red-50">
+                <h3 className="font-semibold text-lg text-red-900">{auth.authorization_title}</h3>
+                <div className="grid grid-cols-2 gap-4 mt-2 text-sm">
+                  <div>
+                    {auth.completed_at && (
+                      <p><strong>Was Completed:</strong> {formatDateSafe(auth.completed_at)}</p>
+                    )}
+                    <p className="text-red-700"><strong>Revoked:</strong> {auth.revoked_at ? formatDateSafe(auth.revoked_at) : 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-red-600"><strong>Reason:</strong> {auth.revoked_reason || 'Revoked by admin'}</p>
+                    <p><strong>Status:</strong> 
+                      <span className="ml-1 px-2 py-1 rounded text-xs bg-red-100 text-red-800">
+                        Revoked
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Completed Courses */}
       <div className="mb-8">

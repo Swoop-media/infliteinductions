@@ -113,6 +113,11 @@ async function loadUserCompletedItems(userId: string) {
     auth.assignment_status === "completed" && auth.completed_at
   ) || [];
 
+  // Filter revoked authorizations
+  const revokedAuthWithCourses = authWithCourses?.filter(auth => 
+    auth.assignment_status === "revoked" || auth.revoked_at
+  ) || [];
+
   // Process courses
   const processedCourses: CompletedCourse[] = (completedCourses || []).map((course: any) => {
     const completedDate = new Date(course.completed_at);
@@ -178,7 +183,18 @@ async function loadUserCompletedItems(userId: string) {
     };
   });
 
-  return { processedCourses, processedAuthorizations };
+  // Process revoked authorizations
+  const processedRevokedAuthorizations = (revokedAuthWithCourses || []).map((auth: any) => ({
+    assignment_id: auth.id,
+    authorization_title: auth.authorisations?.title || 'Unknown Authorization',
+    completed_at: auth.completed_at,
+    revoked_at: auth.revoked_at,
+    revoked_by: auth.revoked_by,
+    revoked_reason: auth.revoked_reason || 'Revoked by admin',
+    status: 'revoked'
+  }));
+
+  return { processedCourses, processedAuthorizations, processedRevokedAuthorizations };
 }
 
 export default async function UserTrainingRecordPDF({
@@ -206,13 +222,14 @@ export default async function UserTrainingRecordPDF({
     );
   }
 
-  const { processedCourses, processedAuthorizations } = await loadUserCompletedItems(resolvedParams.id);
+  const { processedCourses, processedAuthorizations, processedRevokedAuthorizations } = await loadUserCompletedItems(resolvedParams.id);
 
   return (
     <ExpandableTrainingRecord 
       profile={profile}
       courses={processedCourses}
       authorizations={processedAuthorizations}
+      revokedAuthorizations={processedRevokedAuthorizations}
     />
   );
 }

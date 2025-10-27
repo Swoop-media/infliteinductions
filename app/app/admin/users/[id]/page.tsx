@@ -9,6 +9,7 @@ import { PDFExportButton } from "./PDFExportButton";
 import { DocumentViewButton } from "./DocumentViewButton";
 import ExpandableCourseDetails from "./ExpandableCourseDetails";
 import AdminRetakeButton from "./AdminRetakeButton";
+import AdminRevokeButton from "./AdminRevokeButton";
 import UserNotifications from "./UserNotifications";
 import NotificationSubscriptions from "./NotificationSubscriptions";
 
@@ -235,6 +236,11 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
     auth.assignment_status === "completed" && auth.completed_at
   ) || [];
 
+  // Filter revoked authorizations
+  const revokedAuthWithCourses = authWithCourses?.filter(auth => 
+    auth.assignment_status === "revoked" || auth.revoked_at
+  ) || [];
+
 
   // Process courses
   const processedCourses: CompletedCourse[] = (completedCourses || []).map((course: any) => {
@@ -301,9 +307,21 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
     };
   });
 
+  // Process revoked authorizations
+  const processedRevokedAuthorizations = (revokedAuthWithCourses || []).map((auth: any) => ({
+    assignment_id: auth.id,
+    authorization_title: auth.authorisations?.title || 'Unknown Authorization',
+    completed_at: auth.completed_at,
+    revoked_at: auth.revoked_at,
+    revoked_by: auth.revoked_by,
+    revoked_reason: auth.revoked_reason || 'Revoked by admin',
+    status: 'revoked'
+  }));
+
   return { 
     processedCourses, 
-    processedAuthorizations, 
+    processedAuthorizations,
+    processedRevokedAuthorizations, 
     uploadedDocuments: uploadedDocuments || [],
     allCourseAssignments: allCourseAssignments || [],
     allAuthAssignments: allAuthAssignments || [],
@@ -378,7 +396,8 @@ export default async function EditUserPage({
 
   const { 
     processedCourses, 
-    processedAuthorizations, 
+    processedAuthorizations,
+    processedRevokedAuthorizations, 
     uploadedDocuments, 
     allCourseAssignments, 
     allAuthAssignments, 
@@ -586,12 +605,21 @@ export default async function EditUserPage({
                           {getStatusText(auth.status, auth.days_until_expiry)}
                         </span>
                         {authorizationId && (
-                          <AdminRetakeButton
-                            type="authorization"
-                            userId={resolvedParams.id}
-                            authorizationId={authorizationId}
-                            authTitle={auth.authorization_title}
-                          />
+                          <>
+                            <AdminRetakeButton
+                              type="authorization"
+                              userId={resolvedParams.id}
+                              authorizationId={authorizationId}
+                              authTitle={auth.authorization_title}
+                            />
+                            <AdminRevokeButton
+                              type="authorization"
+                              userId={resolvedParams.id}
+                              authorizationId={authorizationId}
+                              assignmentId={auth.assignment_id}
+                              authTitle={auth.authorization_title}
+                            />
+                          </>
                         )}
                       </div>
                     </div>
@@ -601,19 +629,57 @@ export default async function EditUserPage({
             )}
           </div>
 
+          {/* Revoked Authorizations */}
+          {processedRevokedAuthorizations && processedRevokedAuthorizations.length > 0 && (
+            <div className="rounded-lg border bg-red-50 border-red-200 p-4">
+              <h2 className="text-lg font-medium mb-4 text-red-900">
+                Revoked Authorizations ({processedRevokedAuthorizations.length})
+              </h2>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {processedRevokedAuthorizations.map((auth) => (
+                  <div key={auth.assignment_id} className="flex items-center justify-between p-3 border border-red-300 rounded-md bg-white">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-sm text-red-900">{auth.authorization_title}</h3>
+                      {auth.completed_at && (
+                        <p className="text-xs text-gray-600">
+                          Was completed: {new Date(auth.completed_at).toLocaleDateString()}
+                        </p>
+                      )}
+                      <p className="text-xs text-red-700">
+                        Revoked: {auth.revoked_at ? new Date(auth.revoked_at).toLocaleDateString() : 'N/A'}
+                      </p>
+                      <p className="text-xs text-red-600 italic">
+                        Reason: {auth.revoked_reason}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 ml-3">
+                      <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-red-100 text-red-700">
+                        Revoked
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Current Authorization Assignments */}
           <div className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-medium mb-4">Current Authorization Assignments ({allAuthAssignments.length})</h2>
-            {allAuthAssignments.length === 0 ? (
+            <h2 className="text-lg font-medium mb-4">
+              Current Authorization Assignments ({allAuthAssignments.filter(a => a.assignment_status !== 'revoked').length})
+            </h2>
+            {allAuthAssignments.filter(a => a.assignment_status !== 'revoked').length === 0 ? (
               <p className="text-sm text-gray-500">No authorization assignments found.</p>
             ) : (
               <ExpandableCourseDetails 
-                authorizations={allAuthAssignments.map(assignment => ({
-                  authorization_id: assignment.authorisation_id,
-                  authorization_title: assignment.authorisations?.title || 'Unknown Authorization',
-                  assignment_status: assignment.assignment_status,
-                  completed_at: assignment.completed_at
-                }))}
+                authorizations={allAuthAssignments
+                  .filter(assignment => assignment.assignment_status !== 'revoked')
+                  .map(assignment => ({
+                    authorization_id: assignment.authorisation_id,
+                    authorization_title: assignment.authorisations?.title || 'Unknown Authorization',
+                    assignment_status: assignment.assignment_status,
+                    completed_at: assignment.completed_at
+                  }))}
                 userId={resolvedParams.id}
                 type="authorizations"
               />
