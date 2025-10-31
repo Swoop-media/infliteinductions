@@ -6,6 +6,7 @@ import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import DocumentSummary from "./DocumentSummary";
+import DocumentRequirements from "./DocumentRequirements";
 import ExpandableCourseDetails from "./ExpandableCourseDetails";
 import ExpiryPreview from "./ExpiryPreview";
 
@@ -789,7 +790,10 @@ export default async function ReviewAssignmentPage({ params }: Props) {
         </div>
       </div>
 
-      {/* Document Summary */}
+      {/* Document Requirements and Summary */}
+      <DocumentRequirements documents={documents} courses={courses} />
+      
+      {/* Original Document Summary */}
       <DocumentSummary documents={documents} />
 
       {/* Course Progress with Expandable Details */}
