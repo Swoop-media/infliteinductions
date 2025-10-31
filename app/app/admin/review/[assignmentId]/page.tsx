@@ -868,9 +868,6 @@ export default async function ReviewAssignmentPage({ params }: Props) {
           <button className="rounded-md bg-green-600 px-6 py-2 text-sm text-white hover:bg-green-700">
             Approve Authorisation
           </button>
-          <button className="rounded-md border px-6 py-2 text-sm hover:bg-gray-50">
-            Add Notes
-          </button>
         </form>
         <p className="text-xs text-gray-500 mt-2">
           Note: Review functionality will be implemented in the next phase
