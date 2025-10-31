@@ -530,6 +530,43 @@ async function loadAssignmentDetails(assignmentId: string) {
     };
   });
 
+  // Fetch document requirements from module_content_blocks
+  let documentRequirements = [];
+  if (moduleIds.length > 0) {
+    const { data: contentBlocks } = await supabase
+      .from("module_content_blocks")
+      .select("*")
+      .in("module_id", moduleIds)
+      .eq("kind", "request_document")
+      .order("order_index", { ascending: true });
+      
+    if (contentBlocks) {
+      documentRequirements = contentBlocks.map(block => {
+        const module = modules?.find(m => m.id === block.module_id);
+        const course = authCourses?.find(ac => {
+          const courseModules = modules?.filter(m => m.course_id === ac.course_id) || [];
+          return courseModules.some(m => m.id === block.module_id);
+        });
+        
+        // Parse the data field to get the label and requirements
+        const blockData = block.data || {};
+        const label = blockData.label || "Document Upload Required";
+        const requireExpiry = blockData.require_expiry || false;
+        
+        return {
+          id: block.id,
+          module_id: block.module_id,
+          module_title: module?.title || "Unknown Module",
+          course_id: course?.course_id || null,
+          course_title: (course?.courses as any)?.title || "Unknown Course",
+          label: label,
+          require_expiry: requireExpiry,
+          order_index: block.order_index
+        };
+      });
+    }
+  }
+
   // Process documents for the summary section
   const documentsWithContext = (documents || []).map(doc => {
     const course = authCourses?.find(ac => ac.course_id === doc.course_id);
@@ -543,7 +580,9 @@ async function loadAssignmentDetails(assignmentId: string) {
       storage_path: doc.file_path || doc.storage_path,
       expires_on: doc.expires_on,
       created_at: doc.created_at,
-      user_id: doc.user_id
+      user_id: doc.user_id,
+      block_id: doc.block_id || null,
+      module_id: doc.module_id || null
     };
   });
 
@@ -553,6 +592,7 @@ async function loadAssignmentDetails(assignmentId: string) {
     profile,
     courses: coursesWithDetails,
     documents: documentsWithContext,
+    documentRequirements,
     responsiblePerson: responsiblePersonDetails
   };
 }
@@ -711,7 +751,7 @@ export default async function ReviewAssignmentPage({ params }: Props) {
   // }
 
   const resolvedParams = await params;
-  const { assignment, authorisation, profile, courses, documents, responsiblePerson } = await loadAssignmentDetails(resolvedParams.assignmentId);
+  const { assignment, authorisation, profile, courses, documents, documentRequirements, responsiblePerson } = await loadAssignmentDetails(resolvedParams.assignmentId);
 
   return (
     <div className="space-y-6">
@@ -791,7 +831,11 @@ export default async function ReviewAssignmentPage({ params }: Props) {
       </div>
 
       {/* Document Requirements and Summary */}
-      <DocumentRequirements documents={documents} courses={courses} />
+      <DocumentRequirements 
+        documents={documents} 
+        courses={courses} 
+        documentRequirements={documentRequirements} 
+      />
       
       {/* Original Document Summary */}
       <DocumentSummary documents={documents} />
