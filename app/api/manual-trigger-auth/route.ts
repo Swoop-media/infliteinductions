@@ -21,9 +21,15 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Test user data
-    const testUserId = 'aaaf24e3-9b9b-41d2-ac52-220d1ee25551';
-    const authId = 'a707ba0b-7ba3-4ee0-9937-c85e2b0e66b3';
+    // Test user data - load from environment variables
+    const testUserId = process.env.TEST_USER_ID;
+    const authId = process.env.TEST_AUTH_ID;
+    
+    if (!testUserId || !authId) {
+      return NextResponse.json({ 
+        error: "Test configuration missing" 
+      }, { status: 500 });
+    }
 
     console.log("Manually triggering authorization to pending_approval...");
 
