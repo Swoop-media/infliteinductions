@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         completed_at,
         approved_at,
         role,
-        profiles!inner(
+        profiles!authorisation_assignments_user_id_fkey!inner(
           full_name,
           email
         ),
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (searchTerm) {
-      query = query.or(`profiles.full_name.ilike.%${searchTerm}%,profiles.email.ilike.%${searchTerm}%,authorisations.title.ilike.%${searchTerm}%`);
+      query = query.or(`profiles!authorisation_assignments_user_id_fkey.full_name.ilike.%${searchTerm}%,profiles!authorisation_assignments_user_id_fkey.email.ilike.%${searchTerm}%,authorisations.title.ilike.%${searchTerm}%`);
     }
 
     if (dateFrom) {
