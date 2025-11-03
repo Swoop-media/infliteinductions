@@ -66,6 +66,13 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (December 2024)
 
+## Authorization Diagnostic Tool Optimization (Latest)
+- **Performance improvements**: Reduced database queries from 400+ to 3-4 using batched queries, eliminating N+1 problem
+- **Enhanced filtering**: Added comprehensive filters including search, status filters, date range, and quick filters to exclude completed/approved items  
+- **Pagination**: Implemented 50 items per page for efficient handling of large datasets
+- **API authentication fix**: Corrected all diagnostic endpoints to use `has_role` RPC function instead of direct `user_roles` table queries (critical fix for admin access)
+- **Optimized API endpoint**: Server-side filtering and batching for better performance
+
 ## Notification System Enhancements
 - **Enhanced notification system** with detailed notification displays on admin user pages
 - **Improved in-app notifications dropdown** with comprehensive information and emoji icons

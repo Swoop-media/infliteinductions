@@ -12,14 +12,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Verify user has admin role
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("role_name")
-      .eq("user_id", user.id)
-      .in("role_name", ["Admin", "Senior Management"]);
+    // Verify user has admin role using RPC function
+    const { data: hasAdminRole, error: roleError } = await supabase.rpc("has_role", {
+      uid: user.id,
+      role_name: "Admin"
+    });
+    
+    // Also check for Senior Management if not admin
+    let hasSeniorRole = false;
+    if (!hasAdminRole) {
+      const { data: seniorCheck } = await supabase.rpc("has_role", {
+        uid: user.id,
+        role_name: "Senior Management"
+      });
+      hasSeniorRole = !!seniorCheck;
+    }
 
-    if (!roles || roles.length === 0) {
+    if (!hasAdminRole && !hasSeniorRole) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
