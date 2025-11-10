@@ -211,13 +211,13 @@ async function loadInProgressCourses(q: string | null) {
   if (!allowed) redirect("/app/home?banner=no_access");
 
   // Get course assignments that are not completed (only trainee role to avoid duplicates)
+  // Note: No limit here so search can find all assignments
   const { data: assignments, error: assignError } = await supabase
     .from("course_assignments")
     .select("id, user_id, course_id, assignment_status, created_at")
     .in("assignment_status", ["assigned", "in_progress"])
     .eq("role", "trainee")
-    .order("created_at", { ascending: false })
-    .limit(100);
+    .order("created_at", { ascending: false });
 
   if (assignError) throw new Error(assignError.message);
   if (!assignments || assignments.length === 0) return [];
@@ -308,6 +308,13 @@ async function loadInProgressCourses(q: string | null) {
       (course.title?.toLowerCase().includes(searchTerm)) ||
       (course.department?.toLowerCase().includes(searchTerm))
     );
+  }
+
+  // Apply a reasonable limit after filtering to prevent performance issues
+  // This ensures search works across all data but we don't return too many results
+  const MAX_DISPLAY_RESULTS = 200;
+  if (inProgressCourses.length > MAX_DISPLAY_RESULTS) {
+    inProgressCourses = inProgressCourses.slice(0, MAX_DISPLAY_RESULTS);
   }
 
   return inProgressCourses;

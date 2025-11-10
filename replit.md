@@ -66,6 +66,12 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (December 2024)
 
+## Course Progress Search Fix
+- **Issue Fixed**: Search in Course Progress tab was missing many course enrollments
+- **Solution**: Removed premature limit(100) that was applied before search filtering
+- **Impact**: Search now works across all course assignments, then limits results after filtering
+- **Files Updated**: `app/app/admin/page.tsx` - loadInProgressCourses function
+
 ## Dynamic Department Loading Fix
 - **Issue Fixed**: Edit User page was using hardcoded department list instead of database values
 - **Solution**: Refactored to dynamically load departments from Supabase `departments` table
