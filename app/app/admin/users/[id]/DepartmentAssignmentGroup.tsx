@@ -32,10 +32,14 @@ export default function DepartmentAssignmentGroup({
   formAction,
   userId
 }: DepartmentAssignmentGroupProps) {
-  const [localSelectedIds, setLocalSelectedIds] = useState<Set<string>>(new Set(selectedIds));
+  // Initialize local state directly from props, no need for syncing
+  const [localSelectedIds, setLocalSelectedIds] = useState<Set<string>>(() => {
+    const validItemIds = new Set(items.map(item => item.id));
+    return new Set(selectedIds.filter(id => validItemIds.has(id)));
+  });
   
   // Initialize expanded departments based on selections or default to first department
-  const getInitialExpanded = () => {
+  const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(() => {
     const expanded = new Set<string>();
     
     // Add departments with selected items
@@ -52,18 +56,7 @@ export default function DepartmentAssignmentGroup({
     }
     
     return expanded;
-  };
-  
-  const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(getInitialExpanded);
-
-  // Sync localSelectedIds with external selectedIds prop and prune invalid selections
-  useEffect(() => {
-    const validItemIds = new Set(items.map(item => item.id));
-    const newSelectedIds = new Set(
-      selectedIds.filter(id => validItemIds.has(id))
-    );
-    setLocalSelectedIds(newSelectedIds);
-  }, [selectedIds, items]);
+  });
 
   // Group items by department
   const departmentGroups = useMemo(() => {
