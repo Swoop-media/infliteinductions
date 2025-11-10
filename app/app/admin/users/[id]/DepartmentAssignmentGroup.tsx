@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 
 interface AssignmentItem {
@@ -34,6 +34,34 @@ export default function DepartmentAssignmentGroup({
 }: DepartmentAssignmentGroupProps) {
   const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(new Set());
   const [localSelectedIds, setLocalSelectedIds] = useState<Set<string>>(new Set(selectedIds));
+
+  // Sync localSelectedIds with external selectedIds prop and prune invalid selections
+  useEffect(() => {
+    const validItemIds = new Set(items.map(item => item.id));
+    const newSelectedIds = new Set(
+      selectedIds.filter(id => validItemIds.has(id))
+    );
+    setLocalSelectedIds(newSelectedIds);
+  }, [selectedIds, items]);
+
+  // Initialize expanded departments - expand any with selected items or the first one
+  useEffect(() => {
+    const departmentsWithSelections = new Set<string>();
+    items.forEach(item => {
+      if (localSelectedIds.has(item.id)) {
+        departmentsWithSelections.add(item.department || 'Unassigned');
+      }
+    });
+
+    // If we have departments with selections, expand them
+    if (departmentsWithSelections.size > 0) {
+      setExpandedDepartments(departmentsWithSelections);
+    } else if (items.length > 0) {
+      // Otherwise, expand the first department
+      const firstDept = items[0].department || 'Unassigned';
+      setExpandedDepartments(new Set([firstDept]));
+    }
+  }, []); // Only run on initial mount
 
   // Group items by department
   const departmentGroups = useMemo(() => {
