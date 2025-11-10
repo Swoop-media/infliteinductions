@@ -138,7 +138,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
   const assignedCourseIds = (allCourseAssignments || []).map(a => a.courses?.id).filter(Boolean);
   let availableCoursesQuery = supabase
     .from("courses")
-    .select("id, title, status")
+    .select("id, title, status, department")
     .eq("status", "published");
   
   if (assignedCourseIds.length > 0) {
@@ -151,7 +151,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
   const assignedAuthIds = (allAuthAssignments || []).map(a => a.authorisation_id).filter(Boolean);
   let availableAuthsQuery = supabase
     .from("authorisations")
-    .select("id, title, status")
+    .select("id, title, status, department")
     .eq("status", "active");
     
   if (assignedAuthIds.length > 0) {
