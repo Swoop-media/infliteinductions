@@ -66,6 +66,14 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (December 2024)
 
+## Department-Based Assignment UI
+- **Feature Added**: Redesigned course and authorization assignment UI with department organization
+- **New Component**: Created DepartmentAssignmentGroup that groups items by department with collapsible sections
+- **Functionality**: Supports "select all" per department, individual selection, and proper form submission
+- **Data Loading**: Updated queries to include department field for courses and authorizations
+- **Implementation**: Replaced flat checkbox lists with organized department sections for better usability
+- **Files Created/Updated**: Created `app/app/admin/users/[id]/DepartmentAssignmentGroup.tsx`, updated `app/app/admin/users/[id]/page.tsx`
+
 ## Collapsible Sections in Edit User Page
 - **Feature Added**: Made four sections collapsible with default collapsed state for better UI organization
 - **Sections Updated**: Completed Authorizations, Current Authorization Assignments, Completed Courses, Current Course Assignments
