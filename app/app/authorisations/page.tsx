@@ -94,10 +94,44 @@ async function loadCompletedAuthorisationsWithFilters(
 
   // Apply search filter if provided (search user name, email, or authorisation title)
   if (q && q.trim()) {
-    const searchTerm = `%${q.trim()}%`;
-    // Search in user names, emails, and authorisation titles
-    query = query.or(`profiles!authorisation_assignments_user_id_fkey.full_name.ilike.${searchTerm},profiles!authorisation_assignments_user_id_fkey.email.ilike.${searchTerm},authorisations!inner.title.ilike.${searchTerm}`);
-    countQuery = countQuery.or(`profiles!authorisation_assignments_user_id_fkey.full_name.ilike.${searchTerm},profiles!authorisation_assignments_user_id_fkey.email.ilike.${searchTerm},authorisations!inner.title.ilike.${searchTerm}`);
+    const searchTerm = q.trim().toLowerCase();
+    
+    // For search, we need to filter after fetching because of the complex joins
+    // First, get user IDs matching the search term
+    const { data: searchUsers } = await supabase
+      .from("profiles")
+      .select("id")
+      .or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`);
+    
+    // Also get authorisation IDs matching the search term
+    const { data: searchAuths } = await supabase
+      .from("authorisations")
+      .select("id")
+      .ilike("title", `%${searchTerm}%`);
+    
+    const matchingUserIds = searchUsers ? searchUsers.map(u => u.id) : [];
+    const matchingAuthIds = searchAuths ? searchAuths.map(a => a.id) : [];
+    
+    // Apply the combined filter - match either user OR authorisation
+    if (matchingUserIds.length > 0 || matchingAuthIds.length > 0) {
+      if (matchingUserIds.length > 0 && matchingAuthIds.length > 0) {
+        // Match either user or authorisation
+        query = query.or(`user_id.in.(${matchingUserIds.map(id => `"${id}"`).join(',')}),authorisation_id.in.(${matchingAuthIds.map(id => `"${id}"`).join(',')})`);
+        countQuery = countQuery.or(`user_id.in.(${matchingUserIds.map(id => `"${id}"`).join(',')}),authorisation_id.in.(${matchingAuthIds.map(id => `"${id}"`).join(',')})`);
+      } else if (matchingUserIds.length > 0) {
+        query = query.in("user_id", matchingUserIds);
+        countQuery = countQuery.in("user_id", matchingUserIds);
+      } else if (matchingAuthIds.length > 0) {
+        query = query.in("authorisation_id", matchingAuthIds);
+        countQuery = countQuery.in("authorisation_id", matchingAuthIds);
+      }
+    } else {
+      // No matches found, return empty result
+      return {
+        data: [],
+        totalCount: 0
+      };
+    }
   }
 
   // Apply authorisation filter if provided  
