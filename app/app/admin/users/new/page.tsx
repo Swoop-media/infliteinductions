@@ -5,21 +5,22 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import AssignmentSections from "./AssignmentSections";
 
 async function fetchData() {
   const supabase = await createSupabaseServer();
 
-  // Fetch courses for assignment
+  // Fetch courses for assignment with department
   const { data: coursesData } = await supabase
     .from("courses")
-    .select("id, title, status")
+    .select("id, title, status, department")
     .eq("status", "published")
     .order("title");
 
-  // Fetch authorizations
+  // Fetch authorizations with department
   const { data: authsData } = await supabase
     .from("authorisations")
-    .select("id, title, status")
+    .select("id, title, status, department")
     .eq("status", "active")
     .order("title");
 
@@ -159,45 +160,11 @@ export default async function NewUserPage({
           </div>
         </div>
 
-        {courses.length > 0 && (
-          <div className="rounded-lg border bg-white p-6">
-            <h2 className="mb-4 text-lg font-medium">Assign Courses</h2>
-            <div className="space-y-2">
-              {courses.map((course) => (
-                <label key={course.id} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="course_ids"
-                    value={course.id}
-                    className="mr-2 rounded border-gray-300"
-                  />
-                  <span className="text-sm">{course.title}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="rounded-lg border bg-white p-6">
-          <h2 className="mb-4 text-lg font-medium">Assign Authorizations</h2>
-          {authorizations.length > 0 ? (
-            <div className="space-y-2">
-              {authorizations.map((auth) => (
-                <label key={auth.id} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    name="authorization_ids"
-                    value={auth.id}
-                    className="mr-2 rounded border-gray-300"
-                  />
-                  <span className="text-sm">{auth.title}</span>
-                </label>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-gray-500">No authorizations available</p>
-          )}
-        </div>
+        {/* Assignment sections with department organization - Authorizations first, then Courses */}
+        <AssignmentSections 
+          authorizations={authorizations}
+          courses={courses}
+        />
 
         <div className="flex gap-3">
           <button

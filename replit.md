@@ -66,14 +66,18 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (December 2024)
 
-## Department-Based Assignment UI
-- **Feature Added**: Redesigned course and authorization assignment UI with department organization
-- **New Component**: Created DepartmentAssignmentGroup that groups items by department with collapsible sections
+## Department-Based Assignment UI (Refactored)
+- **Feature Added**: Redesigned course and authorization assignment UI with department organization for both Edit User and Add New User pages
+- **Component Architecture**: 
+  - Created `DepartmentAssignmentBase.tsx` - Shared form-agnostic component for grouping logic
+  - Updated `DepartmentAssignmentGroup.tsx` - Adapter for Edit User page with form submission
+  - Created `AssignmentSections.tsx` - Implementation for Add New User page using the shared base
 - **Functionality**: Supports "select all" per department, individual selection, and proper form submission
 - **Data Loading**: Updated queries to include department field for courses and authorizations
 - **Implementation**: Replaced flat checkbox lists with organized department sections for better usability
-- **Bug Fix**: Fixed infinite render loop in useEffect by limiting expansion logic to initial mount only
-- **Files Created/Updated**: Created `app/app/admin/users/[id]/DepartmentAssignmentGroup.tsx`, updated `app/app/admin/users/[id]/page.tsx`
+- **Bug Fix**: Fixed infinite render loop by using useState initializers instead of useEffect
+- **Placement**: Authorizations appear at the top, courses appear below in assignment interfaces
+- **Files Created/Updated**: `app/app/admin/users/DepartmentAssignmentBase.tsx`, `app/app/admin/users/[id]/DepartmentAssignmentGroup.tsx`, `app/app/admin/users/new/AssignmentSections.tsx`
 
 ## Collapsible Sections in Edit User Page
 - **Feature Added**: Made four sections collapsible with default collapsed state for better UI organization
