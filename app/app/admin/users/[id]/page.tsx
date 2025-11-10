@@ -12,6 +12,7 @@ import AdminRetakeButton from "./AdminRetakeButton";
 import AdminRevokeButton from "./AdminRevokeButton";
 import UserNotifications from "./UserNotifications";
 import NotificationSubscriptions from "./NotificationSubscriptions";
+import CollapsibleSection from "./CollapsibleSection";
 
 
 
@@ -576,8 +577,11 @@ export default async function EditUserPage({
         {/* Right Column - Assignment Management & Completed Items */}
         <div className="space-y-6">
           {/* Completed Authorizations */}
-          <div className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-medium mb-4">Completed Authorizations ({processedAuthorizations.length})</h2>
+          <CollapsibleSection
+            title="Completed Authorizations"
+            count={processedAuthorizations.length}
+            defaultOpen={false}
+          >
             {processedAuthorizations.length === 0 ? (
               <p className="text-sm text-gray-500">No completed authorizations found.</p>
             ) : (
@@ -627,7 +631,7 @@ export default async function EditUserPage({
                 })}
               </div>
             )}
-          </div>
+          </CollapsibleSection>
 
           {/* Revoked Authorizations */}
           {processedRevokedAuthorizations && processedRevokedAuthorizations.length > 0 && (
@@ -664,10 +668,11 @@ export default async function EditUserPage({
           )}
 
           {/* Current Authorization Assignments */}
-          <div className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-medium mb-4">
-              Current Authorization Assignments ({allAuthAssignments.filter(a => a.assignment_status !== 'revoked').length})
-            </h2>
+          <CollapsibleSection
+            title="Current Authorization Assignments"
+            count={allAuthAssignments.filter(a => a.assignment_status !== 'revoked').length}
+            defaultOpen={false}
+          >
             {allAuthAssignments.filter(a => a.assignment_status !== 'revoked').length === 0 ? (
               <p className="text-sm text-gray-500">No authorization assignments found.</p>
             ) : (
@@ -684,11 +689,14 @@ export default async function EditUserPage({
                 type="authorizations"
               />
             )}
-          </div>
+          </CollapsibleSection>
 
           {/* Completed Courses */}
-          <div className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-medium mb-4">Completed Courses ({processedCourses.length})</h2>
+          <CollapsibleSection
+            title="Completed Courses"
+            count={processedCourses.length}
+            defaultOpen={false}
+          >
             {processedCourses.length === 0 ? (
               <p className="text-sm text-gray-500">No completed courses found.</p>
             ) : (
@@ -703,11 +711,14 @@ export default async function EditUserPage({
                 type="courses"
               />
             )}
-          </div>
+          </CollapsibleSection>
 
           {/* Current Course Assignments */}
-          <div className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-medium mb-4">Current Course Assignments ({allCourseAssignments.length})</h2>
+          <CollapsibleSection
+            title="Current Course Assignments"
+            count={allCourseAssignments.length}
+            defaultOpen={false}
+          >
             {allCourseAssignments.length === 0 ? (
               <p className="text-sm text-gray-500">No course assignments found.</p>
             ) : (
@@ -722,7 +733,7 @@ export default async function EditUserPage({
                 type="courses"
               />
             )}
-          </div>
+          </CollapsibleSection>
 
           {/* Uploaded Documents */}
           <div className="rounded-lg border bg-white p-4">
