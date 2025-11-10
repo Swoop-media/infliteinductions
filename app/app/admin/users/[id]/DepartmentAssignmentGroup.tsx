@@ -32,8 +32,29 @@ export default function DepartmentAssignmentGroup({
   formAction,
   userId
 }: DepartmentAssignmentGroupProps) {
-  const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(new Set());
   const [localSelectedIds, setLocalSelectedIds] = useState<Set<string>>(new Set(selectedIds));
+  
+  // Initialize expanded departments based on selections or default to first department
+  const getInitialExpanded = () => {
+    const expanded = new Set<string>();
+    
+    // Add departments with selected items
+    items.forEach(item => {
+      if (selectedIds.includes(item.id)) {
+        expanded.add(item.department || 'Unassigned');
+      }
+    });
+    
+    // If no selections, expand first department
+    if (expanded.size === 0 && items.length > 0) {
+      const firstDept = items[0].department || 'Unassigned';
+      expanded.add(firstDept);
+    }
+    
+    return expanded;
+  };
+  
+  const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(getInitialExpanded);
 
   // Sync localSelectedIds with external selectedIds prop and prune invalid selections
   useEffect(() => {
@@ -43,27 +64,6 @@ export default function DepartmentAssignmentGroup({
     );
     setLocalSelectedIds(newSelectedIds);
   }, [selectedIds, items]);
-
-  // Initialize expanded departments on mount only
-  useEffect(() => {
-    if (items.length === 0) return;
-    
-    const departmentsWithSelections = new Set<string>();
-    items.forEach(item => {
-      if (selectedIds.includes(item.id)) {
-        departmentsWithSelections.add(item.department || 'Unassigned');
-      }
-    });
-
-    // If we have departments with selections, expand them
-    if (departmentsWithSelections.size > 0) {
-      setExpandedDepartments(departmentsWithSelections);
-    } else {
-      // Otherwise, expand the first department
-      const firstDept = items[0].department || 'Unassigned';
-      setExpandedDepartments(new Set([firstDept]));
-    }
-  }, []); // Only run on initial mount
 
   // Group items by department
   const departmentGroups = useMemo(() => {
