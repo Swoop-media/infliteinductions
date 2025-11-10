@@ -13,6 +13,7 @@ import AdminRevokeButton from "./AdminRevokeButton";
 import UserNotifications from "./UserNotifications";
 import NotificationSubscriptions from "./NotificationSubscriptions";
 import CollapsibleSection from "./CollapsibleSection";
+import DepartmentAssignmentGroup from "./DepartmentAssignmentGroup";
 
 
 
@@ -772,60 +773,34 @@ export default async function EditUserPage({
 
           {/* Assign New Authorizations */}
           {availableAuthorizations.length > 0 && (
-            <div className="rounded-lg border bg-white p-4">
-              <h2 className="text-lg font-medium mb-4">Assign Authorizations</h2>
-              <form action="/app/admin/users/assign-authorization" method="post" className="space-y-3">
-                <input type="hidden" name="user_id" value={profile.id} />
-                <div className="space-y-2">
-                  {availableAuthorizations.map((auth) => (
-                    <label key={auth.id} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="authorization_ids"
-                        value={auth.id}
-                        className="mr-2 rounded border-gray-300"
-                      />
-                      <span className="text-sm">{auth.title}</span>
-                    </label>
-                  ))}
-                </div>
-                <button
-                  type="submit"
-                  className="rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
-                >
-                  Assign Selected Authorizations
-                </button>
-              </form>
-            </div>
+            <DepartmentAssignmentGroup
+              title="Assign Authorizations"
+              items={availableAuthorizations.map(auth => ({
+                id: auth.id,
+                title: auth.title,
+                department: auth.department
+              }))}
+              inputName="authorization_ids"
+              buttonText="Assign Selected Authorizations"
+              formAction="/app/admin/users/assign-authorization"
+              userId={profile.id}
+            />
           )}
 
           {/* Assign New Courses */}
           {availableCourses.length > 0 && (
-            <div className="rounded-lg border bg-white p-4">
-              <h2 className="text-lg font-medium mb-4">Assign Courses</h2>
-              <form action="/app/admin/users/assign-course" method="post" className="space-y-3">
-                <input type="hidden" name="user_id" value={profile.id} />
-                <div className="space-y-2">
-                  {availableCourses.map((course) => (
-                    <label key={course.id} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        name="course_ids"
-                        value={course.id}
-                        className="mr-2 rounded border-gray-300"
-                      />
-                      <span className="text-sm">{course.title}</span>
-                    </label>
-                  ))}
-                </div>
-                <button
-                  type="submit"
-                  className="rounded-md bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
-                >
-                  Assign Selected Courses
-                </button>
-              </form>
-            </div>
+            <DepartmentAssignmentGroup
+              title="Assign Courses"
+              items={availableCourses.map(course => ({
+                id: course.id,
+                title: course.title,
+                department: course.department
+              }))}
+              inputName="course_ids"
+              buttonText="Assign Selected Courses"
+              formAction="/app/admin/users/assign-course"
+              userId={profile.id}
+            />
           )}
         </div>
       </div>
