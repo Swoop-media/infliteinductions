@@ -72,6 +72,7 @@ Preferred communication style: Simple, everyday language.
 - **Functionality**: Supports "select all" per department, individual selection, and proper form submission
 - **Data Loading**: Updated queries to include department field for courses and authorizations
 - **Implementation**: Replaced flat checkbox lists with organized department sections for better usability
+- **Bug Fix**: Fixed infinite render loop in useEffect by limiting expansion logic to initial mount only
 - **Files Created/Updated**: Created `app/app/admin/users/[id]/DepartmentAssignmentGroup.tsx`, updated `app/app/admin/users/[id]/page.tsx`
 
 ## Collapsible Sections in Edit User Page

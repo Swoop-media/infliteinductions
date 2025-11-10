@@ -44,28 +44,26 @@ export default function DepartmentAssignmentGroup({
     setLocalSelectedIds(newSelectedIds);
   }, [selectedIds, items]);
 
-  // Update expanded departments when items or selections change
+  // Initialize expanded departments on mount only
   useEffect(() => {
+    if (items.length === 0) return;
+    
     const departmentsWithSelections = new Set<string>();
     items.forEach(item => {
-      if (localSelectedIds.has(item.id)) {
+      if (selectedIds.includes(item.id)) {
         departmentsWithSelections.add(item.department || 'Unassigned');
       }
     });
 
     // If we have departments with selections, expand them
     if (departmentsWithSelections.size > 0) {
-      setExpandedDepartments(prev => {
-        const newExpanded = new Set(prev);
-        departmentsWithSelections.forEach(dept => newExpanded.add(dept));
-        return newExpanded;
-      });
-    } else if (items.length > 0 && expandedDepartments.size === 0) {
-      // If no departments are expanded and we have items, expand the first department
+      setExpandedDepartments(departmentsWithSelections);
+    } else {
+      // Otherwise, expand the first department
       const firstDept = items[0].department || 'Unassigned';
       setExpandedDepartments(new Set([firstDept]));
     }
-  }, [items, localSelectedIds]); // Run when items or selections change
+  }, []); // Only run on initial mount
 
   // Group items by department
   const departmentGroups = useMemo(() => {
