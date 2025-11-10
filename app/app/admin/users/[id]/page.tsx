@@ -15,15 +15,8 @@ import NotificationSubscriptions from "./NotificationSubscriptions";
 
 
 
-const DEPARTMENTS = [
-  "Skydive Franz",
-  "Skydive Mt Cook",
-  "Skydive Abel Tasman",
-  "Helitranz",
-  "Engineering",
-  "Mt Cook Skiplanes and Helicopters",
-  "Franz and Fox Helicopters",
-];
+// These will be loaded from the database
+// const DEPARTMENTS - removed, loading from database instead
 
 const JOBS = [
   "Front of house",
@@ -376,6 +369,13 @@ export default async function EditUserPage({
     .eq("id", resolvedParams.id)
     .maybeSingle();
 
+  // Fetch departments from database
+  const { data: departments } = await supabase
+    .from("departments")
+    .select("id, name, active")
+    .eq("active", true)
+    .order("name");
+
   const ok =
     (Array.isArray(resolvedSearchParams?.ok) ? resolvedSearchParams?.ok[0] : resolvedSearchParams?.ok) ?? null;
   const error =
@@ -466,9 +466,9 @@ export default async function EditUserPage({
                 className="rounded-md border px-3 py-2 text-sm"
               >
                 <option value="">—</option>
-                {DEPARTMENTS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
+                {(departments || []).map((dept) => (
+                  <option key={dept.id} value={dept.name}>
+                    {dept.name}
                   </option>
                 ))}
               </select>

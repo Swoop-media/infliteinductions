@@ -66,6 +66,12 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (December 2024)
 
+## Dynamic Department Loading Fix
+- **Issue Fixed**: Edit User page was using hardcoded department list instead of database values
+- **Solution**: Refactored to dynamically load departments from Supabase `departments` table
+- **Impact**: Department changes in database now immediately reflect in the UI
+- **Files Updated**: `app/app/admin/users/[id]/page.tsx` - removed hardcoded DEPARTMENTS array, added database query
+
 ## Authorization Diagnostic Tool Optimization (Latest)
 - **Performance improvements**: Reduced database queries from 400+ to 3-4 using batched queries, eliminating N+1 problem
 - **Enhanced filtering**: Added comprehensive filters including search, status filters, date range, and quick filters to exclude completed/approved items  
