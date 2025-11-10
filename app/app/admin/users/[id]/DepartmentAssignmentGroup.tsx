@@ -44,7 +44,7 @@ export default function DepartmentAssignmentGroup({
     setLocalSelectedIds(newSelectedIds);
   }, [selectedIds, items]);
 
-  // Initialize expanded departments - expand any with selected items or the first one
+  // Update expanded departments when items or selections change
   useEffect(() => {
     const departmentsWithSelections = new Set<string>();
     items.forEach(item => {
@@ -55,13 +55,17 @@ export default function DepartmentAssignmentGroup({
 
     // If we have departments with selections, expand them
     if (departmentsWithSelections.size > 0) {
-      setExpandedDepartments(departmentsWithSelections);
-    } else if (items.length > 0) {
-      // Otherwise, expand the first department
+      setExpandedDepartments(prev => {
+        const newExpanded = new Set(prev);
+        departmentsWithSelections.forEach(dept => newExpanded.add(dept));
+        return newExpanded;
+      });
+    } else if (items.length > 0 && expandedDepartments.size === 0) {
+      // If no departments are expanded and we have items, expand the first department
       const firstDept = items[0].department || 'Unassigned';
       setExpandedDepartments(new Set([firstDept]));
     }
-  }, []); // Only run on initial mount
+  }, [items, localSelectedIds]); // Run when items or selections change
 
   // Group items by department
   const departmentGroups = useMemo(() => {
@@ -142,6 +146,11 @@ export default function DepartmentAssignmentGroup({
       <form action={formAction} method="post" className="space-y-3">
         <input type="hidden" name="user_id" value={userId} />
         
+        {/* Include all selected IDs as hidden inputs to ensure they're submitted */}
+        {Array.from(localSelectedIds).map(id => (
+          <input key={id} type="hidden" name={inputName} value={id} />
+        ))}
+        
         <div className="space-y-2">
           {Array.from(departmentGroups.entries()).map(([dept, deptItems]) => {
             const isExpanded = expandedDepartments.has(dept);
@@ -194,8 +203,7 @@ export default function DepartmentAssignmentGroup({
                       <label key={item.id} className="flex items-center hover:bg-gray-50 p-1 rounded">
                         <input
                           type="checkbox"
-                          name={inputName}
-                          value={item.id}
+                          // Don't include name attribute here since we're using hidden inputs for submission
                           checked={localSelectedIds.has(item.id)}
                           onChange={() => handleItemToggle(item.id)}
                           className="mr-3 rounded border-gray-300"
