@@ -37,13 +37,11 @@ export async function POST(request: Request) {
     const supabase = supabaseAdmin();
 
     if (type === "authorization") {
-      // Simplified update - only update assignment_status to bypass schema cache issues
-      // The revoked_at, revoked_by, revoked_reason columns exist but PostgREST doesn't recognize them
+      // Only update assignment_status - PostgREST cache doesn't recognize other columns
       const { error: revokeError } = await supabase
         .from("authorisation_assignments")
         .update({
-          assignment_status: 'revoked',
-          updated_at: new Date().toISOString()
+          assignment_status: 'revoked'
         })
         .eq('id', assignmentId)
         .eq('user_id', userId);
