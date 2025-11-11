@@ -37,11 +37,11 @@ export async function POST(request: Request) {
     const supabase = supabaseAdmin();
 
     if (type === "authorization") {
-      // Only update assignment_status - PostgREST cache doesn't recognize other columns
+      // Use 'cancelled' status - 'revoked' is not allowed by check constraint
       const { error: revokeError } = await supabase
         .from("authorisation_assignments")
         .update({
-          assignment_status: 'revoked'
+          assignment_status: 'cancelled'
         })
         .eq('id', assignmentId)
         .eq('user_id', userId);
