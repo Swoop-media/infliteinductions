@@ -62,8 +62,10 @@ export async function middleware(req: NextRequest) {
       // If this is a page request (not API), redirect to login
       if (!req.nextUrl.pathname.startsWith('/api') && 
           !req.nextUrl.pathname.startsWith('/auth') && 
+          req.nextUrl.pathname.startsWith('/app') &&
           req.nextUrl.pathname !== '/') {
-        const loginUrl = new URL('/auth/login', req.url);
+        // Redirect to the dual authentication login page
+        const loginUrl = new URL('/app/auth/login', req.url);
         return NextResponse.redirect(loginUrl);
       }
     }
