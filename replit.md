@@ -64,7 +64,25 @@ Preferred communication style: Simple, everyday language.
 - **Supabase**: Backend-as-a-Service for database, authentication, and storage.
 - **Microsoft Graph API**: User profile and organizational data access.
 
-# Recent Changes (December 2024)
+# Recent Changes (November-December 2024)
+
+## Dual Authentication System (Latest)
+- **Feature Added**: Support for external users (contractors/operators) who don't have Microsoft accounts
+- **Database**: Added `user_type` column to profiles table (internal_employee, external_contractor, external_operator)
+- **Authentication Options**:
+  - Microsoft OAuth for internal employees (existing)
+  - Email/password authentication for external users (new)
+- **Registration**: New registration page (`/app/auth/register`) for external users
+- **Login Pages Updated**: Both root (`/`) and `/auth/signin` now show dual authentication options
+- **Roles**: External contractors assigned "Trainers and Assessors" role, operators assigned "User" role
+- **Features**: External users have full system access - can be assigned courses, complete training, receive authorizations
+
+## Authorization Revocation Fix 
+- **Issue Fixed**: Authorization revocation was failing due to database check constraints
+- **Solution**: Changed revocation to use 'expired' status (allowed by constraint)
+- **Functionality**: Revoked authorizations marked as expired, related courses cancelled, notifications sent
+
+# Recent Changes (November-December 2024)
 
 ## Department-Based Assignment UI (Refactored)
 - **Feature Added**: Redesigned course and authorization assignment UI with department organization for both Edit User and Add New User pages

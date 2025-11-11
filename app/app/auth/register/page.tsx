@@ -85,7 +85,7 @@ export default function RegisterPage() {
         }
 
         // Redirect to email verification message
-        router.push('/auth/verify-email');
+        router.push('/app/auth/verify-email');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred during registration');
