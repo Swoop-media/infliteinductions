@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { NextResponse } from "next/server";
 
@@ -22,16 +23,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = await createSupabaseServer();
-    
-    // Get current admin user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get current admin user from regular client
+    const regularSupabase = await createSupabaseServer();
+    const { data: { user }, error: userError } = await regularSupabase.auth.getUser();
     if (userError || !user) {
       return NextResponse.json(
         { error: "Failed to get current user" },
         { status: 401 }
       );
     }
+
+    // Use admin client to bypass schema cache issues for database operations
+    const supabase = supabaseAdmin();
 
     if (type === "authorization") {
       // Revoke the authorization assignment
