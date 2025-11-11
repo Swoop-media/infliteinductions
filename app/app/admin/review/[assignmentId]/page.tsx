@@ -744,11 +744,10 @@ async function approveAssignment(formData: FormData) {
 
 export default async function ReviewAssignmentPage({ params }: Props) {
   // Check if user has Authorization Approver role
-  // Temporarily bypass role check for testing
-  const isApprover = true; // await hasRole("Authorization Approver");
-  // if (!isApprover) {
-  //   redirect("/app/admin?tab=pending_authorisations&banner=no_access");
-  // }
+  const isApprover = await hasRole("Authorization Approver");
+  if (!isApprover) {
+    redirect("/app/admin?tab=pending_authorisations&banner=no_access");
+  }
 
   const resolvedParams = await params;
   const { assignment, authorisation, profile, courses, documents, documentRequirements, responsiblePerson } = await loadAssignmentDetails(resolvedParams.assignmentId);

@@ -579,6 +579,9 @@ export default async function AdminPage({
   const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
   if (!allowed) redirect("/app/home?banner=no_access");
 
+  // Check if user has Authorization Approver role for pending_authorisations tab
+  const isAuthorizationApprover = await hasRole("Authorization Approver");
+
   const resolvedSearchParams = await searchParams;
   const tab = tabFromSearch(resolvedSearchParams ?? {});
   const ok =
@@ -598,8 +601,12 @@ export default async function AdminPage({
     { key: "course_progress", label: "Course Progress", href: "/app/admin?tab=course_progress" },
     { key: "documents", label: "Due Dates - Documents", href: "/app/admin?tab=documents" },
     { key: "users", label: "Users & Roles", href: "/app/admin?tab=users" },
-    { key: "pending_authorisations", label: "Pending Authorisations", href: "/app/admin?tab=pending_authorisations" },
   ];
+  
+  // Only add pending_authorisations tab if user has Authorization Approver role
+  if (isAuthorizationApprover) {
+    tabs.push({ key: "pending_authorisations", label: "Pending Authorisations", href: "/app/admin?tab=pending_authorisations" });
+  }
 
   // Fetch necessary data based on the active tab
   let documents: DocumentRow[] = [];
@@ -1316,7 +1323,7 @@ async function loadPendingAuthorisations(q: string | null) {
   "use server";
   noStore();
   const supabase = await createSupabaseServer();
-  const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors")) || (await hasRole("Senior Management"));
+  const allowed = await hasRole("Authorization Approver");
   if (!allowed) redirect("/app/home?banner=no_access");
 
   // Get all authorisation assignments that are completed
@@ -1418,7 +1425,7 @@ async function loadPendingAuthorisations(q: string | null) {
 
 async function PendingAuthorisationsSection({ q }: { q: string | null }) {
   const pendingAuthorisations = await loadPendingAuthorisations(q);
-  const isSeniorManager = await hasRole("Senior Management");
+  const isAuthorizationApprover = await hasRole("Authorization Approver");
 
   return (
     <div className="space-y-4">
@@ -1487,7 +1494,7 @@ async function PendingAuthorisationsSection({ q }: { q: string | null }) {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {isSeniorManager ? (
+                    {isAuthorizationApprover ? (
                       <Link
                         href={`/app/admin/review/${auth.assignment_id}`}
                         className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -1495,7 +1502,7 @@ async function PendingAuthorisationsSection({ q }: { q: string | null }) {
                         Review
                       </Link>
                     ) : (
-                      <span className="text-gray-400 text-xs">Senior Manager Only</span>
+                      <span className="text-gray-400 text-xs">Authorization Approver Only</span>
                     )}
                   </td>
                 </tr>
