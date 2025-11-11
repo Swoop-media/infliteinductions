@@ -71,7 +71,7 @@ export default function SignIn() {
         <div className="text-center">
           <h1 className="text-lg font-semibold">INFLITE Induction & Training</h1>
           <p className="text-sm text-gray-600 mt-2">
-            Sign in to continue
+            Choose your login method
           </p>
         </div>
         
