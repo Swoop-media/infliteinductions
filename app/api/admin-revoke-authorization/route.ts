@@ -37,11 +37,11 @@ export async function POST(request: Request) {
     const supabase = supabaseAdmin();
 
     if (type === "authorization") {
-      // Use 'cancelled' status - 'revoked' is not allowed by check constraint
+      // Use 'expired' status - only valid values are: assigned, in_progress, pending_approval, completed, expired
       const { error: revokeError } = await supabase
         .from("authorisation_assignments")
         .update({
-          assignment_status: 'cancelled'
+          assignment_status: 'expired'
         })
         .eq('id', assignmentId)
         .eq('user_id', userId);
