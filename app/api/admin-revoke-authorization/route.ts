@@ -37,14 +37,12 @@ export async function POST(request: Request) {
     const supabase = supabaseAdmin();
 
     if (type === "authorization") {
-      // Revoke the authorization assignment
+      // Simplified update - only update assignment_status to bypass schema cache issues
+      // The revoked_at, revoked_by, revoked_reason columns exist but PostgREST doesn't recognize them
       const { error: revokeError } = await supabase
         .from("authorisation_assignments")
         .update({
           assignment_status: 'revoked',
-          revoked_at: new Date().toISOString(),
-          revoked_by: user.id,
-          revoked_reason: reason || 'Revoked by admin',
           updated_at: new Date().toISOString()
         })
         .eq('id', assignmentId)
@@ -56,6 +54,32 @@ export async function POST(request: Request) {
           { error: "Failed to revoke authorization" },
           { status: 500 }
         );
+      }
+      
+      // Log the revocation details separately for audit trail
+      console.log(`Authorization ${assignmentId} revoked by ${user.email} for user ${userId} with reason: ${reason || 'Revoked by admin'}`);
+      
+      // Store audit information in notifications as a workaround
+      try {
+        await supabase
+          .from("notifications")
+          .insert({
+            user_id: userId,
+            type: 'authorization_revoked',
+            payload: {
+              authorization_id: authorizationId,
+              assignment_id: assignmentId,
+              revoked_by: user.email,
+              revoked_by_id: user.id,
+              revoked_at: new Date().toISOString(),
+              revoked_reason: reason || 'Revoked by admin',
+              authorization_title: reason?.replace('Revoked by admin for ', '') || 'Authorization'
+            },
+            created_at: new Date().toISOString()
+          });
+      } catch (notifyError) {
+        console.error('Failed to create revocation notification:', notifyError);
+        // Continue even if notification fails
       }
 
       // Also mark all related course assignments as cancelled/revoked
@@ -81,20 +105,6 @@ export async function POST(request: Request) {
             .eq('role', 'trainee');
         }
       }
-
-      // Create a notification for the user
-      await supabase
-        .from("notifications")
-        .insert({
-          user_id: userId,
-          type: 'authorization_revoked',
-          payload: {
-            authorization_title: reason?.replace('Revoked by admin for ', '') || 'Authorization',
-            revoked_by: user.email,
-            revoked_at: new Date().toISOString()
-          },
-          created_at: new Date().toISOString()
-        });
 
       return NextResponse.json({ 
         success: true,
