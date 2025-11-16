@@ -102,10 +102,8 @@ export default function LandingClient() {
             </div>
 
             <p className="text-center text-sm text-gray-600">
-              Don't have an account?{' '}
-              <Link href="/app/auth/register" className="font-medium text-blue-600 hover:text-blue-500">
-                Register as External User
-              </Link>
+              Internal employees use Microsoft login<br />
+              External contractors use email login
             </p>
           </>
         ) : (
