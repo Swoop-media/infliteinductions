@@ -4,6 +4,7 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import NewUserForm from "./NewUserForm";
 
 async function fetchData() {
