@@ -4,8 +4,7 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import AssignmentSections from "./AssignmentSections";
+import NewUserForm from "./NewUserForm";
 
 async function fetchData() {
   const supabase = await createSupabaseServer();
@@ -90,97 +89,12 @@ export default async function NewUserPage({
         </div>
       )}
 
-      <form action="/app/admin/users/create" method="post" className="space-y-6">
-        <div className="rounded-lg border bg-white p-6">
-          <h2 className="mb-4 text-lg font-medium">User Information</h2>
-          
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                name="email"
-                required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="user@company.com"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Must match their Microsoft account email
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Full Name *
-              </label>
-              <input
-                type="text"
-                name="full_name"
-                required
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-                placeholder="John Doe"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Department
-              </label>
-              <select
-                name="department"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-              >
-                <option value="">Select Department</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.name}>
-                    {dept.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Job Description
-              </label>
-              <select
-                name="job_description"
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
-              >
-                <option value="">Select Job Description</option>
-                {jobDescriptions.map((job) => (
-                  <option key={job.id} value={job.name}>
-                    {job.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Assignment sections with department organization - Authorizations first, then Courses */}
-        <AssignmentSections 
-          authorizations={authorizations}
-          courses={courses}
-        />
-
-        <div className="flex gap-3">
-          <button
-            type="submit"
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-          >
-            Create User
-          </button>
-          <Link
-            href="/app/admin?tab=users"
-            className="rounded-md border px-4 py-2 text-sm hover:bg-gray-50"
-          >
-            Cancel
-          </Link>
-        </div>
-      </form>
+      <NewUserForm
+        courses={courses}
+        authorizations={authorizations}
+        departments={departments}
+        jobDescriptions={jobDescriptions}
+      />
     </div>
   );
 }
