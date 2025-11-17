@@ -37,6 +37,6 @@ export async function getUncachableResendClient() {
   const {apiKey, fromEmail} = await getCredentials();
   return {
     client: new Resend(apiKey),
-    fromEmail: fromEmail || 'noreply@inflite.nz'  // Change this to your preferred email
+    fromEmail: fromEmail || 'no-reply@training.inflite.nz'
   };
 }
