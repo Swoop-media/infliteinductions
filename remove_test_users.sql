@@ -16,8 +16,7 @@ SELECT
     au.id as user_id,
     au.email,
     au.created_at,
-    p.full_name,
-    p.user_type
+    p.full_name
 FROM auth.users au
 LEFT JOIN profiles p ON p.id = au.id
 WHERE au.email IN ('henryafrica@hotmail.com', 'henrymorganskydive@gmail.com');
