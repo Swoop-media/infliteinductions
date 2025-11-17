@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseRoute } from '@/lib/supabase/server';
 import { getUncachableResendClient } from '@/lib/resend-client';
 
 function generateTempPassword(): string {
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
     
-    const supabase = await createSupabaseServer(true); // Admin client
+    const supabase = await createSupabaseRoute(true); // Admin client
     
     // Generate temporary password
     const tempPassword = generateTempPassword();
