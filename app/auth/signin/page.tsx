@@ -8,18 +8,27 @@ import Link from "next/link";
 export default function SignIn() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [showExternalLogin, setShowExternalLogin] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   useEffect(() => {
-    // Check for error in URL params
+    // Check for error or message in URL params
     const urlParams = new URLSearchParams(window.location.search);
     const errorParam = urlParams.get("error");
+    const messageParam = urlParams.get("message");
+    
     if (errorParam === "auth_failed") {
       setError("Authentication failed. Please try again.");
     } else if (errorParam === "missing_code") {
       setError("Authentication was cancelled or failed.");
+    }
+    
+    // Show success message if coming from signup
+    if (messageParam) {
+      setError(""); // Clear any errors
+      setSuccess(messageParam);
     }
   }, []);
 
@@ -81,6 +90,12 @@ export default function SignIn() {
           </div>
         )}
 
+        {success && (
+          <div className="p-3 text-sm text-green-600 bg-green-50 border border-green-200 rounded-md">
+            {success}
+          </div>
+        )}
+
         {!showExternalLogin ? (
           <>
             <button
@@ -119,8 +134,8 @@ export default function SignIn() {
 
             <p className="text-center text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link href="/app/auth/register" className="font-medium text-blue-600 hover:text-blue-500">
-                Register as External User
+              <Link href="/auth/signup" className="font-medium text-blue-600 hover:text-blue-500">
+                Sign Up
               </Link>
             </p>
           </>
@@ -176,7 +191,7 @@ export default function SignIn() {
               >
                 ← Back to login options
               </button>
-              <Link href="/app/auth/register" className="text-blue-600 hover:text-blue-500">
+              <Link href="/auth/signup" className="text-blue-600 hover:text-blue-500">
                 Create account
               </Link>
             </div>
