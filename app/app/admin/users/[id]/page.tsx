@@ -8,6 +8,7 @@ import Link from "next/link";
 import { PDFExportButton } from "./PDFExportButton";
 import { DocumentViewButton } from "./DocumentViewButton";
 import ExpandableCourseDetails from "./ExpandableCourseDetails";
+import ExpandableAuthorizationDetails from "./ExpandableAuthorizationDetails";
 import AdminRetakeButton from "./AdminRetakeButton";
 import AdminRevokeButton from "./AdminRevokeButton";
 import UserNotifications from "./UserNotifications";
@@ -586,51 +587,11 @@ export default async function EditUserPage({
             {processedAuthorizations.length === 0 ? (
               <p className="text-sm text-gray-500">No completed authorizations found.</p>
             ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {processedAuthorizations.map((auth) => {
-                  // Get the authorization ID from the allAuthAssignments
-                  const authAssignment = allAuthAssignments.find(a => a.id === auth.assignment_id);
-                  const authorizationId = authAssignment?.authorisation_id;
-                  
-                  return (
-                    <div key={auth.assignment_id} className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm">{auth.authorization_title}</h3>
-                        <p className="text-xs text-gray-600">
-                          Completed: {new Date(auth.completed_at).toLocaleDateString()}
-                        </p>
-                        {auth.due_date && (
-                          <p className="text-xs text-gray-600">
-                            Due: {new Date(auth.due_date).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 ml-3">
-                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${getStatusColor(auth.status)}`}>
-                          {getStatusText(auth.status, auth.days_until_expiry)}
-                        </span>
-                        {authorizationId && (
-                          <>
-                            <AdminRetakeButton
-                              type="authorization"
-                              userId={resolvedParams.id}
-                              authorizationId={authorizationId}
-                              authTitle={auth.authorization_title}
-                            />
-                            <AdminRevokeButton
-                              type="authorization"
-                              userId={resolvedParams.id}
-                              authorizationId={authorizationId}
-                              assignmentId={auth.assignment_id}
-                              authTitle={auth.authorization_title}
-                            />
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              <ExpandableAuthorizationDetails
+                authorizations={processedAuthorizations}
+                allAuthAssignments={allAuthAssignments}
+                userId={resolvedParams.id}
+              />
             )}
           </CollapsibleSection>
 
