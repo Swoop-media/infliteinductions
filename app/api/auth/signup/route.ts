@@ -25,11 +25,25 @@ export async function POST(request: NextRequest) {
     // Use admin client to create the user
     const supabase = supabaseAdmin();
 
-    // Create user in Supabase Auth
+    // Check if a profile already exists with this email
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (existingProfile) {
+      return NextResponse.json(
+        { error: 'An account with this email already exists. Please sign in instead.' },
+        { status: 400 }
+      );
+    }
+
+    // Create user in Supabase Auth with email confirmation required
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirm email for self-signup
+      email_confirm: false, // Require email confirmation
       user_metadata: {
         full_name: fullName,
         department: department || null,
@@ -122,12 +136,10 @@ export async function POST(request: NextRequest) {
       // Don't fail the signup if role assignment fails, it can be fixed later by admin
     }
 
-    // Optional: Send welcome email using Resend
-    // We could add this later if needed, but for now, the user can just log in
-
     return NextResponse.json({
-      message: 'Account created successfully. You can now sign in.',
-      userId: authUser.user.id
+      message: 'Account created successfully! Please check your email to confirm your account before signing in.',
+      userId: authUser.user.id,
+      requiresEmailConfirmation: true
     });
 
   } catch (error) {

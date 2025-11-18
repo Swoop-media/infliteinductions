@@ -60,11 +60,7 @@ export default function SignUp() {
       }
 
       setSuccess(true);
-      
-      // Show success message then redirect to login
-      setTimeout(() => {
-        router.push("/auth/signin?message=Account created successfully. Please sign in.");
-      }, 2000);
+      // Don't redirect automatically when email confirmation is required
       
     } catch (err: any) {
       setError(err.message || "Failed to create account");
@@ -83,14 +79,28 @@ export default function SignUp() {
     return (
       <main className="min-h-screen grid place-items-center p-4 bg-gray-50">
         <div className="w-full max-w-md space-y-4 rounded-lg border bg-white p-6 text-center">
-          <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
-            <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+          <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+            <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
             </svg>
           </div>
-          <h2 className="text-lg font-semibold text-gray-900">Account Created Successfully!</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Check Your Email!</h2>
           <p className="text-sm text-gray-600">
-            Your account has been created. Redirecting you to the login page...
+            We've sent a confirmation email to <strong>{formData.email}</strong>
+          </p>
+          <p className="text-sm text-gray-600">
+            Please click the link in the email to verify your account before signing in.
+          </p>
+          <div className="pt-4">
+            <Link
+              href="/auth/signin"
+              className="inline-block px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Go to Sign In
+            </Link>
+          </div>
+          <p className="text-xs text-gray-500 mt-4">
+            Didn't receive the email? Check your spam folder or contact support.
           </p>
         </div>
       </main>
