@@ -1,8 +1,99 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, CheckCircle, Circle, FileText, User, AlertCircle, BookOpen, Target, Calendar } from "lucide-react";
 import AdminRetakeButton from "./AdminRetakeButton";
+
+// Quiz Attempt Component to handle state properly
+function QuizAttemptView({ attempt, idx, moduleId, quizInfo }: any) {
+  const [showDetails, setShowDetails] = useState(false);
+  
+  return (
+    <div className="bg-gray-50 rounded p-2 text-sm">
+      <div 
+        className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded"
+        onClick={() => setShowDetails(!showDetails)}
+      >
+        <span className="flex items-center gap-2">
+          <span>Attempt {idx + 1}</span>
+          {showDetails ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+        </span>
+        <span className={attempt.passed ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
+          Score: {attempt.score_pct}% {attempt.passed ? "(Passed)" : "(Failed)"}
+          {attempt.pass_mark && ` - Pass mark: ${attempt.pass_mark}%`}
+        </span>
+      </div>
+      {attempt.created_at && (
+        <div className="text-xs text-gray-500 mt-1">
+          {formatDateTimeSafe(attempt.created_at)}
+        </div>
+      )}
+      
+      {/* Show quiz questions and answers when expanded */}
+      {showDetails && attempt.questions_with_answers && (
+        <div className="mt-3 space-y-3 border-t pt-3">
+          {attempt.questions_with_answers.map((question: any, qIdx: number) => {
+            const userAnswer = attempt.answers?.[question.id];
+            const selectedOption = question.options?.find((opt: any) => opt.id === userAnswer);
+            const correctOption = question.options?.find((opt: any) => opt.is_correct);
+            const isCorrect = selectedOption?.is_correct;
+            
+            return (
+              <div key={`q-${question.id}-${qIdx}`} className="bg-white rounded p-3 border">
+                <div className="font-medium text-gray-700 mb-2">
+                  Question {qIdx + 1}: {question.question_text}
+                  {question.points && <span className="text-xs text-gray-500 ml-2">({question.points} points)</span>}
+                </div>
+                
+                <div className="space-y-1 ml-4">
+                  {question.options?.map((option: any) => {
+                    const isSelected = option.id === userAnswer;
+                    const optionClass = isSelected 
+                      ? (option.is_correct ? "bg-green-100 border-green-300" : "bg-red-100 border-red-300")
+                      : (option.is_correct ? "bg-green-50 border-green-200" : "");
+                    
+                    return (
+                      <div 
+                        key={option.id} 
+                        className={`p-2 rounded border ${optionClass || "border-gray-200"}`}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className="text-sm">
+                            {isSelected && (isCorrect ? "✅" : "❌")}
+                            {!isSelected && option.is_correct && "✓"}
+                          </span>
+                          <span className={`text-sm ${isSelected ? "font-medium" : ""}`}>
+                            {option.label}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                {userAnswer ? (
+                  <div className={`text-xs mt-2 ${isCorrect ? "text-green-600" : "text-red-600"}`}>
+                    Your answer: {selectedOption?.label || "Unknown"}
+                    {!isCorrect && correctOption && ` (Correct answer: ${correctOption.label})`}
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500 mt-2">No answer provided</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      
+      {/* Show quiz info if no attempts have detailed questions */}
+      {showDetails && !attempt.questions_with_answers && quizInfo && (
+        <div className="mt-3 text-sm text-gray-600 italic">
+          Quiz has {quizInfo.questions.length} questions (Pass mark: {quizInfo.pass_mark}%)
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Deterministic date formatting to prevent hydration mismatches
 function formatDateSafe(dateString: string | null | undefined): string {
@@ -45,15 +136,57 @@ interface ModuleProgress {
   quiz_attempts?: Array<{
     score_pct: number;
     passed: boolean;
+    pass_mark?: number;
     answers?: any;
     created_at: string;
+    questions_with_answers?: Array<{
+      id?: string;
+      question_text?: string;
+      points?: number;
+      options?: Array<{
+        id: string;
+        label: string;
+        is_correct: boolean;
+      }>;
+    }>;
   }>;
+  quiz_info?: {
+    quiz_id: string;
+    pass_mark: number;
+    questions: Array<{
+      id: string;
+      question_text: string;
+      points: number;
+      options: Array<{
+        id: string;
+        label: string;
+        is_correct: boolean;
+      }>;
+    }>;
+  };
   onsite_responses?: Array<{
+    requirement_id?: string;
     requirement_label: string;
-    response_text: string;
-    response_date: string;
-    assessor_name?: string;
+    response_text: string | null;
+    response_date: string | null;
+    trainer_name?: string | null;
+    field_type?: string;
+    required?: boolean;
+    has_response?: boolean;
   }>;
+  equipment_requirements?: Array<{
+    requirement_id: string;
+    requirement_label: string;
+    description?: string | null;
+    response_text: string | null;
+    response_date: string | null;
+    trainer_name?: string | null;
+    field_type?: string;
+    required?: boolean;
+    has_response?: boolean;
+  }>;
+  has_onsite_requirements?: boolean;
+  include_equipment_assessment?: boolean;
   documents?: Array<{
     document_title: string;
     uploaded_at: string;
@@ -255,24 +388,18 @@ export default function ExpandableCourseDetails({ courses, authorizations, userI
                               </div>
                             )}
 
-                            {/* Digital Quiz - Show attempts and results */}
+                            {/* Digital Quiz - Show attempts and results with questions and answers */}
                             {module.module_type === "digital_assessment_quiz" && module.quiz_attempts && module.quiz_attempts.length > 0 && (
                               <div className="space-y-2">
                                 <p className="text-sm font-medium text-gray-700">Quiz Results:</p>
                                 {module.quiz_attempts.map((attempt, idx) => (
-                                  <div key={`quiz-${module.module_id}-attempt-${idx}-${attempt.created_at}`} className="bg-gray-50 rounded p-2 text-sm">
-                                    <div className="flex items-center justify-between">
-                                      <span>Attempt {idx + 1}</span>
-                                      <span className={attempt.passed ? "text-green-600" : "text-red-600"}>
-                                        Score: {attempt.score_pct}% {attempt.passed ? "(Passed)" : "(Failed)"}
-                                      </span>
-                                    </div>
-                                    {attempt.created_at && (
-                                      <div className="text-xs text-gray-500 mt-1">
-                                        {formatDateTimeSafe(attempt.created_at)}
-                                      </div>
-                                    )}
-                                  </div>
+                                  <QuizAttemptView 
+                                    key={`quiz-${module.module_id}-attempt-${idx}-${attempt.created_at}`}
+                                    attempt={attempt}
+                                    idx={idx}
+                                    moduleId={module.module_id}
+                                    quizInfo={module.quiz_info}
+                                  />
                                 ))}
                               </div>
                             )}
@@ -280,41 +407,82 @@ export default function ExpandableCourseDetails({ courses, authorizations, userI
                             {/* Form Requirements - Show for all modules with requirements (digital training, onsite training/assessment, etc.) */}
                             {module.onsite_responses && module.onsite_responses.length > 0 && (
                               <div className="space-y-2">
-                                {module.onsite_responses && module.onsite_responses.length > 0 ? (
-                                  <>
-                                    <p className="text-sm font-medium text-gray-700">
-                                      {module.module_type === "onsite_training" ? "Training Requirements:" : 
-                                       module.module_type === "onsite_assessment" ? "Assessment Requirements:" :
-                                       module.module_type === "digital_training" ? "Form Questions:" :
-                                       "Requirements:"}
-                                    </p>
-                                    {module.onsite_responses.map((response, idx) => (
-                                      <div key={`onsite-${module.module_id}-${response.requirement_label}-${idx}`} className="bg-gray-50 rounded p-2 text-sm">
-                                        <div className="font-medium text-gray-700">{response.requirement_label}</div>
-                                        <div className="text-gray-600 mt-1">{response.response_text || "No response provided"}</div>
-                                        {response.assessor_name && (
-                                          <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
-                                            <User className="w-3 h-3" />
-                                            <span>Assessed by {response.assessor_name}</span>
-                                          </div>
-                                        )}
-                                        {response.response_date && (
-                                          <div className="text-xs text-gray-500">
-                                            {formatDateSafe(response.response_date)}
-                                          </div>
+                                <p className="text-sm font-medium text-gray-700">
+                                  {module.module_type === "onsite_training" ? "Training Requirements:" : 
+                                   module.module_type === "onsite_assessment" ? "Assessment Requirements:" :
+                                   module.module_type === "digital_training" ? "Form Questions:" :
+                                   "Requirements:"}
+                                </p>
+                                {module.onsite_responses.map((response, idx) => (
+                                  <div key={`onsite-${module.module_id}-${response.requirement_id || idx}`} className={`bg-gray-50 rounded p-2 text-sm ${response.has_response ? 'border-l-4 border-green-400' : 'border-l-4 border-gray-300'}`}>
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex-1">
+                                        <div className="font-medium text-gray-700">
+                                          {response.requirement_label}
+                                          {response.required && <span className="text-red-500 ml-1">*</span>}
+                                        </div>
+                                        {response.has_response ? (
+                                          <>
+                                            <div className="text-gray-600 mt-1">{response.response_text || "Completed"}</div>
+                                            {response.trainer_name && (
+                                              <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                                                <User className="w-3 h-3" />
+                                                <span>{module.module_type === "onsite_training" ? "Trained by" : "Assessed by"} {response.trainer_name}</span>
+                                              </div>
+                                            )}
+                                            {response.response_date && (
+                                              <div className="text-xs text-gray-500">
+                                                {formatDateSafe(response.response_date)}
+                                              </div>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <div className="text-gray-500 italic mt-1">Not yet completed</div>
                                         )}
                                       </div>
-                                    ))}
-                                  </>
-                                ) : module.completed ? (
-                                  <div className="text-sm text-gray-600">
-                                    <span className="text-green-600">✓</span> {module.module_type === "onsite_training" ? "Onsite training completed" : "Onsite assessment completed"}
+                                      {response.has_response && (
+                                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                      )}
+                                    </div>
                                   </div>
-                                ) : (
-                                  <div className="text-sm text-gray-500 italic">
-                                    {module.module_type === "onsite_training" ? "Onsite training not yet completed" : "Onsite assessment not yet completed"}
+                                ))}
+                              </div>
+                            )}
+                            
+                            {/* Equipment Assessment Requirements */}
+                            {module.equipment_requirements && module.equipment_requirements.length > 0 && (
+                              <div className="space-y-2">
+                                <p className="text-sm font-medium text-gray-700">Equipment Assessment:</p>
+                                {module.equipment_requirements.map((equipment, idx) => (
+                                  <div key={`equipment-${module.module_id}-${equipment.requirement_id}`} className={`bg-blue-50 rounded p-2 text-sm ${equipment.has_response ? 'border-l-4 border-blue-400' : 'border-l-4 border-gray-300'}`}>
+                                    <div className="flex items-start justify-between">
+                                      <div className="flex-1">
+                                        <div className="font-medium text-gray-700">
+                                          {equipment.requirement_label}
+                                          {equipment.required && <span className="text-red-500 ml-1">*</span>}
+                                        </div>
+                                        {equipment.description && (
+                                          <p className="text-xs text-gray-500 mt-0.5">{equipment.description}</p>
+                                        )}
+                                        {equipment.has_response ? (
+                                          <>
+                                            <div className="text-gray-600 mt-1">{equipment.response_text || "Equipment confirmed"}</div>
+                                            {equipment.response_date && (
+                                              <div className="text-xs text-gray-500 mt-1">
+                                                Submitted: {formatDateSafe(equipment.response_date)}
+                                              </div>
+                                            )}
+                                          </>
+                                        ) : (
+                                          <div className="text-gray-500 italic mt-1">Not yet provided</div>
+                                        )}
+                                      </div>
+                                      {equipment.has_response && (
+                                        <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                                      )}
+                                    </div>
                                   </div>
-                                )}
+                                ))}
                               </div>
                             )}
 

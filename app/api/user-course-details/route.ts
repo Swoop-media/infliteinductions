@@ -62,6 +62,9 @@ export async function GET(request: NextRequest) {
 
     const progressMap = new Map((moduleProgress || []).map(p => [p.module_id, p.completed_at]));
 
+    // Get module IDs for later queries
+    const moduleIds = modules.map(m => m.id);
+
     // Get quiz attempts
     const { data: quizAttempts } = await adminClient
       .from("quiz_attempts")
@@ -72,12 +75,51 @@ export async function GET(request: NextRequest) {
         passed,
         answers,
         created_at,
-        quizzes!inner(module_id)
+        quizzes!inner(module_id, pass_mark)
       `)
       .eq("user_id", userId);
+    
+    // Get quiz questions and options for this course's modules
+    const { data: quizzes } = await adminClient
+      .from("quizzes")
+      .select("id, module_id, course_id, pass_mark")
+      .or(`module_id.in.(${moduleIds.join(',')}),course_id.eq.${courseId}`);
+    
+    const quizIds = quizzes?.map(q => q.id) || [];
+    
+    // Get quiz questions
+    const { data: quizQuestions } = moduleIds.length > 0 || quizIds.length > 0 ? await adminClient
+      .from("quiz_questions")
+      .select(`
+        id,
+        quiz_id,
+        module_id,
+        stem,
+        prompt,
+        explanation,
+        points,
+        order_index,
+        kind,
+        type
+      `)
+      .or(`quiz_id.in.(${quizIds.join(',')}),module_id.in.(${moduleIds.join(',')})`)
+      .order("order_index", { ascending: true }) : { data: [] };
+    
+    // Get quiz options
+    const questionIds = quizQuestions?.map(q => q.id) || [];
+    const { data: quizOptions } = questionIds.length > 0 ? await adminClient
+      .from("quiz_options")
+      .select(`
+        id,
+        question_id,
+        label,
+        is_correct,
+        order_index
+      `)
+      .in("question_id", questionIds)
+      .order("order_index", { ascending: true }) : { data: [] };
 
     // Get ALL requirements for all modules (not just ones with responses)
-    const moduleIds = modules.map(m => m.id);
     const { data: allRequirements } = await adminClient
       .from("onsite_requirements")
       .select(`
@@ -272,15 +314,57 @@ export async function GET(request: NextRequest) {
     const modulesWithDetails = modules.map(module => {
       const isCompleted = progressMap.has(module.id);
       
+      // Find quiz for this module
+      const moduleQuiz = quizzes?.find(q => 
+        q.module_id === module.id || 
+        (!q.module_id && q.course_id === courseId)
+      );
+      
+      // Get quiz questions for this module
+      const moduleQuizQuestions = (quizQuestions || []).filter(q => 
+        (moduleQuiz && q.quiz_id === moduleQuiz.id) ||
+        q.module_id === module.id
+      ).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+      
+      // Map questions with their options
+      const questionsWithOptions = moduleQuizQuestions.map(question => {
+        const options = (quizOptions || [])
+          .filter(opt => opt.question_id === question.id)
+          .sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+        
+        return {
+          id: question.id,
+          question_text: question.stem || question.prompt || `Question ${(question.order_index || 0) + 1}`,
+          points: question.points || 1,
+          options: options.map(opt => ({
+            id: opt.id,
+            label: opt.label || '',
+            is_correct: opt.is_correct || false
+          }))
+        };
+      });
+      
+      // Build quiz info
+      const quizInfo = moduleQuiz ? {
+        quiz_id: moduleQuiz.id,
+        pass_mark: moduleQuiz.pass_mark || 70,
+        questions: questionsWithOptions
+      } : undefined;
+      
       // Get quiz attempts for this module
       const moduleQuizAttempts = quizAttempts?.filter(
         qa => (qa.quizzes as any)?.module_id === module.id
-      ).map(qa => ({
-        score_pct: qa.score_pct,
-        passed: qa.passed,
-        answers: qa.answers,
-        created_at: qa.created_at
-      }));
+      ).map(qa => {
+        const quiz = qa.quizzes as any;
+        return {
+          score_pct: qa.score_pct,
+          passed: qa.passed,
+          pass_mark: quiz?.pass_mark || 70,
+          answers: qa.answers,
+          created_at: qa.created_at,
+          questions_with_answers: questionsWithOptions // Include the actual questions
+        };
+      });
 
       // Get ALL requirements for this module and match with responses
       const moduleRequirements = allRequirements?.filter(
@@ -388,10 +472,12 @@ export async function GET(request: NextRequest) {
         module_title: module.title || `Module ${module.order_index + 1}`,
         completed: isCompleted,
         quiz_attempts: moduleQuizAttempts,
+        quiz_info: quizInfo,
         onsite_responses: moduleOnsiteResponses,
         equipment_requirements: equipmentFormResponses, // Return equipment separately
         documents: moduleDocuments,
-        include_equipment_assessment: module.include_equipment_assessment || false
+        include_equipment_assessment: module.include_equipment_assessment || false,
+        has_onsite_requirements: moduleOnsiteResponses.length > 0
       };
     });
 

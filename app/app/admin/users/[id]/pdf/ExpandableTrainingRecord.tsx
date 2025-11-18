@@ -43,22 +43,57 @@ interface ModuleProgress {
   quiz_attempts?: Array<{
     score_pct: number;
     passed: boolean;
+    pass_mark?: number;
     answers?: any;
     created_at: string;
+    questions_with_answers?: Array<{
+      id?: string;
+      question_text?: string;
+      points?: number;
+      options?: Array<{
+        id: string;
+        label: string;
+        is_correct: boolean;
+      }>;
+    }>;
   }>;
+  quiz_info?: {
+    quiz_id: string;
+    pass_mark: number;
+    questions: Array<{
+      id: string;
+      question_text: string;
+      points: number;
+      options: Array<{
+        id: string;
+        label: string;
+        is_correct: boolean;
+      }>;
+    }>;
+  };
   onsite_responses?: Array<{
+    requirement_id?: string;
     requirement_label: string;
-    response_text: string;
-    response_date: string;
-    assessor_name?: string;
-  }>;
-  equipment_requirements?: Array<{
-    requirement_label: string;
-    description?: string;
-    response_text: string;
-    response_date: string;
+    response_text: string | null;
+    response_date: string | null;
+    trainer_name?: string | null;
+    field_type?: string;
+    required?: boolean;
     has_response?: boolean;
   }>;
+  equipment_requirements?: Array<{
+    requirement_id?: string;
+    requirement_label: string;
+    description?: string | null;
+    response_text: string | null;
+    response_date: string | null;
+    trainer_name?: string | null;
+    field_type?: string;
+    required?: boolean;
+    has_response?: boolean;
+  }>;
+  has_onsite_requirements?: boolean;
+  include_equipment_assessment?: boolean;
   documents?: Array<{
     document_title: string;
     uploaded_at: string;
@@ -359,16 +394,55 @@ export default function ExpandableTrainingRecord({ profile, courses, authorizati
 
                               {/* Module Content */}
                               <div className="ml-6 space-y-2">
-                                {/* Digital Quiz Results */}
+                                {/* Digital Quiz Results with Questions and Answers */}
                                 {module.module_type === "digital_assessment_quiz" && module.quiz_attempts && module.quiz_attempts.length > 0 && (
                                   <div className="space-y-1">
                                     <p className="text-xs font-medium text-gray-700">Quiz Results:</p>
                                     {module.quiz_attempts.map((attempt, idx) => (
                                       <div key={`quiz-${module.module_id}-${idx}`} className="bg-gray-50 rounded p-1.5 text-xs">
-                                        <span>Attempt {idx + 1}: </span>
-                                        <span className={attempt.passed ? "text-green-600" : "text-red-600"}>
-                                          {attempt.score_pct}% {attempt.passed ? "(Passed)" : "(Failed)"}
-                                        </span>
+                                        <div className="font-medium">
+                                          <span>Attempt {idx + 1}: </span>
+                                          <span className={attempt.passed ? "text-green-600" : "text-red-600"}>
+                                            {attempt.score_pct}% {attempt.passed ? "(Passed)" : "(Failed)"}
+                                            {attempt.pass_mark && ` - Pass mark: ${attempt.pass_mark}%`}
+                                          </span>
+                                        </div>
+                                        
+                                        {/* Show quiz questions and answers */}
+                                        {attempt.questions_with_answers && attempt.questions_with_answers.length > 0 && (
+                                          <div className="mt-2 space-y-2 border-t pt-2">
+                                            {attempt.questions_with_answers.map((question, qIdx) => {
+                                              const userAnswer = attempt.answers?.[question.id];
+                                              const selectedOption = question.options?.find(opt => opt.id === userAnswer);
+                                              const correctOption = question.options?.find(opt => opt.is_correct);
+                                              const isCorrect = selectedOption?.is_correct;
+                                              
+                                              return (
+                                                <div key={`q-${question.id}-${qIdx}`} className="bg-white rounded p-2 border border-gray-200">
+                                                  <div className="font-medium text-gray-700 mb-1">
+                                                    Q{qIdx + 1}: {question.question_text}
+                                                    {question.points && <span className="text-xs text-gray-500 ml-1">({question.points}pts)</span>}
+                                                  </div>
+                                                  
+                                                  <div className="ml-2">
+                                                    <div className="text-gray-600">
+                                                      <span className="font-medium">Your answer: </span>
+                                                      <span className={isCorrect ? "text-green-600" : "text-red-600"}>
+                                                        {selectedOption?.label || "No answer"}
+                                                        {isCorrect ? " ✓" : " ✗"}
+                                                      </span>
+                                                    </div>
+                                                    {!isCorrect && correctOption && (
+                                                      <div className="text-green-600 text-xs mt-0.5">
+                                                        Correct answer: {correctOption.label}
+                                                      </div>
+                                                    )}
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        )}
                                       </div>
                                     ))}
                                   </div>
@@ -403,20 +477,42 @@ export default function ExpandableTrainingRecord({ profile, courses, authorizati
                                 {module.onsite_responses && module.onsite_responses.length > 0 && (
                                   <div className="space-y-1">
                                     <p className="text-xs font-medium text-gray-700">
-                                      {module.module_type === "onsite_training" ? "Training Completed:" : 
-                                       module.module_type === "onsite_assessment" ? "Assessment Completed:" :
+                                      {module.module_type === "onsite_training" ? "Training Requirements:" : 
+                                       module.module_type === "onsite_assessment" ? "Assessment Requirements:" :
                                        module.module_type === "digital_training" ? "Form Questions:" :
                                        "Requirements:"}
                                     </p>
                                     {module.onsite_responses.map((response, idx) => (
-                                      <div key={`onsite-${module.module_id}-${idx}`} className="bg-gray-50 rounded p-1.5 text-xs">
-                                        <div className="font-medium">{response.requirement_label}</div>
-                                        {response.assessor_name && (
-                                          <div className="flex items-center gap-1 text-gray-500 mt-0.5">
-                                            <User className="w-3 h-3" />
-                                            <span>Assessed by {response.assessor_name}</span>
+                                      <div key={`onsite-${module.module_id}-${response.requirement_id || idx}`} className={`bg-gray-50 rounded p-1.5 text-xs ${response.has_response ? 'border-l-2 border-green-400' : 'border-l-2 border-gray-300'}`}>
+                                        <div className="flex items-start justify-between">
+                                          <div className="flex-1">
+                                            <div className="font-medium">
+                                              {response.requirement_label}
+                                              {response.required && <span className="text-red-500 ml-0.5">*</span>}
+                                            </div>
+                                            {response.has_response ? (
+                                              <>
+                                                <div className="text-gray-600 mt-0.5">{response.response_text || "Completed"}</div>
+                                                {response.trainer_name && (
+                                                  <div className="flex items-center gap-1 text-gray-500 mt-0.5">
+                                                    <User className="w-3 h-3" />
+                                                    <span>{module.module_type === "onsite_training" ? "Trained by" : "Assessed by"} {response.trainer_name}</span>
+                                                  </div>
+                                                )}
+                                                {response.response_date && (
+                                                  <div className="text-gray-500 text-xs">
+                                                    {formatDateSafe(response.response_date)}
+                                                  </div>
+                                                )}
+                                              </>
+                                            ) : (
+                                              <div className="text-gray-500 italic mt-0.5">Not yet completed</div>
+                                            )}
                                           </div>
-                                        )}
+                                          {response.has_response && (
+                                            <CheckCircle className="w-3 h-3 text-green-600 flex-shrink-0" />
+                                          )}
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
