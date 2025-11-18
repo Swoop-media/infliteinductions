@@ -60,45 +60,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create profile - build the profile object dynamically
-    const profileData: any = {
+    // Create profile - only include essential fields that exist in production
+    const profileData = {
       id: authUser.user.id,
       email: authUser.user.email,
       full_name: fullName,
       microsoft_id: null,
-      department: department || null,
-      job_description: jobDescription || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
 
-    // Try to insert with user_type first (for databases that have this column)
-    let profileError;
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .insert({
-          ...profileData,
-          user_type: 'external_user'
-        });
-      profileError = error;
-    } catch (e) {
-      // If that fails, try without user_type (for databases without this column)
-      const { error } = await supabase
-        .from('profiles')
-        .insert(profileData);
-      profileError = error;
+    // Add optional fields if they have values
+    if (department) {
+      (profileData as any).department = department;
+    }
+    if (jobDescription) {
+      (profileData as any).job_description = jobDescription;
     }
 
+    console.log('Creating profile with data:', JSON.stringify(profileData));
+    
+    const { error: profileError, data: profileData2 } = await supabase
+      .from('profiles')
+      .insert(profileData as any)
+      .select();
+
     if (profileError) {
-      console.error('Profile creation error:', profileError);
+      console.error('Profile creation error:', JSON.stringify(profileError));
+      console.error('Error details - code:', profileError.code, 'message:', profileError.message);
+      
       // Try to delete the auth user if profile creation fails
       await supabase.auth.admin.deleteUser(authUser.user.id);
+      
+      // Provide more specific error message
+      let errorMessage = 'Failed to create user profile.';
+      if (profileError.message?.includes('duplicate')) {
+        errorMessage = 'A profile with this email already exists.';
+      } else if (profileError.message?.includes('column')) {
+        errorMessage = 'Database configuration issue. Please contact support.';
+      }
+      
       return NextResponse.json(
-        { error: 'Failed to create user profile. Please try again.' },
+        { error: errorMessage },
         { status: 500 }
       );
     }
+    
+    console.log('Profile created successfully:', profileData2);
 
     // Assign default role (User)
     const { error: roleError } = await supabase
