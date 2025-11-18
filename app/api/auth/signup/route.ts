@@ -60,20 +60,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create profile
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: authUser.user.id,
-        email: authUser.user.email,
-        full_name: fullName,
-        user_type: 'external_user', // Self-signup users are external by default
-        microsoft_id: null,
-        department: department || null,
-        job_description: jobDescription || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      } as any);
+    // Create profile - build the profile object dynamically
+    const profileData: any = {
+      id: authUser.user.id,
+      email: authUser.user.email,
+      full_name: fullName,
+      microsoft_id: null,
+      department: department || null,
+      job_description: jobDescription || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+
+    // Try to insert with user_type first (for databases that have this column)
+    let profileError;
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .insert({
+          ...profileData,
+          user_type: 'external_user'
+        });
+      profileError = error;
+    } catch (e) {
+      // If that fails, try without user_type (for databases without this column)
+      const { error } = await supabase
+        .from('profiles')
+        .insert(profileData);
+      profileError = error;
+    }
 
     if (profileError) {
       console.error('Profile creation error:', profileError);
