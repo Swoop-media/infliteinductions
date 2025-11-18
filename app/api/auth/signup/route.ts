@@ -39,16 +39,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create user in Supabase Auth with email confirmation required
-    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+    // Use signUp method which properly sends confirmation emails
+    const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      email_confirm: false, // Require email confirmation
-      user_metadata: {
-        full_name: fullName,
-        department: department || null,
-        job_description: jobDescription || null,
-        signup_method: 'self_signup'
+      options: {
+        data: {
+          full_name: fullName,
+          department: department || null,
+          job_description: jobDescription || null,
+          signup_method: 'self_signup'
+        }
       }
     });
 
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!authUser.user) {
+    if (!authData.user) {
       return NextResponse.json(
         { error: 'Failed to create user account' },
         { status: 500 }
@@ -76,8 +77,8 @@ export async function POST(request: NextRequest) {
 
     // Create profile - only include essential fields that exist in production
     const profileData = {
-      id: authUser.user.id,
-      email: authUser.user.email,
+      id: authData.user.id,
+      email: authData.user.email,
       full_name: fullName,
       microsoft_id: null,
       created_at: new Date().toISOString(),
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
       console.error('Error details - code:', profileError.code, 'message:', profileError.message);
       
       // Try to delete the auth user if profile creation fails
-      await supabase.auth.admin.deleteUser(authUser.user.id);
+      await supabase.auth.admin.deleteUser(authData.user.id);
       
       // Provide more specific error message
       let errorMessage = 'Failed to create user profile.';
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
     const { error: roleError } = await supabase
       .from('user_roles')
       .insert({
-        user_id: authUser.user.id,
+        user_id: authData.user.id,
         role_name: 'User',
         created_at: new Date().toISOString()
       } as any);
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       message: 'Account created successfully! Please check your email to confirm your account before signing in.',
-      userId: authUser.user.id,
+      userId: authData.user.id,
       requiresEmailConfirmation: true
     });
 
