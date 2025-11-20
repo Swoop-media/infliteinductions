@@ -632,6 +632,12 @@ export default async function AdminPage({
           >
             Authorization Diagnostics
           </Link>
+          <Link
+            href="/app/admin/teams-link-test"
+            className="rounded-md bg-blue-600 text-white px-3 py-1 text-sm hover:bg-blue-700"
+          >
+            Teams Link Test
+          </Link>
         </div>
       </div>
 
