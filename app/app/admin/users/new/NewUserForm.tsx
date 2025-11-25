@@ -45,7 +45,6 @@ export default function NewUserForm({
 
     try {
       if (userType === 'external') {
-        // For external users, use the new API endpoint
         const externalUserType = formData.get('external_user_type') as string;
         
         const response = await fetch('/api/admin/create-external-user', {
@@ -68,12 +67,28 @@ export default function NewUserForm({
           throw new Error(data.error || 'Failed to create external user');
         }
 
-        // Show success and redirect
         router.push('/app/admin?tab=users&success=External user created and email sent');
       } else {
-        // For internal users, use the existing form action
-        const form = e.currentTarget;
-        form.submit();
+        const response = await fetch('/api/admin/create-internal-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email,
+            fullName,
+            department,
+            jobDescription,
+            courseIds,
+            authorizationIds: authIds
+          })
+        });
+
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to create internal user');
+        }
+
+        router.push('/app/admin?tab=users&success=Internal user created successfully');
       }
     } catch (err: any) {
       setError(err.message);
