@@ -66,7 +66,20 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (November-December 2024)
 
-## Dual Authentication System (Latest)
+## Internal User Creation Fix (Latest)
+- **Issue Fixed**: Creating internal users (Microsoft Account) from the Add New User page was silently failing
+- **Root Cause**: The form was calling `form.submit()` without any API endpoint, so nothing was being created
+- **Solution**: Created new `/api/admin/create-internal-user` endpoint that:
+  - Pre-creates Supabase auth user for Microsoft SSO login
+  - Creates profile with department and job description
+  - Assigns default "User" role
+  - Assigns courses and authorizations with duplicate checking
+- **Form Update**: `NewUserForm.tsx` now calls the new API endpoint for internal users (same pattern as external users)
+- **User Handling**: Existing users (by email) are updated with new assignments rather than duplicated
+- **Files Created**: `app/api/admin/create-internal-user/route.ts`
+- **Files Updated**: `app/app/admin/users/new/NewUserForm.tsx`
+
+## Dual Authentication System
 - **Feature Added**: Support for external users (contractors/operators) who don't have Microsoft accounts
 - **Database**: Added `user_type` column to profiles table (internal_employee, external_contractor, external_operator)
 - **Authentication Options**:
