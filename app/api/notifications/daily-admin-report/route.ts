@@ -87,6 +87,11 @@ export async function POST(request: NextRequest) {
       const authMap = new Map(auths?.map(a => [a.id, a]) || []);
       
       // Calculate expiry dates and filter only those with valid_for_days
+      // Also filter to only include items overdue or expiring within 30 days
+      const thirtyDaysFromNow = new Date(today);
+      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+      thirtyDaysFromNow.setHours(23, 59, 59, 999); // End of the 30th day
+      
       const assignmentsWithExpiry = authAssignments
         .map(assignment => {
           const auth = authMap.get(assignment.authorisation_id);
@@ -96,6 +101,9 @@ export async function POST(request: NextRequest) {
           const expiryDate = new Date(completedDate);
           expiryDate.setDate(expiryDate.getDate() + auth.valid_for_days);
           
+          // Only include if overdue (before today) or expiring within 30 days
+          if (expiryDate > thirtyDaysFromNow) return null;
+          
           return {
             ...assignment,
             expires_at: expiryDate.toISOString(),
@@ -104,15 +112,15 @@ export async function POST(request: NextRequest) {
         })
         .filter(Boolean);
       
-      // Sort by expiry date and take first 25
+      // Sort by expiry date and take first 50
       assignmentsWithExpiry.sort((a, b) => 
         new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime()
       );
       
-      const next25 = assignmentsWithExpiry.slice(0, 25);
+      const next50 = assignmentsWithExpiry.slice(0, 50);
       
-      // Get profiles for the next 25
-      const userIds = [...new Set(next25.map(a => a.user_id))];
+      // Get profiles for the next 50
+      const userIds = [...new Set(next50.map(a => a.user_id))];
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, full_name")
@@ -120,7 +128,7 @@ export async function POST(request: NextRequest) {
       
       const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
       
-      authDetails = next25.map(exp => ({
+      authDetails = next50.map(exp => ({
         ...exp,
         profiles: profileMap.get(exp.user_id)
       }));
@@ -130,7 +138,15 @@ export async function POST(request: NextRequest) {
       console.error("Error fetching authorization expiries:", authError);
     }
 
-    // Fetch upcoming document expiries (next 25 regardless of proximity)
+    // Fetch upcoming document expiries - filter to overdue or within 30 days, limit 50
+    // Manually construct date string to avoid timezone issues with toISOString()
+    const thirtyDaysFromNowDate = new Date(today);
+    thirtyDaysFromNowDate.setDate(thirtyDaysFromNowDate.getDate() + 30);
+    const year = thirtyDaysFromNowDate.getFullYear();
+    const month = String(thirtyDaysFromNowDate.getMonth() + 1).padStart(2, '0');
+    const day = String(thirtyDaysFromNowDate.getDate()).padStart(2, '0');
+    const thirtyDaysStr = `${year}-${month}-${day}`;
+    
     const { data: docExpiries, error: docError } = await supabase
       .from("learner_documents")
       .select(`
@@ -140,8 +156,9 @@ export async function POST(request: NextRequest) {
         user_id
       `)
       .not("expires_on", "is", null)
+      .lte("expires_on", thirtyDaysStr)
       .order("expires_on", { ascending: true })
-      .limit(25);
+      .limit(50);
     
     // Get profiles for document expiries
     let docDetails = [];
@@ -168,12 +185,12 @@ export async function POST(request: NextRequest) {
     // Prepare authorization summary as an array
     let authSummaryLines = [];
     if (authDetails.length > 0) {
-      const itemCount = Math.min(authDetails.length, 25);
-      authSummaryLines.push(`Top ${itemCount} expiring authorizations:`);
-      authDetails.slice(0, 25).forEach(auth => {
+      const itemCount = Math.min(authDetails.length, 50);
+      authSummaryLines.push(`📜 Daily Authorization Expiry Report (${itemCount} items due within 30 days or overdue):`);
+      authDetails.slice(0, 50).forEach(auth => {
         const expiryDate = new Date(auth.expires_at);
         const daysUntil = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        const status = daysUntil <= 0 ? "EXPIRED" : `${daysUntil} days`;
+        const status = daysUntil <= 0 ? "⚠️ OVERDUE" : daysUntil <= 7 ? `🔴 ${daysUntil} days` : `${daysUntil} days`;
         authSummaryLines.push(`• ${auth.authorisations?.title || 'Authorization'} - ${auth.profiles?.full_name || 'User'} (${status})`);
       });
     }
@@ -181,12 +198,12 @@ export async function POST(request: NextRequest) {
     // Prepare document summary as an array
     let docSummaryLines = [];
     if (docDetails.length > 0) {
-      const itemCount = Math.min(docDetails.length, 25);
-      docSummaryLines.push(`Top ${itemCount} expiring documents:`);
-      docDetails.slice(0, 25).forEach(doc => {
+      const itemCount = Math.min(docDetails.length, 50);
+      docSummaryLines.push(`📄 Daily Document Expiry Report (${itemCount} items due within 30 days or overdue):`);
+      docDetails.slice(0, 50).forEach(doc => {
         const expiryDate = new Date(doc.expires_on);
         const daysUntil = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        const status = daysUntil <= 0 ? "EXPIRED" : `${daysUntil} days`;
+        const status = daysUntil <= 0 ? "⚠️ OVERDUE" : daysUntil <= 7 ? `🔴 ${daysUntil} days` : `${daysUntil} days`;
         docSummaryLines.push(`• ${doc.title || 'Document'} - ${doc.profiles?.full_name || 'User'} (${status})`);
       });
     }
