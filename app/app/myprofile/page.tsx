@@ -181,13 +181,66 @@ async function loadMyProfileAndLearning() {
   console.log('In progress auth:', inProgressAuth);
   console.log('Completed auth:', completedAuth);
 
+  const { data: noticeAssignments } = await supabase
+    .from("operations_notice_assignments")
+    .select("id, notice_id, user_id, assigned_at")
+    .eq("user_id", user.id);
+
+  const assignedNoticeIds = (noticeAssignments ?? []).map((a) => a.notice_id);
+
+  let operationsNotices: any[] = [];
+  if (assignedNoticeIds.length > 0) {
+    const { data: notices } = await supabase
+      .from("operations_notices")
+      .select("*")
+      .in("id", assignedNoticeIds)
+      .eq("status", "published")
+      .order("created_at", { ascending: false });
+
+    const { data: acknowledgements } = await supabase
+      .from("operations_notice_acknowledgements")
+      .select("notice_id, acknowledged_at")
+      .eq("user_id", user.id);
+
+    const ackMap = new Map(
+      (acknowledgements ?? []).map((a) => [a.notice_id, a.acknowledged_at])
+    );
+
+    const assignmentMap = new Map(
+      (noticeAssignments ?? []).map((a) => [a.notice_id, a])
+    );
+
+    operationsNotices = (notices ?? []).map((notice) => {
+      const assignment = assignmentMap.get(notice.id);
+      const acknowledgedAt = ackMap.get(notice.id);
+
+      let expiryDate: Date | null = null;
+      let isExpired = false;
+      if (notice.valid_for_days && notice.created_at) {
+        expiryDate = new Date(notice.created_at);
+        expiryDate.setDate(expiryDate.getDate() + notice.valid_for_days);
+        isExpired = expiryDate < new Date();
+      }
+
+      return {
+        ...notice,
+        assignedAt: assignment?.assigned_at || null,
+        acknowledgedAt: acknowledgedAt || null,
+        expiryDate,
+        isExpired,
+        isValid: !isExpired,
+      };
+    }).filter((n) => !n.isExpired);
+  }
+
   return { 
     profile, 
     inProgressCourses, 
     completedCourses, 
     inProgressAuth,
     completedAuth,
-    onsiteAssignments: onsiteAssignments || []
+    onsiteAssignments: onsiteAssignments || [],
+    operationsNotices
   };
 }
 
@@ -214,7 +267,7 @@ function Pill({
 
 /* ---------------- Page ---------------- */
 export default async function MyProfilePage() {
-  const { profile, inProgressCourses, completedCourses, inProgressAuth, completedAuth, onsiteAssignments } = await loadMyProfileAndLearning();
+  const { profile, inProgressCourses, completedCourses, inProgressAuth, completedAuth, onsiteAssignments, operationsNotices } = await loadMyProfileAndLearning();
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -563,6 +616,93 @@ export default async function MyProfilePage() {
           </div>
         </CollapsibleSection>
       )}
+
+      {/* Operations Notices Section */}
+      <CollapsibleSection
+        title="Operations Notices"
+        count={operationsNotices.length}
+        defaultCollapsed={true}
+        pillTone="blue"
+      >
+        {operationsNotices.length === 0 ? (
+          <p className="text-sm text-gray-500">No operations notices assigned to you.</p>
+        ) : (
+          <div className="space-y-3">
+            {operationsNotices.map((notice: any) => {
+              const needsAcknowledgement = notice.require_acknowledgement && !notice.acknowledgedAt;
+              const isAcknowledged = !!notice.acknowledgedAt;
+
+              return (
+                <div
+                  key={notice.id}
+                  className={`rounded-lg border p-4 ${
+                    needsAcknowledgement
+                      ? "border-orange-300 bg-orange-50"
+                      : isAcknowledged
+                      ? "border-green-300 bg-green-50"
+                      : "bg-white"
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">{notice.title}</h3>
+                      {notice.department && (
+                        <span className="inline-block mt-1 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                          {notice.department}
+                        </span>
+                      )}
+                      {notice.description && (
+                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">
+                          {notice.description}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      {notice.require_acknowledgement && (
+                        <span
+                          className={`rounded px-2 py-0.5 text-xs font-medium ${
+                            isAcknowledged
+                              ? "bg-green-200 text-green-800"
+                              : "bg-orange-200 text-orange-800"
+                          }`}
+                        >
+                          {isAcknowledged ? "Acknowledged" : "Pending"}
+                        </span>
+                      )}
+                      <span className="rounded px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
+                        Valid
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
+                    {notice.assignedAt && (
+                      <span>Assigned: {new Date(notice.assignedAt).toLocaleDateString()}</span>
+                    )}
+                    {notice.expiryDate && (
+                      <span>Expires: {new Date(notice.expiryDate).toLocaleDateString()}</span>
+                    )}
+                    {isAcknowledged && notice.acknowledgedAt && (
+                      <span className="text-green-600">
+                        Acknowledged: {new Date(notice.acknowledgedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="mt-2 flex gap-2">
+                    <Link
+                      href="/app/operations-notices"
+                      className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
+                    >
+                      View Details
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CollapsibleSection>
 
       {/* Teams Integration Section */}
       <div className="rounded-md border bg-white p-4">
