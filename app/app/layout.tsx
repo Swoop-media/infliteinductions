@@ -59,6 +59,14 @@ export default async function AppSectionLayout({
                 Authorisations
               </Link>
             )}
+            {showAuthorisationsButton && (
+              <Link 
+                href="/app/operations-notices" 
+                className="rounded-md bg-orange-500 px-3 py-1 text-white hover:bg-orange-600"
+              >
+                Operations Notices
+              </Link>
+            )}
           </nav>
 
           <nav className="flex items-center gap-2">
