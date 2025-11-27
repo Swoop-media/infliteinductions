@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
+import BatchUserAssignment from "./BatchUserAssignment";
 
 type TabKey = "details" | "assignments";
 
@@ -76,6 +77,7 @@ type AcknowledgementRow = {
 };
 
 type Profile = { id: string; full_name: string | null; email: string | null };
+type ProfileWithDepartment = { id: string; full_name: string | null; email: string | null; department: string | null };
 
 async function loadNotice(noticeId: string) {
   "use server";
@@ -165,6 +167,24 @@ async function loadAllDepartments() {
   }
   
   return departments?.map(dept => dept.name).filter(Boolean) || [];
+}
+
+async function loadAllUsersWithDepartments() {
+  "use server";
+  const supabase = await createSupabaseServer();
+  
+  const { data: users, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, department")
+    .is("archived_at", null)
+    .order("full_name", { ascending: true });
+  
+  if (error) {
+    console.error("Error loading users:", error);
+    return [];
+  }
+  
+  return (users ?? []) as ProfileWithDepartment[];
 }
 
 async function updateNoticeStatusAction(formData: FormData) {
@@ -258,6 +278,57 @@ async function revokeAssignmentAction(formData: FormData) {
   redirect(next);
 }
 
+async function bulkAssignUsersAction(formData: FormData) {
+  "use server";
+  const supabase = await createSupabaseServer();
+
+  const noticeId = String(formData.get("notice_id") || "");
+  const userIds = formData.getAll("user_ids").map(id => String(id));
+  
+  if (!noticeId) throw new Error("Missing notice_id");
+
+  const { data: { user }, error: authErr } = await supabase.auth.getUser();
+  if (authErr) throw new Error(authErr.message);
+  if (!user) throw new Error("Not authenticated");
+
+  const { data: existingAssignments, error: fetchErr } = await supabase
+    .from("operations_notice_assignments")
+    .select("id, user_id")
+    .eq("notice_id", noticeId);
+  
+  if (fetchErr) throw new Error(fetchErr.message);
+  
+  const existingUserIds = new Set((existingAssignments ?? []).map(a => a.user_id));
+  
+  const toAdd = userIds.filter(id => !existingUserIds.has(id));
+  const toRemove = (existingAssignments ?? []).filter(a => !userIds.includes(a.user_id));
+
+  if (toRemove.length > 0) {
+    const removeIds = toRemove.map(a => a.id);
+    const { error: delErr } = await supabase
+      .from("operations_notice_assignments")
+      .delete()
+      .in("id", removeIds);
+    if (delErr) throw new Error(delErr.message);
+  }
+
+  if (toAdd.length > 0) {
+    const insertRows = toAdd.map(userId => ({
+      notice_id: noticeId,
+      user_id: userId,
+      role: "recipient" as const,
+      assigned_by: user.id,
+    }));
+    
+    const { error: insertErr } = await supabase
+      .from("operations_notice_assignments")
+      .insert(insertRows);
+    if (insertErr) throw new Error(insertErr.message);
+  }
+
+  revalidatePath(buildNoticeUrl(noticeId));
+}
+
 type SearchParamsType = {
   notice?: string | string[];
   error?: string | string[];
@@ -307,21 +378,18 @@ export default async function Page(props: {
   }
 
   let assignments: AssignmentRow[] = [];
-  let profileMap = new Map<string, Profile>();
   let acknowledgedUserIds = new Set<string>();
-  let searchResults: Profile[] = [];
+  let allUsers: ProfileWithDepartment[] = [];
   
   if (activeTab === "assignments") {
     const assignData = await loadAssignments(id);
     assignments = assignData.assignments;
-    profileMap = assignData.profileMap;
     
     if (notice.require_acknowledgement) {
       acknowledgedUserIds = await loadAcknowledgements(id);
     }
     
-    const q = (Array.isArray(search.q) ? search.q[0] : search.q) ?? "";
-    searchResults = await searchProfilesByQuery(q);
+    allUsers = await loadAllUsersWithDepartments();
   }
 
   const tabs: { key: TabKey; href: string }[] = [
@@ -378,10 +446,8 @@ export default async function Page(props: {
             noticeId={id}
             notice={notice}
             assignments={assignments}
-            profileMap={profileMap}
             acknowledgedUserIds={acknowledgedUserIds}
-            searchResults={searchResults}
-            search={search}
+            allUsers={allUsers}
           />
         )}
       </div>
@@ -489,121 +555,35 @@ function AssignmentsTab({
   noticeId,
   notice,
   assignments,
-  profileMap,
   acknowledgedUserIds,
-  searchResults,
-  search,
+  allUsers,
 }: {
   noticeId: string;
   notice: NoticeRow;
   assignments: AssignmentRow[];
-  profileMap: Map<string, Profile>;
   acknowledgedUserIds: Set<string>;
-  searchResults: Profile[];
-  search: SearchParamsType;
+  allUsers: ProfileWithDepartment[];
 }) {
-  const q = (Array.isArray(search.q) ? search.q[0] : search.q) ?? "";
-  const existingUserIds = new Set(assignments.map(a => a.user_id));
+  const assignedUserIds = new Set(assignments.map(a => a.user_id));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h3 className="font-medium mb-3">Assign Users to this Notice</h3>
-        <form method="get" className="flex gap-2 mb-4">
-          <input type="hidden" name="tab" value="assignments" />
-          <input
-            type="text"
-            name="q"
-            defaultValue={q}
-            placeholder="Search users by name or email..."
-            className="flex-1 rounded-md border px-3 py-2 text-sm"
-          />
-          <button className="rounded-md bg-black px-4 py-2 text-sm text-white">Search</button>
-        </form>
-
-        {searchResults.length > 0 && (
-          <div className="space-y-2 mb-6">
-            <h4 className="text-sm text-gray-600">Search Results:</h4>
-            <ul className="divide-y rounded-md border">
-              {searchResults.map((p) => {
-                const alreadyAssigned = existingUserIds.has(p.id);
-                return (
-                  <li key={p.id} className="flex items-center justify-between p-3">
-                    <div>
-                      <div className="font-medium text-sm">{p.full_name || "Unknown"}</div>
-                      <div className="text-xs text-gray-500">{p.email}</div>
-                    </div>
-                    {alreadyAssigned ? (
-                      <span className="text-xs text-gray-400">Already assigned</span>
-                    ) : (
-                      <form action={assignUserAction}>
-                        <input type="hidden" name="notice_id" value={noticeId} />
-                        <input type="hidden" name="user_id" value={p.id} />
-                        <input type="hidden" name="next" value={buildNoticeUrl(noticeId, "assignments", "assigned")} />
-                        <button className="rounded-md bg-green-600 px-3 py-1 text-xs text-white hover:bg-green-700">
-                          Assign
-                        </button>
-                      </form>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
+        <h3 className="font-medium mb-1">Assign Users to this Notice</h3>
+        <p className="text-sm text-gray-500 mb-4">
+          Select users from the list below. Changes are saved when you click "Save Assignments".
+        </p>
       </div>
 
-      <hr />
-
-      <div>
-        <h3 className="font-medium mb-3">
-          Current Assignments ({assignments.length})
-          {notice.require_acknowledgement && (
-            <span className="ml-2 text-sm font-normal text-gray-500">
-              - Acknowledgement required
-            </span>
-          )}
-        </h3>
-        
-        {assignments.length === 0 ? (
-          <p className="text-sm text-gray-500">No users assigned yet. Use the search above to find and assign users.</p>
-        ) : (
-          <ul className="divide-y rounded-md border">
-            {assignments.map((a) => {
-              const profile = profileMap.get(a.user_id);
-              const hasAcknowledged = acknowledgedUserIds.has(a.user_id);
-              
-              return (
-                <li key={a.id} className="flex items-center justify-between p-3">
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <div className="font-medium text-sm">{profile?.full_name || "Unknown User"}</div>
-                      <div className="text-xs text-gray-500">{profile?.email || a.user_id}</div>
-                    </div>
-                    {notice.require_acknowledgement && (
-                      <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
-                        hasAcknowledged 
-                          ? "bg-green-100 text-green-800" 
-                          : "bg-amber-100 text-amber-800"
-                      }`}>
-                        {hasAcknowledged ? "Acknowledged" : "Pending"}
-                      </span>
-                    )}
-                  </div>
-                  <form action={revokeAssignmentAction}>
-                    <input type="hidden" name="notice_id" value={noticeId} />
-                    <input type="hidden" name="assignment_id" value={a.id} />
-                    <input type="hidden" name="next" value={buildNoticeUrl(noticeId, "assignments", "revoked")} />
-                    <button className="rounded-md border border-red-300 bg-red-50 px-3 py-1 text-xs text-red-700 hover:bg-red-100">
-                      Revoke
-                    </button>
-                  </form>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+      <BatchUserAssignment
+        users={allUsers}
+        assignedUserIds={assignedUserIds}
+        acknowledgedUserIds={acknowledgedUserIds}
+        requireAcknowledgement={notice.require_acknowledgement}
+        noticeId={noticeId}
+        bulkAssignAction={bulkAssignUsersAction}
+        revokeAction={revokeAssignmentAction}
+      />
     </div>
   );
 }
