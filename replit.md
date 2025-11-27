@@ -75,16 +75,25 @@ Preferred communication style: Simple, everyday language.
   - `operations-notices/new/page.tsx` - Create new notice with title
   - `operations-notices/[id]/page.tsx` - Notice editor with Details and Assignments tabs
   - `operations-notices/[id]/delete/page.tsx` - Delete confirmation page
+  - `app/app/operations-notices/page.tsx` - User-facing page showing all published notices
 - **Database Tables Required** (SQL migration file provided: `supabase_operations_notices_migration.sql`):
-  - `operations_notices` - Main table with title, description, status, require_acknowledgement flag
+  - `operations_notices` - Main table with title, description, status, require_acknowledgement flag, responsible_person, valid_for_days
   - `operations_notice_assignments` - User assignments to notices
   - `operations_notice_acknowledgements` - Tracking user acknowledgements
 - **Features**:
   - Create/Edit/Delete operations notices
   - "Require Acknowledgement" checkbox - when enabled, tracks if assigned users have acknowledged
-  - Assignments tab with search for users and acknowledgement status display
+  - Assignments tab with batch user assignment grouped by department
   - Department and tags support for filtering
-- **Files Updated**: `app/app/creator/page.tsx` to add "Operations Notices" tab
+  - Responsible Person dropdown (Senior Management/Admin users)
+  - Valid for (days) field for notice expiry tracking
+  - Orange "Operations Notices" button in navigation bar (next to green Authorisations button)
+  - User-facing page at `/app/operations-notices` showing all valid published notices with acknowledgement buttons
+  - Collapsible "Operations Notices" section in My Profile page showing assigned notices with status
+- **Files Updated**: 
+  - `app/app/creator/page.tsx` to add "Operations Notices" tab
+  - `app/app/layout.tsx` to add orange navigation button
+  - `app/app/myprofile/page.tsx` to add Operations Notices collapsible section
 
 ## Internal User Creation Fix
 - **Issue Fixed**: Creating internal users (Microsoft Account) from the Add New User page was silently failing
