@@ -58,6 +58,15 @@ type NoticeRow = {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  responsible_person: string | null;
+  valid_for_days: number | null;
+};
+
+type ResponsiblePerson = {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
 };
 
 type AssignmentRow = {
@@ -187,6 +196,74 @@ async function loadAllUsersWithDepartments() {
   return (users ?? []) as ProfileWithDepartment[];
 }
 
+async function loadResponsiblePersons(): Promise<ResponsiblePerson[]> {
+  "use server";
+  const supabase = await createSupabaseServer();
+  
+  const { data: roles, error: rolesError } = await supabase
+    .from("roles")
+    .select("id, name")
+    .in("name", ["Senior Management", "Admin"]);
+  
+  if (rolesError) {
+    console.error("Error loading roles:", rolesError);
+    return [];
+  }
+  
+  if (!roles || roles.length === 0) {
+    return [];
+  }
+  
+  const roleIds = roles.map(r => r.id);
+  const roleMap = new Map(roles.map(r => [r.id, r.name]));
+  
+  const { data: userRoles, error: userRolesError } = await supabase
+    .from("user_roles")
+    .select("user_id, role_id")
+    .in("role_id", roleIds);
+  
+  if (userRolesError) {
+    console.error("Error loading user roles:", userRolesError);
+    return [];
+  }
+  
+  if (!userRoles || userRoles.length === 0) {
+    return [];
+  }
+  
+  const userIds = [...new Set(userRoles.map(ur => ur.user_id))];
+  
+  const { data: profiles, error: profilesError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", userIds);
+  
+  if (profilesError) {
+    console.error("Error loading profiles:", profilesError);
+    return [];
+  }
+  
+  const userRolesMap = new Map<string, string[]>();
+  userRoles.forEach(ur => {
+    if (!userRolesMap.has(ur.user_id)) {
+      userRolesMap.set(ur.user_id, []);
+    }
+    const roleName = roleMap.get(ur.role_id);
+    if (roleName && !userRolesMap.get(ur.user_id)!.includes(roleName)) {
+      userRolesMap.get(ur.user_id)!.push(roleName);
+    }
+  });
+  
+  const users = (profiles || []).map(profile => ({
+    id: profile.id,
+    name: profile.full_name || 'Unknown',
+    email: profile.email || '',
+    role: userRolesMap.get(profile.id)?.join(', ') || 'Unknown'
+  }));
+  
+  return users.sort((a, b) => a.name.localeCompare(b.name));
+}
+
 async function updateNoticeStatusAction(formData: FormData) {
   "use server";
   const supabase = await createSupabaseServer();
@@ -224,12 +301,23 @@ async function updateNoticeDetails(formData: FormData) {
       ? []
       : Array.from(new Set(tagsCsv.split(",").map((t) => t.trim()).filter(Boolean)));
 
+  const responsiblePerson = String(formData.get("responsible_person") || "").trim() || null;
+  
+  const validForDaysStr = String(formData.get("valid_for_days") || "").trim();
+  let validForDays: number | null = null;
+  if (validForDaysStr !== "") {
+    const val = Number(validForDaysStr);
+    validForDays = Number.isFinite(val) && val >= 0 ? val : null;
+  }
+
   const updatePayload: Record<string, any> = {};
   if (title.length > 0) updatePayload.title = title;
   updatePayload.description = description;
   updatePayload.require_acknowledgement = requireAcknowledgement;
   updatePayload.department = department;
   updatePayload.tags = tags;
+  updatePayload.responsible_person = responsiblePerson;
+  updatePayload.valid_for_days = validForDays;
 
   const { error } = await supabase.from("operations_notices").update(updatePayload).eq("id", noticeId);
   if (error) throw new Error(`Save failed: ${error.message}`);
@@ -373,8 +461,10 @@ export default async function Page(props: {
   }
 
   let allDepartments: string[] = [];
+  let responsiblePersons: ResponsiblePerson[] = [];
   if (activeTab === "details") {
     allDepartments = await loadAllDepartments();
+    responsiblePersons = await loadResponsiblePersons();
   }
 
   let assignments: AssignmentRow[] = [];
@@ -438,7 +528,7 @@ export default async function Page(props: {
 
       <div className="rounded-xl border p-4">
         {activeTab === "details" && (
-          <DetailsTab notice={notice} allDepartments={allDepartments} />
+          <DetailsTab notice={notice} allDepartments={allDepartments} responsiblePersons={responsiblePersons} />
         )}
 
         {activeTab === "assignments" && (
@@ -455,7 +545,7 @@ export default async function Page(props: {
   );
 }
 
-function DetailsTab({ notice, allDepartments }: { notice: NoticeRow; allDepartments: string[] }) {
+function DetailsTab({ notice, allDepartments, responsiblePersons }: { notice: NoticeRow; allDepartments: string[]; responsiblePersons: ResponsiblePerson[] }) {
   const tagsCsv = Array.isArray(notice.tags) ? (notice.tags as string[]).join(", ") : "";
   
   return (
@@ -493,6 +583,40 @@ function DetailsTab({ notice, allDepartments }: { notice: NoticeRow; allDepartme
             <option value="">— Select department —</option>
             {allDepartments.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
+        </div>
+
+        <div className="grid gap-2">
+          <label className="text-sm font-medium">Responsible Person</label>
+          <select
+            name="responsible_person"
+            defaultValue={notice.responsible_person ?? ""}
+            className="w-full rounded-md border px-3 py-2"
+          >
+            <option value="">— Select responsible person —</option>
+            {responsiblePersons.map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.name} ({person.email}) - {person.role}
+              </option>
+            ))}
+          </select>
+          <div className="text-xs text-gray-500">
+            Select a senior person or admin who is responsible for this notice.
+          </div>
+        </div>
+
+        <div className="grid gap-2">
+          <label className="text-sm font-medium">Valid for (days)</label>
+          <input
+            type="number"
+            name="valid_for_days"
+            min={0}
+            defaultValue={notice.valid_for_days == null ? "" : String(notice.valid_for_days)}
+            className="w-full rounded-md border px-3 py-2"
+            placeholder="e.g. 365 for 1 year, leave empty for no expiry"
+          />
+          <div className="text-xs text-gray-500">
+            Number of days this notice is valid for. Leave empty for no expiry.
+          </div>
         </div>
 
         <div className="grid gap-2">
