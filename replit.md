@@ -66,7 +66,27 @@ Preferred communication style: Simple, everyday language.
 
 # Recent Changes (November-December 2024)
 
-## Internal User Creation Fix (Latest)
+## Operations Notices Feature (Latest)
+- **Feature Added**: New "Operations Notices" learning type in Creator section
+- **Purpose**: Allow creators to publish notices that can be assigned to users with optional acknowledgement requirements
+- **Components Created**:
+  - `FilteredOperationsNoticeList.tsx` - Listing component with search/filter
+  - `DeleteOperationsNoticeButton.tsx` - Client-side delete button
+  - `operations-notices/new/page.tsx` - Create new notice with title
+  - `operations-notices/[id]/page.tsx` - Notice editor with Details and Assignments tabs
+  - `operations-notices/[id]/delete/page.tsx` - Delete confirmation page
+- **Database Tables Required** (SQL migration file provided: `supabase_operations_notices_migration.sql`):
+  - `operations_notices` - Main table with title, description, status, require_acknowledgement flag
+  - `operations_notice_assignments` - User assignments to notices
+  - `operations_notice_acknowledgements` - Tracking user acknowledgements
+- **Features**:
+  - Create/Edit/Delete operations notices
+  - "Require Acknowledgement" checkbox - when enabled, tracks if assigned users have acknowledged
+  - Assignments tab with search for users and acknowledgement status display
+  - Department and tags support for filtering
+- **Files Updated**: `app/app/creator/page.tsx` to add "Operations Notices" tab
+
+## Internal User Creation Fix
 - **Issue Fixed**: Creating internal users (Microsoft Account) from the Add New User page was silently failing
 - **Root Cause**: The form was calling `form.submit()` without any API endpoint, so nothing was being created
 - **Solution**: Created new `/api/admin/create-internal-user` endpoint that:

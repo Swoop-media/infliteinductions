@@ -8,6 +8,7 @@ import { hasRole } from "@/lib/roles";
 import DeleteAuthorisationButton from "./_components/DeleteAuthorisationButton";
 import FilteredCourseList from "./_components/FilteredCourseList";
 import FilteredAuthorisationList from "./_components/FilteredAuthorisationList";
+import FilteredOperationsNoticeList from "./_components/FilteredOperationsNoticeList";
 
 type CourseRow = {
   id: string;
@@ -26,6 +27,16 @@ type AuthzRow = {
   updated_at: string;
   created_at: string;
   department: string | null;
+};
+
+type NoticeRow = {
+  id: string;
+  title: string | null;
+  status: "draft" | "published" | "archived";
+  updated_at: string;
+  created_at: string;
+  department: string | null;
+  require_acknowledgement: boolean;
 };
 
 function Badge({
@@ -332,6 +343,8 @@ function FlashBanner({ ok, error }: { ok?: string | null; error?: string | null 
         ? "Authorisation deleted."
         : ok === "course_duplicated"
         ? "Course duplicated successfully."
+        : ok === "notice_deleted"
+        ? "Operations notice deleted."
         : "Saved.";
     return (
       <div className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-800">
@@ -357,13 +370,14 @@ export default async function CreatorHome({
   }
 
   const sp = await searchParams;
-  const tab = (Array.isArray(sp.tab) ? sp.tab[0] : sp.tab) === "authorisations" ? "authorisations" : "courses";
+  const tabRaw = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab;
+  const tab = tabRaw === "authorisations" ? "authorisations" : tabRaw === "operations-notices" ? "operations-notices" : "courses";
   const ok = (Array.isArray(sp.ok) ? sp.ok[0] : sp.ok) ?? null;
   const error = (Array.isArray(sp.error) ? sp.error[0] : sp.error) ?? null;
 
   const supabase = await createSupabaseServer();
 
-  const [{ data: courses = [] as CourseRow[] }, { data: authzs = [] as AuthzRow[] }] =
+  const [{ data: courses = [] as CourseRow[] }, { data: authzs = [] as AuthzRow[] }, { data: notices = [] as NoticeRow[] }] =
     await Promise.all([
       supabase
         .from("courses")
@@ -373,6 +387,11 @@ export default async function CreatorHome({
       supabase
         .from("authorisations")
         .select("id,title,status,updated_at,created_at,department")
+        .order("updated_at", { ascending: false })
+        .limit(500),
+      supabase
+        .from("operations_notices")
+        .select("id,title,status,updated_at,created_at,department,require_acknowledgement")
         .order("updated_at", { ascending: false })
         .limit(500),
     ]);
@@ -392,6 +411,14 @@ export default async function CreatorHome({
           Courses
         </Link>
         <Link
+          href="/app/creator?tab=operations-notices"
+          className={`rounded-md px-3 py-2 text-sm font-medium ${
+            tab === "operations-notices" ? "bg-black text-white" : "border border-gray-200 hover:bg-gray-100"
+          }`}
+        >
+          Operations Notices
+        </Link>
+        <Link
           href="/app/creator?tab=authorisations"
           className={`rounded-md px-3 py-2 text-sm font-medium ${
             tab === "authorisations" ? "bg-black text-white" : "border border-gray-200 hover:bg-gray-100"
@@ -406,6 +433,8 @@ export default async function CreatorHome({
           courses={courses} 
           duplicateCourseAction={duplicateCourseAction}
         />
+      ) : tab === "operations-notices" ? (
+        <FilteredOperationsNoticeList notices={notices} />
       ) : (
         <FilteredAuthorisationList authorisations={authzs} />
       )}
