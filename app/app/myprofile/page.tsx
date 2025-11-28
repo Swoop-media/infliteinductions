@@ -431,23 +431,22 @@ export default async function MyProfilePage() {
         {/* Left Column: In Progress */}
         <div className="space-y-6">
           {/* In Progress Authorizations */}
-          <section className="space-y-3 rounded-xl border bg-white p-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">In Progress Authorizations</h2>
-              <Pill tone="blue">{inProgressAuth.length}</Pill>
-            </div>
-
-            <div className="space-y-3">
-              {inProgressAuth.length === 0 ? (
-                <p className="text-sm text-gray-500">No authorizations in progress.</p>
-              ) : (
-                inProgressAuth.map((assignment: any) => {
+          <CollapsibleSection
+            title="In Progress Authorizations"
+            count={inProgressAuth.length}
+            defaultCollapsed={true}
+            pillTone="blue"
+          >
+            {inProgressAuth.length === 0 ? (
+              <p className="text-sm text-gray-500">No authorizations in progress.</p>
+            ) : (
+              <div className="space-y-3">
+                {inProgressAuth.map((assignment: any) => {
                   const auth = assignment.authorisations;
                   const completedCoursesCount = assignment.courses.filter((c: any) => 
                     c.assignment?.assignment_status === "completed"
                   ).length;
                   const totalCourses = assignment.courses.length;
-                  const firstCourse = assignment.courses[0];
 
                   return (
                     <div key={assignment.id} className="flex items-center justify-between rounded-lg border p-4 bg-purple-50">
@@ -462,7 +461,6 @@ export default async function MyProfilePage() {
                         <p className="text-xs text-gray-500 mt-1">
                           {completedCoursesCount} of {totalCourses} courses completed
                         </p>
-                        {/* Show completed courses */}
                         {assignment.courses.filter((c: any) => c.assignment?.assignment_status === "completed").length > 0 && (
                           <div className="mt-2">
                             <p className="text-xs text-green-600 font-medium">Completed:</p>
@@ -486,10 +484,10 @@ export default async function MyProfilePage() {
                       </div>
                     </div>
                   );
-                })
-              )}
-            </div>
-          </section>
+                })}
+              </div>
+            )}
+          </CollapsibleSection>
 
           {/* In Progress Courses */}
           <CollapsibleSection
@@ -529,17 +527,17 @@ export default async function MyProfilePage() {
         {/* Right Column: Completed */}
         <div className="space-y-6">
           {/* Completed Authorizations */}
-          <section className="space-y-3 rounded-xl border bg-white p-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Completed Authorizations</h2>
-              <Pill tone="green">{completedAuth.length}</Pill>
-            </div>
-
-            <div className="space-y-3">
-              {completedAuth.length === 0 ? (
-                <p className="text-sm text-gray-500">No completed authorizations yet.</p>
-              ) : (
-                completedAuth.map((assignment: any) => {
+          <CollapsibleSection
+            title="Completed Authorizations"
+            count={completedAuth.length}
+            defaultCollapsed={true}
+            pillTone="green"
+          >
+            {completedAuth.length === 0 ? (
+              <p className="text-sm text-gray-500">No completed authorizations yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {completedAuth.map((assignment: any) => {
                   const auth = assignment.authorisations;
                   const totalCourses = assignment.courses?.length || 0;
 
@@ -555,7 +553,6 @@ export default async function MyProfilePage() {
                             All {totalCourses} courses completed
                           </p>
 
-                          {/* Show completed courses */}
                           {assignment.courses.length > 0 && (
                             <div className="mt-2">
                               <p className="text-xs text-gray-600 font-medium">Courses completed:</p>
@@ -586,10 +583,10 @@ export default async function MyProfilePage() {
                       </div>
                     </div>
                   );
-                })
-              )}
-            </div>
-          </section>
+                })}
+              </div>
+            )}
+          </CollapsibleSection>
 
           {/* Completed Courses */}
           <CollapsibleSection
