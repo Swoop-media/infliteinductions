@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS operations_notices (
   description TEXT,
   status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'archived')),
   require_acknowledgement BOOLEAN NOT NULL DEFAULT false,
+  responsible_person UUID REFERENCES auth.users(id),
+  valid_for_days INTEGER,
   department TEXT,
   tags TEXT[] DEFAULT '{}',
   created_by UUID REFERENCES auth.users(id),
