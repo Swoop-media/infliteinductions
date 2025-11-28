@@ -1,9 +1,9 @@
 // @ts-nocheck
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import NoticeCard from "./NoticeCard";
 
 type OperationsNotice = {
   id: string;
@@ -170,6 +170,7 @@ export default async function OperationsNoticesPage() {
                 notice={notice}
                 userId={userId}
                 isAssigned={true}
+                acknowledgeAction={acknowledgeNotice}
               />
             ))}
           </div>
@@ -188,6 +189,7 @@ export default async function OperationsNoticesPage() {
                 notice={notice}
                 userId={userId}
                 isAssigned={false}
+                acknowledgeAction={acknowledgeNotice}
               />
             ))}
           </div>
@@ -203,104 +205,3 @@ export default async function OperationsNoticesPage() {
   );
 }
 
-function NoticeCard({
-  notice,
-  userId,
-  isAssigned,
-}: {
-  notice: any;
-  userId: string;
-  isAssigned: boolean;
-}) {
-  const needsAcknowledgement =
-    notice.require_acknowledgement && isAssigned && !notice.acknowledgedAt;
-  const isAcknowledged = !!notice.acknowledgedAt;
-
-  return (
-    <div
-      className={`rounded-xl border p-4 ${
-        isAssigned
-          ? needsAcknowledgement
-            ? "border-orange-300 bg-orange-50"
-            : "border-green-300 bg-green-50"
-          : "bg-white"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1">
-          <h3 className="font-semibold text-gray-900">{notice.title}</h3>
-          {notice.department && (
-            <span className="inline-block mt-1 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-              {notice.department}
-            </span>
-          )}
-        </div>
-        <div className="flex flex-col items-end gap-1">
-          {isAssigned && (
-            <span
-              className={`rounded px-2 py-0.5 text-xs font-medium ${
-                isAcknowledged
-                  ? "bg-green-200 text-green-800"
-                  : "bg-orange-200 text-orange-800"
-              }`}
-            >
-              {isAcknowledged ? "Acknowledged" : "Pending"}
-            </span>
-          )}
-          {notice.require_acknowledgement && (
-            <span className="text-xs text-gray-500">Requires acknowledgement</span>
-          )}
-        </div>
-      </div>
-
-      {notice.description && (
-        <p className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">
-          {notice.description}
-        </p>
-      )}
-
-      <div className="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
-        {notice.responsiblePersonName && (
-          <span>Responsible: {notice.responsiblePersonName}</span>
-        )}
-        {notice.expiryDate && (
-          <span>Expires: {new Date(notice.expiryDate).toLocaleDateString()}</span>
-        )}
-        {notice.tags && notice.tags.length > 0 && (
-          <div className="flex gap-1">
-            {notice.tags.map((tag: string) => (
-              <span
-                key={tag}
-                className="rounded bg-gray-100 px-1.5 py-0.5 text-xs"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {isAssigned && notice.assignedAt && (
-        <p className="mt-2 text-xs text-gray-500">
-          Assigned: {new Date(notice.assignedAt).toLocaleDateString()}
-          {isAcknowledged &&
-            notice.acknowledgedAt &&
-            ` | Acknowledged: ${new Date(notice.acknowledgedAt).toLocaleDateString()}`}
-        </p>
-      )}
-
-      {needsAcknowledgement && (
-        <form action={acknowledgeNotice} className="mt-3">
-          <input type="hidden" name="notice_id" value={notice.id} />
-          <input type="hidden" name="user_id" value={userId} />
-          <button
-            type="submit"
-            className="rounded-md bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
-          >
-            Acknowledge
-          </button>
-        </form>
-      )}
-    </div>
-  );
-}
