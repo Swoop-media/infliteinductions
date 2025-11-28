@@ -316,183 +316,93 @@ export default async function MyProfilePage() {
         </div>
       </div>
 
-      {/* Operations Notices Section */}
-      <CollapsibleSection
-        title="Operations Notices"
-        count={operationsNotices.length}
-        defaultCollapsed={true}
-        pillTone="blue"
-      >
-        {operationsNotices.length === 0 ? (
-          <p className="text-sm text-gray-500">No operations notices assigned to you.</p>
-        ) : (
-          <div className="space-y-3">
-            {operationsNotices.map((notice: any) => {
-              const needsAcknowledgement = notice.require_acknowledgement && !notice.acknowledgedAt;
-              const isAcknowledged = !!notice.acknowledgedAt;
+      {/* Operations Notices and Teams Integration - Side by Side */}
+      <section className="grid gap-4 sm:grid-cols-2">
+        {/* Operations Notices */}
+        <Link
+          href="/app/operations-notices"
+          className="rounded-xl border bg-white p-4 hover:bg-gray-50"
+        >
+          <div className="flex items-center justify-between">
+            <div className="text-lg font-semibold">Operations Notices</div>
+            <span className="rounded-full bg-orange-100 text-orange-800 px-2 py-0.5 text-xs font-medium">
+              {operationsNotices.length}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-gray-600">
+            {operationsNotices.length === 0 
+              ? "No operations notices assigned to you."
+              : `${operationsNotices.filter((n: any) => n.require_acknowledgement && !n.acknowledgedAt).length} pending acknowledgement`
+            }
+          </p>
+          <div className="mt-3 inline-flex items-center gap-1 text-sm underline">
+            View notices →
+          </div>
+        </Link>
 
-              return (
-                <div
-                  key={notice.id}
-                  className={`rounded-lg border p-4 ${
-                    needsAcknowledgement
-                      ? "border-orange-300 bg-orange-50"
-                      : isAcknowledged
-                      ? "border-green-300 bg-green-50"
-                      : "bg-white"
-                  }`}
+        {/* Teams Integration */}
+        <div className="rounded-xl border bg-white p-4">
+          <div className="text-lg font-semibold">Teams Integration</div>
+          {teamsLink ? (
+            <div className="mt-1">
+              <p className="text-sm text-green-600">✅ Teams account linked</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Last activity: {new Date(teamsLink.last_activity).toLocaleDateString()}
+              </p>
+              <div className="mt-3 flex gap-2">
+                <a 
+                  href="https://teams.microsoft.com/l/chat/0/0?users=28:dc8a23c4-a57f-4e10-8543-05397e1b4ae3"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{notice.title}</h3>
-                      {notice.department && (
-                        <span className="inline-block mt-1 rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                          {notice.department}
-                        </span>
-                      )}
-                      {notice.description && (
-                        <p className="mt-1 text-sm text-gray-600 line-clamp-2">
-                          {notice.description}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      {notice.require_acknowledgement && (
-                        <span
-                          className={`rounded px-2 py-0.5 text-xs font-medium ${
-                            isAcknowledged
-                              ? "bg-green-200 text-green-800"
-                              : "bg-orange-200 text-orange-800"
-                          }`}
-                        >
-                          {isAcknowledged ? "Acknowledged" : "Pending"}
-                        </span>
-                      )}
-                      <span className="rounded px-2 py-0.5 text-xs font-medium bg-blue-100 text-blue-800">
-                        Valid
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
-                    {notice.assignedAt && (
-                      <span>Assigned: {new Date(notice.assignedAt).toLocaleDateString()}</span>
-                    )}
-                    {notice.expiryDate && (
-                      <span>Expires: {new Date(notice.expiryDate).toLocaleDateString()}</span>
-                    )}
-                    {isAcknowledged && notice.acknowledgedAt && (
-                      <span className="text-green-600">
-                        Acknowledged: {new Date(notice.acknowledgedAt).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-2 flex gap-2">
-                    <Link
-                      href="/app/operations-notices"
-                      className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
-                    >
-                      View Details
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </CollapsibleSection>
-
-      {/* Teams Integration Section */}
-      <div className="rounded-md border bg-white p-4">
-        <h2 className="font-medium mb-2">Teams Integration</h2>
-
-        {teamsLink ? (
-          <div className="space-y-3">
-            <div className="text-sm text-green-600">✅ Teams account linked</div>
-            <div className="text-xs text-gray-500">
-              Last activity: {new Date(teamsLink.last_activity).toLocaleString()}
-            </div>
-            <div className="flex gap-2">
-              <a 
-                href="https://teams.microsoft.com/l/chat/0/0?users=28:dc8a23c4-a57f-4e10-8543-05397e1b4ae3"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
-              >
-                Open Teams Chat
-              </a>
-              <TestMessageButton userId={user.id} />
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Link your Teams account to receive notifications via Teams messages.
-            </p>
-
-            {linkCode ? (
-              <div className="space-y-3">
-                <div className="text-sm">
-                  <strong>Your link code:</strong> 
-                  <code className="ml-2 px-2 py-1 bg-gray-100 rounded font-mono text-lg">
-                    {linkCode.code}
-                  </code>
-                </div>
-                <div className="text-xs text-gray-500">
-                  Expires: {new Date(linkCode.expires_at).toLocaleString()}
-                </div>
-                <div className="p-3 bg-blue-50 rounded-md">
-                  <div className="text-sm font-medium text-blue-800 mb-1">Next steps:</div>
-                  <div className="text-xs text-blue-700 space-y-1">
-                    <div>1. <a 
-                      href="https://teams.microsoft.com/l/chat/0/0?users=28:dc8a23c4-a57f-4e10-8543-05397e1b4ae3"
-                      target="_blank"
-                      rel="noopener noreferrer" 
-                      className="underline"
-                    >
-                      Open chat with the bot in Teams
-                    </a></div>
-                    <div>2. Send: <code className="bg-white px-1 rounded">link {linkCode.code}</code></div>
-                  </div>
-                </div>
+                  Open Teams Chat
+                </a>
+                <TestMessageButton userId={user.id} />
               </div>
-            ) : (
-              <form action={async () => {
-                "use server";
-
-                const supabase = await createSupabaseServer();
-                const { data: { user } } = await supabase.auth.getUser();
-
-                if (!user) return;
-
-                // Generate 6-digit code
-                const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-                const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-                // Delete any existing codes for this user
-                await supabase.from("teams_link_codes").delete().eq("user_id", user.id);
-
-                // Insert new code
-                await supabase.from("teams_link_codes").insert({
-                  user_id: user.id,
-                  code,
-                  expires_at: expiresAt.toISOString()
-                });
-
-                revalidatePath("/app/myprofile");
-              }}>
-                <button 
-                  type="submit"
-                  className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
-                >
-                  Generate Link Code
-                </button>
-              </form>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          ) : (
+            <div className="mt-1">
+              <p className="text-sm text-gray-600">
+                Link your Teams account for notifications.
+              </p>
+              {linkCode ? (
+                <div className="mt-2">
+                  <div className="text-sm">
+                    Code: <code className="ml-1 px-2 py-0.5 bg-gray-100 rounded font-mono">{linkCode.code}</code>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Send "link {linkCode.code}" to the bot in Teams
+                  </p>
+                </div>
+              ) : (
+                <form action={async () => {
+                  "use server";
+                  const supabase = await createSupabaseServer();
+                  const { data: { user } } = await supabase.auth.getUser();
+                  if (!user) return;
+                  const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+                  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+                  await supabase.from("teams_link_codes").delete().eq("user_id", user.id);
+                  await supabase.from("teams_link_codes").insert({
+                    user_id: user.id,
+                    code,
+                    expires_at: expiresAt.toISOString()
+                  });
+                  revalidatePath("/app/myprofile");
+                }}>
+                  <button 
+                    type="submit"
+                    className="mt-3 inline-flex items-center gap-1 text-sm underline"
+                  >
+                    Generate link code →
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
 
       {/* Quick links */}
       <section className="grid gap-4 sm:grid-cols-2">
