@@ -23,8 +23,7 @@ type NoticeAssignment = {
   id: string;
   notice_id: string;
   user_id: string;
-  assigned_at: string;
-  acknowledged_at: string | null;
+  created_at: string;
 };
 
 async function loadPublishedNoticesForUser() {
@@ -39,10 +38,14 @@ async function loadPublishedNoticesForUser() {
   } = await supabase.auth.getUser();
   if (authErr || !user) redirect("/auth/login");
 
-  const { data: assignments } = await supabase
+  const { data: assignments, error: assignErr } = await supabase
     .from("operations_notice_assignments")
-    .select("id, notice_id, user_id, assigned_at")
+    .select("id, notice_id, user_id, created_at")
     .eq("user_id", user.id);
+  
+  if (assignErr) {
+    console.error("Error fetching assignments:", assignErr);
+  }
 
   const assignedNoticeIds = (assignments ?? []).map((a) => a.notice_id);
 
@@ -92,7 +95,7 @@ async function loadPublishedNoticesForUser() {
     return {
       ...notice,
       isAssigned,
-      assignedAt: assignment?.assigned_at || null,
+      assignedAt: assignment?.created_at || null,
       acknowledgedAt: acknowledgedAt || null,
       responsiblePersonName: responsiblePerson?.full_name || null,
       expiryDate,

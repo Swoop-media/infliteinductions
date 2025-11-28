@@ -181,10 +181,14 @@ async function loadMyProfileAndLearning() {
   console.log('In progress auth:', inProgressAuth);
   console.log('Completed auth:', completedAuth);
 
-  const { data: noticeAssignments } = await supabase
+  const { data: noticeAssignments, error: noticeAssignErr } = await supabase
     .from("operations_notice_assignments")
-    .select("id, notice_id, user_id, assigned_at")
+    .select("id, notice_id, user_id, created_at")
     .eq("user_id", user.id);
+  
+  if (noticeAssignErr) {
+    console.error("Error fetching notice assignments:", noticeAssignErr);
+  }
 
   const assignedNoticeIds = (noticeAssignments ?? []).map((a) => a.notice_id);
 
@@ -224,7 +228,7 @@ async function loadMyProfileAndLearning() {
 
       return {
         ...notice,
-        assignedAt: assignment?.assigned_at || null,
+        assignedAt: assignment?.created_at || null,
         acknowledgedAt: acknowledgedAt || null,
         expiryDate,
         isExpired,
