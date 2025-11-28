@@ -90,10 +90,18 @@ Preferred communication style: Simple, everyday language.
   - Orange "Operations Notices" button in navigation bar (next to green Authorisations button)
   - User-facing page at `/app/operations-notices` showing all valid published notices with acknowledgement buttons
   - Collapsible "Operations Notices" section in My Profile page showing assigned notices with status
+  - **Notifications**: When users are assigned an operations notice, they receive:
+    - In-app notification (visible in bell dropdown with orange FileText icon)
+    - Teams bot message with direct link to published app (`https://training.inflite.nz/app/operations-notices`)
+    - Message shows notice title, whether acknowledgement is required, and who assigned it
+- **Environment Variables**:
+  - `NEXT_PUBLIC_SITE_URL` set to `https://training.inflite.nz` for production URL in notifications
 - **Files Updated**: 
   - `app/app/creator/page.tsx` to add "Operations Notices" tab
   - `app/app/layout.tsx` to add orange navigation button
   - `app/app/myprofile/page.tsx` to add Operations Notices collapsible section
+  - `lib/notifications/dispatcher.ts` to add `operations_notice_assigned` notification type
+  - `app/app/_components/NotificationsBell.tsx` to display operations notice notifications
 
 ## Internal User Creation Fix
 - **Issue Fixed**: Creating internal users (Microsoft Account) from the Add New User page was silently failing
