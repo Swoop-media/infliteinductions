@@ -96,12 +96,18 @@ Preferred communication style: Simple, everyday language.
     - Message shows notice title, whether acknowledgement is required, and who assigned it
 - **Environment Variables**:
   - `NEXT_PUBLIC_SITE_URL` set to `https://training.inflite.nz` for production URL in notifications
+- **Daily Pending Acknowledgements Report** (Cron Job):
+  - Endpoint: `POST /api/notifications/operations-notice-pending`
+  - Runs at 8am NZT daily
+  - Sends notification to each notice's Responsible Person listing users who haven't acknowledged
+  - cron-job.org configuration: Schedule at 8:00 AM, Timezone: Pacific/Auckland
 - **Files Updated**: 
   - `app/app/creator/page.tsx` to add "Operations Notices" tab
   - `app/app/layout.tsx` to add orange navigation button
   - `app/app/myprofile/page.tsx` to add Operations Notices collapsible section
-  - `lib/notifications/dispatcher.ts` to add `operations_notice_assigned` notification type
+  - `lib/notifications/dispatcher.ts` to add `operations_notice_assigned` and `operations_notice_pending_ack` notification types
   - `app/app/_components/NotificationsBell.tsx` to display operations notice notifications
+  - `app/api/notifications/operations-notice-pending/route.ts` - Daily cron job endpoint
 
 ## Internal User Creation Fix
 - **Issue Fixed**: Creating internal users (Microsoft Account) from the Add New User page was silently failing

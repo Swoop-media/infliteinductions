@@ -48,6 +48,7 @@ export type NotificationType =
   | "course_expired"
   | "issue_report"
   | "operations_notice_assigned"
+  | "operations_notice_pending_ack"
   | string;
 
 function formatTeamsText(
@@ -172,6 +173,21 @@ function formatTeamsText(
         `• Acknowledgement required: ${ackRequired}`,
         payload?.assignedBy ? `• Assigned by: ${payload.assignedBy}` : "",
         url ? `• View & acknowledge: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "operations_notice_pending_ack":
+      const pendingCount = payload?.pendingCount || 0;
+      const pendingSummary = Array.isArray(payload?.summary) 
+        ? payload.summary.join("\n\n") 
+        : payload?.summary || "";
+      return [
+        "📋 Daily Pending Acknowledgements Report",
+        payload?.noticeTitle ? `• Notice: ${payload.noticeTitle}` : "",
+        `• Users pending: ${pendingCount}`,
+        pendingSummary ? `\n${pendingSummary}` : "",
+        url ? `• Review: ${url}` : "",
       ]
         .filter(Boolean)
         .join("\n");

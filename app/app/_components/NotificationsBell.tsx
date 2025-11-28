@@ -61,6 +61,7 @@ export default function NotificationsBell() {
       case "issue_report":
         return <AlertTriangle className="h-4 w-4 text-orange-600" />;
       case "operations_notice_assigned":
+      case "operations_notice_pending_ack":
         return <FileText className="h-4 w-4 text-orange-600" />;
       case "onsite_training_ready":
       case "onsite_assessment_ready":
@@ -332,6 +333,15 @@ function labelFor(type: string, p: any) {
       let message = "📋 Operations Notice assigned";
       if (noticeTitle) message += `: ${noticeTitle}`;
       if (requiresAck) message += " (acknowledgement required)";
+      return message;
+    }
+    
+    case "operations_notice_pending_ack": {
+      const noticeTitle = p?.noticeTitle || p?.notice_title || "";
+      const pendingCount = p?.pendingCount || 0;
+      let message = "📋 Pending Acknowledgements";
+      if (noticeTitle) message += `: ${noticeTitle}`;
+      message += ` - ${pendingCount} user${pendingCount !== 1 ? 's' : ''} pending`;
       return message;
     }
     
