@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import BatchUserAssignment from "./BatchUserAssignment";
+import { notifyUser } from "@/lib/notifications/dispatcher";
+import { toAbsoluteUrl } from "@/lib/utils/url";
 
 type TabKey = "details" | "assignments";
 
@@ -412,6 +414,36 @@ async function bulkAssignUsersAction(formData: FormData) {
       .from("operations_notice_assignments")
       .insert(insertRows);
     if (insertErr) throw new Error(insertErr.message);
+
+    // Send notifications to newly assigned users
+    const { data: notice } = await supabase
+      .from("operations_notices")
+      .select("title, require_acknowledgement")
+      .eq("id", noticeId)
+      .single();
+
+    const { data: assignerProfile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single();
+
+    const noticeUrl = toAbsoluteUrl("/app/operations-notices");
+    const assignerName = assignerProfile?.full_name || "Admin";
+
+    // Send notification to each newly assigned user (best effort, don't fail on notification errors)
+    for (const userId of toAdd) {
+      try {
+        await notifyUser(userId, "operations_notice_assigned", {
+          noticeTitle: notice?.title || "Operations Notice",
+          requireAcknowledgement: notice?.require_acknowledgement || false,
+          assignedBy: assignerName,
+          url: noticeUrl,
+        });
+      } catch (notifyErr) {
+        console.error(`Failed to send notification to user ${userId}:`, notifyErr);
+      }
+    }
   }
 
   revalidatePath(buildNoticeUrl(noticeId));

@@ -60,6 +60,8 @@ export default function NotificationsBell() {
         return <User className="h-4 w-4 text-purple-600" />;
       case "issue_report":
         return <AlertTriangle className="h-4 w-4 text-orange-600" />;
+      case "operations_notice_assigned":
+        return <FileText className="h-4 w-4 text-orange-600" />;
       case "onsite_training_ready":
       case "onsite_assessment_ready":
         return <Award className="h-4 w-4 text-indigo-600" />;
@@ -322,6 +324,15 @@ function labelFor(type: string, p: any) {
     case "course_updated": {
       const course = getCourseTitle();
       return course ? `📝 Course updated: ${course}` : "📝 Course updated";
+    }
+    
+    case "operations_notice_assigned": {
+      const noticeTitle = p?.noticeTitle || p?.notice_title || "";
+      const requiresAck = p?.requireAcknowledgement;
+      let message = "📋 Operations Notice assigned";
+      if (noticeTitle) message += `: ${noticeTitle}`;
+      if (requiresAck) message += " (acknowledgement required)";
+      return message;
     }
     
     default: {
