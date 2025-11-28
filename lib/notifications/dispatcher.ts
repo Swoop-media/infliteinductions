@@ -47,6 +47,7 @@ export type NotificationType =
   | "course_expiry_reminder"
   | "course_expired"
   | "issue_report"
+  | "operations_notice_assigned"
   | string;
 
 function formatTeamsText(
@@ -159,6 +160,18 @@ function formatTeamsText(
         payload?.reporter_email ? `• Email: ${payload.reporter_email}` : "",
         payload?.message ? `• Message: ${payload.message}` : "",
         payload?.attachments_count > 0 ? `• Attachments: ${payload.attachments_count}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "operations_notice_assigned":
+      const ackRequired = payload?.requireAcknowledgement ? "Yes" : "No";
+      return [
+        "📋 Operations Notice assigned",
+        payload?.noticeTitle ? `• Notice: ${payload.noticeTitle}` : "",
+        `• Acknowledgement required: ${ackRequired}`,
+        payload?.assignedBy ? `• Assigned by: ${payload.assignedBy}` : "",
+        url ? `• View & acknowledge: ${url}` : "",
       ]
         .filter(Boolean)
         .join("\n");
