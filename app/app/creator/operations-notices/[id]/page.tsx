@@ -586,7 +586,6 @@ export default async function Page(props: {
             updateNoticeDetails={updateNoticeDetails}
             updateNoticeDescription={updateNoticeDescription}
             updateNoticeStatusAction={updateNoticeStatusAction}
-            buildNoticeUrl={buildNoticeUrl}
           />
         )}
 

@@ -11,6 +11,15 @@ const NoticeRichDescriptionEditor = dynamic(
   }
 );
 
+type TabKey = "details" | "assignments";
+
+function buildNoticeUrl(noticeId: string, tab?: TabKey, notice?: string) {
+  const params = new URLSearchParams();
+  if (tab) params.set("tab", tab);
+  if (notice) params.set("notice", notice);
+  return `/app/creator/operations-notices/${noticeId}${params.toString() ? `?${params.toString()}` : ""}`;
+}
+
 type NoticeRow = {
   id: string;
   title: string;
@@ -40,7 +49,6 @@ interface DetailsTabClientProps {
   updateNoticeDetails: (formData: FormData) => Promise<void>;
   updateNoticeDescription: (formData: FormData) => Promise<void>;
   updateNoticeStatusAction: (formData: FormData) => Promise<void>;
-  buildNoticeUrl: (noticeId: string, tab?: "details" | "assignments", notice?: string) => string;
 }
 
 export default function DetailsTabClient({
@@ -50,7 +58,6 @@ export default function DetailsTabClient({
   updateNoticeDetails,
   updateNoticeDescription,
   updateNoticeStatusAction,
-  buildNoticeUrl,
 }: DetailsTabClientProps) {
   const tagsCsv = Array.isArray(notice.tags) ? (notice.tags as string[]).join(", ") : "";
 
