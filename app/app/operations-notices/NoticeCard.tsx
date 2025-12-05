@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { ChevronDown, ChevronUp, Check, Clock } from "lucide-react";
+import DOMPurify from "isomorphic-dompurify";
 
 type NoticeCardProps = {
   notice: {
@@ -29,6 +30,15 @@ export default function NoticeCard({
 }: NoticeCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const sanitizedDescription = useMemo(() => {
+    if (!notice.description) return "";
+    return DOMPurify.sanitize(notice.description, {
+      ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'ul', 'ol', 'li', 'h1', 'h2', 'h3', 'a', 'img', 'span', 'div'],
+      ALLOWED_ATTR: ['href', 'target', 'rel', 'src', 'alt', 'class', 'style'],
+      ALLOW_DATA_ATTR: false,
+    });
+  }, [notice.description]);
 
   const needsAcknowledgement =
     notice.require_acknowledgement && isAssigned && !notice.acknowledgedAt;
@@ -105,19 +115,18 @@ export default function NoticeCard({
 
         {!expanded && notice.description && (
           <p className="mt-2 text-sm text-gray-600 line-clamp-2">
-            {notice.description}
+            {notice.description.replace(/<[^>]*>/g, '')}
           </p>
         )}
       </button>
 
       {expanded && (
         <div className="px-4 pb-4 border-t border-gray-100 pt-3">
-          {notice.description ? (
-            <div className="prose prose-sm max-w-none">
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
-                {notice.description}
-              </p>
-            </div>
+          {sanitizedDescription ? (
+            <div 
+              className="prose prose-sm max-w-none text-gray-700"
+              dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+            />
           ) : (
             <p className="text-sm text-gray-500 italic">No description provided.</p>
           )}

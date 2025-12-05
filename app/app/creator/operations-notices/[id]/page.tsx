@@ -8,6 +8,7 @@ import { hasRole } from "@/lib/roles";
 import BatchUserAssignment from "./BatchUserAssignment";
 import { notifyUser } from "@/lib/notifications/dispatcher";
 import { toAbsoluteUrl } from "@/lib/utils/url";
+import DetailsTabClient from "./_components/DetailsTabClient";
 
 type TabKey = "details" | "assignments";
 
@@ -291,7 +292,6 @@ async function updateNoticeDetails(formData: FormData) {
   if (!noticeId) throw new Error("Missing notice_id");
 
   const title = String(formData.get("title") || "").trim();
-  const description = String(formData.get("description") || "").trim();
   const requireAcknowledgement = formData.get("require_acknowledgement") === "on";
 
   const deptSelect = String(formData.get("department_select") || "").trim();
@@ -314,7 +314,6 @@ async function updateNoticeDetails(formData: FormData) {
 
   const updatePayload: Record<string, any> = {};
   if (title.length > 0) updatePayload.title = title;
-  updatePayload.description = description;
   updatePayload.require_acknowledgement = requireAcknowledgement;
   updatePayload.department = department;
   updatePayload.tags = tags;
@@ -326,6 +325,26 @@ async function updateNoticeDetails(formData: FormData) {
 
   revalidatePath(buildNoticeUrl(noticeId));
   redirect(next);
+}
+
+async function updateNoticeDescription(formData: FormData) {
+  "use server";
+  const supabase = await createSupabaseServer();
+
+  const noticeId = String(formData.get("notice_id") || "");
+  if (!noticeId) throw new Error("Missing notice_id");
+
+  const description = String(formData.get("description") || "");
+
+  const { error } = await supabase
+    .from("operations_notices")
+    .update({ description })
+    .eq("id", noticeId);
+
+  if (error) throw new Error(`Save failed: ${error.message}`);
+
+  revalidatePath(buildNoticeUrl(noticeId));
+  redirect(buildNoticeUrl(noticeId, "details", "saved"));
 }
 
 async function assignUserAction(formData: FormData) {
@@ -560,7 +579,15 @@ export default async function Page(props: {
 
       <div className="rounded-xl border p-4">
         {activeTab === "details" && (
-          <DetailsTab notice={notice} allDepartments={allDepartments} responsiblePersons={responsiblePersons} />
+          <DetailsTabClient
+            notice={notice}
+            allDepartments={allDepartments}
+            responsiblePersons={responsiblePersons}
+            updateNoticeDetails={updateNoticeDetails}
+            updateNoticeDescription={updateNoticeDescription}
+            updateNoticeStatusAction={updateNoticeStatusAction}
+            buildNoticeUrl={buildNoticeUrl}
+          />
         )}
 
         {activeTab === "assignments" && (
