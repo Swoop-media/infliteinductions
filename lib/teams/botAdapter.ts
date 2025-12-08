@@ -23,14 +23,6 @@ export const botAppId = MicrosoftAppId;
 function getBotAuth(): ConfigurationBotFrameworkAuthentication {
   if (_botAuth) return _botAuth;
 
-  // Log configuration for debugging (without sensitive data) - only when actually needed
-  console.log("Initializing bot configuration:", {
-    MicrosoftAppType,
-    MicrosoftAppId: MicrosoftAppId ? `${MicrosoftAppId.substring(0, 8)}...` : "MISSING",
-    MicrosoftAppPassword: MicrosoftAppPassword ? "SET" : "MISSING",
-    MicrosoftAppTenantId: MicrosoftAppTenantId ? `${MicrosoftAppTenantId.substring(0, 8)}...` : "MISSING",
-  });
-
   if (!MicrosoftAppId || !MicrosoftAppPassword) {
     throw new Error("MICROSOFT_APP_ID and MICROSOFT_APP_PASSWORD are required");
   }
