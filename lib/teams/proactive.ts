@@ -28,12 +28,6 @@ export async function sendProactive(conversationRef: any, text: string) {
   tokenParams.set("scope", "https://api.botframework.com/.default");
 
   console.log("🔑 Requesting access token from:", tokenUrl);
-  console.log("🔐 Token request params:", {
-    client_id: (process.env.MICROSOFT_APP_ID || "").substring(0, 8) + "...",
-    grant_type: "client_credentials",
-    scope: "https://api.botframework.com/.default",
-    hasClientSecret: !!(process.env.MICROSOFT_APP_PASSWORD)
-  });
   
   const tokenResponse = await fetch(tokenUrl, {
     method: "POST",
