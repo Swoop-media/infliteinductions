@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseRoute } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { syncUserToSafeflite } from '@/lib/webhooks/safeflite-sync';
 
 export async function POST(request: NextRequest) {
   try {
@@ -136,6 +137,19 @@ export async function POST(request: NextRequest) {
       console.error('Role assignment error:', roleError);
       // Don't fail the signup if role assignment fails, it can be fixed later by admin
     }
+
+    // Sync user to SafeFLITE
+    const now = new Date().toISOString();
+    await syncUserToSafeflite({
+      microsoft_id: null,
+      email: authData.user.email || email,
+      full_name: fullName,
+      job_description: jobDescription || null,
+      department: department || null,
+      created_at: now,
+      updated_at: now,
+      archived_at: null
+    });
 
     return NextResponse.json({
       message: 'Account created successfully! Please check your email to confirm your account before signing in.',

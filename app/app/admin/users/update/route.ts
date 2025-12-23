@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
+import { syncUserToSafeflite } from "@/lib/webhooks/safeflite-sync";
 
 async function makeURL(path: string): Promise<URL> {
   const h = await headers();
@@ -36,8 +37,31 @@ export async function POST(req: Request) {
     .update({ full_name, department: department || null, job_description: job_description || null })
     .eq("id", user_id);
 
-  if (error) back.searchParams.set("error", error.message);
-  else back.searchParams.set("ok", "profile_saved");
+  if (error) {
+    back.searchParams.set("error", error.message);
+  } else {
+    back.searchParams.set("ok", "profile_saved");
+
+    // Fetch updated profile to sync to SafeFLITE
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("microsoft_id, email, full_name, job_description, department, created_at, updated_at, archived_at")
+      .eq("id", user_id)
+      .single();
+
+    if (profile) {
+      await syncUserToSafeflite({
+        microsoft_id: profile.microsoft_id,
+        email: profile.email,
+        full_name: profile.full_name,
+        job_description: profile.job_description,
+        department: profile.department,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at,
+        archived_at: profile.archived_at
+      });
+    }
+  }
 
   return NextResponse.redirect(back);
 }

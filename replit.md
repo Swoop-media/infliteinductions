@@ -197,3 +197,18 @@ Preferred communication style: Simple, everyday language.
 - **Authorization expiry calculations**: Uses completed_at + valid_for_days from authorisations table
 - **Document queries**: Uses learner_documents table with separate profile fetches to avoid conflicts
 - **Quiz data structure**: Updated to handle quiz_questions linked by quiz_id or module_id (no course_id)
+
+## SafeFLITE User Sync Webhook (December 2024)
+- **Feature Added**: Webhook integration to sync user data to SafeFLITE whenever users are created/updated
+- **Webhook Utility**: `lib/webhooks/safeflite-sync.ts` - reusable function for syncing user data
+- **Endpoint**: POST to `https://yakvuypqwqhdtkpgqdcf.supabase.co/functions/v1/sync-training-user`
+- **Authentication**: Uses `TRAINING_SYNC_SECRET` environment variable (stored as secret)
+- **Triggers**:
+  - External user creation (`app/api/admin/create-external-user/route.ts`)
+  - Internal user creation (`app/api/admin/create-internal-user/route.ts`)
+  - User profile updates (`app/app/admin/users/update/route.ts`)
+  - User archiving (`app/app/admin/users/archive/route.ts`)
+  - User restoration/unarchiving (`app/app/admin/users/restore/route.ts`)
+  - Self-signup (`app/api/auth/signup/route.ts`)
+- **Payload**: Sends microsoft_id, email, full_name, job_description, department, created_at, updated_at, archived_at
+- **Error Handling**: Gracefully handles failures - logs errors but doesn't block main operations

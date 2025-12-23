@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseRoute } from '@/lib/supabase/server';
 import { getUncachableResendClient } from '@/lib/resend-client';
+import { syncUserToSafeflite } from '@/lib/webhooks/safeflite-sync';
 
 function generateTempPassword(): string {
   // Generate a secure temporary password
@@ -140,6 +141,19 @@ export async function POST(request: Request) {
       }
     }
     
+    // Sync user to SafeFLITE
+    const now = new Date().toISOString();
+    await syncUserToSafeflite({
+      microsoft_id: null,
+      email: authUser.user.email || email,
+      full_name: fullName,
+      job_description: null,
+      department: null,
+      created_at: now,
+      updated_at: now,
+      archived_at: null
+    });
+
     // Send email with credentials using Resend
     try {
       const { client, fromEmail } = await getUncachableResendClient();

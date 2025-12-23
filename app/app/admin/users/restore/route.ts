@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
+import { syncUserToSafeflite } from "@/lib/webhooks/safeflite-sync";
 
 export async function POST(request: Request) {
   try {
@@ -39,6 +40,26 @@ export async function POST(request: Request) {
     if (restoreError) {
       console.error("Restore error:", restoreError);
       return NextResponse.json({ error: "Failed to restore user" }, { status: 500 });
+    }
+
+    // Fetch user profile to sync to SafeFLITE
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("microsoft_id, email, full_name, job_description, department, created_at, updated_at, archived_at")
+      .eq("id", userId)
+      .single();
+
+    if (profile) {
+      await syncUserToSafeflite({
+        microsoft_id: profile.microsoft_id,
+        email: profile.email,
+        full_name: profile.full_name,
+        job_description: profile.job_description,
+        department: profile.department,
+        created_at: profile.created_at,
+        updated_at: profile.updated_at,
+        archived_at: profile.archived_at
+      });
     }
 
     return NextResponse.json({ success: true });

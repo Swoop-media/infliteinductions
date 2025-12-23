@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextResponse } from 'next/server';
 import { createSupabaseRoute } from '@/lib/supabase/server';
+import { syncUserToSafeflite } from '@/lib/webhooks/safeflite-sync';
 
 export async function POST(request: Request) {
   try {
@@ -217,6 +218,26 @@ export async function POST(request: Request) {
       }
     }
     
+    // Fetch updated profile for SafeFLITE sync
+    const { data: profileForSync } = await supabase
+      .from('profiles')
+      .select('microsoft_id, email, full_name, job_description, department, created_at, updated_at, archived_at')
+      .eq('id', userId)
+      .single();
+
+    if (profileForSync) {
+      await syncUserToSafeflite({
+        microsoft_id: profileForSync.microsoft_id,
+        email: profileForSync.email,
+        full_name: profileForSync.full_name,
+        job_description: profileForSync.job_description,
+        department: profileForSync.department,
+        created_at: profileForSync.created_at,
+        updated_at: profileForSync.updated_at,
+        archived_at: profileForSync.archived_at
+      });
+    }
+
     return NextResponse.json({ 
       message: existingUser ? 'Internal user updated successfully' : 'Internal user created successfully',
       email: email,
