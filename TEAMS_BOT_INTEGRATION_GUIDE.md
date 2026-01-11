@@ -373,6 +373,204 @@ your-app/
 │   └── teams/
 │       ├── proactive.ts    # Low-level function to send via REST API
 │       └── send.ts         # High-level function to send by user ID
+│   └── utils/
+│       └── url.ts          # URL utilities for generating absolute links
 ├── .env.local              # Environment variables
 └── ...
+```
+
+---
+
+## Adding Hyperlinks to Teams Messages
+
+Teams automatically converts plain URLs in message text into clickable hyperlinks. **You don't need special markdown or HTML** - just include the full absolute URL in your message.
+
+### The Key: Use Absolute URLs
+
+The most important thing is to always use **absolute URLs** (starting with `https://`), not relative paths. Relative paths like `/app/courses/123` won't work as links.
+
+### URL Utility Functions
+
+Create a utility file to generate absolute URLs:
+
+```typescript
+// lib/utils/url.ts
+
+/**
+ * Get the base URL for the application
+ * Prioritizes production domain, falls back to Replit domain or localhost
+ */
+export function getBaseUrl(): string {
+  // 1. Explicit site URL (production) - SET THIS IN YOUR ENV
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    return process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '');
+  }
+  
+  // 2. Replit deployed app domain
+  if (process.env.REPLIT_DOMAINS) {
+    const domain = process.env.REPLIT_DOMAINS.split(',')[0];
+    return `https://${domain}`;
+  }
+  
+  // 3. Fallback to localhost for development
+  return 'http://localhost:3000';
+}
+
+/**
+ * Convert a relative path to an absolute URL using the production domain
+ */
+export function toAbsoluteUrl(urlOrPath: string): string {
+  // Handle non-http schemes (mailto:, tel:, etc.) - return as-is
+  if (urlOrPath.includes(':') && !urlOrPath.startsWith('http://') && !urlOrPath.startsWith('https://')) {
+    return urlOrPath;
+  }
+  
+  // If already absolute HTTP/HTTPS URL, replace origin with production domain
+  if (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://')) {
+    try {
+      const url = new URL(urlOrPath);
+      const productionUrl = new URL(getBaseUrl());
+      url.protocol = productionUrl.protocol;
+      url.host = productionUrl.host;
+      return url.toString();
+    } catch (e) {
+      return urlOrPath;
+    }
+  }
+  
+  // If relative path, prepend base URL
+  if (urlOrPath.startsWith('/')) {
+    return getBaseUrl() + urlOrPath;
+  }
+  
+  // If no leading slash, assume it's a relative path
+  return getBaseUrl() + '/' + urlOrPath;
+}
+
+// Helper functions for common pages
+export function getItemUrl(itemId: string): string {
+  return toAbsoluteUrl(`/app/items/${itemId}`);
+}
+
+export function getDashboardUrl(): string {
+  return toAbsoluteUrl('/app/dashboard');
+}
+```
+
+### How to Include Links in Messages
+
+Simply include the absolute URL in your message text. Teams will auto-convert it to a clickable link:
+
+```typescript
+import { toAbsoluteUrl } from "@/lib/utils/url";
+import { sendTeamsDMToAppUser } from "@/lib/teams/send";
+
+// Example 1: Simple link
+const url = toAbsoluteUrl('/app/tasks/123');
+await sendTeamsDMToAppUser(userId, `New task assigned!\n\nView task: ${url}`);
+
+// Example 2: Formatted notification with link
+const taskUrl = toAbsoluteUrl(`/app/tasks/${taskId}`);
+const message = [
+  "📋 New Task Assigned",
+  `• Task: ${taskName}`,
+  `• Assigned by: ${assignedBy}`,
+  `• Due date: ${dueDate}`,
+  `• View task: ${taskUrl}`,  // <-- Teams auto-links this!
+].filter(Boolean).join("\n");
+
+await sendTeamsDMToAppUser(userId, message);
+```
+
+### Message Format Pattern (How This App Does It)
+
+The LMS app uses a consistent pattern for formatting notifications:
+
+```typescript
+function formatNotificationMessage(type: string, data: any): string {
+  // Normalize URL to absolute
+  const rawUrl = data?.url as string | undefined;
+  const url = rawUrl ? toAbsoluteUrl(rawUrl) : undefined;
+
+  switch (type) {
+    case "task_assigned":
+      return [
+        "📋 Task assigned",                              // Title with emoji
+        data?.taskName ? `• Task: ${data.taskName}` : "",  // Bullet points
+        data?.assignedBy ? `• Assigned by: ${data.assignedBy}` : "",
+        url ? `• View task: ${url}` : "",                // Link at the end
+      ]
+        .filter(Boolean)  // Remove empty lines
+        .join("\n");      // Join with newlines
+    
+    case "deadline_reminder":
+      return [
+        `⏰ Deadline reminder`,
+        data?.taskName ? `• Task: ${data.taskName}` : "",
+        data?.dueDate ? `• Due: ${data.dueDate}` : "",
+        url ? `• Complete now: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    default:
+      return data?.message || "You have a new notification";
+  }
+}
+```
+
+### Environment Variable for Base URL
+
+Add this to your environment to ensure links point to your production domain:
+
+```env
+# Your app's production URL (REQUIRED for links to work correctly)
+NEXT_PUBLIC_SITE_URL=https://your-app-domain.com
+```
+
+If not set, it will fall back to `REPLIT_DOMAINS` (automatically set by Replit).
+
+### Summary: Hyperlinks Checklist
+
+1. **Create `lib/utils/url.ts`** with `getBaseUrl()` and `toAbsoluteUrl()` functions
+2. **Set `NEXT_PUBLIC_SITE_URL`** environment variable to your production domain
+3. **Always convert paths to absolute URLs** before including in messages
+4. **Include the URL in plain text** - Teams auto-links it
+5. **Use a consistent message format** with the link at the end
+
+---
+
+## Agent Prompt for Hyperlinks
+
+If you just need to add hyperlink support to an existing Teams integration, give this prompt to your agent:
+
+```
+I need to add clickable hyperlinks to my Teams bot notifications.
+
+Currently, my Teams messages include relative URLs like /app/tasks/123 but they don't become clickable links.
+
+Please:
+
+1. Create lib/utils/url.ts with these functions:
+   - getBaseUrl(): Returns the app's base URL (check NEXT_PUBLIC_SITE_URL env var first, then REPLIT_DOMAINS)
+   - toAbsoluteUrl(path): Converts a relative path to absolute URL
+
+2. Update my notification message formatting to:
+   - Convert any relative URLs to absolute URLs using toAbsoluteUrl()
+   - Include the full absolute URL in the message text (Teams auto-converts to clickable links)
+
+3. Add NEXT_PUBLIC_SITE_URL to .env.local set to my production domain
+
+The pattern for messages should be:
+- Title with emoji (e.g., "📋 Task assigned")
+- Bullet points for details (e.g., "• Task: My Task Name")
+- Link at the end (e.g., "• View task: https://my-app.com/app/tasks/123")
+
+Example output:
+📋 Task assigned
+• Task: Complete report
+• Assigned by: John
+• View task: https://my-app.com/app/tasks/abc123
+
+Teams will automatically make that URL clickable.
 ```
