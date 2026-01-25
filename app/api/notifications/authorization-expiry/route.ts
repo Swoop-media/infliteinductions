@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { notifyUser } from "@/lib/notifications/dispatcher";
+import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorizationExpiry";
 
 function supabaseAdmin() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
@@ -19,7 +20,6 @@ function supabaseAdmin() {
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify the request is authorized (could be from a cron job with a secret)
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
     
@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Fetch all authorization assignments that are completed
     const { data: assignments, error } = await supabase
       .from("authorisation_assignments")
       .select(`
@@ -44,24 +43,6 @@ export async function POST(request: NextRequest) {
       .eq("assignment_status", "completed")
       .not("completed_at", "is", null);
     
-    // Get authorizations separately
-    const authIds = [...new Set((assignments || []).map(a => a.authorisation_id))];
-    const { data: authorisations } = await supabase
-      .from("authorisations")
-      .select("id, title, valid_for_days, retake_reminder_days")
-      .in("id", authIds);
-    
-    const authMap = new Map(authorisations?.map(a => [a.id, a]) || []);
-    
-    // Get user profiles separately
-    const userIds = [...new Set((assignments || []).map(a => a.user_id))];
-    const { data: profiles } = await supabase
-      .from("profiles")
-      .select("id, full_name, email")
-      .in("id", userIds);
-    
-    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
-
     if (error) {
       console.error("Error fetching authorization assignments:", error);
       return NextResponse.json({ 
@@ -70,24 +51,132 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
+    if (!assignments || assignments.length === 0) {
+      return NextResponse.json({ 
+        success: true,
+        summary: { totalAssignments: 0, notificationsExpired: 0, notificationsRetakeReminder: 0 }
+      });
+    }
+
+    const authIds = [...new Set(assignments.map(a => a.authorisation_id))];
+    const { data: authorisations } = await supabase
+      .from("authorisations")
+      .select("id, title, valid_for_days, retake_reminder_days")
+      .in("id", authIds);
+    
+    const authMap = new Map(authorisations?.map(a => [a.id, a]) || []);
+    
+    const userIds = [...new Set(assignments.map(a => a.user_id))];
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", userIds);
+    
+    const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+    const { data: authCourses } = await supabase
+      .from("authorisation_courses")
+      .select("authorisation_id, course_id")
+      .in("authorisation_id", authIds);
+
+    const authCourseMap = new Map<string, string[]>();
+    (authCourses || []).forEach((ac: any) => {
+      const existing = authCourseMap.get(ac.authorisation_id) || [];
+      existing.push(ac.course_id);
+      authCourseMap.set(ac.authorisation_id, existing);
+    });
+
+    const allCourseIds = [...new Set((authCourses || []).map((ac: any) => ac.course_id))];
+
+    let documents: any[] = [];
+    if (allCourseIds.length > 0 && userIds.length > 0) {
+      const { data: docs } = await supabase
+        .from("learner_documents")
+        .select("id, user_id, course_id, expires_on")
+        .in("user_id", userIds)
+        .in("course_id", allCourseIds)
+        .not("expires_on", "is", null);
+      documents = docs || [];
+    }
+
+    const userCourseDocMap = new Map<string, any[]>();
+    documents.forEach((doc: any) => {
+      const key = `${doc.user_id}_${doc.course_id}`;
+      const existing = userCourseDocMap.get(key) || [];
+      existing.push(doc);
+      userCourseDocMap.set(key, existing);
+    });
+
+    const { data: courses } = await supabase
+      .from("courses")
+      .select("id, valid_for_months")
+      .in("id", allCourseIds);
+
+    const courseValidityMap = new Map<string, number | null>();
+    (courses || []).forEach((c: any) => {
+      courseValidityMap.set(c.id, c.valid_for_months);
+    });
+
+    let courseAssignmentsData: any[] = [];
+    if (allCourseIds.length > 0 && userIds.length > 0) {
+      const { data: caData } = await supabase
+        .from("course_assignments")
+        .select("id, user_id, course_id, completed_at")
+        .in("user_id", userIds)
+        .in("course_id", allCourseIds)
+        .eq("role", "trainee")
+        .not("completed_at", "is", null);
+      courseAssignmentsData = caData || [];
+    }
+
+    const userCourseAssignmentMap = new Map<string, any>();
+    courseAssignmentsData.forEach((ca: any) => {
+      const key = `${ca.user_id}_${ca.course_id}`;
+      userCourseAssignmentMap.set(key, ca);
+    });
+
     let notificationsExpired = 0;
     let notificationsRetakeReminder = 0;
 
-    for (const assignment of assignments || []) {
+    for (const assignment of assignments) {
       const auth = authMap.get(assignment.authorisation_id);
       
-      // Skip if no authorization found or no valid_for_days
-      if (!auth?.valid_for_days) continue;
+      if (!auth) continue;
       
-      // Calculate expiry date from completed_at + valid_for_days
       const completedDate = new Date(assignment.completed_at);
-      const expiryDate = new Date(completedDate);
-      expiryDate.setDate(expiryDate.getDate() + auth.valid_for_days);
+      
+      const courseIds = authCourseMap.get(assignment.authorisation_id) || [];
+      const userDocs: any[] = [];
+      const userCourses: any[] = [];
+      
+      courseIds.forEach(courseId => {
+        const key = `${assignment.user_id}_${courseId}`;
+        const docs = userCourseDocMap.get(key) || [];
+        userDocs.push(...docs);
+        
+        const validForMonths = courseValidityMap.get(courseId);
+        const courseAssignment = userCourseAssignmentMap.get(key);
+        if (validForMonths && courseAssignment?.completed_at) {
+          userCourses.push({
+            valid_for_months: validForMonths,
+            completed_at: courseAssignment.completed_at
+          });
+        }
+      });
+
+      const expiryDate = calculateAuthorizationExpiry(
+        completedDate,
+        auth.valid_for_days,
+        userDocs.map(d => ({ expires_on: d.expires_on })),
+        userCourses
+      );
+
+      if (!expiryDate) continue;
+      
       expiryDate.setHours(0, 0, 0, 0);
       
       const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
       
-      // Format expiry date for display
       const formattedExpiryDate = expiryDate.toLocaleDateString('en-GB', {
         day: '2-digit',
         month: '2-digit',
@@ -96,11 +185,9 @@ export async function POST(request: NextRequest) {
 
       const profile = profileMap.get(assignment.user_id);
       const authTitle = auth.title || "Authorization";
-      const retakeReminderDays = auth.retake_reminder_days || 30; // Default to 30 days
+      const retakeReminderDays = auth.retake_reminder_days || 30;
 
-      // Check if authorization has expired
       if (daysUntilExpiry <= 0) {
-        // Send authorization expired notification
         await notifyUser(
           assignment.user_id,
           "authorization_expired",
@@ -120,15 +207,12 @@ export async function POST(request: NextRequest) {
         );
         notificationsExpired++;
 
-        // Update the assignment status to expired
         await supabase
           .from("authorisation_assignments")
           .update({ assignment_status: "expired" })
           .eq("id", assignment.id);
       } 
-      // Check if we should send a retake reminder
       else if (daysUntilExpiry === retakeReminderDays) {
-        // Send retake reminder notification
         await notifyUser(
           assignment.user_id,
           "retake_reminder",
@@ -175,6 +259,5 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  // Allow GET for testing
   return POST(request);
 }
