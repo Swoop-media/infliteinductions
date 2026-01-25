@@ -136,6 +136,16 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
     const userDocs: any[] = [];
     const userCourses: any[] = [];
     
+    // Debug logging
+    if (row.profiles?.full_name?.includes("Jake")) {
+      console.log("[DEBUG] Jake auth:", row.authorisations?.title);
+      console.log("[DEBUG] Jake auth courseIds:", courseIds);
+      console.log("[DEBUG] All docs for Jake's courses:", courseIds.map(cid => ({
+        courseId: cid,
+        docs: userCourseDocMap.get(`${userId}_${cid}`)
+      })));
+    }
+    
     courseIds.forEach(courseId => {
       const docKey = `${userId}_${courseId}`;
       const docs = userCourseDocMap.get(docKey) || [];
