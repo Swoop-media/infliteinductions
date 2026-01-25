@@ -129,6 +129,11 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
     userCourseAssignmentMap.set(key, ca);
   });
 
+  console.log("[ADMIN DEBUG] authCourseMap size:", authCourseMap.size);
+  console.log("[ADMIN DEBUG] userCourseDocMap size:", userCourseDocMap.size);
+  console.log("[ADMIN DEBUG] documents fetched:", documents.length);
+  console.log("[ADMIN DEBUG] authCourses data:", authCourses);
+
   const completedAuthorisations: AuthorisationWithExpiry[] = (rows ?? []).map((row: any) => {
     const authId = row.authorisation_id;
     const userId = row.user_id;
@@ -138,6 +143,13 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
     const courseIds = authCourseMap.get(authId) || [];
     const userDocs: any[] = [];
     const userCourses: any[] = [];
+
+    if (row.profiles?.full_name?.includes("Vitaljich")) {
+      console.log("[DEBUG Vitaljich]", row.authorisations?.title);
+      console.log("[DEBUG Vitaljich] authId:", authId);
+      console.log("[DEBUG Vitaljich] courseIds from map:", courseIds);
+      console.log("[DEBUG Vitaljich] authCourseMap has authId:", authCourseMap.has(authId));
+    }
     
     courseIds.forEach(courseId => {
       const docKey = `${userId}_${courseId}`;
