@@ -5,6 +5,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { calculateAuthorizationExpiry, getDaysUntilExpiry, getExpiryStatus } from "@/lib/utils/calculateAuthorizationExpiry";
 
@@ -65,7 +66,9 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
   const authIds = [...new Set(rows.map((r: any) => r.authorisation_id))];
   const userIds = [...new Set(rows.map((r: any) => r.user_id))];
 
-  const { data: authCourses } = await supabase
+  const adminClient = supabaseAdmin();
+
+  const { data: authCourses } = await adminClient
     .from("authorisation_courses")
     .select("authorisation_id, course_id")
     .in("authorisation_id", authIds);
@@ -81,7 +84,7 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
 
   let documents: any[] = [];
   if (allCourseIds.length > 0 && userIds.length > 0) {
-    const { data: docs } = await supabase
+    const { data: docs } = await adminClient
       .from("learner_documents")
       .select("id, user_id, course_id, expires_on")
       .in("user_id", userIds)
@@ -98,7 +101,7 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
     userCourseDocMap.set(key, existing);
   });
 
-  const { data: courses } = await supabase
+  const { data: courses } = await adminClient
     .from("courses")
     .select("id, valid_for_months")
     .in("id", allCourseIds);
@@ -110,7 +113,7 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
 
   let courseAssignments: any[] = [];
   if (allCourseIds.length > 0 && userIds.length > 0) {
-    const { data: assignments } = await supabase
+    const { data: assignments } = await adminClient
       .from("course_assignments")
       .select("id, user_id, course_id, completed_at")
       .in("user_id", userIds)
@@ -135,16 +138,6 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
     const courseIds = authCourseMap.get(authId) || [];
     const userDocs: any[] = [];
     const userCourses: any[] = [];
-    
-    // Debug logging
-    if (row.profiles?.full_name?.includes("Jake")) {
-      console.log("[DEBUG] Jake auth:", row.authorisations?.title);
-      console.log("[DEBUG] Jake auth courseIds:", courseIds);
-      console.log("[DEBUG] All docs for Jake's courses:", courseIds.map(cid => ({
-        courseId: cid,
-        docs: userCourseDocMap.get(`${userId}_${cid}`)
-      })));
-    }
     
     courseIds.forEach(courseId => {
       const docKey = `${userId}_${courseId}`;
