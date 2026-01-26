@@ -13,6 +13,7 @@ interface AuthorisationCompletionRow {
   user_id: string;
   authorisation_id: string;
   approved_at: string;
+  expires_at: string | null;
   full_name: string | null;
   email: string | null;
   authorisation_title: string | null;
@@ -56,15 +57,12 @@ function getSortIcon(column: SortField, sortField: SortField | null, sortDirecti
 }
 
 // Function to calculate days until expiry and return status display
-function getStatusDisplay(approvedAt: string, validForDays: number | null) {
-  if (!validForDays) {
+function getStatusDisplay(expiresAt: string | null) {
+  if (!expiresAt) {
     return <span className="text-gray-600 font-medium">No expiry</span>;
   }
 
-  const approvedDate = new Date(approvedAt);
-  const dueDate = new Date(approvedDate);
-  dueDate.setDate(dueDate.getDate() + validForDays);
-
+  const dueDate = new Date(expiresAt);
   const today = new Date();
   const timeDiff = dueDate.getTime() - today.getTime();
   const daysUntilExpiry = Math.ceil(timeDiff / (1000 * 3600 * 24));
@@ -80,25 +78,17 @@ function getStatusDisplay(approvedAt: string, validForDays: number | null) {
   }
 }
 
-// Function to calculate due date
-function calculateDueDate(approvedAt: string, validForDays: number | null): string {
-  if (!validForDays) return "No expiry";
-  
-  const approvedDate = new Date(approvedAt);
-  const dueDate = new Date(approvedDate);
-  dueDate.setDate(dueDate.getDate() + validForDays);
-  
-  return formatDate(dueDate.toISOString());
+// Function to format due date for display
+function displayDueDate(expiresAt: string | null): string {
+  if (!expiresAt) return "No expiry";
+  return formatDate(expiresAt);
 }
 
 // Function to get days until expiry for sorting
-function getDaysUntilExpiry(approvedAt: string, validForDays: number | null): number {
-  if (!validForDays) return 999999; // No expiry, sort last
+function getDaysUntilExpiry(expiresAt: string | null): number {
+  if (!expiresAt) return 999999; // No expiry, sort last
 
-  const approvedDate = new Date(approvedAt);
-  const dueDate = new Date(approvedDate);
-  dueDate.setDate(dueDate.getDate() + validForDays);
-
+  const dueDate = new Date(expiresAt);
   const today = new Date();
   const timeDiff = dueDate.getTime() - today.getTime();
   return Math.ceil(timeDiff / (1000 * 3600 * 24));
@@ -142,26 +132,13 @@ export default function SortableAuthorisationsTable({ completedAuthorisations }:
           bValue = new Date(b.approved_at).getTime();
           break;
         case 'due_date':
-          // For sorting, use the actual due date timestamp
-          if (a.valid_for_days) {
-            const aDueDate = new Date(a.approved_at);
-            aDueDate.setDate(aDueDate.getDate() + a.valid_for_days);
-            aValue = aDueDate.getTime();
-          } else {
-            aValue = 999999999999999; // No expiry, sort last
-          }
-          
-          if (b.valid_for_days) {
-            const bDueDate = new Date(b.approved_at);
-            bDueDate.setDate(bDueDate.getDate() + b.valid_for_days);
-            bValue = bDueDate.getTime();
-          } else {
-            bValue = 999999999999999; // No expiry, sort last
-          }
+          // For sorting, use the expires_at timestamp
+          aValue = a.expires_at ? new Date(a.expires_at).getTime() : 999999999999999;
+          bValue = b.expires_at ? new Date(b.expires_at).getTime() : 999999999999999;
           break;
         case 'status':
-          aValue = getDaysUntilExpiry(a.approved_at, a.valid_for_days);
-          bValue = getDaysUntilExpiry(b.approved_at, b.valid_for_days);
+          aValue = getDaysUntilExpiry(a.expires_at);
+          bValue = getDaysUntilExpiry(b.expires_at);
           break;
         default:
           return 0;
@@ -267,10 +244,10 @@ export default function SortableAuthorisationsTable({ completedAuthorisations }:
                 {formatDate(auth.approved_at)}
               </td>
               <td className="border-b px-4 py-3 text-sm">
-                {calculateDueDate(auth.approved_at, auth.valid_for_days)}
+                {displayDueDate(auth.expires_at)}
               </td>
               <td className="px-4 py-3 text-sm">
-                {getStatusDisplay(auth.approved_at, auth.valid_for_days)}
+                {getStatusDisplay(auth.expires_at)}
               </td>
             </tr>
           ))}
