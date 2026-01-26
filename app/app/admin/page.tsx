@@ -11,6 +11,8 @@ import SortableUsersTable from "./_components/SortableUsersTable";
 import SortableAuthorisationsTable from "./_components/SortableAuthorisationsTable";
 import SortableDocumentsTable from "./_components/SortableDocumentsTable";
 import SortableCourseProgressTable from "./_components/SortableCourseProgressTable";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorizationExpiry";
 
 
 export const dynamic = "force-dynamic";
@@ -972,26 +974,115 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null, page: n
   const authMap = new Map((authorisations || []).map(a => [a.id, a]));
   const profileMap = new Map((profiles || []).map(p => [p.id, p]));
 
+  // Use admin client to bypass RLS for document and course queries
+  const adminClient = supabaseAdmin();
+
+  // Get authorisation-course mappings
+  const { data: authCourses } = await adminClient
+    .from("authorisation_courses")
+    .select("authorisation_id, course_id")
+    .in("authorisation_id", authIds);
+
+  const authCourseMap = new Map<string, string[]>();
+  (authCourses || []).forEach((ac: any) => {
+    const existing = authCourseMap.get(ac.authorisation_id) || [];
+    existing.push(ac.course_id);
+    authCourseMap.set(ac.authorisation_id, existing);
+  });
+
+  const allCourseIds = [...new Set((authCourses || []).map((ac: any) => ac.course_id))];
+
+  // Get documents with expiry dates
+  let documents: any[] = [];
+  if (allCourseIds.length > 0 && userIds.length > 0) {
+    const { data: docs } = await adminClient
+      .from("learner_documents")
+      .select("id, user_id, course_id, expires_on")
+      .in("user_id", userIds)
+      .in("course_id", allCourseIds)
+      .not("expires_on", "is", null);
+    documents = docs || [];
+  }
+
+  const userCourseDocMap = new Map<string, any[]>();
+  documents.forEach((doc: any) => {
+    const key = `${doc.user_id}_${doc.course_id}`;
+    const existing = userCourseDocMap.get(key) || [];
+    existing.push(doc);
+    userCourseDocMap.set(key, existing);
+  });
+
+  // Get courses with validity
+  const { data: courses } = await adminClient
+    .from("courses")
+    .select("id, valid_for_months")
+    .in("id", allCourseIds.length > 0 ? allCourseIds : ["none"]);
+
+  const courseValidityMap = new Map<string, number | null>();
+  (courses || []).forEach((c: any) => {
+    courseValidityMap.set(c.id, c.valid_for_months);
+  });
+
+  // Get course assignments
+  let courseAssignments: any[] = [];
+  if (allCourseIds.length > 0 && userIds.length > 0) {
+    const { data: assignments } = await adminClient
+      .from("course_assignments")
+      .select("id, user_id, course_id, completed_at")
+      .in("user_id", userIds)
+      .in("course_id", allCourseIds)
+      .eq("role", "trainee")
+      .not("completed_at", "is", null);
+    courseAssignments = assignments || [];
+  }
+
+  const userCourseAssignmentMap = new Map<string, any>();
+  courseAssignments.forEach((ca: any) => {
+    const key = `${ca.user_id}_${ca.course_id}`;
+    userCourseAssignmentMap.set(key, ca);
+  });
+
   // Transform all data with calculated expiry dates
   let completedAuthorisations = allAssignments.map(assignment => {
     const auth = authMap.get(assignment.authorisation_id);
     const profile = profileMap.get(assignment.user_id);
+    const completedAt = new Date(assignment.approved_at);
+    const validForDays = auth?.valid_for_days ?? null;
 
-    // Calculate expiry date based on valid_for_days
-    let expires_at = null;
-    if (auth?.valid_for_days && assignment.approved_at) {
-      const approvedDate = new Date(assignment.approved_at);
-      const expiryDate = new Date(approvedDate);
-      expiryDate.setDate(expiryDate.getDate() + auth.valid_for_days);
-      expires_at = expiryDate.toISOString();
-    }
+    // Get courses linked to this authorization
+    const courseIds = authCourseMap.get(assignment.authorisation_id) || [];
+    const userDocs: any[] = [];
+    const userCourses: any[] = [];
+
+    courseIds.forEach(courseId => {
+      const docKey = `${assignment.user_id}_${courseId}`;
+      const docs = userCourseDocMap.get(docKey) || [];
+      userDocs.push(...docs);
+
+      const validForMonths = courseValidityMap.get(courseId);
+      const courseAssignment = userCourseAssignmentMap.get(docKey);
+      if (validForMonths && courseAssignment?.completed_at) {
+        userCourses.push({
+          valid_for_months: validForMonths,
+          completed_at: courseAssignment.completed_at
+        });
+      }
+    });
+
+    // Calculate expiry using the comprehensive function
+    const expiryDate = calculateAuthorizationExpiry(
+      completedAt,
+      validForDays,
+      userDocs.map(d => ({ expires_on: d.expires_on })),
+      userCourses
+    );
 
     return {
       assignment_id: assignment.id,
       user_id: assignment.user_id,
       authorisation_id: assignment.authorisation_id,
       approved_at: assignment.approved_at,
-      expires_at: expires_at,
+      expires_at: expiryDate?.toISOString() ?? null,
       full_name: profile?.full_name ?? null,
       email: profile?.email ?? null,
       authorisation_title: auth?.title ?? null,
