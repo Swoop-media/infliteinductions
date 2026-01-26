@@ -139,9 +139,26 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
     const userDocs: any[] = [];
     const userCourses: any[] = [];
     
+    // Debug logging for Jake's Driver Authorization
+    const isJakeDriver = row.profiles?.full_name?.includes("Jake") && row.authorisations?.title?.includes("Driver");
+    if (isJakeDriver) {
+      console.log("DEBUG Jake Driver:", {
+        authId,
+        userId,
+        completedAt: completedAt.toISOString(),
+        validForDays,
+        courseIds,
+        authCourseMapHasKey: authCourseMap.has(authId),
+        authCourseMapSize: authCourseMap.size
+      });
+    }
+    
     courseIds.forEach(courseId => {
       const docKey = `${userId}_${courseId}`;
       const docs = userCourseDocMap.get(docKey) || [];
+      if (isJakeDriver) {
+        console.log("DEBUG Jake docs lookup:", { courseId, docKey, docsFound: docs.length, docs });
+      }
       userDocs.push(...docs);
       
       const validForMonths = courseValidityMap.get(courseId);
@@ -154,12 +171,20 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
       }
     });
 
+    if (isJakeDriver) {
+      console.log("DEBUG Jake before calc:", { userDocsCount: userDocs.length, userDocs, userCourses });
+    }
+    
     const expiryDate = calculateAuthorizationExpiry(
       completedAt,
       validForDays,
       userDocs.map(d => ({ expires_on: d.expires_on })),
       userCourses
     );
+    
+    if (isJakeDriver) {
+      console.log("DEBUG Jake after calc:", { expiryDate: expiryDate?.toISOString() });
+    }
 
     let expirySource = "No expiry";
     if (expiryDate) {
