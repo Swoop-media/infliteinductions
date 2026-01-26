@@ -1,17 +1,18 @@
 
-# TODO: Daily Admin Due Dates Notifications
+# Daily Admin Due Dates Notifications
 
 ## Feature Overview
-Implement daily Teams notifications for all Admin users containing summaries of:
+Daily Teams notifications for users with Admin or Senior Management roles containing summaries of:
 1. **Course Due Dates** - from `/app/admin` due dates-courses tab
 2. **Authorisation Due Dates** - from `/app/admin` due dates-authorisations tab
+3. **Document Due Dates** - expiring learner documents
 
 ## Specifications
 
 ### Timing & Delivery
-- **Schedule**: Daily at 8:00 AM New Zealand time
-- **Recipients**: All users with Admin role
-- **Format**: Two separate Teams messages (clearly labeled)
+- **Schedule**: Daily at 8:00 AM New Zealand time (triggered via cron-job.org)
+- **Recipients**: All users with Admin OR Senior Management role (deduplicated)
+- **Format**: Single combined Teams message with all summaries
 - **Channel**: Teams only (no in-app notifications)
 
 ### Content Requirements
@@ -22,7 +23,7 @@ Implement daily Teams notifications for all Admin users containing summaries of:
 ### Data Sources
 - **Course Due Dates**: Use existing `loadCompletedCoursesWithDueDates` function
 - **Authorisation Due Dates**: Use existing `loadCompletedAuthorisationsWithDueDates` function
-- **Admin Users**: Query profiles table for users with 'admin' role
+- **Recipients**: Query profiles table for users with 'Admin' or 'Senior Management' roles
 
 ## Implementation Plan
 
@@ -144,10 +145,9 @@ Consider adding a `scheduled_notifications` table to track:
 
 ---
 
-**Status**: TODO - Ready for implementation when deployment is available
+**Status**: IMPLEMENTED
 **Priority**: Medium
-**Dependencies**: Replit deployment, production Teams bot setup
-**Estimated Effort**: 2-3 hours implementation + testing
+**Dependencies**: Replit deployment, production Teams bot setup, cron-job.org trigger
 
 **Created**: January 2025
-**Last Updated**: January 2025
+**Last Updated**: January 2026 - Expanded recipients to include Senior Management role

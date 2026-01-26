@@ -337,44 +337,47 @@ export async function POST(req: NextRequest) {
 
     const supabase = supabaseAdmin();
 
-    // First get the Admin role ID
-    const { data: adminRole, error: roleError } = await supabase
+    // Get Admin and Senior Management role IDs
+    const { data: roles, error: roleError } = await supabase
       .from("roles")
-      .select("id")
-      .eq("name", "Admin")
-      .single();
+      .select("id, name")
+      .in("name", ["Admin", "Senior Management"]);
 
-    if (roleError || !adminRole) {
+    if (roleError || !roles || roles.length === 0) {
       return NextResponse.json({ 
-        error: "Admin role not found", 
+        error: "Required roles not found (Admin or Senior Management)", 
         details: roleError?.message 
       }, { status: 404 });
     }
 
-    // Get all user IDs who have the Admin role
-    const { data: adminUserRoles, error: userRoleError } = await supabase
+    const roleIds = roles.map(r => r.id);
+
+    // Get all user IDs who have either Admin or Senior Management role
+    const { data: userRoles, error: userRoleError } = await supabase
       .from("user_roles")
       .select("user_id")
-      .eq("role_id", adminRole.id);
+      .in("role_id", roleIds);
 
-    if (userRoleError || !adminUserRoles || adminUserRoles.length === 0) {
+    if (userRoleError || !userRoles || userRoles.length === 0) {
       return NextResponse.json({ 
-        error: "No admin users found", 
+        error: "No users found with Admin or Senior Management roles", 
         details: userRoleError?.message 
       }, { status: 404 });
     }
 
-    // Get profile information for all admin users
-    const adminUserIds = adminUserRoles.map(ur => ur.user_id);
-    const { data: adminUsers, error: adminError } = await supabase
+    // Deduplicate user IDs (in case someone has both roles)
+    const uniqueUserIds = [...new Set(userRoles.map(ur => ur.user_id))];
+    
+    // Get profile information for all recipient users
+    const { data: recipientUsers, error: recipientError } = await supabase
       .from("profiles")
       .select("id, email, full_name")
-      .in("id", adminUserIds);
+      .in("id", uniqueUserIds);
 
-    if (adminError || !adminUsers || adminUsers.length === 0) {
+    if (recipientError || !recipientUsers || recipientUsers.length === 0) {
       return NextResponse.json({ 
-        error: "No admin users found", 
-        details: adminError?.message 
+        error: "No users found with Admin or Senior Management roles", 
+        details: recipientError?.message 
       }, { status: 404 });
     }
 
@@ -395,9 +398,9 @@ export async function POST(req: NextRequest) {
     const authorisationMessage = formatAuthorisationSummary(topAuthorisations, allAuthorisations.length);
     const documentMessage = formatDocumentSummary(topDocuments, allDocuments.length);
 
-    // Send notifications to each admin
+    // Send notifications to each Admin and Senior Management user
     const results = [];
-    for (const admin of adminUsers) {
+    for (const recipient of recipientUsers) {
       try {
         // Always send a combined summary message
         const today = new Date().toLocaleDateString('en-NZ', { 
@@ -509,22 +512,22 @@ export async function POST(req: NextRequest) {
         }
         
         // Always send the combined message
-        await sendTeamsDMToAppUser(admin.id, combinedMessage);
+        await sendTeamsDMToAppUser(recipient.id, combinedMessage);
         
         results.push({
-          userId: admin.id,
-          userName: admin.full_name || admin.email,
+          userId: recipient.id,
+          userName: recipient.full_name || recipient.email,
           status: "success",
-          coursesSent: true, // Changed to true since we always send now
+          coursesSent: true,
           authorisationsSent: true,
           documentsSent: true,
           itemsFound: allCourses.length + allAuthorisations.length + allDocuments.length
         });
       } catch (error) {
-        console.error(`Failed to send notifications to admin ${admin.id}:`, error);
+        console.error(`Failed to send notifications to user ${recipient.id}:`, error);
         results.push({
-          userId: admin.id,
-          userName: admin.full_name || admin.email,
+          userId: recipient.id,
+          userName: recipient.full_name || recipient.email,
           status: "failed",
           error: error.message
         });
@@ -535,7 +538,7 @@ export async function POST(req: NextRequest) {
       success: true,
       timestamp: new Date().toISOString(),
       summary: {
-        adminsNotified: adminUsers.length,
+        recipientsNotified: recipientUsers.length,
         coursesFound: allCourses.length,
         authorisationsFound: allAuthorisations.length,
         documentsFound: allDocuments.length,
