@@ -46,7 +46,7 @@ function getStatus(daysUntilExpiry: number): string {
   return "✅ Current";
 }
 
-// Fetch authorisation due dates
+// Fetch authorisation due dates - uses expires_at field directly
 async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationWithDueDate[]> {
   const { data, error } = await supabase
     .from("authorisation_assignments")
@@ -54,7 +54,8 @@ async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationW
       id,
       user_id,
       authorisation_id,
-      completed_at,
+      expires_at,
+      approved_at,
       profiles!authorisation_assignments_user_id_fkey (
         id,
         full_name,
@@ -66,8 +67,8 @@ async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationW
         valid_for_days
       )
     `)
-    .eq("assignment_status", "completed")
-    .not("completed_at", "is", null);
+    .eq("assignment_status", "approved")
+    .not("expires_at", "is", null);
 
   console.log("Authorisation query result:", { dataCount: data?.length, error });
   if (error || !data) return [];
@@ -75,22 +76,19 @@ async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationW
   const authorisationsWithDates: AuthorisationWithDueDate[] = [];
   
   for (const assignment of data) {
-    if (!assignment.authorisations?.valid_for_days || !assignment.completed_at) continue;
+    if (!assignment.expires_at) continue;
     
-    const completedDate = new Date(assignment.completed_at);
-    const dueDate = new Date(completedDate);
-    dueDate.setDate(dueDate.getDate() + assignment.authorisations.valid_for_days);
-    
-    const daysUntilExpiry = calculateDaysUntilExpiry(dueDate);
+    const expiryDate = new Date(assignment.expires_at);
+    const daysUntilExpiry = calculateDaysUntilExpiry(expiryDate);
     
     authorisationsWithDates.push({
       user_id: assignment.user_id,
       user_name: assignment.profiles?.full_name || assignment.profiles?.email || "Unknown",
       user_email: assignment.profiles?.email || "",
-      authorisation_title: assignment.authorisations.title || "Unknown Authorisation",
-      completed_at: assignment.completed_at,
-      valid_for_days: assignment.authorisations.valid_for_days,
-      due_date: dueDate,
+      authorisation_title: assignment.authorisations?.title || "Unknown Authorisation",
+      completed_at: assignment.approved_at || "",
+      valid_for_days: assignment.authorisations?.valid_for_days || 0,
+      due_date: expiryDate,
       days_until_expiry: daysUntilExpiry,
       status: getStatus(daysUntilExpiry)
     });
