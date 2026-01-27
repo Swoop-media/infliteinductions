@@ -228,50 +228,54 @@ export async function POST(req: NextRequest) {
     const results = [];
     for (const recipient of recipientUsers) {
       try {
-        // Build authorisation expiry message (matching document format)
+        // Build combined daily summary message
+        const today = new Date().toLocaleDateString('en-NZ', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+        
+        let message = `📋 **Daily Expiry Summary**\n`;
+        message += `📅 ${today}\n\n`;
+
+        // Authorisations section
         if (topAuthorisations.length > 0) {
-          let authMessage = `📜 **Daily Authorisation Expiry Report**\n`;
-          authMessage += `• Total expiring soon: ${upcomingAuthorisations.length} authorisations\n`;
-          authMessage += `• Summary:\n`;
-          authMessage += `📜 Daily Authorisation Expiry Report (${topAuthorisations.length} items due within 30 days or overdue):\n`;
-          
+          message += `📜 **Authorisations** (${upcomingAuthorisations.length} expiring soon)\n`;
           for (const auth of topAuthorisations) {
             const daysText = auth.days_until_expiry < 0 
               ? `overdue by ${Math.abs(auth.days_until_expiry)} days`
               : `${auth.days_until_expiry} days`;
-            authMessage += `• ${auth.authorisation_title} - ${auth.user_name} (${daysText})\n`;
+            message += `• ${auth.authorisation_title} - ${auth.user_name} (${daysText})\n`;
           }
-          
-          authMessage += `• View full report:\nhttps://training.inflite.nz/app/admin?tab=due-dates-authorisations`;
-          
-          await sendTeamsDMToAppUser(recipient.id, authMessage);
+          message += `\n`;
+        } else {
+          message += `📜 **Authorisations**: No items due within 30 days.\n\n`;
         }
 
-        // Build document expiry message (matching existing format)
+        // Documents section
         if (topDocuments.length > 0) {
-          let docMessage = `📄 **Daily Document Expiry Report**\n`;
-          docMessage += `• Total expiring soon: ${upcomingDocuments.length} documents\n`;
-          docMessage += `• Summary:\n`;
-          docMessage += `📄 Daily Document Expiry Report (${topDocuments.length} items due within 30 days or overdue):\n`;
-          
+          message += `📄 **Documents** (${upcomingDocuments.length} expiring soon)\n`;
           for (const doc of topDocuments) {
             const daysText = doc.days_until_expiry < 0 
               ? `overdue by ${Math.abs(doc.days_until_expiry)} days`
               : `${doc.days_until_expiry} days`;
-            docMessage += `• ${doc.document_title} - ${doc.user_name} (${daysText})\n`;
+            message += `• ${doc.document_title} - ${doc.user_name} (${daysText})\n`;
           }
-          
-          docMessage += `• View full report:\nhttps://training.inflite.nz/app/admin?tab=due-dates-documents`;
-          
-          await sendTeamsDMToAppUser(recipient.id, docMessage);
+          message += `\n`;
+        } else {
+          message += `📄 **Documents**: No items due within 30 days.\n\n`;
         }
+
+        message += `View full reports: https://training.inflite.nz/app/admin`;
+        
+        await sendTeamsDMToAppUser(recipient.id, message);
         
         results.push({
           userId: recipient.id,
           userName: recipient.full_name || recipient.email,
           status: "success",
-          authorisationsSent: topAuthorisations.length > 0,
-          documentsSent: topDocuments.length > 0,
+          messageSent: true,
           itemsFound: upcomingAuthorisations.length + upcomingDocuments.length
         });
       } catch (error) {
