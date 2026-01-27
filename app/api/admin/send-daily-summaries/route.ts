@@ -67,9 +67,9 @@ async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationW
       )
     `)
     .eq("assignment_status", "completed")
-    .not("completed_at", "is", null)
-    .not("authorisations.valid_for_days", "is", null);
+    .not("completed_at", "is", null);
 
+  console.log("Authorisation query result:", { dataCount: data?.length, error });
   if (error || !data) return [];
 
   const authorisationsWithDates: AuthorisationWithDueDate[] = [];
@@ -117,6 +117,7 @@ async function fetchDocumentDueDates(supabase: any): Promise<DocumentWithDueDate
     `)
     .not("expires_on", "is", null);
 
+  console.log("Document query result:", { dataCount: data?.length, error });
   if (error || !data) return [];
 
   const documentsWithDates: DocumentWithDueDate[] = [];
@@ -207,11 +208,21 @@ export async function POST(req: NextRequest) {
       fetchDocumentDueDates(supabase)
     ]);
 
+    console.log("Fetched data:", { 
+      allAuthorisations: allAuthorisations.length, 
+      allDocuments: allDocuments.length 
+    });
+
     // Filter to only items due within 30 days or overdue, then limit to top 25
     const upcomingAuthorisations = allAuthorisations.filter(a => a.days_until_expiry <= 30);
     const upcomingDocuments = allDocuments.filter(d => d.days_until_expiry <= 30);
     const topAuthorisations = upcomingAuthorisations.slice(0, 25);
     const topDocuments = upcomingDocuments.slice(0, 25);
+    
+    console.log("Filtered data:", { 
+      upcomingAuthorisations: upcomingAuthorisations.length, 
+      upcomingDocuments: upcomingDocuments.length 
+    });
 
     // Send notifications to each Admin and Senior Management user
     const results = [];
@@ -283,6 +294,14 @@ export async function POST(req: NextRequest) {
         documentsFound: upcomingDocuments.length,
         authorisationsShown: topAuthorisations.length,
         documentsShown: topDocuments.length
+      },
+      debug: {
+        totalAuthorisationsFromDB: allAuthorisations.length,
+        totalDocumentsFromDB: allDocuments.length,
+        afterFilter30Days: {
+          authorisations: upcomingAuthorisations.length,
+          documents: upcomingDocuments.length
+        }
       },
       results
     });
