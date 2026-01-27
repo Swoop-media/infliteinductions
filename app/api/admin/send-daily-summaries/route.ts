@@ -6,25 +6,13 @@ import { hasRole } from "@/lib/roles";
 import { sendTeamsDMToAppUser } from "@/lib/teams/send";
 
 // Type definitions
-type CourseWithDueDate = {
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  course_title: string;
-  completed_at: string;
-  valid_for_days: number;
-  due_date: Date;
-  days_until_expiry: number;
-  status: string;
-};
-
 type AuthorisationWithDueDate = {
   user_id: string;
   user_name: string;
   user_email: string;
   authorisation_title: string;
   completed_at: string;
-  valid_for_years: number;
+  valid_for_days: number;
   due_date: Date;
   days_until_expiry: number;
   status: string;
@@ -58,60 +46,6 @@ function getStatus(daysUntilExpiry: number): string {
   return "✅ Current";
 }
 
-// Fetch course due dates
-async function fetchCourseDueDates(supabase: any): Promise<CourseWithDueDate[]> {
-  const { data, error } = await supabase
-    .from("course_assignments")
-    .select(`
-      id,
-      user_id,
-      course_id,
-      completed_at,
-      profiles!course_assignments_user_id_fkey (
-        id,
-        full_name,
-        email
-      ),
-      courses (
-        id,
-        title,
-        valid_for_days
-      )
-    `)
-    .eq("assignment_status", "completed")
-    .not("completed_at", "is", null)
-    .not("courses.valid_for_days", "is", null);
-
-  if (error || !data) return [];
-
-  const coursesWithDates: CourseWithDueDate[] = [];
-  
-  for (const assignment of data) {
-    if (!assignment.courses?.valid_for_days || !assignment.completed_at) continue;
-    
-    const completedDate = new Date(assignment.completed_at);
-    const dueDate = new Date(completedDate);
-    dueDate.setDate(dueDate.getDate() + assignment.courses.valid_for_days);
-    
-    const daysUntilExpiry = calculateDaysUntilExpiry(dueDate);
-    
-    coursesWithDates.push({
-      user_id: assignment.user_id,
-      user_name: assignment.profiles?.full_name || assignment.profiles?.email || "Unknown",
-      user_email: assignment.profiles?.email || "",
-      course_title: assignment.courses.title || "Unknown Course",
-      completed_at: assignment.completed_at,
-      valid_for_days: assignment.courses.valid_for_days,
-      due_date: dueDate,
-      days_until_expiry: daysUntilExpiry,
-      status: getStatus(daysUntilExpiry)
-    });
-  }
-
-  // Sort by days until expiry (ascending - most urgent first)
-  return coursesWithDates.sort((a, b) => a.days_until_expiry - b.days_until_expiry);
-}
-
 // Fetch authorisation due dates
 async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationWithDueDate[]> {
   const { data, error } = await supabase
@@ -129,23 +63,23 @@ async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationW
       authorisations (
         id,
         title,
-        valid_for_years
+        valid_for_days
       )
     `)
     .eq("assignment_status", "completed")
     .not("completed_at", "is", null)
-    .not("authorisations.valid_for_years", "is", null);
+    .not("authorisations.valid_for_days", "is", null);
 
   if (error || !data) return [];
 
   const authorisationsWithDates: AuthorisationWithDueDate[] = [];
   
   for (const assignment of data) {
-    if (!assignment.authorisations?.valid_for_years || !assignment.completed_at) continue;
+    if (!assignment.authorisations?.valid_for_days || !assignment.completed_at) continue;
     
     const completedDate = new Date(assignment.completed_at);
     const dueDate = new Date(completedDate);
-    dueDate.setFullYear(dueDate.getFullYear() + assignment.authorisations.valid_for_years);
+    dueDate.setDate(dueDate.getDate() + assignment.authorisations.valid_for_days);
     
     const daysUntilExpiry = calculateDaysUntilExpiry(dueDate);
     
@@ -155,7 +89,7 @@ async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationW
       user_email: assignment.profiles?.email || "",
       authorisation_title: assignment.authorisations.title || "Unknown Authorisation",
       completed_at: assignment.completed_at,
-      valid_for_years: assignment.authorisations.valid_for_years,
+      valid_for_days: assignment.authorisations.valid_for_days,
       due_date: dueDate,
       days_until_expiry: daysUntilExpiry,
       status: getStatus(daysUntilExpiry)
@@ -206,120 +140,6 @@ async function fetchDocumentDueDates(supabase: any): Promise<DocumentWithDueDate
 
   // Sort by days until expiry (ascending - most urgent first)
   return documentsWithDates.sort((a, b) => a.days_until_expiry - b.days_until_expiry);
-}
-
-// Format course summary message
-function formatCourseSummary(courses: CourseWithDueDate[], total: number): string {
-  const today = new Date().toLocaleDateString('en-NZ', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
-
-  let message = `🎓 **Daily Course Due Dates Summary**\n`;
-  message += `📅 Date: ${today}\n\n`;
-  
-  if (courses.length === 0) {
-    message += `✅ No courses with upcoming expiry dates.\n`;
-    return message;
-  }
-
-  message += `📋 **Upcoming Course Expiries** (Top ${courses.length})\n\n`;
-  
-  for (const course of courses) {
-    const daysText = course.days_until_expiry < 0 
-      ? `${Math.abs(course.days_until_expiry)} days overdue`
-      : course.days_until_expiry === 0 
-      ? `Today`
-      : `${course.days_until_expiry} days`;
-    
-    message += `👤 **${course.user_name}**\n`;
-    message += `   📚 ${course.course_title}\n`;
-    message += `   ${course.status} - ${daysText}\n\n`;
-  }
-  
-  if (total > courses.length) {
-    message += `📊 Total records: ${total} (showing top ${courses.length})\n`;
-  }
-  
-  return message;
-}
-
-// Format authorisation summary message
-function formatAuthorisationSummary(authorisations: AuthorisationWithDueDate[], total: number): string {
-  const today = new Date().toLocaleDateString('en-NZ', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
-
-  let message = `📜 **Daily Authorisation Due Dates Summary**\n`;
-  message += `📅 Date: ${today}\n\n`;
-  
-  if (authorisations.length === 0) {
-    message += `✅ No authorisations with upcoming expiry dates.\n`;
-    return message;
-  }
-
-  message += `📋 **Upcoming Authorisation Expiries** (Top ${authorisations.length})\n\n`;
-  
-  for (const auth of authorisations) {
-    const daysText = auth.days_until_expiry < 0 
-      ? `${Math.abs(auth.days_until_expiry)} days overdue`
-      : auth.days_until_expiry === 0 
-      ? `Today`
-      : `${auth.days_until_expiry} days`;
-    
-    message += `👤 **${auth.user_name}**\n`;
-    message += `   🛡️ ${auth.authorisation_title}\n`;
-    message += `   ${auth.status} - ${daysText}\n\n`;
-  }
-  
-  if (total > authorisations.length) {
-    message += `📊 Total records: ${total} (showing top ${authorisations.length})\n`;
-  }
-  
-  return message;
-}
-
-// Format document summary message
-function formatDocumentSummary(documents: DocumentWithDueDate[], total: number): string {
-  const today = new Date().toLocaleDateString('en-NZ', { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  });
-
-  let message = `📄 **Daily Document Due Dates Summary**\n`;
-  message += `📅 Date: ${today}\n\n`;
-  
-  if (documents.length === 0) {
-    message += `✅ No documents with upcoming expiry dates.\n`;
-    return message;
-  }
-
-  message += `📋 **Expiring Documents** (Top ${documents.length})\n\n`;
-  
-  for (const doc of documents) {
-    const daysText = doc.days_until_expiry < 0 
-      ? `${Math.abs(doc.days_until_expiry)} days overdue`
-      : doc.days_until_expiry === 0 
-      ? `Today`
-      : `${doc.days_until_expiry} days`;
-    
-    message += `👤 **${doc.user_name}**\n`;
-    message += `   📄 ${doc.document_title}\n`;
-    message += `   ${doc.status} - ${daysText}\n\n`;
-  }
-  
-  if (total > documents.length) {
-    message += `📊 Total records: ${total} (showing top ${documents.length})\n`;
-  }
-  
-  return message;
 }
 
 export async function POST(req: NextRequest) {
@@ -381,147 +201,67 @@ export async function POST(req: NextRequest) {
       }, { status: 404 });
     }
 
-    // Fetch all due dates data
-    const [allCourses, allAuthorisations, allDocuments] = await Promise.all([
-      fetchCourseDueDates(supabase),
+    // Fetch authorisations and documents only (no courses)
+    const [allAuthorisations, allDocuments] = await Promise.all([
       fetchAuthorisationDueDates(supabase),
       fetchDocumentDueDates(supabase)
     ]);
 
-    // Limit to top 25 for each type
-    const topCourses = allCourses.slice(0, 25);
-    const topAuthorisations = allAuthorisations.slice(0, 25);
-    const topDocuments = allDocuments.slice(0, 25);
-
-    // Format messages
-    const courseMessage = formatCourseSummary(topCourses, allCourses.length);
-    const authorisationMessage = formatAuthorisationSummary(topAuthorisations, allAuthorisations.length);
-    const documentMessage = formatDocumentSummary(topDocuments, allDocuments.length);
+    // Filter to only items due within 30 days or overdue, then limit to top 25
+    const upcomingAuthorisations = allAuthorisations.filter(a => a.days_until_expiry <= 30);
+    const upcomingDocuments = allDocuments.filter(d => d.days_until_expiry <= 30);
+    const topAuthorisations = upcomingAuthorisations.slice(0, 25);
+    const topDocuments = upcomingDocuments.slice(0, 25);
 
     // Send notifications to each Admin and Senior Management user
     const results = [];
     for (const recipient of recipientUsers) {
       try {
-        // Always send a combined summary message
-        const today = new Date().toLocaleDateString('en-NZ', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
-        });
-        
-        let combinedMessage = `📊 **Daily Training Summary**\n`;
-        combinedMessage += `📅 Date: ${today}\n\n`;
-        
-        // Add course section
-        if (allCourses.length > 0) {
-          combinedMessage += `🎓 **Courses**: ${allCourses.length} expiring\n`;
-          const urgent = allCourses.filter(c => c.days_until_expiry <= 7);
-          if (urgent.length > 0) {
-            combinedMessage += `   ⚠️ ${urgent.length} need immediate attention\n`;
-          }
-          combinedMessage += `\n`;
-        } else {
-          combinedMessage += `🎓 **Courses**: All up to date ✅\n\n`;
-        }
-        
-        // Add authorisation section
-        if (allAuthorisations.length > 0) {
-          combinedMessage += `📜 **Authorisations**: ${allAuthorisations.length} expiring\n`;
-          const urgent = allAuthorisations.filter(a => a.days_until_expiry <= 30);
-          if (urgent.length > 0) {
-            combinedMessage += `   ⚠️ ${urgent.length} need attention this month\n`;
-          }
-          combinedMessage += `\n`;
-        } else {
-          combinedMessage += `📜 **Authorisations**: All current ✅\n\n`;
-        }
-        
-        // Add document section
-        if (allDocuments.length > 0) {
-          combinedMessage += `📄 **Documents**: ${allDocuments.length} expiring\n`;
-          const urgent = allDocuments.filter(d => d.days_until_expiry <= 7);
-          if (urgent.length > 0) {
-            combinedMessage += `   ⚠️ ${urgent.length} need immediate attention\n`;
-          }
-          combinedMessage += `\n`;
-        } else {
-          combinedMessage += `📄 **Documents**: All valid ✅\n\n`;
-        }
-        
-        // Add details section with up to 25 entries each
-        combinedMessage += `---\n\n`;
-        
-        // Add course details (up to 25)
-        if (topCourses.length > 0) {
-          combinedMessage += `**📚 COURSES (Next ${topCourses.length} expiring):**\n`;
-          for (const course of topCourses) {
-            const daysText = course.days_until_expiry < 0 
-              ? `⚠️ ${Math.abs(course.days_until_expiry)}d overdue`
-              : course.days_until_expiry === 0 
-              ? `🔴 Today`
-              : course.days_until_expiry <= 7
-              ? `🟡 ${course.days_until_expiry}d`
-              : course.days_until_expiry <= 30
-              ? `🟠 ${course.days_until_expiry}d`
-              : `${course.days_until_expiry}d`;
-            combinedMessage += `• **${course.user_name}** - ${course.course_title} (${daysText})\n`;
-          }
-          combinedMessage += `\n`;
-        } else {
-          combinedMessage += `**📚 COURSES:** No upcoming expiries\n\n`;
-        }
-        
-        // Add authorisation details (up to 25)
+        // Build authorisation expiry message (matching document format)
         if (topAuthorisations.length > 0) {
-          combinedMessage += `**🛡️ AUTHORISATIONS (Next ${topAuthorisations.length} expiring):**\n`;
+          let authMessage = `📜 **Daily Authorisation Expiry Report**\n`;
+          authMessage += `• Total expiring soon: ${upcomingAuthorisations.length} authorisations\n`;
+          authMessage += `• Summary:\n`;
+          authMessage += `📜 Daily Authorisation Expiry Report (${topAuthorisations.length} items due within 30 days or overdue):\n`;
+          
           for (const auth of topAuthorisations) {
             const daysText = auth.days_until_expiry < 0 
-              ? `⚠️ ${Math.abs(auth.days_until_expiry)}d overdue`
-              : auth.days_until_expiry === 0 
-              ? `🔴 Today`
-              : auth.days_until_expiry <= 7
-              ? `🟡 ${auth.days_until_expiry}d`
-              : auth.days_until_expiry <= 30
-              ? `🟠 ${auth.days_until_expiry}d`
-              : `${auth.days_until_expiry}d`;
-            combinedMessage += `• **${auth.user_name}** - ${auth.authorisation_title} (${daysText})\n`;
+              ? `overdue by ${Math.abs(auth.days_until_expiry)} days`
+              : `${auth.days_until_expiry} days`;
+            authMessage += `• ${auth.authorisation_title} - ${auth.user_name} (${daysText})\n`;
           }
-          combinedMessage += `\n`;
-        } else {
-          combinedMessage += `**🛡️ AUTHORISATIONS:** No upcoming expiries\n\n`;
+          
+          authMessage += `• View full report:\nhttps://training.inflite.nz/app/admin?tab=due-dates-authorisations`;
+          
+          await sendTeamsDMToAppUser(recipient.id, authMessage);
         }
-        
-        // Add document details (up to 25)
+
+        // Build document expiry message (matching existing format)
         if (topDocuments.length > 0) {
-          combinedMessage += `**📄 DOCUMENTS (Next ${topDocuments.length} expiring):**\n`;
+          let docMessage = `📄 **Daily Document Expiry Report**\n`;
+          docMessage += `• Total expiring soon: ${upcomingDocuments.length} documents\n`;
+          docMessage += `• Summary:\n`;
+          docMessage += `📄 Daily Document Expiry Report (${topDocuments.length} items due within 30 days or overdue):\n`;
+          
           for (const doc of topDocuments) {
             const daysText = doc.days_until_expiry < 0 
-              ? `⚠️ ${Math.abs(doc.days_until_expiry)}d overdue`
-              : doc.days_until_expiry === 0 
-              ? `🔴 Today`
-              : doc.days_until_expiry <= 7
-              ? `🟡 ${doc.days_until_expiry}d`
-              : doc.days_until_expiry <= 30
-              ? `🟠 ${doc.days_until_expiry}d`
-              : `${doc.days_until_expiry}d`;
-            combinedMessage += `• **${doc.user_name}** - ${doc.document_title} (${daysText})\n`;
+              ? `overdue by ${Math.abs(doc.days_until_expiry)} days`
+              : `${doc.days_until_expiry} days`;
+            docMessage += `• ${doc.document_title} - ${doc.user_name} (${daysText})\n`;
           }
-        } else {
-          combinedMessage += `**📄 DOCUMENTS:** No upcoming expiries\n`;
+          
+          docMessage += `• View full report:\nhttps://training.inflite.nz/app/admin?tab=due-dates-documents`;
+          
+          await sendTeamsDMToAppUser(recipient.id, docMessage);
         }
-        
-        // Always send the combined message
-        await sendTeamsDMToAppUser(recipient.id, combinedMessage);
         
         results.push({
           userId: recipient.id,
           userName: recipient.full_name || recipient.email,
           status: "success",
-          coursesSent: true,
-          authorisationsSent: true,
-          documentsSent: true,
-          itemsFound: allCourses.length + allAuthorisations.length + allDocuments.length
+          authorisationsSent: topAuthorisations.length > 0,
+          documentsSent: topDocuments.length > 0,
+          itemsFound: upcomingAuthorisations.length + upcomingDocuments.length
         });
       } catch (error) {
         console.error(`Failed to send notifications to user ${recipient.id}:`, error);
@@ -539,10 +279,8 @@ export async function POST(req: NextRequest) {
       timestamp: new Date().toISOString(),
       summary: {
         recipientsNotified: recipientUsers.length,
-        coursesFound: allCourses.length,
-        authorisationsFound: allAuthorisations.length,
-        documentsFound: allDocuments.length,
-        coursesShown: topCourses.length,
+        authorisationsFound: upcomingAuthorisations.length,
+        documentsFound: upcomingDocuments.length,
         authorisationsShown: topAuthorisations.length,
         documentsShown: topDocuments.length
       },
