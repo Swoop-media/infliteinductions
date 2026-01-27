@@ -31,36 +31,44 @@ export async function POST(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Get all admin users
-    const { data: adminRoles, error: adminError } = await supabase
-      .from("user_roles")
-      .select(`
-        user_id,
-        role_id
-      `);
-    
-    // Get role IDs for Admin role
-    const { data: roles } = await supabase
+    // Get Admin and Senior Management role IDs
+    const { data: roles, error: rolesError } = await supabase
       .from("roles")
       .select("id, name")
-      .eq("name", "Admin");
+      .in("name", ["Admin", "Senior Management"]);
     
-    const adminRoleId = roles?.[0]?.id;
-    const adminUserIds = adminRoles?.filter(ur => ur.role_id === adminRoleId).map(ur => ur.user_id) || [];
-    
-    // Get profiles for admin users
-    const { data: adminProfiles } = await supabase
-      .from("profiles")
-      .select("id, full_name, email")
-      .in("id", adminUserIds);
-
-    if (adminError) {
-      console.error("Error fetching admin users:", adminError);
+    if (rolesError || !roles || roles.length === 0) {
+      console.error("Error fetching roles:", rolesError);
       return NextResponse.json({ 
-        error: "Failed to fetch admin users",
-        details: adminError.message 
+        error: "Failed to fetch roles",
+        details: rolesError?.message 
       }, { status: 500 });
     }
+
+    const roleIds = roles.map(r => r.id);
+
+    // Get all users with Admin or Senior Management role
+    const { data: userRoles, error: userRolesError } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .in("role_id", roleIds);
+
+    if (userRolesError) {
+      console.error("Error fetching user roles:", userRolesError);
+      return NextResponse.json({ 
+        error: "Failed to fetch user roles",
+        details: userRolesError.message 
+      }, { status: 500 });
+    }
+    
+    // Deduplicate user IDs (in case someone has both roles)
+    const uniqueUserIds = [...new Set(userRoles?.map(ur => ur.user_id) || [])];
+    
+    // Get profiles for recipient users
+    const { data: recipientProfiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", uniqueUserIds);
 
     // Fetch all completed authorization assignments
     const { data: authAssignments, error: authError } = await supabase
@@ -210,24 +218,24 @@ export async function POST(request: NextRequest) {
 
     let notificationsSent = 0;
 
-    // Send daily reports to each admin
-    for (const admin of adminProfiles || []) {
-      const adminId = admin.id;
-      const adminName = admin.full_name || admin.email;
+    // Send daily reports to each Admin and Senior Management user
+    for (const recipient of recipientProfiles || []) {
+      const recipientId = recipient.id;
+      const recipientName = recipient.full_name || recipient.email;
 
       // Send authorization expiry report
       if (authDetails.length > 0) {
         await notifyUser(
-          adminId,
+          recipientId,
           "daily_auth_expiry_report",
           {
             count: authDetails.length,
             summary: authSummaryLines,
-            adminName: adminName,
+            adminName: recipientName,
             url: `/app/admin?tab=due-dates-authorisations`
           },
           { 
-            eventId: `daily_auth_report_${adminId}_${today.toISOString().split('T')[0]}`,
+            eventId: `daily_auth_report_${recipientId}_${today.toISOString().split('T')[0]}`,
             skipTeams: false 
           }
         );
@@ -237,16 +245,16 @@ export async function POST(request: NextRequest) {
       // Send document expiry report
       if (docDetails.length > 0) {
         await notifyUser(
-          adminId,
+          recipientId,
           "daily_doc_expiry_report",
           {
             count: docDetails.length,
             summary: docSummaryLines,
-            adminName: adminName,
+            adminName: recipientName,
             url: `/app/admin?tab=due-dates-documents`
           },
           { 
-            eventId: `daily_doc_report_${adminId}_${today.toISOString().split('T')[0]}`,
+            eventId: `daily_doc_report_${recipientId}_${today.toISOString().split('T')[0]}`,
             skipTeams: false 
           }
         );
@@ -255,7 +263,7 @@ export async function POST(request: NextRequest) {
     }
 
     const summary = {
-      adminUsers: adminProfiles?.length || 0,
+      recipientUsers: recipientProfiles?.length || 0,
       authorizationExpiries: authDetails.length,
       documentExpiries: docDetails.length,
       notificationsSent,

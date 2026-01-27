@@ -33,63 +33,40 @@ export async function POST(request: NextRequest) {
     const protocol = request.headers.get('x-forwarded-proto') || 'https';
     const baseUrl = `${protocol}://${host}`;
 
-    const results = {};
-    const errors = [];
+    const results: Record<string, any> = {};
+    const errors: string[] = [];
 
-    // Run document expiry notifications
-    try {
-      const docResponse = await fetch(`${baseUrl}/api/notifications/document-expiry`, {
-        method: 'POST',
-        headers: {
-          'authorization': authHeader || '',
-          'Content-Type': 'application/json'
-        }
-      });
-      results.documentExpiry = await docResponse.json();
-    } catch (error: any) {
-      errors.push(`Document expiry: ${error.message}`);
-    }
+    // Run all notification jobs in parallel for speed
+    const jobs = [
+      { name: 'documentExpiry', url: `${baseUrl}/api/notifications/document-expiry` },
+      { name: 'authorizationExpiry', url: `${baseUrl}/api/notifications/authorization-expiry` },
+      { name: 'retakeReminders', url: `${baseUrl}/api/notifications/retake-reminders` },
+      { name: 'dailyAdminReport', url: `${baseUrl}/api/notifications/daily-admin-report` }
+    ];
 
-    // Run authorization expiry notifications
-    try {
-      const authResponse = await fetch(`${baseUrl}/api/notifications/authorization-expiry`, {
-        method: 'POST',
-        headers: {
-          'authorization': authHeader || '',
-          'Content-Type': 'application/json'
-        }
-      });
-      results.authorizationExpiry = await authResponse.json();
-    } catch (error: any) {
-      errors.push(`Authorization expiry: ${error.message}`);
-    }
+    const jobPromises = jobs.map(async (job) => {
+      try {
+        const response = await fetch(job.url, {
+          method: 'POST',
+          headers: {
+            'authorization': authHeader || '',
+            'Content-Type': 'application/json'
+          }
+        });
+        return { name: job.name, result: await response.json(), error: null };
+      } catch (error: any) {
+        return { name: job.name, result: null, error: error.message };
+      }
+    });
 
-    // Run retake reminder notifications
-    try {
-      const retakeResponse = await fetch(`${baseUrl}/api/notifications/retake-reminders`, {
-        method: 'POST',
-        headers: {
-          'authorization': authHeader || '',
-          'Content-Type': 'application/json'
-        }
-      });
-      results.retakeReminders = await retakeResponse.json();
-    } catch (error: any) {
-      errors.push(`Retake reminders: ${error.message}`);
-    }
+    const jobResults = await Promise.all(jobPromises);
 
-    // Run daily admin reports
-    try {
-      const adminResponse = await fetch(`${baseUrl}/api/notifications/daily-admin-report`, {
-        method: 'POST',
-        headers: {
-          'authorization': authHeader || '',
-          'Content-Type': 'application/json'
-        }
-      });
-      results.dailyAdminReport = await adminResponse.json();
-    } catch (error: any) {
-      errors.push(`Daily admin report: ${error.message}`);
+    for (const job of jobResults) {
+      if (job.error) {
+        errors.push(`${job.name}: ${job.error}`);
+      } else {
+        results[job.name] = job.result;
+      }
     }
 
     const summary = {
