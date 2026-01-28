@@ -4,6 +4,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { sendTeamsDMToAppUser } from "@/lib/teams/send";
+import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorizationExpiry";
 
 // Type definitions
 type AuthorisationWithDueDate = {
@@ -46,48 +47,143 @@ function getStatus(daysUntilExpiry: number): string {
   return "✅ Current";
 }
 
-// Fetch authorisation due dates - uses expires_at field directly
+// Fetch authorisation due dates - matches admin page logic exactly
 async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationWithDueDate[]> {
-  const { data, error } = await supabase
+  // Step 1: Get all completed authorisation assignments with approved_at
+  const { data: assignments, error } = await supabase
     .from("authorisation_assignments")
-    .select(`
-      id,
-      user_id,
-      authorisation_id,
-      expires_at,
-      approved_at,
-      profiles!authorisation_assignments_user_id_fkey (
-        id,
-        full_name,
-        email
-      ),
-      authorisations (
-        id,
-        title,
-        valid_for_days
-      )
-    `)
-    .eq("assignment_status", "approved")
-    .not("expires_at", "is", null);
+    .select("id, user_id, authorisation_id, approved_at")
+    .eq("assignment_status", "completed")
+    .not("approved_at", "is", null);
 
-  console.log("Authorisation query result:", { dataCount: data?.length, error });
-  if (error || !data) return [];
+  console.log("Authorisation query result:", { dataCount: assignments?.length, error });
+  if (error || !assignments || assignments.length === 0) return [];
 
+  // Step 2: Get authorisations
+  const authIds = [...new Set(assignments.map((a: any) => a.authorisation_id))];
+  const { data: authorisations } = await supabase
+    .from("authorisations")
+    .select("id, title, valid_for_days, department")
+    .in("id", authIds);
+  const authMap = new Map((authorisations || []).map((a: any) => [a.id, a]));
+
+  // Step 3: Get profiles
+  const userIds = [...new Set(assignments.map((a: any) => a.user_id))];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, full_name, email")
+    .in("id", userIds);
+  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+  // Step 4: Get authorisation courses
+  const { data: authCourses } = await supabase
+    .from("authorisation_courses")
+    .select("authorisation_id, course_id")
+    .in("authorisation_id", authIds);
+  const authCourseMap = new Map<string, string[]>();
+  (authCourses || []).forEach((ac: any) => {
+    const existing = authCourseMap.get(ac.authorisation_id) || [];
+    existing.push(ac.course_id);
+    authCourseMap.set(ac.authorisation_id, existing);
+  });
+
+  const allCourseIds = [...new Set((authCourses || []).map((ac: any) => ac.course_id))];
+
+  // Step 5: Get documents with expiry
+  let documents: any[] = [];
+  if (allCourseIds.length > 0 && userIds.length > 0) {
+    const { data: docs } = await supabase
+      .from("learner_documents")
+      .select("id, user_id, course_id, expires_on")
+      .in("user_id", userIds)
+      .in("course_id", allCourseIds)
+      .not("expires_on", "is", null);
+    documents = docs || [];
+  }
+  const userCourseDocMap = new Map<string, any[]>();
+  documents.forEach((doc: any) => {
+    const key = `${doc.user_id}_${doc.course_id}`;
+    const existing = userCourseDocMap.get(key) || [];
+    existing.push(doc);
+    userCourseDocMap.set(key, existing);
+  });
+
+  // Step 6: Get courses with validity
+  const { data: courses } = await supabase
+    .from("courses")
+    .select("id, valid_for_months")
+    .in("id", allCourseIds.length > 0 ? allCourseIds : ["none"]);
+  const courseValidityMap = new Map<string, number | null>();
+  (courses || []).forEach((c: any) => {
+    courseValidityMap.set(c.id, c.valid_for_months);
+  });
+
+  // Step 7: Get course assignments
+  let courseAssignments: any[] = [];
+  if (allCourseIds.length > 0 && userIds.length > 0) {
+    const { data: ca } = await supabase
+      .from("course_assignments")
+      .select("id, user_id, course_id, completed_at")
+      .in("user_id", userIds)
+      .in("course_id", allCourseIds)
+      .eq("role", "trainee")
+      .not("completed_at", "is", null);
+    courseAssignments = ca || [];
+  }
+  const userCourseAssignmentMap = new Map<string, any>();
+  courseAssignments.forEach((ca: any) => {
+    const key = `${ca.user_id}_${ca.course_id}`;
+    userCourseAssignmentMap.set(key, ca);
+  });
+
+  // Step 8: Calculate expiry for each assignment
   const authorisationsWithDates: AuthorisationWithDueDate[] = [];
   
-  for (const assignment of data) {
-    if (!assignment.expires_at) continue;
+  for (const assignment of assignments) {
+    const auth = authMap.get(assignment.authorisation_id);
+    const profile = profileMap.get(assignment.user_id);
+    const approvedAt = new Date(assignment.approved_at);
+    const validForDays = auth?.valid_for_days ?? null;
+
+    // Get courses linked to this authorization
+    const courseIds = authCourseMap.get(assignment.authorisation_id) || [];
+    const userDocs: any[] = [];
+    const userCourses: any[] = [];
+
+    courseIds.forEach((courseId: string) => {
+      const docKey = `${assignment.user_id}_${courseId}`;
+      const docs = userCourseDocMap.get(docKey) || [];
+      userDocs.push(...docs);
+
+      const validForMonths = courseValidityMap.get(courseId);
+      const courseAssignment = userCourseAssignmentMap.get(docKey);
+      if (validForMonths && courseAssignment?.completed_at) {
+        userCourses.push({
+          valid_for_months: validForMonths,
+          completed_at: courseAssignment.completed_at
+        });
+      }
+    });
+
+    // Calculate expiry using the same function as admin page
+    const expiryDate = calculateAuthorizationExpiry(
+      approvedAt,
+      validForDays,
+      userDocs.map((d: any) => ({ expires_on: d.expires_on })),
+      userCourses
+    );
+
+    if (!expiryDate) continue; // No expiry date = skip
     
-    const expiryDate = new Date(assignment.expires_at);
     const daysUntilExpiry = calculateDaysUntilExpiry(expiryDate);
     
     authorisationsWithDates.push({
       user_id: assignment.user_id,
-      user_name: assignment.profiles?.full_name || assignment.profiles?.email || "Unknown",
-      user_email: assignment.profiles?.email || "",
-      authorisation_title: assignment.authorisations?.title || "Unknown Authorisation",
+      user_name: profile?.full_name || profile?.email || "Unknown",
+      user_email: profile?.email || "",
+      authorisation_title: auth?.title || "Unknown Authorisation",
       completed_at: assignment.approved_at || "",
-      valid_for_days: assignment.authorisations?.valid_for_days || 0,
+      valid_for_days: validForDays || 0,
       due_date: expiryDate,
       days_until_expiry: daysUntilExpiry,
       status: getStatus(daysUntilExpiry)
