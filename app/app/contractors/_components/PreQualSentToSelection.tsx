@@ -6,6 +6,8 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 interface Person {
   id: string;
   full_name: string;
+  site_id: string | null;
+  site_name?: string | null;
 }
 
 interface PreQualSentToSelectionProps {
@@ -15,23 +17,25 @@ interface PreQualSentToSelectionProps {
 }
 
 export default function PreQualSentToSelection({ siteId, onSelect, onBack }: PreQualSentToSelectionProps) {
-  const [people, setPeople] = useState<Person[]>([]);
+  const [sitePeople, setSitePeople] = useState<Person[]>([]);
+  const [searchResults, setSearchResults] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [selectedPerson, setSelectedPerson] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const fetchPeople = async () => {
+    const fetchSitePeople = async () => {
       try {
         const { data, error } = await supabaseBrowser
           .from("profiles" as any)
-          .select("id, full_name")
+          .select("id, full_name, site_id")
           .is("archived_at", null)
           .eq("site_id", siteId)
           .order("full_name", { ascending: true });
 
         if (error) throw error;
-        setPeople(data || []);
+        setSitePeople(data || []);
       } catch (err) {
         console.error("Error fetching people:", err);
       } finally {
@@ -39,14 +43,53 @@ export default function PreQualSentToSelection({ siteId, onSelect, onBack }: Pre
       }
     };
 
-    fetchPeople();
+    fetchSitePeople();
   }, [siteId]);
 
-  const filteredPeople = people.filter(person =>
-    person.full_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  useEffect(() => {
+    const searchPeople = async () => {
+      if (searchQuery.length < 2) {
+        setSearchResults([]);
+        return;
+      }
 
-  const selectedPersonName = people.find(p => p.id === selectedPerson)?.full_name || "";
+      setIsSearching(true);
+      try {
+        const { data: sitesData } = await supabaseBrowser
+          .from("sites" as any)
+          .select("id, name");
+        const siteMap = new Map((sitesData || []).map((s: any) => [s.id, s.name]));
+
+        const { data, error } = await supabaseBrowser
+          .from("profiles" as any)
+          .select("id, full_name, site_id")
+          .is("archived_at", null)
+          .ilike("full_name", `%${searchQuery}%`)
+          .order("full_name", { ascending: true })
+          .limit(50);
+
+        if (error) throw error;
+
+        const formattedData = (data || []).map((p: any) => ({
+          ...p,
+          site_name: p.site_id ? siteMap.get(p.site_id) || null : null,
+        }));
+
+        setSearchResults(formattedData);
+      } catch (err) {
+        console.error("Error searching people:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounce = setTimeout(searchPeople, 300);
+    return () => clearTimeout(debounce);
+  }, [searchQuery]);
+
+  const displayPeople = searchQuery.length >= 2 ? searchResults : sitePeople;
+  const selectedPersonData = [...sitePeople, ...searchResults].find(p => p.id === selectedPerson);
+  const selectedPersonName = selectedPersonData?.full_name || "";
 
   return (
     <div className="space-y-6">
@@ -78,11 +121,20 @@ export default function PreQualSentToSelection({ siteId, onSelect, onBack }: Pre
             type="text"
             placeholder="Search by name..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setSelectedPerson("");
+            }}
             className="w-full max-w-md mx-auto p-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
 
-          {loading ? (
+          {searchQuery.length >= 2 && (
+            <p className="text-sm text-gray-500">
+              Searching all staff members...
+            </p>
+          )}
+
+          {loading || isSearching ? (
             <p className="text-gray-500">Loading...</p>
           ) : (
             <select
@@ -91,12 +143,20 @@ export default function PreQualSentToSelection({ siteId, onSelect, onBack }: Pre
               className="w-full max-w-md mx-auto p-4 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Select a person...</option>
-              {filteredPeople.map((person) => (
+              {displayPeople.map((person) => (
                 <option key={person.id} value={person.id}>
-                  {person.full_name}
+                  {person.full_name}{person.site_name ? ` (${person.site_name})` : ""}
                 </option>
               ))}
             </select>
+          )}
+
+          {displayPeople.length === 0 && !loading && !isSearching && (
+            <p className="text-gray-500 text-sm">
+              {searchQuery.length >= 2 
+                ? "No results found. Try a different search." 
+                : "No staff members at this site. Use search to find someone."}
+            </p>
           )}
 
           <button
