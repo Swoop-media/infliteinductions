@@ -16,6 +16,8 @@ interface Person {
   id: string;
   full_name: string;
   department: string | null;
+  department_id: string | null;
+  is_site_user?: boolean;
 }
 
 interface VisitorFormProps {
@@ -27,9 +29,13 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
-  const [people, setPeople] = useState<Person[]>([]);
+  const [sitePeople, setSitePeople] = useState<Person[]>([]);
+  const [searchResults, setSearchResults] = useState<Person[]>([]);
   const [loadingSites, setLoadingSites] = useState(true);
   const [loadingPeople, setLoadingPeople] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [siteDepartmentIds, setSiteDepartmentIds] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -60,22 +66,48 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
   }, []);
 
   useEffect(() => {
-    const fetchPeople = async () => {
+    const fetchSitePeople = async () => {
       if (!formData.site_id) {
-        setPeople([]);
+        setSitePeople([]);
+        setSiteDepartmentIds([]);
         return;
       }
 
       setLoadingPeople(true);
       try {
-        const { data, error } = await supabaseBrowser
-          .from("profiles" as any)
-          .select("id, full_name, department")
-          .is("archived_at", null)
-          .order("full_name", { ascending: true });
+        const { data: siteDepts, error: deptError } = await supabaseBrowser
+          .from("site_departments" as any)
+          .select("department_id")
+          .eq("site_id", formData.site_id);
 
-        if (error) throw error;
-        setPeople(data || []);
+        if (deptError) {
+          console.error("Error fetching site departments:", deptError);
+          const { data: allUsers, error: usersError } = await supabaseBrowser
+            .from("profiles" as any)
+            .select("id, full_name, department, department_id")
+            .is("archived_at", null)
+            .order("full_name", { ascending: true });
+
+          if (usersError) throw usersError;
+          setSitePeople((allUsers || []).map((u: Person) => ({ ...u, is_site_user: true })));
+        } else {
+          const deptIds = (siteDepts || []).map((d: any) => d.department_id);
+          setSiteDepartmentIds(deptIds);
+
+          if (deptIds.length > 0) {
+            const { data: users, error: usersError } = await supabaseBrowser
+              .from("profiles" as any)
+              .select("id, full_name, department, department_id")
+              .is("archived_at", null)
+              .in("department_id", deptIds)
+              .order("full_name", { ascending: true });
+
+            if (usersError) throw usersError;
+            setSitePeople((users || []).map((u: Person) => ({ ...u, is_site_user: true })));
+          } else {
+            setSitePeople([]);
+          }
+        }
       } catch (err) {
         console.error("Error fetching people:", err);
       } finally {
@@ -83,8 +115,46 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
       }
     };
 
-    fetchPeople();
+    fetchSitePeople();
+    setSearchQuery("");
+    setSearchResults([]);
+    setFormData(prev => ({ ...prev, visiting_user_id: "" }));
   }, [formData.site_id]);
+
+  useEffect(() => {
+    const searchPeople = async () => {
+      if (searchQuery.length < 2) {
+        setSearchResults([]);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const { data, error } = await supabaseBrowser
+          .from("profiles" as any)
+          .select("id, full_name, department, department_id")
+          .is("archived_at", null)
+          .ilike("full_name", `%${searchQuery}%`)
+          .order("full_name", { ascending: true })
+          .limit(20);
+
+        if (error) throw error;
+        
+        const siteUserIds = sitePeople.map(p => p.id);
+        const otherUsers = (data || []).filter((u: Person) => !siteUserIds.includes(u.id));
+        setSearchResults(otherUsers);
+      } catch (err) {
+        console.error("Error searching people:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    };
+
+    const debounce = setTimeout(searchPeople, 300);
+    return () => clearTimeout(debounce);
+  }, [searchQuery, sitePeople]);
+
+  const allPeople = [...sitePeople, ...searchResults];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,6 +252,14 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="visiting">Who are you visiting?</Label>
+              <Input
+                type="text"
+                placeholder={!formData.site_id ? "Select a base first" : "Search by name..."}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                disabled={!formData.site_id}
+                className="mb-2"
+              />
               <select
                 id="visiting"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -193,16 +271,32 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
                 <option value="">
                   {!formData.site_id 
                     ? "Select a base first" 
-                    : loadingPeople 
+                    : loadingPeople || isSearching
                       ? "Loading..." 
                       : "Select a person"}
                 </option>
-                {people.map((person) => (
-                  <option key={person.id} value={person.id}>
-                    {person.full_name}{person.department ? ` (${person.department})` : ""}
-                  </option>
-                ))}
+                {sitePeople.length > 0 && (
+                  <optgroup label="People at this base">
+                    {sitePeople.map((person) => (
+                      <option key={person.id} value={person.id}>
+                        {person.full_name}{person.department ? ` (${person.department})` : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {searchResults.length > 0 && (
+                  <optgroup label="Other people (search results)">
+                    {searchResults.map((person) => (
+                      <option key={person.id} value={person.id}>
+                        {person.full_name}{person.department ? ` (${person.department})` : ""}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
+              {formData.site_id && sitePeople.length === 0 && !loadingPeople && searchQuery.length < 2 && (
+                <p className="text-sm text-gray-500">No departments linked to this base. Use search to find people.</p>
+              )}
             </div>
 
             {error && (
