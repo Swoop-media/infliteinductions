@@ -8,9 +8,10 @@ import StaffPortal from "./StaffPortal";
 import SignOutForm from "./SignOutForm";
 import PreQualificationCheck from "./PreQualificationCheck";
 import SiteSelection from "./SiteSelection";
+import PreQualSentToSelection from "./PreQualSentToSelection";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
-type ContractorStep = "site" | "prequalification" | "training";
+type ContractorStep = "site" | "prequalification" | "sentto" | "training";
 
 interface ContractorVisitorFlowProps {
   courses: any[];
@@ -28,11 +29,15 @@ export default function ContractorVisitorFlow({
   const [userType, setUserType] = useState<SelectionType | null>(null);
   const [contractorStep, setContractorStep] = useState<ContractorStep>("site");
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [sentToPersonId, setSentToPersonId] = useState<string | null>(null);
+  const [sentToPersonName, setSentToPersonName] = useState<string | null>(null);
 
   const resetFlow = () => {
     setUserType(null);
     setContractorStep("site");
     setSelectedSiteId(null);
+    setSentToPersonId(null);
+    setSentToPersonName(null);
   };
 
   if (!userType) {
@@ -67,12 +72,26 @@ export default function ContractorVisitorFlow({
     if (contractorStep === "prequalification") {
       return (
         <PreQualificationCheck
-          onYes={() => setContractorStep("training")}
+          onYes={() => setContractorStep("sentto")}
           onNo={() => {
             alert("Please complete your pre-qualification before proceeding.");
             resetFlow();
           }}
           onBack={() => setContractorStep("site")}
+        />
+      );
+    }
+
+    if (contractorStep === "sentto" && selectedSiteId) {
+      return (
+        <PreQualSentToSelection
+          siteId={selectedSiteId}
+          onSelect={(personId, personName) => {
+            setSentToPersonId(personId);
+            setSentToPersonName(personName);
+            setContractorStep("training");
+          }}
+          onBack={() => setContractorStep("prequalification")}
         />
       );
     }
