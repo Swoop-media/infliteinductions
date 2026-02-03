@@ -163,15 +163,16 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
     id: string,
     type: "visitor" | "contractor"
   ) => {
-    const table =
-      type === "visitor" ? "visitor_signins" : "contractor_signins";
-    const { error } = await supabaseBrowser
-      .from(table as any)
-      .update({ signed_out_at: new Date().toISOString() } as any)
-      .eq("id", id);
-
-    if (!error) {
+    try {
+      const table = type === "visitor" ? "visitor_signins" : "contractor_signins";
+      const updateData = { signed_out_at: new Date().toISOString() };
+      await (supabaseBrowser as any)
+        .from(table)
+        .update(updateData)
+        .eq("id", id);
       loadData();
+    } catch (err) {
+      console.error("Error signing out:", err);
     }
   };
 
