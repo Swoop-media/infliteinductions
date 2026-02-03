@@ -16,7 +16,6 @@ interface Person {
   id: string;
   full_name: string;
   department: string | null;
-  department_id: string | null;
 }
 
 interface VisitorFormProps {
@@ -34,6 +33,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
   const [loadingPeople, setLoadingPeople] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedDepartmentName, setSelectedDepartmentName] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -64,7 +64,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
 
   useEffect(() => {
     const fetchDepartmentPeople = async () => {
-      if (!formData.department_id) {
+      if (!selectedDepartmentName) {
         setDepartmentPeople([]);
         return;
       }
@@ -73,9 +73,9 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
       try {
         const { data: users, error: usersError } = await supabaseBrowser
           .from("profiles" as any)
-          .select("id, full_name, department, department_id")
+          .select("id, full_name, department")
           .is("archived_at", null)
-          .eq("department_id", formData.department_id)
+          .eq("department", selectedDepartmentName)
           .order("full_name", { ascending: true });
 
         if (usersError) throw usersError;
@@ -91,7 +91,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
     setSearchQuery("");
     setSearchResults([]);
     setFormData(prev => ({ ...prev, visiting_user_id: "" }));
-  }, [formData.department_id]);
+  }, [selectedDepartmentName]);
 
   useEffect(() => {
     const searchPeople = async () => {
@@ -104,7 +104,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
       try {
         const { data, error } = await supabaseBrowser
           .from("profiles" as any)
-          .select("id, full_name, department, department_id")
+          .select("id, full_name, department")
           .is("archived_at", null)
           .ilike("full_name", `%${searchQuery}%`)
           .order("full_name", { ascending: true })
@@ -125,6 +125,12 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
     const debounce = setTimeout(searchPeople, 300);
     return () => clearTimeout(debounce);
   }, [searchQuery, departmentPeople]);
+
+  const handleDepartmentChange = (departmentId: string) => {
+    const dept = departments.find(d => d.id === departmentId);
+    setSelectedDepartmentName(dept?.name || "");
+    setFormData({ ...formData, department_id: departmentId });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -172,7 +178,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
                 id="department"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={formData.department_id}
-                onChange={(e) => setFormData({ ...formData, department_id: e.target.value })}
+                onChange={(e) => handleDepartmentChange(e.target.value)}
                 required
               >
                 <option value="">{loadingDepartments ? "Loading..." : "Select a department"}</option>
