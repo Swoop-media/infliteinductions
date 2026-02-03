@@ -105,12 +105,16 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
         const { data, error } = await supabaseBrowser
           .from("profiles" as any)
           .select("id, full_name, department")
-          .is("archived_at", null)
           .ilike("full_name", `%${searchQuery}%`)
           .order("full_name", { ascending: true })
-          .limit(20);
+          .limit(50);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Search error:", error);
+          throw error;
+        }
+        
+        console.log("Search results for", searchQuery, ":", data?.length || 0, "users found");
         
         const deptUserIds = departmentPeople.map(p => p.id);
         const otherUsers = (data || []).filter((u: Person) => !deptUserIds.includes(u.id));
