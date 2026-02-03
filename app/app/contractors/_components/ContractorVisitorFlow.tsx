@@ -9,9 +9,10 @@ import SignOutForm from "./SignOutForm";
 import PreQualificationCheck from "./PreQualificationCheck";
 import SiteSelection from "./SiteSelection";
 import PreQualSentToSelection from "./PreQualSentToSelection";
+import AirsideCheck from "./AirsideCheck";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
-type ContractorStep = "site" | "prequalification" | "sentto" | "training";
+type ContractorStep = "site" | "prequalification" | "sentto" | "airside" | "training";
 
 interface ContractorVisitorFlowProps {
   courses: any[];
@@ -31,6 +32,9 @@ export default function ContractorVisitorFlow({
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
   const [sentToPersonId, setSentToPersonId] = useState<string | null>(null);
   const [sentToPersonName, setSentToPersonName] = useState<string | null>(null);
+  const [workingAirside, setWorkingAirside] = useState<boolean | null>(null);
+
+  const selectedSiteName = sites.find((s: any) => s.id === selectedSiteId)?.name || "";
 
   const resetFlow = () => {
     setUserType(null);
@@ -38,6 +42,23 @@ export default function ContractorVisitorFlow({
     setSelectedSiteId(null);
     setSentToPersonId(null);
     setSentToPersonName(null);
+    setWorkingAirside(null);
+  };
+
+  const notifyStaffOfArrival = async (personId: string, personName: string) => {
+    try {
+      await fetch("/api/notify/contractor-arrival", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          staffId: personId,
+          contractorName: "Contractor",
+          siteName: selectedSiteName,
+        }),
+      });
+    } catch (err) {
+      console.error("Failed to notify staff:", err);
+    }
   };
 
   if (!userType) {
@@ -89,9 +110,26 @@ export default function ContractorVisitorFlow({
           onSelect={(personId, personName) => {
             setSentToPersonId(personId);
             setSentToPersonName(personName);
-            setContractorStep("training");
+            notifyStaffOfArrival(personId, personName);
+            setContractorStep("airside");
           }}
           onBack={() => setContractorStep("prequalification")}
+        />
+      );
+    }
+
+    if (contractorStep === "airside") {
+      return (
+        <AirsideCheck
+          onYes={() => {
+            setWorkingAirside(true);
+            setContractorStep("training");
+          }}
+          onNo={() => {
+            setWorkingAirside(false);
+            setContractorStep("training");
+          }}
+          onBack={() => setContractorStep("sentto")}
         />
       );
     }
