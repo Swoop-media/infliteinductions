@@ -21,8 +21,9 @@ export default function PreQualSentToSelection({ siteId, onSelect, onBack }: Pre
   const [searchResults, setSearchResults] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedPerson, setSelectedPerson] = useState<string>("");
+  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     const fetchSitePeople = async () => {
@@ -87,9 +88,13 @@ export default function PreQualSentToSelection({ siteId, onSelect, onBack }: Pre
     return () => clearTimeout(debounce);
   }, [searchQuery]);
 
+  const handleSelectPerson = (person: Person) => {
+    setSelectedPerson(person);
+    setSearchQuery(person.full_name);
+    setShowDropdown(false);
+  };
+
   const displayPeople = searchQuery.length >= 2 ? searchResults : sitePeople;
-  const selectedPersonData = [...sitePeople, ...searchResults].find(p => p.id === selectedPerson);
-  const selectedPersonName = selectedPersonData?.full_name || "";
 
   return (
     <div className="space-y-6">
@@ -117,50 +122,72 @@ export default function PreQualSentToSelection({ siteId, onSelect, onBack }: Pre
         </p>
 
         <div className="space-y-4">
-          <input
-            type="text"
-            placeholder="Search by name..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setSelectedPerson("");
-            }}
-            className="w-full max-w-md mx-auto p-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+          <div className="relative max-w-md mx-auto">
+            <input
+              type="text"
+              placeholder="Type to search for a person..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setSelectedPerson(null);
+                setShowDropdown(true);
+              }}
+              onFocus={() => setShowDropdown(true)}
+              className="w-full p-3 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
 
-          {searchQuery.length >= 2 && (
-            <p className="text-sm text-gray-500">
-              Searching all staff members...
-            </p>
-          )}
+            {selectedPerson && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md text-sm text-green-800">
+                Selected: {selectedPerson.full_name}
+                {selectedPerson.site_name ? ` (${selectedPerson.site_name})` : ""}
+              </div>
+            )}
 
-          {loading || isSearching ? (
-            <p className="text-gray-500">Loading...</p>
-          ) : (
-            <select
-              value={selectedPerson}
-              onChange={(e) => setSelectedPerson(e.target.value)}
-              className="w-full max-w-md mx-auto p-4 text-lg border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">Select a person...</option>
-              {displayPeople.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.full_name}{person.site_name ? ` (${person.site_name})` : ""}
-                </option>
-              ))}
-            </select>
-          )}
-
-          {displayPeople.length === 0 && !loading && !isSearching && (
-            <p className="text-gray-500 text-sm">
-              {searchQuery.length >= 2 
-                ? "No results found. Try a different search." 
-                : "No staff members at this site. Use search to find someone."}
-            </p>
-          )}
+            {showDropdown && !selectedPerson && (searchQuery.length >= 2 || sitePeople.length > 0) && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                {loading || isSearching ? (
+                  <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+                ) : searchQuery.length >= 2 ? (
+                  searchResults.length > 0 ? (
+                    <>
+                      <div className="px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-50">Search results</div>
+                      {searchResults.map((person) => (
+                        <button
+                          key={person.id}
+                          type="button"
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                          onClick={() => handleSelectPerson(person)}
+                        >
+                          {person.full_name}{person.site_name ? ` (${person.site_name})` : ""}
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <div className="px-3 py-2 text-sm text-gray-500">No results found</div>
+                  )
+                ) : sitePeople.length > 0 ? (
+                  <>
+                    <div className="px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-50">People at this site</div>
+                    {sitePeople.map((person) => (
+                      <button
+                        key={person.id}
+                        type="button"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                        onClick={() => handleSelectPerson(person)}
+                      >
+                        {person.full_name}
+                      </button>
+                    ))}
+                  </>
+                ) : (
+                  <div className="px-3 py-2 text-sm text-gray-500">No people at this site. Start typing to search all staff.</div>
+                )}
+              </div>
+            )}
+          </div>
 
           <button
-            onClick={() => selectedPerson && onSelect(selectedPerson, selectedPersonName)}
+            onClick={() => selectedPerson && onSelect(selectedPerson.id, selectedPerson.full_name)}
             disabled={!selectedPerson}
             className="px-8 py-4 bg-blue-600 text-white rounded-lg text-lg font-medium hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
