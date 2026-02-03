@@ -149,6 +149,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
 
     try {
       const supabase = supabaseBrowser;
+      const signedInAt = new Date().toISOString();
       
       const { error: insertError } = await supabase
         .from("visitor_signins" as any)
@@ -158,11 +159,32 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
           email: formData.email,
           site_id: formData.site_id,
           visiting_user_id: formData.visiting_user_id,
-          signed_in_at: new Date().toISOString(),
+          signed_in_at: signedInAt,
         } as any);
 
       if (insertError) {
         throw insertError;
+      }
+
+      // Send Teams notification to the person being visited
+      if (formData.visiting_user_id) {
+        const selectedSite = sites.find(s => s.id === formData.site_id);
+        try {
+          await fetch("/api/notify/visitor-signin", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              visitorName: formData.name,
+              visitorEmail: formData.email,
+              visitorPhone: formData.phone,
+              visitingUserId: formData.visiting_user_id,
+              siteName: selectedSite?.name || null,
+              signedInAt,
+            }),
+          });
+        } catch (notifyErr) {
+          console.error("Failed to send Teams notification:", notifyErr);
+        }
       }
 
       onSuccess();
