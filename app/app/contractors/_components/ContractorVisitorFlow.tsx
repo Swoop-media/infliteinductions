@@ -5,6 +5,7 @@ import TypeSelection from "./TypeSelection";
 import ContractorTabs from "./ContractorTabs";
 import VisitorForm from "./VisitorForm";
 import StaffPortal from "./StaffPortal";
+import SignOutForm from "./SignOutForm";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
 
@@ -98,9 +99,13 @@ export default function ContractorVisitorFlow({
           </p>
         </div>
 
-        <div className="bg-gray-50 rounded-lg p-8 text-center">
-          <p className="text-gray-500">Sign out flow coming soon...</p>
-        </div>
+        <SignOutForm
+          onBack={() => setUserType(null)}
+          onSuccess={() => {
+            alert("You have been signed out successfully!");
+            setUserType(null);
+          }}
+        />
       </div>
     );
   }
