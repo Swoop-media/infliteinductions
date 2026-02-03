@@ -3,7 +3,7 @@
 // app/app/admin/users/update/route.ts
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
-import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { syncUserToSafeflite } from "@/lib/webhooks/safeflite-sync";
 
@@ -18,7 +18,7 @@ export async function POST(req: Request) {
   const isAdmin = await hasRole("Admin");
   if (!isAdmin) return NextResponse.redirect(await makeURL("/app/home"));
 
-  const supabase = await createSupabaseServer();
+  const supabase = supabaseAdmin();
   const form = await req.formData();
 
   const user_id = String(form.get("user_id") || "").trim();

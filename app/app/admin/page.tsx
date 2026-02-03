@@ -325,7 +325,7 @@ async function loadInProgressCourses(q: string | null) {
 /* --------------------------
    USERS + ROLES
 ---------------------------*/
-type Profile = { id: string; full_name: string | null; email: string | null; department?: string | null; job_description?: string | null };
+type Profile = { id: string; full_name: string | null; email: string | null; site_id?: string | null; site_name?: string | null; job_description?: string | null };
 type RoleCatalogItem = { id: string; name: string; description?: string | null };
 
 async function loadRoleCatalog() {
@@ -344,9 +344,10 @@ async function loadRoleCatalog() {
 async function loadUsersAndRoles(q: string | null, page: number = 1) {
   "use server";
   noStore();
-  const supabase = await createSupabaseServer();
   const isAdmin = await hasRole("Admin");
   if (!isAdmin) redirect("/app/home?banner=no_access");
+  
+  const supabase = supabaseAdmin();
 
   const PAGE_SIZE = 50;
   const offset = (page - 1) * PAGE_SIZE;
@@ -364,28 +365,40 @@ async function loadUsersAndRoles(q: string | null, page: number = 1) {
 
   const { count: totalCount } = await countQuery;
 
+  // Get all sites for lookup
+  const { data: allSites } = await supabase
+    .from("sites")
+    .select("id, name");
+  const siteMap = new Map((allSites || []).map(s => [s.id, s.name]));
+
   // Profiles (exclude archived users) with pagination
   let profs: Profile[] = [];
   if (q && q.trim()) {
     const like = `%${q.trim()}%`;
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, email, department, job_description")
+      .select("id, full_name, email, site_id, job_description")
       .or(`full_name.ilike.${like},email.ilike.${like}`)
       .is("archived_at", null)
       .order("full_name", { ascending: true })
       .range(offset, offset + PAGE_SIZE - 1);
     if (error) throw new Error(error.message);
-    profs = (data ?? []) as Profile[];
+    profs = (data ?? []).map((p: any) => ({
+      ...p,
+      site_name: p.site_id ? siteMap.get(p.site_id) || null : null
+    })) as Profile[];
   } else {
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, full_name, email, department, job_description")
+      .select("id, full_name, email, site_id, job_description")
       .is("archived_at", null)
       .order("created_at", { ascending: false })
       .range(offset, offset + PAGE_SIZE - 1);
     if (error) throw new Error(error.message);
-    profs = (data ?? []) as Profile[];
+    profs = (data ?? []).map((p: any) => ({
+      ...p,
+      site_name: p.site_id ? siteMap.get(p.site_id) || null : null
+    })) as Profile[];
   }
 
   // Role catalog + user_roles

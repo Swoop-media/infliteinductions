@@ -103,9 +103,15 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
 
       setIsSearching(true);
       try {
+        // Fetch sites first for lookup
+        const { data: sitesData } = await supabaseBrowser
+          .from("sites" as any)
+          .select("id, name");
+        const siteMap = new Map((sitesData || []).map((s: any) => [s.id, s.name]));
+        
         const { data, error } = await supabaseBrowser
           .from("profiles" as any)
-          .select("id, full_name, site_id, sites!profiles_site_id_fkey(name)")
+          .select("id, full_name, site_id")
           .ilike("full_name", `%${searchQuery}%`)
           .order("full_name", { ascending: true })
           .limit(50);
@@ -117,7 +123,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
         
         const formattedData = (data || []).map((p: any) => ({
           ...p,
-          site_name: p.sites?.name || null
+          site_name: p.site_id ? siteMap.get(p.site_id) || null : null
         }));
         
         setSearchResults(formattedData);

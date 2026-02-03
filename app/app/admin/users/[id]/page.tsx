@@ -365,7 +365,8 @@ export default async function EditUserPage({
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
 
-  const supabase = await createSupabaseServer();
+  const { supabaseAdmin } = await import("@/lib/supabase/admin");
+  const supabase = supabaseAdmin();
   const { data: profile } = await supabase
     .from("profiles")
     .select("id, full_name, email, site_id, job_description")

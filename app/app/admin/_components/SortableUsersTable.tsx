@@ -10,11 +10,12 @@ type Profile = {
   id: string;
   full_name: string | null;
   email: string | null;
-  department?: string | null;
+  site_id?: string | null;
+  site_name?: string | null;
   job_description?: string | null;
 };
 
-type SortField = 'name' | 'email' | 'department';
+type SortField = 'name' | 'email' | 'site';
 type SortDirection = 'asc' | 'desc';
 
 interface Props {
@@ -62,9 +63,9 @@ export default function SortableUsersTable({ profiles, roleMap, grantablePool }:
           aValue = a.email || '';
           bValue = b.email || '';
           break;
-        case 'department':
-          aValue = a.department || '';
-          bValue = b.department || '';
+        case 'site':
+          aValue = a.site_name || '';
+          bValue = b.site_name || '';
           break;
         default:
           return 0;
@@ -125,11 +126,11 @@ export default function SortableUsersTable({ profiles, roleMap, grantablePool }:
             </th>
             <th
               className="px-3 py-2 text-left font-medium cursor-pointer hover:bg-gray-100"
-              onClick={() => handleSort('department')}
+              onClick={() => handleSort('site')}
             >
               <div className="flex items-center justify-between">
-                Department
-                {getSortIcon('department', sortField, sortDirection)}
+                Site
+                {getSortIcon('site', sortField, sortDirection)}
               </div>
             </th>
             <th className="px-3 py-2 text-left font-medium">
@@ -157,7 +158,7 @@ export default function SortableUsersTable({ profiles, roleMap, grantablePool }:
                   {p.email ?? "-"}
                 </td>
                 <td className="px-3 py-2 text-gray-600">
-                  {p.department ?? "-"}
+                  {p.site_name ?? "-"}
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap gap-1">
