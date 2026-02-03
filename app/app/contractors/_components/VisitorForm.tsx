@@ -229,54 +229,76 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="visiting">Who are you visiting?</Label>
-              <Input
-                type="text"
-                placeholder={!formData.department_id ? "Select a department first" : "Search by name..."}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                disabled={!formData.department_id}
-                className="mb-2"
-              />
-              <select
-                id="visiting"
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={formData.visiting_user_id}
-                onChange={(e) => setFormData({ ...formData, visiting_user_id: e.target.value })}
-                required
-                disabled={!formData.department_id}
-              >
-                <option value="">
-                  {!formData.department_id 
-                    ? "Select a department first" 
-                    : loadingPeople || isSearching
-                      ? "Loading..." 
-                      : "Select a person"}
-                </option>
-                {searchQuery.length >= 2 ? (
-                  searchResults.length > 0 ? (
-                    <optgroup label="Search results">
-                      {searchResults.map((person) => (
-                        <option key={person.id} value={person.id}>
-                          {person.full_name}{person.department ? ` (${person.department})` : ""}
-                        </option>
-                      ))}
-                    </optgroup>
-                  ) : null
-                ) : (
-                  departmentPeople.length > 0 && (
-                    <optgroup label="People in this department">
-                      {departmentPeople.map((person) => (
-                        <option key={person.id} value={person.id}>
-                          {person.full_name}
-                        </option>
-                      ))}
-                    </optgroup>
-                  )
+              <div className="relative">
+                <Input
+                  type="text"
+                  placeholder={!formData.department_id ? "Select a department first" : "Type to search for a person..."}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    if (e.target.value.length < 2) {
+                      setFormData({ ...formData, visiting_user_id: "" });
+                    }
+                  }}
+                  disabled={!formData.department_id}
+                />
+                {formData.visiting_user_id && (
+                  <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md text-sm text-green-800">
+                    Selected: {searchResults.find(p => p.id === formData.visiting_user_id)?.full_name || 
+                              departmentPeople.find(p => p.id === formData.visiting_user_id)?.full_name || 
+                              "Unknown"}
+                  </div>
                 )}
-              </select>
-              {formData.department_id && departmentPeople.length === 0 && !loadingPeople && searchQuery.length < 2 && (
-                <p className="text-sm text-gray-500">No people in this department. Use search to find people.</p>
+                {formData.department_id && (searchQuery.length >= 2 || departmentPeople.length > 0) && !formData.visiting_user_id && (
+                  <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                    {isSearching || loadingPeople ? (
+                      <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
+                    ) : searchQuery.length >= 2 ? (
+                      searchResults.length > 0 ? (
+                        <>
+                          <div className="px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-50">Search results</div>
+                          {searchResults.map((person) => (
+                            <button
+                              key={person.id}
+                              type="button"
+                              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              onClick={() => {
+                                setFormData({ ...formData, visiting_user_id: person.id });
+                                setSearchQuery(person.full_name);
+                              }}
+                            >
+                              {person.full_name}{person.department ? ` (${person.department})` : ""}
+                            </button>
+                          ))}
+                        </>
+                      ) : (
+                        <div className="px-3 py-2 text-sm text-gray-500">No results found</div>
+                      )
+                    ) : departmentPeople.length > 0 ? (
+                      <>
+                        <div className="px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-50">People in this department</div>
+                        {departmentPeople.map((person) => (
+                          <button
+                            key={person.id}
+                            type="button"
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                            onClick={() => {
+                              setFormData({ ...formData, visiting_user_id: person.id });
+                              setSearchQuery(person.full_name);
+                            }}
+                          >
+                            {person.full_name}
+                          </button>
+                        ))}
+                      </>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+              {formData.department_id && departmentPeople.length === 0 && !loadingPeople && searchQuery.length < 2 && !formData.visiting_user_id && (
+                <p className="text-sm text-gray-500">Type at least 2 characters to search for people.</p>
               )}
+              <input type="hidden" name="visiting_user_id" value={formData.visiting_user_id} required />
             </div>
 
             {error && (
