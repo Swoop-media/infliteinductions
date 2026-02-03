@@ -1,11 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabaseBrowser } from "@/lib/supabase/client";
+
+interface Site {
+  id: string;
+  name: string;
+}
 
 interface VisitorFormProps {
   onBack: () => void;
@@ -15,11 +21,35 @@ interface VisitorFormProps {
 export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [loadingSites, setLoadingSites] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
     email: "",
+    site_id: "",
   });
+
+  useEffect(() => {
+    const fetchSites = async () => {
+      try {
+        const { data, error } = await supabaseBrowser
+          .from("public_sites" as any)
+          .select("id, name")
+          .eq("active", true)
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+        setSites(data || []);
+      } catch (err) {
+        console.error("Error fetching sites:", err);
+      } finally {
+        setLoadingSites(false);
+      }
+    };
+
+    fetchSites();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +65,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
           name: formData.name,
           phone: formData.phone,
           email: formData.email,
+          site_id: formData.site_id,
           signed_in_at: new Date().toISOString(),
         } as any);
 
@@ -59,6 +90,26 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="site">Base</Label>
+              <Select
+                value={formData.site_id}
+                onValueChange={(value) => setFormData({ ...formData, site_id: value })}
+                required
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingSites ? "Loading..." : "Select a base"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {sites.map((site) => (
+                    <SelectItem key={site.id} value={site.id}>
+                      {site.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
               <Input
