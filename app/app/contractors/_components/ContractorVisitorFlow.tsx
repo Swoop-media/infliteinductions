@@ -4,6 +4,7 @@ import { useState } from "react";
 import TypeSelection from "./TypeSelection";
 import ContractorTabs from "./ContractorTabs";
 import VisitorForm from "./VisitorForm";
+import StaffPortal from "./StaffPortal";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
 
@@ -117,9 +118,7 @@ export default function ContractorVisitorFlow({
           </p>
         </div>
 
-        <div className="bg-gray-50 rounded-lg p-8 text-center">
-          <p className="text-gray-500">Staff portal coming soon...</p>
-        </div>
+        <StaffPortal sites={sites} />
       </div>
     );
   }
