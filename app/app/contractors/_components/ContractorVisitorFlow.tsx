@@ -7,9 +7,10 @@ import VisitorForm from "./VisitorForm";
 import StaffPortal from "./StaffPortal";
 import SignOutForm from "./SignOutForm";
 import PreQualificationCheck from "./PreQualificationCheck";
+import SiteSelection from "./SiteSelection";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
-type ContractorStep = "prequalification" | "training";
+type ContractorStep = "site" | "prequalification" | "training";
 
 interface ContractorVisitorFlowProps {
   courses: any[];
@@ -25,11 +26,13 @@ export default function ContractorVisitorFlow({
   initialTab 
 }: ContractorVisitorFlowProps) {
   const [userType, setUserType] = useState<SelectionType | null>(null);
-  const [contractorStep, setContractorStep] = useState<ContractorStep>("prequalification");
+  const [contractorStep, setContractorStep] = useState<ContractorStep>("site");
+  const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
 
   const resetFlow = () => {
     setUserType(null);
-    setContractorStep("prequalification");
+    setContractorStep("site");
+    setSelectedSiteId(null);
   };
 
   if (!userType) {
@@ -48,6 +51,19 @@ export default function ContractorVisitorFlow({
   );
 
   if (userType === "contractor") {
+    if (contractorStep === "site") {
+      return (
+        <SiteSelection
+          sites={sites}
+          onSelect={(siteId) => {
+            setSelectedSiteId(siteId);
+            setContractorStep("prequalification");
+          }}
+          onBack={resetFlow}
+        />
+      );
+    }
+
     if (contractorStep === "prequalification") {
       return (
         <PreQualificationCheck
@@ -56,7 +72,7 @@ export default function ContractorVisitorFlow({
             alert("Please complete your pre-qualification before proceeding.");
             resetFlow();
           }}
-          onBack={resetFlow}
+          onBack={() => setContractorStep("site")}
         />
       );
     }
