@@ -12,6 +12,12 @@ interface Site {
   name: string;
 }
 
+interface Person {
+  id: string;
+  full_name: string;
+  department: string | null;
+}
+
 interface VisitorFormProps {
   onBack: () => void;
   onSuccess: () => void;
@@ -21,12 +27,15 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
   const [loadingSites, setLoadingSites] = useState(true);
+  const [loadingPeople, setLoadingPeople] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
     email: "",
     site_id: "",
+    visiting_user_id: "",
   });
 
   useEffect(() => {
@@ -50,6 +59,33 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
     fetchSites();
   }, []);
 
+  useEffect(() => {
+    const fetchPeople = async () => {
+      if (!formData.site_id) {
+        setPeople([]);
+        return;
+      }
+
+      setLoadingPeople(true);
+      try {
+        const { data, error } = await supabaseBrowser
+          .from("profiles" as any)
+          .select("id, full_name, department")
+          .is("archived_at", null)
+          .order("full_name", { ascending: true });
+
+        if (error) throw error;
+        setPeople(data || []);
+      } catch (err) {
+        console.error("Error fetching people:", err);
+      } finally {
+        setLoadingPeople(false);
+      }
+    };
+
+    fetchPeople();
+  }, [formData.site_id]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -65,6 +101,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
           phone: formData.phone,
           email: formData.email,
           site_id: formData.site_id,
+          visiting_user_id: formData.visiting_user_id,
           signed_in_at: new Date().toISOString(),
         } as any);
 
@@ -141,6 +178,31 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="visiting">Who are you visiting?</Label>
+              <select
+                id="visiting"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                value={formData.visiting_user_id}
+                onChange={(e) => setFormData({ ...formData, visiting_user_id: e.target.value })}
+                required
+                disabled={!formData.site_id}
+              >
+                <option value="">
+                  {!formData.site_id 
+                    ? "Select a base first" 
+                    : loadingPeople 
+                      ? "Loading..." 
+                      : "Select a person"}
+                </option>
+                {people.map((person) => (
+                  <option key={person.id} value={person.id}>
+                    {person.full_name}{person.department ? ` (${person.department})` : ""}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {error && (
