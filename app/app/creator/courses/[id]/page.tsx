@@ -796,6 +796,7 @@ export default async function CourseEditorPage(props: {
           <DetailsTab
             course={course}
             courseUrlFor={(notice: string) => buildCourseUrl(courseId, "details", notice)}
+            sites={sites}
           />
         )}
 
@@ -859,9 +860,11 @@ const DEFAULT_DEPARTMENTS = [
 function DetailsTab({
   course,
   courseUrlFor,
+  sites,
 }: {
   course: any;
   courseUrlFor: (notice: string) => string;
+  sites: { id: string; name: string }[];
 }) {
   const title = (course?.title as string) ?? "";
   const description = (course?.description as string) ?? "";
