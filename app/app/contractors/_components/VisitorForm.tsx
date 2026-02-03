@@ -115,10 +115,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
         }
         
         console.log("Search results for", searchQuery, ":", data?.length || 0, "users found");
-        
-        const deptUserIds = departmentPeople.map(p => p.id);
-        const otherUsers = (data || []).filter((u: Person) => !deptUserIds.includes(u.id));
-        setSearchResults(otherUsers);
+        setSearchResults(data || []);
       } catch (err) {
         console.error("Error searching people:", err);
       } finally {
@@ -255,23 +252,26 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
                       ? "Loading..." 
                       : "Select a person"}
                 </option>
-                {departmentPeople.length > 0 && (
-                  <optgroup label="People in this department">
-                    {departmentPeople.map((person) => (
-                      <option key={person.id} value={person.id}>
-                        {person.full_name}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {searchResults.length > 0 && (
-                  <optgroup label="Other people (search results)">
-                    {searchResults.map((person) => (
-                      <option key={person.id} value={person.id}>
-                        {person.full_name}{person.department ? ` (${person.department})` : ""}
-                      </option>
-                    ))}
-                  </optgroup>
+                {searchQuery.length >= 2 ? (
+                  searchResults.length > 0 ? (
+                    <optgroup label="Search results">
+                      {searchResults.map((person) => (
+                        <option key={person.id} value={person.id}>
+                          {person.full_name}{person.department ? ` (${person.department})` : ""}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ) : null
+                ) : (
+                  departmentPeople.length > 0 && (
+                    <optgroup label="People in this department">
+                      {departmentPeople.map((person) => (
+                        <option key={person.id} value={person.id}>
+                          {person.full_name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )
                 )}
               </select>
               {formData.department_id && departmentPeople.length === 0 && !loadingPeople && searchQuery.length < 2 && (
