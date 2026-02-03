@@ -3,6 +3,7 @@
 import { useState } from "react";
 import TypeSelection from "./TypeSelection";
 import ContractorTabs from "./ContractorTabs";
+import VisitorForm from "./VisitorForm";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
 
@@ -72,9 +73,13 @@ export default function ContractorVisitorFlow({
           </p>
         </div>
 
-        <div className="bg-gray-50 rounded-lg p-8 text-center">
-          <p className="text-gray-500">Visitor flow coming soon...</p>
-        </div>
+        <VisitorForm 
+          onBack={() => setUserType(null)}
+          onSuccess={() => {
+            alert("You have been signed in successfully!");
+            setUserType(null);
+          }}
+        />
       </div>
     );
   }
