@@ -1,5 +1,5 @@
 import { createSupabaseServer } from "@/lib/supabase/server";
-import ContractorTabs from "./_components/ContractorTabs";
+import ContractorVisitorFlow from "./_components/ContractorVisitorFlow";
 
 interface ContractorsPageProps {
   searchParams: Promise<{ tab?: string }>;
@@ -50,20 +50,11 @@ export default async function ContractorsPage({ searchParams }: ContractorsPageP
   }
 
   return (
-    <div className="space-y-6">
-      <div className="border-b pb-4">
-        <h1 className="text-2xl font-semibold">Contractor Training</h1>
-        <p className="text-gray-600 mt-2">
-          Training courses for external contractors and subcontractors.
-        </p>
-      </div>
-
-      <ContractorTabs 
-        courses={contractorCourses} 
-        sites={sites || []} 
-        completions={completions || []}
-        initialTab={tab || "courses"}
-      />
-    </div>
+    <ContractorVisitorFlow 
+      courses={contractorCourses} 
+      sites={sites || []} 
+      completions={completions || []}
+      initialTab={tab || "courses"}
+    />
   );
 }
