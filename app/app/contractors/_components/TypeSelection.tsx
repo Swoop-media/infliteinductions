@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
 
@@ -11,8 +9,6 @@ interface TypeSelectionProps {
 }
 
 export default function TypeSelection({ onSelect }: TypeSelectionProps) {
-  const [selected, setSelected] = useState<SelectionType | null>(null);
-
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center">
       <div className="text-center mb-8">
@@ -22,10 +18,8 @@ export default function TypeSelection({ onSelect }: TypeSelectionProps) {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
         <Card 
-          className={`cursor-pointer transition-all hover:shadow-lg ${
-            selected === "contractor" ? "ring-2 ring-blue-500 bg-blue-50" : ""
-          }`}
-          onClick={() => setSelected("contractor")}
+          className="cursor-pointer transition-all hover:shadow-lg hover:ring-2 hover:ring-blue-500 hover:bg-blue-50"
+          onClick={() => onSelect("contractor")}
         >
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-blue-100 flex items-center justify-center">
@@ -42,10 +36,8 @@ export default function TypeSelection({ onSelect }: TypeSelectionProps) {
         </Card>
 
         <Card 
-          className={`cursor-pointer transition-all hover:shadow-lg ${
-            selected === "visitor" ? "ring-2 ring-green-500 bg-green-50" : ""
-          }`}
-          onClick={() => setSelected("visitor")}
+          className="cursor-pointer transition-all hover:shadow-lg hover:ring-2 hover:ring-green-500 hover:bg-green-50"
+          onClick={() => onSelect("visitor")}
         >
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
@@ -61,10 +53,8 @@ export default function TypeSelection({ onSelect }: TypeSelectionProps) {
         </Card>
 
         <Card 
-          className={`cursor-pointer transition-all hover:shadow-lg ${
-            selected === "signout" ? "ring-2 ring-orange-500 bg-orange-50" : ""
-          }`}
-          onClick={() => setSelected("signout")}
+          className="cursor-pointer transition-all hover:shadow-lg hover:ring-2 hover:ring-orange-500 hover:bg-orange-50"
+          onClick={() => onSelect("signout")}
         >
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center">
@@ -82,10 +72,8 @@ export default function TypeSelection({ onSelect }: TypeSelectionProps) {
 
       <div className="mt-6 max-w-4xl w-full flex justify-center">
         <Card 
-          className={`cursor-pointer transition-all hover:shadow-lg w-full md:w-1/3 ${
-            selected === "inflite" ? "ring-2 ring-purple-500 bg-purple-50" : ""
-          }`}
-          onClick={() => setSelected("inflite")}
+          className="cursor-pointer transition-all hover:shadow-lg hover:ring-2 hover:ring-purple-500 hover:bg-purple-50 w-full md:w-1/3"
+          onClick={() => onSelect("inflite")}
         >
           <CardHeader className="text-center">
             <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center">
@@ -100,16 +88,6 @@ export default function TypeSelection({ onSelect }: TypeSelectionProps) {
           </CardHeader>
         </Card>
       </div>
-
-      {selected && (
-        <Button 
-          className="mt-8"
-          size="lg"
-          onClick={() => onSelect(selected)}
-        >
-          Continue
-        </Button>
-      )}
     </div>
   );
 }
