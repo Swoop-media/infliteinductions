@@ -49,7 +49,7 @@ Preferred communication style: Simple, everyday language.
     - Tabbed interfaces (e.g., `app/train-assess`) use lazy rendering and batch processing.
     - Expandable course details with PDF export.
     - Paginated admin views (50 items/page) for efficient data display with smart ordering.
-    - Department-based assignment UI for user management.
+    - Site-based assignment UI for user management (profiles linked to sites table via site_id).
     - Collapsible sections in user edit pages for improved organization.
 - **Operations Notices Feature**: Allows creators to publish assignable notices with optional acknowledgement tracking, integrated with in-app and Teams notifications.
 - **SafeFLITE User Sync Webhook**: Integrates with SafeFLITE to sync user data upon creation, update, or archiving.

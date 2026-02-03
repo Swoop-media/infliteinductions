@@ -368,13 +368,13 @@ export default async function EditUserPage({
   const supabase = await createSupabaseServer();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, full_name, email, department, job_description")
+    .select("id, full_name, email, site_id, job_description")
     .eq("id", resolvedParams.id)
     .maybeSingle();
 
-  // Fetch departments from database
-  const { data: departments } = await supabase
-    .from("departments")
+  // Fetch sites from database
+  const { data: sites } = await supabase
+    .from("sites")
     .select("id, name, active")
     .eq("active", true)
     .order("name");
@@ -462,16 +462,16 @@ export default async function EditUserPage({
             </div>
 
             <div className="grid gap-1">
-              <label className="text-sm font-medium">Department</label>
+              <label className="text-sm font-medium">Site</label>
               <select
-                name="department"
-                defaultValue={profile.department ?? ""}
+                name="site_id"
+                defaultValue={profile.site_id ?? ""}
                 className="rounded-md border px-3 py-2 text-sm"
               >
                 <option value="">—</option>
-                {(departments || []).map((dept) => (
-                  <option key={dept.id} value={dept.name}>
-                    {dept.name}
+                {(sites || []).map((site) => (
+                  <option key={site.id} value={site.id}>
+                    {site.name}
                   </option>
                 ))}
               </select>

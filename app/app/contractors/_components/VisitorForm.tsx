@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
-interface Department {
+interface Site {
   id: string;
   name: string;
 }
@@ -15,7 +15,8 @@ interface Department {
 interface Person {
   id: string;
   full_name: string;
-  department: string | null;
+  site_id: string | null;
+  site_name?: string | null;
 }
 
 interface VisitorFormProps {
@@ -26,46 +27,46 @@ interface VisitorFormProps {
 export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [departmentPeople, setDepartmentPeople] = useState<Person[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [sitePeople, setSitePeople] = useState<Person[]>([]);
   const [searchResults, setSearchResults] = useState<Person[]>([]);
-  const [loadingDepartments, setLoadingDepartments] = useState(true);
+  const [loadingSites, setLoadingSites] = useState(true);
   const [loadingPeople, setLoadingPeople] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [selectedDepartmentName, setSelectedDepartmentName] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
     email: "",
-    department_id: "",
+    site_id: "",
     visiting_user_id: "",
   });
 
   useEffect(() => {
-    const fetchDepartments = async () => {
+    const fetchSites = async () => {
       try {
         const { data, error } = await supabaseBrowser
-          .from("departments" as any)
+          .from("sites" as any)
           .select("id, name")
+          .eq("active", true)
           .order("name", { ascending: true });
 
         if (error) throw error;
-        setDepartments(data || []);
+        setSites(data || []);
       } catch (err) {
-        console.error("Error fetching departments:", err);
+        console.error("Error fetching sites:", err);
       } finally {
-        setLoadingDepartments(false);
+        setLoadingSites(false);
       }
     };
 
-    fetchDepartments();
+    fetchSites();
   }, []);
 
   useEffect(() => {
-    const fetchDepartmentPeople = async () => {
-      if (!selectedDepartmentName) {
-        setDepartmentPeople([]);
+    const fetchSitePeople = async () => {
+      if (!formData.site_id) {
+        setSitePeople([]);
         return;
       }
 
@@ -73,13 +74,13 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
       try {
         const { data: users, error: usersError } = await supabaseBrowser
           .from("profiles" as any)
-          .select("id, full_name, department")
+          .select("id, full_name, site_id")
           .is("archived_at", null)
-          .eq("department", selectedDepartmentName)
+          .eq("site_id", formData.site_id)
           .order("full_name", { ascending: true });
 
         if (usersError) throw usersError;
-        setDepartmentPeople(users || []);
+        setSitePeople(users || []);
       } catch (err) {
         console.error("Error fetching people:", err);
       } finally {
@@ -87,11 +88,11 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
       }
     };
 
-    fetchDepartmentPeople();
+    fetchSitePeople();
     setSearchQuery("");
     setSearchResults([]);
     setFormData(prev => ({ ...prev, visiting_user_id: "" }));
-  }, [selectedDepartmentName]);
+  }, [formData.site_id]);
 
   useEffect(() => {
     const searchPeople = async () => {
@@ -104,7 +105,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
       try {
         const { data, error } = await supabaseBrowser
           .from("profiles" as any)
-          .select("id, full_name, department")
+          .select("id, full_name, site_id, sites!profiles_site_id_fkey(name)")
           .ilike("full_name", `%${searchQuery}%`)
           .order("full_name", { ascending: true })
           .limit(50);
@@ -114,8 +115,12 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
           throw error;
         }
         
-        console.log("Search results for", searchQuery, ":", data?.length || 0, "users found");
-        setSearchResults(data || []);
+        const formattedData = (data || []).map((p: any) => ({
+          ...p,
+          site_name: p.sites?.name || null
+        }));
+        
+        setSearchResults(formattedData);
       } catch (err) {
         console.error("Error searching people:", err);
       } finally {
@@ -125,12 +130,10 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
 
     const debounce = setTimeout(searchPeople, 300);
     return () => clearTimeout(debounce);
-  }, [searchQuery, departmentPeople]);
+  }, [searchQuery, sitePeople]);
 
-  const handleDepartmentChange = (departmentId: string) => {
-    const dept = departments.find(d => d.id === departmentId);
-    setSelectedDepartmentName(dept?.name || "");
-    setFormData({ ...formData, department_id: departmentId });
+  const handleSiteChange = (siteId: string) => {
+    setFormData({ ...formData, site_id: siteId });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -147,7 +150,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
           name: formData.name,
           phone: formData.phone,
           email: formData.email,
-          department_id: formData.department_id,
+          site_id: formData.site_id,
           visiting_user_id: formData.visiting_user_id,
           signed_in_at: new Date().toISOString(),
         } as any);
@@ -174,18 +177,18 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="department">Base / Department</Label>
+              <Label htmlFor="site">Site / Location</Label>
               <select
-                id="department"
+                id="site"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={formData.department_id}
-                onChange={(e) => handleDepartmentChange(e.target.value)}
+                value={formData.site_id}
+                onChange={(e) => handleSiteChange(e.target.value)}
                 required
               >
-                <option value="">{loadingDepartments ? "Loading..." : "Select a department"}</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.name}
+                <option value="">{loadingSites ? "Loading..." : "Select a site"}</option>
+                {sites.map((site) => (
+                  <option key={site.id} value={site.id}>
+                    {site.name}
                   </option>
                 ))}
               </select>
@@ -232,7 +235,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
               <div className="relative">
                 <Input
                   type="text"
-                  placeholder={!formData.department_id ? "Select a department first" : "Type to search for a person..."}
+                  placeholder={!formData.site_id ? "Select a site first" : "Type to search for a person..."}
                   value={searchQuery}
                   onChange={(e) => {
                     setSearchQuery(e.target.value);
@@ -240,16 +243,16 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
                       setFormData({ ...formData, visiting_user_id: "" });
                     }
                   }}
-                  disabled={!formData.department_id}
+                  disabled={!formData.site_id}
                 />
                 {formData.visiting_user_id && (
                   <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-md text-sm text-green-800">
                     Selected: {searchResults.find(p => p.id === formData.visiting_user_id)?.full_name || 
-                              departmentPeople.find(p => p.id === formData.visiting_user_id)?.full_name || 
+                              sitePeople.find(p => p.id === formData.visiting_user_id)?.full_name || 
                               "Unknown"}
                   </div>
                 )}
-                {formData.department_id && (searchQuery.length >= 2 || departmentPeople.length > 0) && !formData.visiting_user_id && (
+                {formData.site_id && (searchQuery.length >= 2 || sitePeople.length > 0) && !formData.visiting_user_id && (
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
                     {isSearching || loadingPeople ? (
                       <div className="px-3 py-2 text-sm text-gray-500">Loading...</div>
@@ -267,17 +270,17 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
                                 setSearchQuery(person.full_name);
                               }}
                             >
-                              {person.full_name}{person.department ? ` (${person.department})` : ""}
+                              {person.full_name}{person.site_name ? ` (${person.site_name})` : ""}
                             </button>
                           ))}
                         </>
                       ) : (
                         <div className="px-3 py-2 text-sm text-gray-500">No results found</div>
                       )
-                    ) : departmentPeople.length > 0 ? (
+                    ) : sitePeople.length > 0 ? (
                       <>
-                        <div className="px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-50">People in this department</div>
-                        {departmentPeople.map((person) => (
+                        <div className="px-3 py-1 text-xs font-semibold text-gray-500 bg-gray-50">People at this site</div>
+                        {sitePeople.map((person) => (
                           <button
                             key={person.id}
                             type="button"
@@ -295,7 +298,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
                   </div>
                 )}
               </div>
-              {formData.department_id && departmentPeople.length === 0 && !loadingPeople && searchQuery.length < 2 && !formData.visiting_user_id && (
+              {formData.site_id && sitePeople.length === 0 && !loadingPeople && searchQuery.length < 2 && !formData.visiting_user_id && (
                 <p className="text-sm text-gray-500">Type at least 2 characters to search for people.</p>
               )}
               <input type="hidden" name="visiting_user_id" value={formData.visiting_user_id} required />
