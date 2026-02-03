@@ -4,6 +4,8 @@ import { useState } from "react";
 import TypeSelection from "./TypeSelection";
 import ContractorTabs from "./ContractorTabs";
 
+type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
+
 interface ContractorVisitorFlowProps {
   courses: any[];
   sites: any[];
@@ -17,25 +19,29 @@ export default function ContractorVisitorFlow({
   completions, 
   initialTab 
 }: ContractorVisitorFlowProps) {
-  const [userType, setUserType] = useState<"contractor" | "visitor" | null>(null);
+  const [userType, setUserType] = useState<SelectionType | null>(null);
 
   if (!userType) {
     return <TypeSelection onSelect={setUserType} />;
   }
+
+  const BackButton = () => (
+    <button 
+      onClick={() => setUserType(null)}
+      className="text-gray-500 hover:text-gray-700"
+    >
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+      </svg>
+    </button>
+  );
 
   if (userType === "contractor") {
     return (
       <div className="space-y-6">
         <div className="border-b pb-4">
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setUserType(null)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
+            <BackButton />
             <h1 className="text-2xl font-semibold">Contractor Training</h1>
           </div>
           <p className="text-gray-600 mt-2">
@@ -58,14 +64,7 @@ export default function ContractorVisitorFlow({
       <div className="space-y-6">
         <div className="border-b pb-4">
           <div className="flex items-center gap-2">
-            <button 
-              onClick={() => setUserType(null)}
-              className="text-gray-500 hover:text-gray-700"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
+            <BackButton />
             <h1 className="text-2xl font-semibold">Visitor Sign In</h1>
           </div>
           <p className="text-gray-600 mt-2">
@@ -75,6 +74,46 @@ export default function ContractorVisitorFlow({
 
         <div className="bg-gray-50 rounded-lg p-8 text-center">
           <p className="text-gray-500">Visitor flow coming soon...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (userType === "signout") {
+    return (
+      <div className="space-y-6">
+        <div className="border-b pb-4">
+          <div className="flex items-center gap-2">
+            <BackButton />
+            <h1 className="text-2xl font-semibold">Sign Out</h1>
+          </div>
+          <p className="text-gray-600 mt-2">
+            Sign out from the site.
+          </p>
+        </div>
+
+        <div className="bg-gray-50 rounded-lg p-8 text-center">
+          <p className="text-gray-500">Sign out flow coming soon...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (userType === "inflite") {
+    return (
+      <div className="space-y-6">
+        <div className="border-b pb-4">
+          <div className="flex items-center gap-2">
+            <BackButton />
+            <h1 className="text-2xl font-semibold">Inflite Staff Portal</h1>
+          </div>
+          <p className="text-gray-600 mt-2">
+            View sign-ins, sign-outs, and completed flows.
+          </p>
+        </div>
+
+        <div className="bg-gray-50 rounded-lg p-8 text-center">
+          <p className="text-gray-500">Staff portal coming soon...</p>
         </div>
       </div>
     );

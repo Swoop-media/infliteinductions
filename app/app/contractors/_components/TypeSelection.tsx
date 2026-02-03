@@ -4,21 +4,23 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
+type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
+
 interface TypeSelectionProps {
-  onSelect: (type: "contractor" | "visitor") => void;
+  onSelect: (type: SelectionType) => void;
 }
 
 export default function TypeSelection({ onSelect }: TypeSelectionProps) {
-  const [selected, setSelected] = useState<"contractor" | "visitor" | null>(null);
+  const [selected, setSelected] = useState<SelectionType | null>(null);
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center">
       <div className="text-center mb-8">
         <h1 className="text-2xl font-semibold mb-2">Welcome</h1>
-        <p className="text-gray-600">Please select which best describes you</p>
+        <p className="text-gray-600">Please select an option</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl w-full">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl w-full">
         <Card 
           className={`cursor-pointer transition-all hover:shadow-lg ${
             selected === "contractor" ? "ring-2 ring-blue-500 bg-blue-50" : ""
@@ -54,6 +56,46 @@ export default function TypeSelection({ onSelect }: TypeSelectionProps) {
             <CardTitle className="text-xl">Visitor</CardTitle>
             <CardDescription className="text-base">
               Visiting a person
+            </CardDescription>
+          </CardHeader>
+        </Card>
+
+        <Card 
+          className={`cursor-pointer transition-all hover:shadow-lg ${
+            selected === "signout" ? "ring-2 ring-orange-500 bg-orange-50" : ""
+          }`}
+          onClick={() => setSelected("signout")}
+        >
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-orange-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </div>
+            <CardTitle className="text-xl">Sign out</CardTitle>
+            <CardDescription className="text-base">
+              Sign out from site
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+
+      <div className="mt-6 max-w-4xl w-full flex justify-center">
+        <Card 
+          className={`cursor-pointer transition-all hover:shadow-lg w-full md:w-1/3 ${
+            selected === "inflite" ? "ring-2 ring-purple-500 bg-purple-50" : ""
+          }`}
+          onClick={() => setSelected("inflite")}
+        >
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-purple-100 flex items-center justify-center">
+              <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+            </div>
+            <CardTitle className="text-xl">Inflite</CardTitle>
+            <CardDescription className="text-base">
+              Staff portal
             </CardDescription>
           </CardHeader>
         </Card>
