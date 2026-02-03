@@ -6,8 +6,10 @@ import ContractorTabs from "./ContractorTabs";
 import VisitorForm from "./VisitorForm";
 import StaffPortal from "./StaffPortal";
 import SignOutForm from "./SignOutForm";
+import PreQualificationCheck from "./PreQualificationCheck";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
+type ContractorStep = "prequalification" | "training";
 
 interface ContractorVisitorFlowProps {
   courses: any[];
@@ -23,6 +25,12 @@ export default function ContractorVisitorFlow({
   initialTab 
 }: ContractorVisitorFlowProps) {
   const [userType, setUserType] = useState<SelectionType | null>(null);
+  const [contractorStep, setContractorStep] = useState<ContractorStep>("prequalification");
+
+  const resetFlow = () => {
+    setUserType(null);
+    setContractorStep("prequalification");
+  };
 
   if (!userType) {
     return <TypeSelection onSelect={setUserType} />;
@@ -30,7 +38,7 @@ export default function ContractorVisitorFlow({
 
   const BackButton = () => (
     <button 
-      onClick={() => setUserType(null)}
+      onClick={resetFlow}
       className="text-gray-500 hover:text-gray-700"
     >
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -40,6 +48,19 @@ export default function ContractorVisitorFlow({
   );
 
   if (userType === "contractor") {
+    if (contractorStep === "prequalification") {
+      return (
+        <PreQualificationCheck
+          onYes={() => setContractorStep("training")}
+          onNo={() => {
+            alert("Please complete your pre-qualification before proceeding.");
+            resetFlow();
+          }}
+          onBack={resetFlow}
+        />
+      );
+    }
+
     return (
       <div className="space-y-6">
         <div className="border-b pb-4">
