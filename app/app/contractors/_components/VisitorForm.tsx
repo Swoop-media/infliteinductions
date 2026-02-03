@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 interface Site {
@@ -34,7 +33,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
     const fetchSites = async () => {
       try {
         const { data, error } = await supabaseBrowser
-          .from("public_sites" as any)
+          .from("sites" as any)
           .select("id, name")
           .eq("active", true)
           .order("name", { ascending: true });
@@ -92,22 +91,20 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="site">Base</Label>
-              <Select
+              <select
+                id="site"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={formData.site_id}
-                onValueChange={(value) => setFormData({ ...formData, site_id: value })}
+                onChange={(e) => setFormData({ ...formData, site_id: e.target.value })}
                 required
               >
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingSites ? "Loading..." : "Select a base"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {sites.map((site) => (
-                    <SelectItem key={site.id} value={site.id}>
-                      {site.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                <option value="">{loadingSites ? "Loading..." : "Select a base"}</option>
+                {sites.map((site) => (
+                  <option key={site.id} value={site.id}>
+                    {site.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">
