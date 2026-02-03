@@ -105,6 +105,9 @@ type CourseRow = {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  external_contractors?: boolean;
+  contractor_flow_type?: string | null;
+  contractor_site_id?: string | null;
 };
 
 type LoadCourseResult = {
@@ -431,6 +434,8 @@ async function updateCourseDetails(formData: FormData) {
 
   // NEW: external contractors checkbox
   const externalContractors = formData.get("external_contractors") === "on";
+  const contractorFlowType = String(formData.get("contractor_flow_type") || "").trim() || null;
+  const contractorSiteId = String(formData.get("contractor_site_id") || "").trim() || null;
 
   const updatePayload: Record<string, any> = {};
   if (title.length > 0) updatePayload.title = title;
@@ -447,6 +452,8 @@ async function updateCourseDetails(formData: FormData) {
   updatePayload.department = department;
   updatePayload.tags = tags;
   updatePayload.external_contractors = externalContractors;
+  updatePayload.contractor_flow_type = externalContractors ? contractorFlowType : null;
+  updatePayload.contractor_site_id = externalContractors ? contractorSiteId : null;
 
   const { error } = await supabase.from("courses").update(updatePayload).eq("id", courseId);
   if (error) throw new Error(`Save failed: ${error.message}`);
@@ -703,12 +710,15 @@ export default async function CourseEditorPage(props: {
     );
   }
 
-  const [digitalTraining, quizModules, onsiteTraining, onsiteAssessment] = await Promise.all([
+  const supabaseForSites = await createSupabaseServer();
+  const [digitalTraining, quizModules, onsiteTraining, onsiteAssessment, sitesResult] = await Promise.all([
     loadModules(courseId, "digital_training"),
     loadModules(courseId, "digital_assessment_quiz"),
     loadModules(courseId, "onsite_training"),
     loadModules(courseId, "onsite_assessment"),
+    supabaseForSites.from("sites").select("id, name").eq("active", true).order("name"),
   ]);
+  const sites = sitesResult.data || [];
 
   const tabs: { key: TabKey; href: string }[] = [
     { key: "details", href: buildCourseUrl(courseId, "details") },
@@ -942,6 +952,46 @@ function DetailsTab({
         <div className="text-xs text-gray-500 -mt-2 ml-7">
           This course will be available to external contractors via the Contractors portal.
         </div>
+
+        {/* Contractor Flow Options - shown when external contractors is checked */}
+        {course?.external_contractors && (
+          <div className="ml-7 space-y-4 border-l-2 border-blue-200 pl-4">
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Contractor Flow Type</label>
+              <select
+                name="contractor_flow_type"
+                defaultValue={course?.contractor_flow_type || ""}
+                className="w-full rounded-md border px-3 py-2"
+              >
+                <option value="">Select flow type...</option>
+                <option value="site_induction">Site Induction (No to airside question)</option>
+                <option value="airside_induction">Airside Induction (Yes to airside question)</option>
+              </select>
+              <div className="text-xs text-gray-500">
+                Which step in the contractor flow should show this course.
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <label className="text-sm font-medium">Site</label>
+              <select
+                name="contractor_site_id"
+                defaultValue={course?.contractor_site_id || ""}
+                className="w-full rounded-md border px-3 py-2"
+              >
+                <option value="">All sites</option>
+                {sites.map((site: any) => (
+                  <option key={site.id} value={site.id}>
+                    {site.name}
+                  </option>
+                ))}
+              </select>
+              <div className="text-xs text-gray-500">
+                Which site this course applies to. Leave empty for all sites.
+              </div>
+            </div>
+          </div>
+        )}
 
         {hasValidFor && (
           <div className="grid gap-2">
