@@ -108,6 +108,7 @@ type CourseRow = {
   external_contractors?: boolean;
   contractor_flow_type?: string | null;
   contractor_site_id?: string | null;
+  visitor_flow_type?: string | null;
 };
 
 type LoadCourseResult = {
@@ -436,6 +437,7 @@ async function updateCourseDetails(formData: FormData) {
   const externalContractors = formData.get("external_contractors") === "on";
   const contractorFlowType = String(formData.get("contractor_flow_type") || "").trim() || null;
   const contractorSiteId = String(formData.get("contractor_site_id") || "").trim() || null;
+  const visitorFlowType = String(formData.get("visitor_flow_type") || "").trim() || null;
 
   const updatePayload: Record<string, any> = {};
   if (title.length > 0) updatePayload.title = title;
@@ -454,6 +456,7 @@ async function updateCourseDetails(formData: FormData) {
   updatePayload.external_contractors = externalContractors;
   updatePayload.contractor_flow_type = externalContractors ? contractorFlowType : null;
   updatePayload.contractor_site_id = externalContractors ? contractorSiteId : null;
+  updatePayload.visitor_flow_type = visitorFlowType;
 
   const { error } = await supabase.from("courses").update(updatePayload).eq("id", courseId);
   if (error) throw new Error(`Save failed: ${error.message}`);
@@ -995,6 +998,21 @@ function DetailsTab({
             </div>
           </div>
         )}
+
+        <div className="grid gap-2">
+          <label className="text-sm font-medium">Visitor Induction</label>
+          <select
+            name="visitor_flow_type"
+            defaultValue={course?.visitor_flow_type || ""}
+            className="w-full rounded-md border px-3 py-2"
+          >
+            <option value="">Not a visitor course</option>
+            <option value="visitor_induction">Visitor Induction Course</option>
+          </select>
+          <div className="text-xs text-gray-500">
+            Set this to make the course appear in the visitor sign-in flow.
+          </div>
+        </div>
 
         {hasValidFor && (
           <div className="grid gap-2">

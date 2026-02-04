@@ -4,6 +4,7 @@ import { useState } from "react";
 import TypeSelection from "./TypeSelection";
 import ContractorTabs from "./ContractorTabs";
 import VisitorForm from "./VisitorForm";
+import VisitorCourse from "./VisitorCourse";
 import StaffPortal from "./StaffPortal";
 import SignOutForm from "./SignOutForm";
 import PreQualificationCheck from "./PreQualificationCheck";
@@ -13,6 +14,15 @@ import AirsideCheck from "./AirsideCheck";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
 type ContractorStep = "site" | "prequalification" | "sentto" | "airside" | "training";
+type VisitorStep = "form" | "course";
+
+interface VisitorFormData {
+  name: string;
+  phone: string;
+  email: string;
+  site_id: string;
+  visiting_user_id: string;
+}
 
 interface ContractorVisitorFlowProps {
   courses: any[];
@@ -33,6 +43,10 @@ export default function ContractorVisitorFlow({
   const [sentToPersonId, setSentToPersonId] = useState<string | null>(null);
   const [sentToPersonName, setSentToPersonName] = useState<string | null>(null);
   const [workingAirside, setWorkingAirside] = useState<boolean | null>(null);
+  
+  const [visitorStep, setVisitorStep] = useState<VisitorStep>("form");
+  const [visitorFormData, setVisitorFormData] = useState<VisitorFormData | null>(null);
+  const [visitorSiteName, setVisitorSiteName] = useState<string>("");
 
   const selectedSiteName = sites.find((s: any) => s.id === selectedSiteId)?.name || "";
 
@@ -43,6 +57,9 @@ export default function ContractorVisitorFlow({
     setSentToPersonId(null);
     setSentToPersonName(null);
     setWorkingAirside(null);
+    setVisitorStep("form");
+    setVisitorFormData(null);
+    setVisitorSiteName("");
   };
 
   const notifyStaffOfArrival = async (personId: string, personName: string) => {
@@ -157,27 +174,56 @@ export default function ContractorVisitorFlow({
   }
 
   if (userType === "visitor") {
-    return (
-      <div className="space-y-6">
-        <div className="border-b pb-4">
-          <div className="flex items-center gap-2">
-            <BackButton />
-            <h1 className="text-2xl font-semibold">Visitor Sign In</h1>
+    if (visitorStep === "form") {
+      return (
+        <div className="space-y-6">
+          <div className="border-b pb-4">
+            <div className="flex items-center gap-2">
+              <BackButton />
+              <h1 className="text-2xl font-semibold">Visitor Sign In</h1>
+            </div>
+            <p className="text-gray-600 mt-2">
+              Sign in as a visitor to the site.
+            </p>
           </div>
-          <p className="text-gray-600 mt-2">
-            Sign in as a visitor to the site.
-          </p>
-        </div>
 
-        <VisitorForm 
-          onBack={() => setUserType(null)}
-          onSuccess={() => {
-            alert("You have been signed in successfully!");
-            setUserType(null);
-          }}
-        />
-      </div>
-    );
+          <VisitorForm 
+            onBack={() => setUserType(null)}
+            onProceed={(data, siteName) => {
+              setVisitorFormData(data);
+              setVisitorSiteName(siteName);
+              setVisitorStep("course");
+            }}
+          />
+        </div>
+      );
+    }
+
+    if (visitorStep === "course" && visitorFormData) {
+      return (
+        <div className="space-y-6">
+          <div className="border-b pb-4">
+            <div className="flex items-center gap-2">
+              <BackButton />
+              <h1 className="text-2xl font-semibold">Visitor Induction</h1>
+            </div>
+            <p className="text-gray-600 mt-2">
+              Please complete the induction before signing in.
+            </p>
+          </div>
+
+          <VisitorCourse
+            formData={visitorFormData}
+            siteName={visitorSiteName}
+            onBack={() => setVisitorStep("form")}
+            onComplete={() => {
+              alert("You have been signed in successfully!");
+              resetFlow();
+            }}
+          />
+        </div>
+      );
+    }
   }
 
   if (userType === "signout") {

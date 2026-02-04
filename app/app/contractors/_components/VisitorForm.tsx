@@ -19,13 +19,20 @@ interface Person {
   site_name?: string | null;
 }
 
-interface VisitorFormProps {
-  onBack: () => void;
-  onSuccess: () => void;
+interface VisitorFormData {
+  name: string;
+  phone: string;
+  email: string;
+  site_id: string;
+  visiting_user_id: string;
 }
 
-export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
+interface VisitorFormProps {
+  onBack: () => void;
+  onProceed: (data: VisitorFormData, siteName: string) => void;
+}
+
+export default function VisitorForm({ onBack, onProceed }: VisitorFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [sites, setSites] = useState<Site[]>([]);
   const [sitePeople, setSitePeople] = useState<Person[]>([]);
@@ -142,57 +149,16 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
     setFormData({ ...formData, site_id: siteId });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleProceed = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
-
-    try {
-      const supabase = supabaseBrowser;
-      const signedInAt = new Date().toISOString();
-      
-      const { error: insertError } = await supabase
-        .from("visitor_signins" as any)
-        .insert({
-          name: formData.name,
-          phone: formData.phone,
-          email: formData.email,
-          site_id: formData.site_id,
-          visiting_user_id: formData.visiting_user_id,
-          signed_in_at: signedInAt,
-        } as any);
-
-      if (insertError) {
-        throw insertError;
-      }
-
-      // Send Teams notification to the person being visited
-      if (formData.visiting_user_id) {
-        const selectedSite = sites.find(s => s.id === formData.site_id);
-        try {
-          await fetch("/api/notify/visitor-signin", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              visitorName: formData.name,
-              visitorEmail: formData.email,
-              visitorPhone: formData.phone,
-              visitingUserId: formData.visiting_user_id,
-              siteName: selectedSite?.name || null,
-              signedInAt,
-            }),
-          });
-        } catch (notifyErr) {
-          console.error("Failed to send Teams notification:", notifyErr);
-        }
-      }
-
-      onSuccess();
-    } catch (err: any) {
-      setError(err.message || "An error occurred. Please try again.");
-    } finally {
-      setIsSubmitting(false);
+    
+    if (!formData.visiting_user_id) {
+      setError("Please select who you are visiting");
+      return;
     }
+
+    const selectedSite = sites.find(s => s.id === formData.site_id);
+    onProceed(formData, selectedSite?.name || "");
   };
 
   return (
@@ -203,7 +169,7 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
           <CardDescription>Please enter your details to sign in</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleProceed} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="site">Site / Location</Label>
               <select
@@ -341,16 +307,14 @@ export default function VisitorForm({ onBack, onSuccess }: VisitorFormProps) {
                 type="button"
                 variant="outline"
                 onClick={onBack}
-                disabled={isSubmitting}
               >
                 Back
               </Button>
               <Button
                 type="submit"
                 className="flex-1"
-                disabled={isSubmitting}
               >
-                {isSubmitting ? "Signing in..." : "Sign In"}
+                Proceed
               </Button>
             </div>
           </form>
