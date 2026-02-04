@@ -435,9 +435,18 @@ async function updateCourseDetails(formData: FormData) {
 
   // NEW: external contractors checkbox
   const externalContractors = formData.get("external_contractors") === "on";
-  const contractorFlowType = String(formData.get("contractor_flow_type") || "").trim() || null;
+  const flowType = String(formData.get("contractor_flow_type") || "").trim() || null;
   const contractorSiteId = String(formData.get("contractor_site_id") || "").trim() || null;
-  const visitorFlowType = String(formData.get("visitor_flow_type") || "").trim() || null;
+  
+  // Set flow types based on selection
+  let contractorFlowType: string | null = null;
+  let visitorFlowType: string | null = null;
+  
+  if (flowType === "visitor_induction") {
+    visitorFlowType = "visitor_induction";
+  } else if (flowType === "site_induction" || flowType === "airside_induction") {
+    contractorFlowType = flowType;
+  }
 
   const updatePayload: Record<string, any> = {};
   if (title.length > 0) updatePayload.title = title;
@@ -456,7 +465,7 @@ async function updateCourseDetails(formData: FormData) {
   updatePayload.external_contractors = externalContractors;
   updatePayload.contractor_flow_type = externalContractors ? contractorFlowType : null;
   updatePayload.contractor_site_id = externalContractors ? contractorSiteId : null;
-  updatePayload.visitor_flow_type = visitorFlowType;
+  updatePayload.visitor_flow_type = externalContractors ? visitorFlowType : null;
 
   const { error } = await supabase.from("courses").update(updatePayload).eq("id", courseId);
   if (error) throw new Error(`Save failed: ${error.message}`);
@@ -959,60 +968,50 @@ function DetailsTab({
           This course will be available to external contractors via the Contractors portal.
         </div>
 
-        {/* Contractor Flow Options - shown when external contractors is checked */}
-        {course?.external_contractors && (
-          <div className="ml-7 space-y-4 border-l-2 border-blue-200 pl-4">
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">Contractor Flow Type</label>
-              <select
-                name="contractor_flow_type"
-                defaultValue={course?.contractor_flow_type || ""}
-                className="w-full rounded-md border px-3 py-2"
-              >
-                <option value="">Select flow type...</option>
-                <option value="site_induction">Site Induction (No to airside question)</option>
-                <option value="airside_induction">Airside Induction (Yes to airside question)</option>
-              </select>
-              <div className="text-xs text-gray-500">
-                Which step in the contractor flow should show this course.
-              </div>
-            </div>
-
-            <div className="grid gap-2">
-              <label className="text-sm font-medium">Site</label>
-              <select
-                name="contractor_site_id"
-                defaultValue={course?.contractor_site_id || ""}
-                className="w-full rounded-md border px-3 py-2"
-              >
-                <option value="">All sites</option>
-                {sites.map((site: any) => (
-                  <option key={site.id} value={site.id}>
-                    {site.name}
-                  </option>
-                ))}
-              </select>
-              <div className="text-xs text-gray-500">
-                Which site this course applies to. Leave empty for all sites.
-              </div>
+        {/* Contractor/Visitor Flow Options - always shown, configured when external contractors is checked */}
+        <div className="ml-7 space-y-4 border-l-2 border-blue-200 pl-4 bg-blue-50/30 py-3 rounded-r-md">
+          <div className="text-sm font-medium text-blue-800 mb-2">
+            Contractor/Visitor Flow Settings
+          </div>
+          
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">Site</label>
+            <select
+              name="contractor_site_id"
+              defaultValue={course?.contractor_site_id || ""}
+              className="w-full rounded-md border px-3 py-2"
+            >
+              <option value="">All sites</option>
+              {sites.map((site: any) => (
+                <option key={site.id} value={site.id}>
+                  {site.name}
+                </option>
+              ))}
+            </select>
+            <div className="text-xs text-gray-500">
+              Which site this course applies to.
             </div>
           </div>
-        )}
 
-        <div className="grid gap-2">
-          <label className="text-sm font-medium">Visitor Induction</label>
-          <select
-            name="visitor_flow_type"
-            defaultValue={course?.visitor_flow_type || ""}
-            className="w-full rounded-md border px-3 py-2"
-          >
-            <option value="">Not a visitor course</option>
-            <option value="visitor_induction">Visitor Induction Course</option>
-          </select>
-          <div className="text-xs text-gray-500">
-            Set this to make the course appear in the visitor sign-in flow.
+          <div className="grid gap-2">
+            <label className="text-sm font-medium">Flow Type</label>
+            <select
+              name="contractor_flow_type"
+              defaultValue={course?.contractor_flow_type || course?.visitor_flow_type || ""}
+              className="w-full rounded-md border px-3 py-2"
+            >
+              <option value="">Select flow type...</option>
+              <option value="visitor_induction">Visitor Induction</option>
+              <option value="site_induction">Site Induction (Contractor - No to airside)</option>
+              <option value="airside_induction">Airside Induction (Contractor - Yes to airside)</option>
+            </select>
+            <div className="text-xs text-gray-500">
+              Which flow this course belongs to (Visitor or Contractor flows).
+            </div>
           </div>
         </div>
+        
+        <input type="hidden" name="visitor_flow_type" value="" />
 
         {hasValidFor && (
           <div className="grid gap-2">
