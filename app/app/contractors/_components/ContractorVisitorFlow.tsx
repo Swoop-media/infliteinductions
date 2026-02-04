@@ -14,7 +14,7 @@ import AirsideCheck from "./AirsideCheck";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
 type ContractorStep = "site" | "prequalification" | "sentto" | "airside" | "training";
-type VisitorStep = "form" | "course";
+type VisitorStep = "form" | "course" | "success";
 
 interface VisitorFormData {
   name: string;
@@ -217,10 +217,44 @@ export default function ContractorVisitorFlow({
             siteName={visitorSiteName}
             onBack={() => setVisitorStep("form")}
             onComplete={() => {
-              alert("You have been signed in successfully!");
-              resetFlow();
+              setVisitorStep("success");
             }}
           />
+        </div>
+      );
+    }
+
+    if (visitorStep === "success") {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+          <div className="bg-green-100 rounded-full p-6 mb-6">
+            <svg className="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          
+          <h1 className="text-3xl font-bold text-green-700 mb-4">
+            You have been signed in successfully!
+          </h1>
+          
+          <div className="bg-amber-50 border-2 border-amber-400 rounded-lg p-6 max-w-md mb-8">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span className="text-xl font-bold text-amber-800">Important Reminder</span>
+            </div>
+            <p className="text-lg text-amber-900 font-semibold">
+              Please remember to sign out when you leave by visiting the iPad and selecting "Sign Ins / Out"
+            </p>
+          </div>
+
+          <button
+            onClick={resetFlow}
+            className="bg-gray-800 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-gray-700 transition-colors"
+          >
+            Done
+          </button>
         </div>
       );
     }
