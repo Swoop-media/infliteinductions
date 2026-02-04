@@ -18,23 +18,6 @@ export default function TypeSelection({ onSelect }: TypeSelectionProps) {
 
       <div className="flex flex-col gap-4 w-full max-w-md">
         <Card 
-          className="cursor-pointer transition-all hover:shadow-lg hover:ring-2 hover:ring-orange-500 hover:bg-orange-50"
-          onClick={() => onSelect("signout")}
-        >
-          <CardHeader className="text-center py-6">
-            <div className="mx-auto mb-3 w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center">
-              <svg className="w-7 h-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </div>
-            <CardTitle className="text-xl">Sign Ins/Out</CardTitle>
-            <CardDescription className="text-base">
-              Sign in or out from site
-            </CardDescription>
-          </CardHeader>
-        </Card>
-
-        <Card 
           className="cursor-pointer transition-all hover:shadow-lg hover:ring-2 hover:ring-green-500 hover:bg-green-50"
           onClick={() => onSelect("visitor")}
         >
@@ -65,6 +48,23 @@ export default function TypeSelection({ onSelect }: TypeSelectionProps) {
             <CardTitle className="text-xl">Contractor</CardTitle>
             <CardDescription className="text-base">
               Performing work on site
+            </CardDescription>
+          </CardHeader>
+        </Card>
+
+        <Card 
+          className="cursor-pointer transition-all hover:shadow-lg hover:ring-2 hover:ring-orange-500 hover:bg-orange-50"
+          onClick={() => onSelect("signout")}
+        >
+          <CardHeader className="text-center py-6">
+            <div className="mx-auto mb-3 w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center">
+              <svg className="w-7 h-7 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </div>
+            <CardTitle className="text-xl">Sign Ins/Out</CardTitle>
+            <CardDescription className="text-base">
+              Sign in or out from site
             </CardDescription>
           </CardHeader>
         </Card>
