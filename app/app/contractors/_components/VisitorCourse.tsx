@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 interface VisitorFormData {
@@ -20,12 +20,153 @@ interface VisitorCourseProps {
   onComplete: () => void;
 }
 
+interface ContentBlock {
+  id: string;
+  kind: string;
+  data: any;
+  order_index: number;
+}
+
 interface CourseModule {
   id: string;
   title: string;
-  content: string;
-  video_url?: string;
-  order: number;
+  order_index: number;
+  content_blocks?: ContentBlock[];
+}
+
+function fileProxy(path: string) {
+  return `/app/files/${encodeURIComponent(path)}`;
+}
+
+function isImagePath(p: string) {
+  const ext = p.split(".").pop()?.toLowerCase();
+  return !!ext && ["png", "jpg", "jpeg", "gif", "webp", "avif", "svg"].includes(ext);
+}
+
+function toEmbedUrl(raw: string) {
+  try {
+    const u = new URL(raw);
+    const host = u.hostname.replace(/^www\./, "");
+    if (host === "youtube.com" || host === "m.youtube.com" || host === "music.youtube.com") {
+      if (u.pathname === "/watch") {
+        const v = u.searchParams.get("v");
+        if (v) return `https://www.youtube.com/embed/${v}`;
+      }
+      if (u.pathname.startsWith("/shorts/")) {
+        const id = u.pathname.split("/")[2];
+        if (id) return `https://www.youtube.com/embed/${id}`;
+      }
+    }
+    if (host === "youtu.be") {
+      const id = u.pathname.slice(1).split("/")[0];
+      if (id) return `https://www.youtube.com/embed/${id}`;
+    }
+    if (host === "vimeo.com") {
+      const id = u.pathname.split("/").filter(Boolean)[0];
+      if (id) return `https://player.vimeo.com/video/${id}`;
+    }
+    return raw;
+  } catch {
+    return raw;
+  }
+}
+
+function BlockRenderer({ block }: { block: ContentBlock }) {
+  const { kind, data } = block;
+
+  if (kind === "rich_text") {
+    const text = String(data?.text ?? "");
+    return (
+      <div
+        className="prose max-w-none text-gray-700"
+        dangerouslySetInnerHTML={{ __html: text }}
+      />
+    );
+  }
+
+  if (kind === "link") {
+    const url = String(data?.url ?? "");
+    const label = String(data?.label ?? url) || "Link";
+    return (
+      <p className="text-sm">
+        🔗{" "}
+        <a href={url} target="_blank" rel="noopener noreferrer" className="underline text-blue-600 break-all">
+          {label}
+        </a>
+      </p>
+    );
+  }
+
+  if (kind === "video_embed") {
+    const raw = String(data?.url ?? "");
+    const embedUrl = toEmbedUrl(raw);
+    return raw ? (
+      <div className="aspect-video rounded-lg overflow-hidden">
+        <iframe
+          src={embedUrl}
+          className="w-full h-full"
+          allowFullScreen
+          title="Video"
+        />
+      </div>
+    ) : null;
+  }
+
+  if (kind === "file") {
+    const display = String(data?.filename ?? data?.display ?? "Download");
+    const path: string | null = data?.file_id ?? data?.storage_path ?? null;
+
+    if (!path) return null;
+
+    const href = fileProxy(path);
+    const isPDF = path.toLowerCase().endsWith('.pdf');
+
+    if (isImagePath(path)) {
+      return (
+        <figure className="space-y-2">
+          <img
+            src={href}
+            alt={display}
+            className="max-h-[400px] w-auto rounded-md border object-contain"
+          />
+          <figcaption className="text-xs text-gray-500">
+            {display}
+          </figcaption>
+        </figure>
+      );
+    }
+
+    if (isPDF) {
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-t-md border">
+            <span className="text-sm font-medium text-gray-900">{display}</span>
+            <a href={href} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
+              Open in new tab
+            </a>
+          </div>
+          <div className="border rounded-b-md bg-white">
+            <iframe
+              src={`${href}#toolbar=1&navpanes=1&scrollbar=1`}
+              className="w-full h-[500px] rounded-b-md"
+              title={display}
+            />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <p className="text-sm">
+        ⬇️{" "}
+        <a href={href} target="_blank" rel="noopener noreferrer" className="underline break-all">
+          {display}
+        </a>
+      </p>
+    );
+  }
+
+  return null;
 }
 
 export default function VisitorCourse({ formData, siteName, onBack, onComplete }: VisitorCourseProps) {
@@ -57,9 +198,25 @@ export default function VisitorCourse({ formData, siteName, onBack, onComplete }
           setCourse(courseData);
           const courseDataTyped = courseData as any;
           const sortedModules = (courseDataTyped.course_modules || []).sort(
-            (a: any, b: any) => (a.order || 0) - (b.order || 0)
+            (a: any, b: any) => (a.order_index || 0) - (b.order_index || 0)
           );
-          setModules(sortedModules);
+
+          const modulesWithContent: CourseModule[] = await Promise.all(
+            sortedModules.map(async (mod: any) => {
+              const { data: blocks } = await supabaseBrowser
+                .from("module_content_blocks" as any)
+                .select("*")
+                .eq("module_id", mod.id)
+                .order("order_index", { ascending: true });
+
+              return {
+                ...mod,
+                content_blocks: blocks || [],
+              };
+            })
+          );
+
+          setModules(modulesWithContent);
         }
       } catch (err) {
         console.error("Error loading visitor course:", err);
@@ -135,7 +292,6 @@ export default function VisitorCourse({ formData, siteName, onBack, onComplete }
         <Card>
           <CardHeader>
             <CardTitle>Visitor Induction</CardTitle>
-            <CardDescription>Complete the induction to sign in</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-gray-600">
@@ -187,22 +343,17 @@ export default function VisitorCourse({ formData, siteName, onBack, onComplete }
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h3 className="text-xl font-semibold mb-3">{currentModule.title}</h3>
+            <h3 className="text-xl font-semibold mb-4">{currentModule.title}</h3>
             
-            {currentModule.video_url && (
-              <div className="mb-4 aspect-video">
-                <iframe
-                  src={currentModule.video_url}
-                  className="w-full h-full rounded-lg"
-                  allowFullScreen
-                />
-              </div>
-            )}
-            
-            <div 
-              className="prose max-w-none text-gray-700"
-              dangerouslySetInnerHTML={{ __html: currentModule.content || "" }}
-            />
+            <div className="space-y-4">
+              {currentModule.content_blocks?.map((block) => (
+                <BlockRenderer key={block.id} block={block} />
+              ))}
+              
+              {(!currentModule.content_blocks || currentModule.content_blocks.length === 0) && (
+                <p className="text-gray-500 italic">No content available for this module.</p>
+              )}
+            </div>
           </div>
 
           {error && (
