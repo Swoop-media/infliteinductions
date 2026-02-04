@@ -70,8 +70,8 @@ export default async function AppSectionLayout({
           </nav>
 
           <nav className="flex items-center gap-2">
-            <ReportIssueButton userId={user?.id} />
             <ContractorsButton />
+            <ReportIssueButton userId={user?.id} />
             <NotificationsBell />
             {user ? (
               <SignOutButton className="rounded-md border px-3 py-1 text-sm" />
