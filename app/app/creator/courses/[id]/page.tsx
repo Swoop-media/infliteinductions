@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import ResitNotificationMenu from "./_components/ResitNotificationMenu";
 
 /** Types & helpers */
@@ -467,7 +468,8 @@ async function updateCourseDetails(formData: FormData) {
   updatePayload.contractor_site_id = externalContractors ? contractorSiteId : null;
   updatePayload.visitor_flow_type = externalContractors ? visitorFlowType : null;
 
-  const { error } = await supabase.from("courses").update(updatePayload).eq("id", courseId);
+  // Use admin client to bypass schema cache issues with newer columns
+  const { error } = await supabaseAdmin().from("courses").update(updatePayload).eq("id", courseId);
   if (error) throw new Error(`Save failed: ${error.message}`);
 
   revalidatePath(buildCourseUrl(courseId));
