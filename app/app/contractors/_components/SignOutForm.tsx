@@ -11,14 +11,18 @@ interface Site {
   name: string;
 }
 
-interface SignedInPerson {
+interface SignedPerson {
   id: string;
   name: string;
   type: "visitor" | "contractor";
   site_id: string | null;
   site_name?: string;
   signed_in_at: string;
+  signed_out_at: string | null;
   company?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  visiting_user_id?: string | null;
 }
 
 interface SignOutFormProps {
@@ -29,11 +33,13 @@ interface SignOutFormProps {
 export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
   const [sites, setSites] = useState<Site[]>([]);
   const [selectedSite, setSelectedSite] = useState<string>("");
-  const [signedInPeople, setSignedInPeople] = useState<SignedInPerson[]>([]);
+  const [signedInPeople, setSignedInPeople] = useState<SignedPerson[]>([]);
+  const [signedOutPeople, setSignedOutPeople] = useState<SignedPerson[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [signingOut, setSigningOut] = useState<string | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"signedIn" | "signedOut">("signedIn");
 
   const siteMap = useMemo(() => {
     return new Map(sites.map((s) => [s.id, s.name]));
@@ -59,52 +65,65 @@ export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
   }, []);
 
   useEffect(() => {
-    loadSignedInPeople();
-  }, [siteMap]);
+    if (siteMap.size > 0 || sites.length === 0) {
+      loadPeople();
+    }
+  }, [siteMap, sites]);
 
-  const loadSignedInPeople = async () => {
+  const loadPeople = async () => {
     setIsLoading(true);
     try {
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const cutoffDate = sevenDaysAgo.toISOString();
+
       const { data: visitors, error: visitorsError } = await supabaseBrowser
         .from("visitor_signins" as any)
-        .select("id, name, site_id, signed_in_at")
-        .is("signed_out_at", null)
+        .select("id, name, site_id, signed_in_at, signed_out_at, email, phone, visiting_user_id")
+        .gte("signed_in_at", cutoffDate)
         .order("signed_in_at", { ascending: false });
 
       if (visitorsError) throw visitorsError;
 
       const { data: contractors, error: contractorsError } = await supabaseBrowser
         .from("contractor_signins" as any)
-        .select("id, name, site_id, signed_in_at, company")
-        .is("signed_out_at", null)
+        .select("id, name, site_id, signed_in_at, signed_out_at, company, email, phone")
+        .gte("signed_in_at", cutoffDate)
         .order("signed_in_at", { ascending: false });
 
       if (contractorsError) throw contractorsError;
 
-      const combined: SignedInPerson[] = [
-        ...(visitors || []).map((v: any) => ({
-          ...v,
-          type: "visitor" as const,
-          site_name: v.site_id ? siteMap.get(v.site_id) || null : null,
-        })),
-        ...(contractors || []).map((c: any) => ({
-          ...c,
-          type: "contractor" as const,
-          site_name: c.site_id ? siteMap.get(c.site_id) || null : null,
-        })),
-      ];
+      const allVisitors = (visitors || []).map((v: any) => ({
+        ...v,
+        type: "visitor" as const,
+        site_name: v.site_id ? siteMap.get(v.site_id) || null : null,
+      }));
 
-      combined.sort((a, b) => a.name.localeCompare(b.name));
-      setSignedInPeople(combined);
+      const allContractors = (contractors || []).map((c: any) => ({
+        ...c,
+        type: "contractor" as const,
+        site_name: c.site_id ? siteMap.get(c.site_id) || null : null,
+      }));
+
+      const signedIn: SignedPerson[] = [...allVisitors, ...allContractors]
+        .filter((p) => !p.signed_out_at)
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      const signedOut: SignedPerson[] = [...allVisitors, ...allContractors]
+        .filter((p) => p.signed_out_at)
+        .sort((a, b) => new Date(b.signed_out_at!).getTime() - new Date(a.signed_out_at!).getTime());
+
+      setSignedInPeople(signedIn);
+      setSignedOutPeople(signedOut);
     } catch (err) {
-      console.error("Error loading signed in people:", err);
-      setError("Failed to load signed in people");
+      console.error("Error loading people:", err);
+      setError("Failed to load people");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredPeople = useMemo(() => {
+  const filteredSignedIn = useMemo(() => {
     return signedInPeople.filter((person) => {
       const matchesSearch = searchQuery
         ? person.name.toLowerCase().includes(searchQuery.toLowerCase())
@@ -116,8 +135,20 @@ export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
     });
   }, [signedInPeople, searchQuery, selectedSite]);
 
-  const handleSignOut = async (person: SignedInPerson) => {
-    setSigningOut(person.id);
+  const filteredSignedOut = useMemo(() => {
+    return signedOutPeople.filter((person) => {
+      const matchesSearch = searchQuery
+        ? person.name.toLowerCase().includes(searchQuery.toLowerCase())
+        : true;
+      const matchesSite = selectedSite
+        ? person.site_id === selectedSite
+        : true;
+      return matchesSearch && matchesSite;
+    });
+  }, [signedOutPeople, searchQuery, selectedSite]);
+
+  const handleSignOut = async (person: SignedPerson) => {
+    setProcessingId(person.id);
     setError(null);
 
     try {
@@ -133,7 +164,48 @@ export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
     } catch (err: any) {
       console.error("Error signing out:", err);
       setError(err.message || "Failed to sign out. Please try again.");
-      setSigningOut(null);
+      setProcessingId(null);
+    }
+  };
+
+  const handleSignInAgain = async (person: SignedPerson) => {
+    setProcessingId(person.id);
+    setError(null);
+
+    try {
+      const table = person.type === "visitor" ? "visitor_signins" : "contractor_signins";
+      const signedInAt = new Date().toISOString();
+      
+      const insertData: any = {
+        name: person.name,
+        site_id: person.site_id,
+        signed_in_at: signedInAt,
+      };
+
+      if (person.type === "visitor") {
+        insertData.email = person.email;
+        insertData.phone = person.phone;
+        insertData.visiting_user_id = person.visiting_user_id;
+      } else {
+        insertData.email = person.email;
+        insertData.phone = person.phone;
+        insertData.company = person.company;
+      }
+
+      const { error: insertError } = await (supabaseBrowser as any)
+        .from(table)
+        .insert(insertData);
+
+      if (insertError) throw insertError;
+
+      alert(`${person.name} has been signed in successfully!\n\nRemember to sign out when you leave.`);
+      await loadPeople();
+      setActiveTab("signedIn");
+    } catch (err: any) {
+      console.error("Error signing in:", err);
+      setError(err.message || "Failed to sign in. Please try again.");
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -144,12 +216,17 @@ export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
     });
   };
 
+  const currentList = activeTab === "signedIn" ? filteredSignedIn : filteredSignedOut;
+
   return (
     <Card className="max-w-2xl mx-auto">
       <CardHeader>
-        <CardTitle>Sign Out</CardTitle>
+        <CardTitle>Sign In / Sign Out</CardTitle>
         <CardDescription>
-          Select your name from the list below to sign out
+          {activeTab === "signedIn" 
+            ? "Select your name from the list below to sign out"
+            : "Find your name to sign in again"
+          }
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -158,6 +235,29 @@ export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
             {error}
           </div>
         )}
+
+        <div className="flex border-b">
+          <button
+            onClick={() => setActiveTab("signedIn")}
+            className={`flex-1 py-3 text-center font-medium transition-colors ${
+              activeTab === "signedIn"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Currently Signed In ({signedInPeople.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("signedOut")}
+            className={`flex-1 py-3 text-center font-medium transition-colors ${
+              activeTab === "signedOut"
+                ? "text-blue-600 border-b-2 border-blue-600"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            Sign In Again ({signedOutPeople.length})
+          </button>
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
           <div className="flex-1">
@@ -188,15 +288,18 @@ export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
           <div className="text-center py-8 text-gray-500">
             Loading...
           </div>
-        ) : filteredPeople.length === 0 ? (
+        ) : currentList.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             {searchQuery || selectedSite
-              ? "No matching people currently signed in"
-              : "No one is currently signed in"}
+              ? "No matching people found"
+              : activeTab === "signedIn"
+                ? "No one is currently signed in"
+                : "No recent visitors or contractors to sign in"
+            }
           </div>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {filteredPeople.map((person) => (
+            {currentList.map((person) => (
               <div
                 key={`${person.type}-${person.id}`}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
@@ -213,17 +316,30 @@ export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
                     )}
                   </div>
                   <div className="text-xs text-gray-400">
-                    Signed in: {formatTime(person.signed_in_at)}
+                    {activeTab === "signedIn" 
+                      ? `Signed in: ${formatTime(person.signed_in_at)}`
+                      : `Last visit: ${formatTime(person.signed_out_at!)}`
+                    }
                   </div>
                 </div>
-                <Button
-                  onClick={() => handleSignOut(person)}
-                  disabled={signingOut === person.id}
-                  variant="outline"
-                  className="ml-4 border-orange-500 text-orange-600 hover:bg-orange-50"
-                >
-                  {signingOut === person.id ? "Signing out..." : "Sign Out"}
-                </Button>
+                {activeTab === "signedIn" ? (
+                  <Button
+                    onClick={() => handleSignOut(person)}
+                    disabled={processingId === person.id}
+                    variant="outline"
+                    className="ml-4 border-orange-500 text-orange-600 hover:bg-orange-50"
+                  >
+                    {processingId === person.id ? "Signing out..." : "Sign Out"}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => handleSignInAgain(person)}
+                    disabled={processingId === person.id}
+                    className="ml-4 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {processingId === person.id ? "Signing in..." : "Sign In"}
+                  </Button>
+                )}
               </div>
             ))}
           </div>
