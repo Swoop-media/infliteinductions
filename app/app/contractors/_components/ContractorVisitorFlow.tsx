@@ -71,23 +71,25 @@ export default function ContractorVisitorFlow({
 
   const createPrequalSubmissionAndNotify = async (personId: string, personName: string) => {
     try {
-      const { data: submission, error: insertError } = await (supabaseBrowser as any)
-        .from("contractor_prequal_submissions")
-        .insert({
-          contractor_name: contractorName,
-          contractor_company: contractorCompany || null,
-          site_id: selectedSiteId,
-          sent_to_user_id: personId,
-        })
-        .select("id")
-        .single();
+      const createRes = await fetch("/api/contractor-prequal/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contractorName: contractorName,
+          contractorCompany: contractorCompany || null,
+          siteId: selectedSiteId,
+          sentToUserId: personId,
+        }),
+      });
 
-      if (insertError) {
-        console.error("Failed to create prequal submission:", insertError);
+      let submissionId = null;
+      if (createRes.ok) {
+        const createData = await createRes.json();
+        submissionId = createData.submissionId;
+      } else {
+        console.error("Failed to create prequal submission");
         alert("There was an issue recording your pre-qualification. Staff have still been notified.");
       }
-
-      const submissionId = (submission as any)?.id || null;
 
       await fetch("/api/notify/contractor-arrival", {
         method: "POST",
