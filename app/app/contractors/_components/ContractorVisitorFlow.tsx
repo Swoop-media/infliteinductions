@@ -11,9 +11,12 @@ import PreQualificationCheck from "./PreQualificationCheck";
 import SiteSelection from "./SiteSelection";
 import PreQualSentToSelection from "./PreQualSentToSelection";
 import AirsideCheck from "./AirsideCheck";
+import ContractorDetailsForm from "./ContractorDetailsForm";
+
+import { supabaseBrowser } from "@/lib/supabase/client";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
-type ContractorStep = "site" | "prequalification" | "sentto" | "airside" | "training";
+type ContractorStep = "site" | "prequalification" | "details" | "sentto" | "airside" | "training";
 type VisitorStep = "form" | "course" | "success";
 
 interface VisitorFormData {
@@ -40,6 +43,8 @@ export default function ContractorVisitorFlow({
   const [userType, setUserType] = useState<SelectionType | null>(null);
   const [contractorStep, setContractorStep] = useState<ContractorStep>("site");
   const [selectedSiteId, setSelectedSiteId] = useState<string | null>(null);
+  const [contractorName, setContractorName] = useState<string>("");
+  const [contractorCompany, setContractorCompany] = useState<string>("");
   const [sentToPersonId, setSentToPersonId] = useState<string | null>(null);
   const [sentToPersonName, setSentToPersonName] = useState<string | null>(null);
   const [workingAirside, setWorkingAirside] = useState<boolean | null>(null);
@@ -54,6 +59,8 @@ export default function ContractorVisitorFlow({
     setUserType(null);
     setContractorStep("site");
     setSelectedSiteId(null);
+    setContractorName("");
+    setContractorCompany("");
     setSentToPersonId(null);
     setSentToPersonName(null);
     setWorkingAirside(null);
@@ -62,15 +69,34 @@ export default function ContractorVisitorFlow({
     setVisitorSiteName("");
   };
 
-  const notifyStaffOfArrival = async (personId: string, personName: string) => {
+  const createPrequalSubmissionAndNotify = async (personId: string, personName: string) => {
     try {
+      const { data: submission, error: insertError } = await supabaseBrowser
+        .from("contractor_prequal_submissions" as any)
+        .insert({
+          contractor_name: contractorName,
+          contractor_company: contractorCompany || null,
+          site_id: selectedSiteId,
+          sent_to_user_id: personId,
+        } as any)
+        .select("id")
+        .single();
+
+      if (insertError) {
+        console.error("Failed to create prequal submission:", insertError);
+      }
+
+      const submissionId = submission?.id || null;
+
       await fetch("/api/notify/contractor-arrival", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           staffId: personId,
-          contractorName: "Contractor",
+          contractorName: contractorName,
+          companyName: contractorCompany || null,
           siteName: selectedSiteName,
+          submissionId: submissionId,
         }),
       });
     } catch (err) {
@@ -110,12 +136,25 @@ export default function ContractorVisitorFlow({
     if (contractorStep === "prequalification") {
       return (
         <PreQualificationCheck
-          onYes={() => setContractorStep("sentto")}
+          onYes={() => setContractorStep("details")}
           onNo={() => {
             alert("Please complete your pre-qualification before proceeding.");
             resetFlow();
           }}
           onBack={() => setContractorStep("site")}
+        />
+      );
+    }
+
+    if (contractorStep === "details") {
+      return (
+        <ContractorDetailsForm
+          onSubmit={(name, company) => {
+            setContractorName(name);
+            setContractorCompany(company);
+            setContractorStep("sentto");
+          }}
+          onBack={() => setContractorStep("prequalification")}
         />
       );
     }
@@ -127,10 +166,10 @@ export default function ContractorVisitorFlow({
           onSelect={(personId, personName) => {
             setSentToPersonId(personId);
             setSentToPersonName(personName);
-            notifyStaffOfArrival(personId, personName);
+            createPrequalSubmissionAndNotify(personId, personName);
             setContractorStep("airside");
           }}
-          onBack={() => setContractorStep("prequalification")}
+          onBack={() => setContractorStep("details")}
         />
       );
     }

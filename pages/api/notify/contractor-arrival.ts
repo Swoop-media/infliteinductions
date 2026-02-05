@@ -14,7 +14,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { staffId, contractorName, siteName, companyName } = req.body;
+  const { staffId, contractorName, siteName, companyName, submissionId } = req.body;
 
   if (!staffId || !contractorName) {
     return res.status(400).json({ error: "Missing required fields" });
@@ -29,7 +29,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq("id", staffId)
       .single();
 
-    const message = [
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}` 
+      : "https://inflite.training";
+    
+    const reviewLink = submissionId 
+      ? `${baseUrl}/app/contractor-prequal/${submissionId}`
+      : null;
+
+    const messageParts = [
       "🔧 **Contractor Arrival**",
       "",
       `**${contractorName}**${companyName ? ` from ${companyName}` : ""} has arrived at ${siteName || "your site"}.`,
@@ -37,7 +45,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       "They have indicated that they sent their pre-qualification to you.",
       "",
       "Please verify their pre-qualification before allowing site access.",
-    ].join("\n");
+    ];
+
+    if (reviewLink) {
+      messageParts.push("");
+      messageParts.push(`**[Click here to review and upload documents](${reviewLink})**`);
+    }
+
+    const message = messageParts.join("\n");
 
     const sent = await sendTeamsDMToAppUser(staffId, message);
 
