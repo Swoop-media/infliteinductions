@@ -50,7 +50,7 @@ export default function PrequalReviewForm({ submission, currentUserId }: Prequal
         const filePath = `contractor-prequal/${fileName}`;
 
         const { error: uploadError } = await supabaseBrowser.storage
-          .from("documents")
+          .from("contractor documents")
           .upload(filePath, file);
 
         if (uploadError) {
