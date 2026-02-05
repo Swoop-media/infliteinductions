@@ -17,11 +17,7 @@ export default async function PrequalReviewPage({ params }: { params: Promise<{ 
 
   const { data: submission, error } = await supabaseAdmin()
     .from("contractor_prequal_submissions")
-    .select(`
-      *,
-      sites(name),
-      sent_to:profiles!sent_to_user_id(id, full_name, email)
-    `)
+    .select("*")
     .eq("id", id)
     .single();
 
@@ -37,10 +33,28 @@ export default async function PrequalReviewPage({ params }: { params: Promise<{ 
     );
   }
 
+  const { data: site } = await supabaseAdmin()
+    .from("sites")
+    .select("name")
+    .eq("id", submission.site_id)
+    .single();
+
+  const { data: sentTo } = await supabaseAdmin()
+    .from("profiles")
+    .select("id, full_name, email")
+    .eq("id", submission.sent_to_user_id)
+    .single();
+
+  const enrichedSubmission = {
+    ...submission,
+    sites: site,
+    sent_to: sentTo,
+  };
+
   return (
     <div className="max-w-2xl mx-auto p-6">
       <PrequalReviewForm 
-        submission={submission} 
+        submission={enrichedSubmission} 
         currentUserId={user.id}
       />
     </div>
