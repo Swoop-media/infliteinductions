@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import TypeSelection from "./TypeSelection";
 import ContractorTabs from "./ContractorTabs";
 import VisitorForm from "./VisitorForm";
 import VisitorCourse from "./VisitorCourse";
+import ContractorCourse from "./ContractorCourse";
 import StaffPortal from "./StaffPortal";
 import SignOutForm from "./SignOutForm";
 import PreQualificationCheck from "./PreQualificationCheck";
@@ -16,7 +18,7 @@ import ContractorDetailsForm from "./ContractorDetailsForm";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
-type ContractorStep = "site" | "prequalification" | "details" | "sentto" | "airside" | "training";
+type ContractorStep = "site" | "prequalification" | "details" | "sentto" | "airside" | "course" | "training" | "success";
 type VisitorStep = "form" | "course" | "success";
 
 interface VisitorFormData {
@@ -182,14 +184,71 @@ export default function ContractorVisitorFlow({
         <AirsideCheck
           onYes={() => {
             setWorkingAirside(true);
-            setContractorStep("training");
+            setContractorStep("course");
           }}
           onNo={() => {
             setWorkingAirside(false);
-            setContractorStep("training");
+            setContractorStep("course");
           }}
           onBack={() => setContractorStep("sentto")}
         />
+      );
+    }
+
+    if (contractorStep === "course" && selectedSiteId && workingAirside !== null) {
+      return (
+        <div className="space-y-6">
+          <div className="border-b pb-4">
+            <div className="flex items-center gap-2">
+              <BackButton />
+              <h1 className="text-2xl font-semibold">Contractor Induction</h1>
+            </div>
+            <p className="text-gray-600 mt-2">
+              Please complete the induction before signing in.
+            </p>
+          </div>
+
+          <ContractorCourse
+            siteId={selectedSiteId}
+            siteName={selectedSiteName}
+            contractorName={contractorName}
+            contractorCompany={contractorCompany}
+            workingAirside={workingAirside}
+            onBack={() => setContractorStep("airside")}
+            onComplete={() => setContractorStep("success")}
+          />
+        </div>
+      );
+    }
+
+    if (contractorStep === "success") {
+      return (
+        <div className="space-y-6">
+          <div className="border-b pb-4">
+            <h1 className="text-2xl font-semibold text-green-700">Sign In Complete</h1>
+          </div>
+
+          <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center space-y-4">
+            <div className="text-4xl">✅</div>
+            <h2 className="text-xl font-semibold text-green-800">
+              Welcome, {contractorName}!
+            </h2>
+            <p className="text-green-700">
+              You have successfully completed your induction and signed in at {selectedSiteName}.
+            </p>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
+              <p className="text-amber-800 font-medium">
+                Remember to sign out when you leave the site.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-center">
+            <Button onClick={resetFlow} className="bg-blue-600 hover:bg-blue-700">
+              Done
+            </Button>
+          </div>
+        </div>
       );
     }
 
