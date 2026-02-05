@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import PrequalReviewForm from "./PrequalReviewForm";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ export default async function PrequalReviewPage({ params }: { params: Promise<{ 
     redirect(`/auth/signin?redirect=/app/contractor-prequal/${id}`);
   }
 
-  const { data: submission, error } = await supabase
+  const { data: submission, error } = await supabaseAdmin()
     .from("contractor_prequal_submissions")
     .select(`
       *,
@@ -25,6 +26,7 @@ export default async function PrequalReviewPage({ params }: { params: Promise<{ 
     .single();
 
   if (error || !submission) {
+    console.error("Failed to fetch submission:", error);
     return (
       <div className="max-w-2xl mx-auto p-6">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
