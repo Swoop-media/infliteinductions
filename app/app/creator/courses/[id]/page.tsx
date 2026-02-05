@@ -462,7 +462,7 @@ async function updateCourseDetails(formData: FormData) {
   // NEW fields
   updatePayload.department = department;
   updatePayload.tags = tags;
-  updatePayload.external_contractors = externalContractors;
+  updatePayload.for_contractors = externalContractors;
   updatePayload.contractor_flow_type = externalContractors ? contractorFlowType : null;
   updatePayload.contractor_site_id = externalContractors ? contractorSiteId : null;
   updatePayload.visitor_flow_type = externalContractors ? visitorFlowType : null;
@@ -957,7 +957,7 @@ function DetailsTab({
             type="checkbox"
             id="external_contractors"
             name="external_contractors"
-            defaultChecked={course?.external_contractors || false}
+            defaultChecked={course?.for_contractors || false}
             className="h-4 w-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
           />
           <label htmlFor="external_contractors" className="text-sm font-medium text-gray-900">

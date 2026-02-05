@@ -185,15 +185,16 @@ export default function ContractorCourse({
   useEffect(() => {
     const fetchContractorCourse = async () => {
       try {
-        const flowType = workingAirside ? "contractor_airside" : "contractor_building";
+        // Match the flow type values used in the course creator:
+        // - "airside_induction" for "Yes to airside"
+        // - "site_induction" for "No to airside"
+        const flowType = workingAirside ? "airside_induction" : "site_induction";
         
         const { data: courseData, error: courseError } = await supabaseBrowser
           .from("courses" as any)
           .select("*, course_modules(*)")
-          .eq("visitor_flow_type", flowType)
-          .or(`contractor_site_id.eq.${siteId},contractor_site_id.is.null`)
-          .eq("active", true)
-          .order("contractor_site_id", { ascending: false, nullsFirst: false })
+          .eq("contractor_flow_type", flowType)
+          .eq("contractor_site_id", siteId)
           .limit(1)
           .single();
 
