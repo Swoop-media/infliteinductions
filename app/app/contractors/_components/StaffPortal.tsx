@@ -36,11 +36,26 @@ interface ContractorSignin {
   site_name?: string;
 }
 
+interface PrequalSubmission {
+  id: string;
+  contractor_name: string;
+  contractor_company: string | null;
+  site_id: string | null;
+  sent_to_user_id: string | null;
+  file_paths: string[];
+  reviewed: boolean;
+  reviewed_at: string | null;
+  notes: string | null;
+  created_at: string;
+  site_name?: string;
+  sent_to_name?: string;
+}
+
 interface StaffPortalProps {
   sites: Site[];
 }
 
-type TabType = "signins" | "contractors" | "visitors";
+type TabType = "signins" | "contractors" | "visitors" | "prequal";
 
 export default function StaffPortal({ sites }: StaffPortalProps) {
   const [activeTab, setActiveTab] = useState<TabType>("signins");
@@ -48,6 +63,7 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
   const [selectedSite, setSelectedSite] = useState<string>("all");
   const [visitors, setVisitors] = useState<VisitorSignin[]>([]);
   const [contractors, setContractors] = useState<ContractorSignin[]>([]);
+  const [prequalSubmissions, setPrequalSubmissions] = useState<PrequalSubmission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const siteMap = useMemo(() => {
@@ -96,6 +112,22 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
           contractorData.map((c: any) => ({
             ...c,
             site_name: c.site_id ? siteMap.get(c.site_id) || null : null,
+          }))
+        );
+      }
+
+      const { data: prequalData, error: prequalError } =
+        await supabaseBrowser
+          .from("contractor_prequal_submissions" as any)
+          .select("*")
+          .order("created_at", { ascending: false });
+
+      if (!prequalError && prequalData) {
+        setPrequalSubmissions(
+          prequalData.map((p: any) => ({
+            ...p,
+            site_name: p.site_id ? siteMap.get(p.site_id) || null : null,
+            sent_to_name: p.sent_to_user_id ? profileMap.get(p.sent_to_user_id) || null : null,
           }))
         );
       }
@@ -150,6 +182,18 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
   const filteredVisitors = filterBySearchAndSite(visitors);
   const filteredContractors = filterBySearchAndSite(contractors);
   const filteredSignins = filterBySearchAndSite(allSignins);
+  
+  const filteredPrequal = useMemo(() => {
+    return prequalSubmissions.filter((item) => {
+      const matchesSearch = searchQuery
+        ? item.contractor_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (item.contractor_company?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
+        : true;
+      const matchesSite =
+        selectedSite === "all" ? true : item.site_id === selectedSite;
+      return matchesSearch && matchesSite;
+    });
+  }, [prequalSubmissions, searchQuery, selectedSite]);
 
   const formatDateTime = (dateStr: string | null) => {
     if (!dateStr) return "-";
@@ -180,6 +224,7 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
     { key: "signins", label: "Sign-ins", count: filteredSignins.length },
     { key: "contractors", label: "Contractors", count: filteredContractors.length },
     { key: "visitors", label: "Visitors", count: filteredVisitors.length },
+    { key: "prequal", label: "Pre-Qualifications", count: filteredPrequal.length },
   ];
 
   return (
@@ -369,6 +414,74 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
                       <td className="p-3">{visitor.email || "-"}</td>
                       <td className="p-3">
                         {formatDateTime(visitor.signed_in_at)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeTab === "prequal" && (
+        <div className="mt-4">
+          {isLoading ? (
+            <div className="text-center py-8 text-gray-500">Loading...</div>
+          ) : filteredPrequal.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No pre-qualification submissions found
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-gray-50">
+                    <th className="text-left p-3 font-medium">Status</th>
+                    <th className="text-left p-3 font-medium">Contractor</th>
+                    <th className="text-left p-3 font-medium">Company</th>
+                    <th className="text-left p-3 font-medium">Site</th>
+                    <th className="text-left p-3 font-medium">Sent To</th>
+                    <th className="text-left p-3 font-medium">Files</th>
+                    <th className="text-left p-3 font-medium">Submitted</th>
+                    <th className="text-left p-3 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredPrequal.map((prequal) => (
+                    <tr key={prequal.id} className="border-b hover:bg-gray-50">
+                      <td className="p-3">
+                        {prequal.reviewed ? (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Reviewed
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            Pending
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 font-medium">{prequal.contractor_name}</td>
+                      <td className="p-3">{prequal.contractor_company || "-"}</td>
+                      <td className="p-3">{prequal.site_name || "-"}</td>
+                      <td className="p-3">{prequal.sent_to_name || "-"}</td>
+                      <td className="p-3">
+                        {prequal.file_paths?.length > 0 ? (
+                          <span className="text-blue-600">{prequal.file_paths.length} file(s)</span>
+                        ) : (
+                          <span className="text-gray-400">None</span>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        {formatDateTime(prequal.created_at)}
+                      </td>
+                      <td className="p-3">
+                        <a
+                          href={`/app/contractor-prequal/${prequal.id}`}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          {prequal.reviewed ? "View" : "Review"}
+                        </a>
                       </td>
                     </tr>
                   ))}
