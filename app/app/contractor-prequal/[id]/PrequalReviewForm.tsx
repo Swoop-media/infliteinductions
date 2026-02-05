@@ -14,7 +14,7 @@ interface PrequalReviewFormProps {
 export default function PrequalReviewForm({ submission, currentUserId }: PrequalReviewFormProps) {
   const router = useRouter();
   const [files, setFiles] = useState<File[]>([]);
-  const [existingFiles, setExistingFiles] = useState<string[]>(submission.file_paths || []);
+  const [existingFiles, setExistingFiles] = useState<string[]>(submission.files || []);
   const [reviewed, setReviewed] = useState(submission.reviewed || false);
   const [notes, setNotes] = useState(submission.notes || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -61,7 +61,7 @@ export default function PrequalReviewForm({ submission, currentUserId }: Prequal
       }
 
       const updateData: any = {
-        file_paths: uploadedPaths,
+        files: uploadedPaths,
         notes: notes,
       };
 
