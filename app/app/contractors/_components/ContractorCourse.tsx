@@ -240,19 +240,22 @@ export default function ContractorCourse({
     setError(null);
 
     try {
-      const { error: signInError } = await (supabaseBrowser as any)
-        .from("contractor_signins")
-        .insert({
+      const res = await fetch("/api/contractor-signin/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           contractor_name: contractorName,
           contractor_company: contractorCompany || null,
           site_id: siteId,
           course_id: course?.id || null,
           course_completed: true,
           working_airside: workingAirside,
-        });
+        }),
+      });
 
-      if (signInError) {
-        throw new Error(signInError.message);
+      const result = await res.json();
+      if (!res.ok) {
+        throw new Error(result.error || "Sign-in failed");
       }
 
       onComplete();
