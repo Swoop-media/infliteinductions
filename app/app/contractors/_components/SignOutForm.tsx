@@ -85,13 +85,9 @@ export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
 
       if (visitorsError) throw visitorsError;
 
-      const { data: contractors, error: contractorsError } = await supabaseBrowser
-        .from("contractor_signins" as any)
-        .select("id, name, site_id, signed_in_at, signed_out_at, company, email, phone")
-        .gte("signed_in_at", cutoffDate)
-        .order("signed_in_at", { ascending: false });
-
-      if (contractorsError) throw contractorsError;
+      const contractorRes = await fetch("/api/contractor-signin/list?days=7");
+      const contractorJson = await contractorRes.json();
+      const contractors = contractorRes.ok ? contractorJson.data || [] : [];
 
       const allVisitors = (visitors || []).map((v: any) => ({
         ...v,
@@ -99,7 +95,7 @@ export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
         site_name: v.site_id ? siteMap.get(v.site_id) || null : null,
       }));
 
-      const allContractors = (contractors || []).map((c: any) => ({
+      const allContractors = contractors.map((c: any) => ({
         ...c,
         type: "contractor" as const,
         site_name: c.site_id ? siteMap.get(c.site_id) || null : null,
@@ -152,13 +148,23 @@ export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
     setError(null);
 
     try {
-      const table = person.type === "visitor" ? "visitor_signins" : "contractor_signins";
-      const { error: updateError } = await (supabaseBrowser as any)
-        .from(table)
-        .update({ signed_out_at: new Date().toISOString() })
-        .eq("id", person.id);
-
-      if (updateError) throw updateError;
+      if (person.type === "contractor") {
+        const res = await fetch("/api/contractor-signin/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: person.id, signed_out_at: new Date().toISOString() }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error);
+        }
+      } else {
+        const { error: updateError } = await (supabaseBrowser as any)
+          .from("visitor_signins")
+          .update({ signed_out_at: new Date().toISOString() })
+          .eq("id", person.id);
+        if (updateError) throw updateError;
+      }
       
       onSuccess();
     } catch (err: any) {
@@ -173,30 +179,36 @@ export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
     setError(null);
 
     try {
-      const table = person.type === "visitor" ? "visitor_signins" : "contractor_signins";
-      const signedInAt = new Date().toISOString();
-      
-      const insertData: any = {
-        name: person.name,
-        site_id: person.site_id,
-        signed_in_at: signedInAt,
-      };
-
-      if (person.type === "visitor") {
-        insertData.email = person.email;
-        insertData.phone = person.phone;
-        insertData.visiting_user_id = person.visiting_user_id;
+      if (person.type === "contractor") {
+        const res = await fetch("/api/contractor-signin/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contractor_name: person.name,
+            contractor_company: person.company || null,
+            site_id: person.site_id,
+            course_completed: true,
+            working_airside: false,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error);
+        }
       } else {
-        insertData.email = person.email;
-        insertData.phone = person.phone;
-        insertData.company = person.company;
+        const insertData: any = {
+          name: person.name,
+          site_id: person.site_id,
+          signed_in_at: new Date().toISOString(),
+          email: person.email,
+          phone: person.phone,
+          visiting_user_id: person.visiting_user_id,
+        };
+        const { error: insertError } = await (supabaseBrowser as any)
+          .from("visitor_signins")
+          .insert(insertData);
+        if (insertError) throw insertError;
       }
-
-      const { error: insertError } = await (supabaseBrowser as any)
-        .from(table)
-        .insert(insertData);
-
-      if (insertError) throw insertError;
 
       alert(`${person.name} has been signed in successfully!\n\nRemember to sign out when you leave.`);
       await loadPeople();

@@ -101,15 +101,12 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
         );
       }
 
-      const { data: contractorData, error: contractorError } =
-        await supabaseBrowser
-          .from("contractor_signins" as any)
-          .select("*")
-          .order("signed_in_at", { ascending: false });
+      const contractorRes = await fetch("/api/contractor-signin/list");
+      const contractorJson = await contractorRes.json();
 
-      if (!contractorError && contractorData) {
+      if (contractorRes.ok && contractorJson.data) {
         setContractors(
-          contractorData.map((c: any) => ({
+          contractorJson.data.map((c: any) => ({
             ...c,
             site_name: c.site_id ? siteMap.get(c.site_id) || null : null,
           }))
@@ -208,12 +205,19 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
     type: "visitor" | "contractor"
   ) => {
     try {
-      const table = type === "visitor" ? "visitor_signins" : "contractor_signins";
-      const updateData = { signed_out_at: new Date().toISOString() };
-      await (supabaseBrowser as any)
-        .from(table)
-        .update(updateData)
-        .eq("id", id);
+      if (type === "contractor") {
+        await fetch("/api/contractor-signin/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id, signed_out_at: new Date().toISOString() }),
+        });
+      } else {
+        const updateData = { signed_out_at: new Date().toISOString() };
+        await (supabaseBrowser as any)
+          .from("visitor_signins")
+          .update(updateData)
+          .eq("id", id);
+      }
       loadData();
     } catch (err) {
       console.error("Error signing out:", err);
