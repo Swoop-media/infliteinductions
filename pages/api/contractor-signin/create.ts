@@ -14,18 +14,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const admin = supabaseAdmin();
-    const { data, error } = await admin
-      .from("contractor_signins")
-      .insert({
-        contractor_name,
-        contractor_company: contractor_company || null,
-        site_id,
-        course_id: course_id || null,
-        course_completed: course_completed ?? false,
-        working_airside: working_airside ?? false,
-      })
-      .select()
-      .single();
+    const { data, error } = await admin.rpc("insert_contractor_signin", {
+      p_contractor_name: contractor_name,
+      p_contractor_company: contractor_company || null,
+      p_site_id: site_id,
+      p_course_id: course_id || null,
+      p_course_completed: course_completed ?? false,
+      p_working_airside: working_airside ?? false,
+    });
 
     if (error) {
       console.error("Error creating contractor sign-in:", error);
