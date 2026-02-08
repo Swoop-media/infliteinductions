@@ -1,4 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import { Pool } from "pg";
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -12,41 +18,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "contractor_name and site_id are required" });
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const result = await pool.query(
+      `INSERT INTO contractor_signins (contractor_name, contractor_company, site_id, course_id, course_completed, working_airside)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING *`,
+      [
+        contractor_name,
+        contractor_company || null,
+        site_id,
+        course_id || null,
+        course_completed ?? false,
+        working_airside ?? false,
+      ]
+    );
 
-    if (!supabaseUrl || !serviceRoleKey) {
-      return res.status(500).json({ error: "Server configuration error" });
-    }
-
-    const payload = {
-      contractor_name,
-      contractor_company: contractor_company || null,
-      site_id,
-      course_id: course_id || null,
-      course_completed: course_completed ?? false,
-      working_airside: working_airside ?? false,
-    };
-
-    const response = await fetch(`${supabaseUrl}/rest/v1/contractor_signins`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "apikey": serviceRoleKey,
-        "Authorization": `Bearer ${serviceRoleKey}`,
-        "Prefer": "return=representation",
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Error creating contractor sign-in:", errorText);
-      return res.status(500).json({ error: errorText });
-    }
-
-    const data = await response.json();
-    return res.status(200).json({ success: true, data: data[0] || data });
+    return res.status(200).json({ success: true, data: result.rows[0] });
   } catch (err: any) {
     console.error("Contractor sign-in error:", err);
     return res.status(500).json({ error: err.message || "Internal server error" });
