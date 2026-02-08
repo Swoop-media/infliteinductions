@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import ContractorDetail from "./ContractorDetail";
 
 interface Site {
   id: string;
@@ -65,6 +66,7 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
   const [contractors, setContractors] = useState<ContractorSignin[]>([]);
   const [prequalSubmissions, setPrequalSubmissions] = useState<PrequalSubmission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedContractorId, setSelectedContractorId] = useState<string | null>(null);
 
   const siteMap = useMemo(() => {
     return new Map(sites.map((s) => [s.id, s.name]));
@@ -231,6 +233,15 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
     { key: "prequal", label: "Pre-Qualifications", count: filteredPrequal.length },
   ];
 
+  if (selectedContractorId) {
+    return (
+      <ContractorDetail
+        contractorId={selectedContractorId}
+        onBack={() => setSelectedContractorId(null)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row gap-4">
@@ -317,7 +328,18 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
                         )}
                       </td>
                       <td className="p-3 capitalize">{signin.type}</td>
-                      <td className="p-3 font-medium">{signin.name}</td>
+                      <td className="p-3 font-medium">
+                        {signin.type === "contractor" ? (
+                          <button
+                            onClick={() => setSelectedContractorId(signin.id)}
+                            className="text-blue-600 hover:text-blue-800 hover:underline text-left"
+                          >
+                            {signin.name}
+                          </button>
+                        ) : (
+                          signin.name
+                        )}
+                      </td>
                       <td className="p-3">{signin.site_name || "-"}</td>
                       <td className="p-3">
                         {formatDateTime(signin.signed_in_at)}
@@ -368,8 +390,12 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
                 </thead>
                 <tbody>
                   {filteredContractors.map((contractor) => (
-                    <tr key={contractor.id} className="border-b hover:bg-gray-50">
-                      <td className="p-3 font-medium">{contractor.name}</td>
+                    <tr
+                      key={contractor.id}
+                      className="border-b hover:bg-blue-50 cursor-pointer transition-colors"
+                      onClick={() => setSelectedContractorId(contractor.id)}
+                    >
+                      <td className="p-3 font-medium text-blue-600">{contractor.name}</td>
                       <td className="p-3">{contractor.company || "-"}</td>
                       <td className="p-3">{contractor.site_name || "-"}</td>
                       <td className="p-3">{contractor.purpose || "-"}</td>
