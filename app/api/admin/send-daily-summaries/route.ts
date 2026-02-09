@@ -1,35 +1,10 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { sendTeamsDMToAppUser } from "@/lib/teams/send";
 import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorizationExpiry";
 
-// Type definitions
-type AuthorisationWithDueDate = {
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  authorisation_title: string;
-  completed_at: string;
-  valid_for_days: number;
-  due_date: Date;
-  days_until_expiry: number;
-  status: string;
-};
-
-type DocumentWithDueDate = {
-  user_id: string;
-  user_name: string;
-  user_email: string;
-  document_title: string;
-  expires_on: string;
-  days_until_expiry: number;
-  status: string;
-};
-
-// Helper function to calculate days until expiry
 function calculateDaysUntilExpiry(dueDate: Date): number {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -38,48 +13,31 @@ function calculateDaysUntilExpiry(dueDate: Date): number {
   return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-// Helper function to determine status
-function getStatus(daysUntilExpiry: number): string {
-  if (daysUntilExpiry < 0) return "⚠️ Overdue";
-  if (daysUntilExpiry === 0) return "🔴 Expires Today";
-  if (daysUntilExpiry <= 7) return "🟡 Expires This Week";
-  if (daysUntilExpiry <= 30) return "🟠 Expires This Month";
-  return "✅ Current";
-}
-
-// Fetch authorisation due dates - matches admin page logic exactly
-async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationWithDueDate[]> {
-  // Step 1: Get all completed authorisation assignments with approved_at
+async function fetchAuthorisationDueDates(supabase: any) {
   const { data: assignments, error } = await supabase
     .from("authorisation_assignments")
     .select("id, user_id, authorisation_id, approved_at")
     .eq("assignment_status", "completed")
     .not("approved_at", "is", null);
 
-  console.log("Authorisation query result:", { dataCount: assignments?.length, error });
   if (error || !assignments || assignments.length === 0) return [];
 
-  // Step 2: Get authorisations
   const authIds = [...new Set(assignments.map((a: any) => a.authorisation_id))];
-  const { data: authorisations } = await supabase
-    .from("authorisations")
-    .select("id, title, valid_for_days, department")
-    .in("id", authIds);
-  const authMap = new Map((authorisations || []).map((a: any) => [a.id, a]));
-
-  // Step 3: Get profiles
   const userIds = [...new Set(assignments.map((a: any) => a.user_id))];
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name, email")
-    .in("id", userIds);
+
+  const [
+    { data: authorisations },
+    { data: profiles },
+    { data: authCourses },
+  ] = await Promise.all([
+    supabase.from("authorisations").select("id, title, valid_for_days, department").in("id", authIds),
+    supabase.from("profiles").select("id, full_name, email").in("id", userIds),
+    supabase.from("authorisation_courses").select("authorisation_id, course_id").in("authorisation_id", authIds),
+  ]);
+
+  const authMap = new Map((authorisations || []).map((a: any) => [a.id, a]));
   const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
 
-  // Step 4: Get authorisation courses
-  const { data: authCourses } = await supabase
-    .from("authorisation_courses")
-    .select("authorisation_id, course_id")
-    .in("authorisation_id", authIds);
   const authCourseMap = new Map<string, string[]>();
   (authCourses || []).forEach((ac: any) => {
     const existing = authCourseMap.get(ac.authorisation_id) || [];
@@ -89,17 +47,21 @@ async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationW
 
   const allCourseIds = [...new Set((authCourses || []).map((ac: any) => ac.course_id))];
 
-  // Step 5: Get documents with expiry
   let documents: any[] = [];
+  let courseAssignmentsData: any[] = [];
+  let courses: any[] = [];
+
   if (allCourseIds.length > 0 && userIds.length > 0) {
-    const { data: docs } = await supabase
-      .from("learner_documents")
-      .select("id, user_id, course_id, expires_on")
-      .in("user_id", userIds)
-      .in("course_id", allCourseIds)
-      .not("expires_on", "is", null);
-    documents = docs || [];
+    const [docsRes, caRes, coursesRes] = await Promise.all([
+      supabase.from("learner_documents").select("id, user_id, course_id, expires_on").in("user_id", userIds).in("course_id", allCourseIds).not("expires_on", "is", null),
+      supabase.from("course_assignments").select("id, user_id, course_id, completed_at").in("user_id", userIds).in("course_id", allCourseIds).eq("role", "trainee").not("completed_at", "is", null),
+      supabase.from("courses").select("id, valid_for_months").in("id", allCourseIds),
+    ]);
+    documents = docsRes.data || [];
+    courseAssignmentsData = caRes.data || [];
+    courses = coursesRes.data || [];
   }
+
   const userCourseDocMap = new Map<string, any[]>();
   documents.forEach((doc: any) => {
     const key = `${doc.user_id}_${doc.course_id}`;
@@ -108,44 +70,25 @@ async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationW
     userCourseDocMap.set(key, existing);
   });
 
-  // Step 6: Get courses with validity
-  const { data: courses } = await supabase
-    .from("courses")
-    .select("id, valid_for_months")
-    .in("id", allCourseIds.length > 0 ? allCourseIds : ["none"]);
   const courseValidityMap = new Map<string, number | null>();
   (courses || []).forEach((c: any) => {
     courseValidityMap.set(c.id, c.valid_for_months);
   });
 
-  // Step 7: Get course assignments
-  let courseAssignments: any[] = [];
-  if (allCourseIds.length > 0 && userIds.length > 0) {
-    const { data: ca } = await supabase
-      .from("course_assignments")
-      .select("id, user_id, course_id, completed_at")
-      .in("user_id", userIds)
-      .in("course_id", allCourseIds)
-      .eq("role", "trainee")
-      .not("completed_at", "is", null);
-    courseAssignments = ca || [];
-  }
   const userCourseAssignmentMap = new Map<string, any>();
-  courseAssignments.forEach((ca: any) => {
+  courseAssignmentsData.forEach((ca: any) => {
     const key = `${ca.user_id}_${ca.course_id}`;
     userCourseAssignmentMap.set(key, ca);
   });
 
-  // Step 8: Calculate expiry for each assignment
-  const authorisationsWithDates: AuthorisationWithDueDate[] = [];
-  
+  const results: any[] = [];
+
   for (const assignment of assignments) {
     const auth = authMap.get(assignment.authorisation_id);
     const profile = profileMap.get(assignment.user_id);
     const approvedAt = new Date(assignment.approved_at);
     const validForDays = auth?.valid_for_days ?? null;
 
-    // Get courses linked to this authorization
     const courseIds = authCourseMap.get(assignment.authorisation_id) || [];
     const userDocs: any[] = [];
     const userCourses: any[] = [];
@@ -160,12 +103,11 @@ async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationW
       if (validForMonths && courseAssignment?.completed_at) {
         userCourses.push({
           valid_for_months: validForMonths,
-          completed_at: courseAssignment.completed_at
+          completed_at: courseAssignment.completed_at,
         });
       }
     });
 
-    // Calculate expiry using the same function as admin page
     const expiryDate = calculateAuthorizationExpiry(
       approvedAt,
       validForDays,
@@ -173,76 +115,27 @@ async function fetchAuthorisationDueDates(supabase: any): Promise<AuthorisationW
       userCourses
     );
 
-    if (!expiryDate) continue; // No expiry date = skip
-    
+    if (!expiryDate) continue;
+
     const daysUntilExpiry = calculateDaysUntilExpiry(expiryDate);
-    
-    authorisationsWithDates.push({
+
+    results.push({
       user_id: assignment.user_id,
       user_name: profile?.full_name || profile?.email || "Unknown",
-      user_email: profile?.email || "",
       authorisation_title: auth?.title || "Unknown Authorisation",
-      completed_at: assignment.approved_at || "",
-      valid_for_days: validForDays || 0,
       due_date: expiryDate,
       days_until_expiry: daysUntilExpiry,
-      status: getStatus(daysUntilExpiry)
     });
   }
 
-  // Sort by days until expiry (ascending - most urgent first)
-  return authorisationsWithDates.sort((a, b) => a.days_until_expiry - b.days_until_expiry);
-}
-
-// Fetch document due dates
-async function fetchDocumentDueDates(supabase: any): Promise<DocumentWithDueDate[]> {
-  const { data, error } = await supabase
-    .from("learner_documents")
-    .select(`
-      id,
-      user_id,
-      title,
-      expires_on,
-      profiles!learner_documents_user_id_fkey (
-        id,
-        full_name,
-        email
-      )
-    `)
-    .not("expires_on", "is", null);
-
-  console.log("Document query result:", { dataCount: data?.length, error });
-  if (error || !data) return [];
-
-  const documentsWithDates: DocumentWithDueDate[] = [];
-  
-  for (const doc of data) {
-    if (!doc.expires_on) continue;
-    
-    const expiryDate = new Date(doc.expires_on);
-    const daysUntilExpiry = calculateDaysUntilExpiry(expiryDate);
-    
-    documentsWithDates.push({
-      user_id: doc.user_id,
-      user_name: doc.profiles?.full_name || doc.profiles?.email || "Unknown",
-      user_email: doc.profiles?.email || "",
-      document_title: doc.title || "Unknown Document",
-      expires_on: doc.expires_on,
-      days_until_expiry: daysUntilExpiry,
-      status: getStatus(daysUntilExpiry)
-    });
-  }
-
-  // Sort by days until expiry (ascending - most urgent first)
-  return documentsWithDates.sort((a, b) => a.days_until_expiry - b.days_until_expiry);
+  return results.sort((a, b) => a.days_until_expiry - b.days_until_expiry);
 }
 
 export async function POST(req: NextRequest) {
   try {
-    // Check authorization - only allow if caller is admin or it's a scheduled task
     const authHeader = req.headers.get("authorization");
     const isScheduledTask = authHeader === `Bearer ${process.env.CRON_SECRET}`;
-    
+
     if (!isScheduledTask) {
       const isAdmin = await hasRole("Admin");
       if (!isAdmin) {
@@ -252,133 +145,127 @@ export async function POST(req: NextRequest) {
 
     const supabase = supabaseAdmin();
 
-    // Get Admin and Senior Management role IDs
-    const { data: roles, error: roleError } = await supabase
-      .from("roles")
-      .select("id, name")
-      .in("name", ["Admin", "Senior Management"]);
+    const [
+      { data: roles, error: roleError },
+      allAuthorisations,
+    ] = await Promise.all([
+      supabase.from("roles").select("id, name").in("name", ["Admin", "Senior Management"]),
+      fetchAuthorisationDueDates(supabase),
+    ]);
 
     if (roleError || !roles || roles.length === 0) {
-      return NextResponse.json({ 
-        error: "Required roles not found (Admin or Senior Management)", 
-        details: roleError?.message 
+      return NextResponse.json({
+        error: "Required roles not found",
+        details: roleError?.message,
       }, { status: 404 });
     }
 
-    const roleIds = roles.map(r => r.id);
+    const roleIds = roles.map((r) => r.id);
 
-    // Get all user IDs who have either Admin or Senior Management role
-    const { data: userRoles, error: userRoleError } = await supabase
+    const { data: userRoles } = await supabase
       .from("user_roles")
       .select("user_id")
       .in("role_id", roleIds);
 
-    if (userRoleError || !userRoles || userRoles.length === 0) {
-      return NextResponse.json({ 
-        error: "No users found with Admin or Senior Management roles", 
-        details: userRoleError?.message 
+    if (!userRoles || userRoles.length === 0) {
+      return NextResponse.json({
+        error: "No users found with Admin or Senior Management roles",
       }, { status: 404 });
     }
 
-    // Deduplicate user IDs (in case someone has both roles)
-    const uniqueUserIds = [...new Set(userRoles.map(ur => ur.user_id))];
-    
-    // Get profile information for all recipient users
-    const { data: recipientUsers, error: recipientError } = await supabase
+    const uniqueUserIds = [...new Set(userRoles.map((ur) => ur.user_id))];
+
+    const { data: recipientUsers } = await supabase
       .from("profiles")
       .select("id, email, full_name")
       .in("id", uniqueUserIds);
 
-    if (recipientError || !recipientUsers || recipientUsers.length === 0) {
-      return NextResponse.json({ 
-        error: "No users found with Admin or Senior Management roles", 
-        details: recipientError?.message 
+    if (!recipientUsers || recipientUsers.length === 0) {
+      return NextResponse.json({
+        error: "No recipient users found",
       }, { status: 404 });
     }
 
-    // Fetch authorisations and documents only (no courses)
-    const [allAuthorisations, allDocuments] = await Promise.all([
-      fetchAuthorisationDueDates(supabase),
-      fetchDocumentDueDates(supabase)
-    ]);
+    const expired = allAuthorisations.filter((a) => a.days_until_expiry <= 0);
+    const due7 = allAuthorisations.filter((a) => a.days_until_expiry > 0 && a.days_until_expiry <= 7);
+    const due30 = allAuthorisations.filter((a) => a.days_until_expiry > 7 && a.days_until_expiry <= 30);
+    const due60 = allAuthorisations.filter((a) => a.days_until_expiry > 30 && a.days_until_expiry <= 60);
 
-    console.log("Fetched data:", { 
-      allAuthorisations: allAuthorisations.length, 
-      allDocuments: allDocuments.length 
-    });
+    const totalItems = expired.length + due7.length + due30.length + due60.length;
 
-    // Filter to only items due within 30 days or overdue, then limit to top 25
-    const upcomingAuthorisations = allAuthorisations.filter(a => a.days_until_expiry <= 30);
-    const upcomingDocuments = allDocuments.filter(d => d.days_until_expiry <= 30);
-    const topAuthorisations = upcomingAuthorisations.slice(0, 25);
-    const topDocuments = upcomingDocuments.slice(0, 25);
-    
-    console.log("Filtered data:", { 
-      upcomingAuthorisations: upcomingAuthorisations.length, 
-      upcomingDocuments: upcomingDocuments.length 
-    });
-
-    // Send notifications to each Admin and Senior Management user
     const results = [];
     for (const recipient of recipientUsers) {
       try {
-        // Build combined daily summary message
-        const today = new Date().toLocaleDateString('en-NZ', { 
-          weekday: 'long', 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
+        const today = new Date().toLocaleDateString("en-NZ", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
         });
-        
-        let message = `📋 **Daily Expiry Summary**\n`;
+
+        let message = `📋 **Daily Authorisation Expiry Summary**\n`;
         message += `📅 ${today}\n\n`;
 
-        // Authorisations section
-        if (topAuthorisations.length > 0) {
-          message += `📜 **Authorisations** (${upcomingAuthorisations.length} expiring soon)\n`;
-          for (const auth of topAuthorisations) {
-            const daysText = auth.days_until_expiry < 0 
-              ? `overdue by ${Math.abs(auth.days_until_expiry)} days`
-              : `${auth.days_until_expiry} days`;
-            message += `• ${auth.authorisation_title} - ${auth.user_name} (${daysText})\n`;
-          }
-          message += `\n`;
+        if (totalItems === 0) {
+          message += `No authorisations due within 60 days.\n\n`;
         } else {
-          message += `📜 **Authorisations**: No items due within 30 days.\n\n`;
-        }
+          if (expired.length > 0) {
+            message += `🔴 **Expired** (${expired.length})\n`;
+            for (const item of expired.slice(0, 15)) {
+              const daysText = item.days_until_expiry === 0
+                ? "expires today"
+                : `overdue by ${Math.abs(item.days_until_expiry)} days`;
+              message += `• ${item.authorisation_title} - ${item.user_name} (${daysText})\n`;
+            }
+            if (expired.length > 15) message += `• ... and ${expired.length - 15} more\n`;
+            message += `\n`;
+          }
 
-        // Documents section
-        if (topDocuments.length > 0) {
-          message += `📄 **Documents** (${upcomingDocuments.length} expiring soon)\n`;
-          for (const doc of topDocuments) {
-            const daysText = doc.days_until_expiry < 0 
-              ? `overdue by ${Math.abs(doc.days_until_expiry)} days`
-              : `${doc.days_until_expiry} days`;
-            message += `• ${doc.document_title} - ${doc.user_name} (${daysText})\n`;
+          if (due7.length > 0) {
+            message += `🟡 **Due within 7 days** (${due7.length})\n`;
+            for (const item of due7.slice(0, 15)) {
+              message += `• ${item.authorisation_title} - ${item.user_name} (${item.days_until_expiry} days)\n`;
+            }
+            if (due7.length > 15) message += `• ... and ${due7.length - 15} more\n`;
+            message += `\n`;
           }
-          message += `\n`;
-        } else {
-          message += `📄 **Documents**: No items due within 30 days.\n\n`;
+
+          if (due30.length > 0) {
+            message += `🟠 **Due within 30 days** (${due30.length})\n`;
+            for (const item of due30.slice(0, 15)) {
+              message += `• ${item.authorisation_title} - ${item.user_name} (${item.days_until_expiry} days)\n`;
+            }
+            if (due30.length > 15) message += `• ... and ${due30.length - 15} more\n`;
+            message += `\n`;
+          }
+
+          if (due60.length > 0) {
+            message += `🔵 **Due within 60 days** (${due60.length})\n`;
+            for (const item of due60.slice(0, 15)) {
+              message += `• ${item.authorisation_title} - ${item.user_name} (${item.days_until_expiry} days)\n`;
+            }
+            if (due60.length > 15) message += `• ... and ${due60.length - 15} more\n`;
+            message += `\n`;
+          }
         }
 
         message += `View full reports: https://training.inflite.nz/app/admin`;
-        
+
         await sendTeamsDMToAppUser(recipient.id, message);
-        
+
         results.push({
           userId: recipient.id,
           userName: recipient.full_name || recipient.email,
           status: "success",
-          messageSent: true,
-          itemsFound: upcomingAuthorisations.length + upcomingDocuments.length
+          itemsFound: totalItems,
         });
       } catch (error) {
-        console.error(`Failed to send notifications to user ${recipient.id}:`, error);
+        console.error(`Failed to send to user ${recipient.id}:`, error);
         results.push({
           userId: recipient.id,
           userName: recipient.full_name || recipient.email,
           status: "failed",
-          error: error.message
+          error: error.message,
         });
       }
     }
@@ -388,36 +275,27 @@ export async function POST(req: NextRequest) {
       timestamp: new Date().toISOString(),
       summary: {
         recipientsNotified: recipientUsers.length,
-        authorisationsFound: upcomingAuthorisations.length,
-        documentsFound: upcomingDocuments.length,
-        authorisationsShown: topAuthorisations.length,
-        documentsShown: topDocuments.length
+        expired: expired.length,
+        due7Days: due7.length,
+        due30Days: due30.length,
+        due60Days: due60.length,
+        totalItems,
       },
-      debug: {
-        totalAuthorisationsFromDB: allAuthorisations.length,
-        totalDocumentsFromDB: allDocuments.length,
-        afterFilter30Days: {
-          authorisations: upcomingAuthorisations.length,
-          documents: upcomingDocuments.length
-        }
-      },
-      results
+      results,
     });
-
   } catch (error) {
     console.error("Error sending daily admin summaries:", error);
-    return NextResponse.json({ 
-      error: "Failed to send daily summaries", 
-      details: error.message 
+    return NextResponse.json({
+      error: "Failed to send daily summaries",
+      details: error.message,
     }, { status: 500 });
   }
 }
 
-// GET endpoint for health check
 export async function GET() {
-  return NextResponse.json({ 
+  return NextResponse.json({
     status: "healthy",
     endpoint: "/api/admin/send-daily-summaries",
-    description: "Daily admin notification summaries endpoint"
+    description: "Daily authorisation expiry summary endpoint",
   });
 }

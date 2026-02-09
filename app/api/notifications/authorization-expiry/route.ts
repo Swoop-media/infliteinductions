@@ -212,6 +212,27 @@ export async function POST(request: NextRequest) {
           .update({ assignment_status: "expired" })
           .eq("id", assignment.id);
       } 
+      else if (daysUntilExpiry === 60 && retakeReminderDays !== 60) {
+        await notifyUser(
+          assignment.user_id,
+          "retake_reminder",
+          {
+            type: "Authorization",
+            itemTitle: authTitle,
+            authorizationId: assignment.authorisation_id,
+            daysUntilExpiry: daysUntilExpiry,
+            expiryDate: formattedExpiryDate,
+            learnerName: profile?.full_name,
+            learner_email: profile?.email,
+            url: `/app/my-training`
+          },
+          { 
+            eventId: `auth_retake_reminder_${assignment.id}_60days`,
+            skipTeams: false 
+          }
+        );
+        notificationsRetakeReminder++;
+      }
       else if (daysUntilExpiry === retakeReminderDays) {
         await notifyUser(
           assignment.user_id,
