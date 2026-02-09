@@ -37,7 +37,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: contractors, error: contractorsError } = await supabase
       .from("contractor_signins")
-      .select("id, contractor_name, contractor_company, site_id, responsible_user_id, signed_in_at")
+      .select("id, name, company, site_id, responsible_user_id, signed_in_at")
       .is("signed_out_at", null);
 
     if (contractorsError) {
@@ -67,7 +67,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     for (const contractor of (contractors || [])) {
       if (!contractor.responsible_user_id) {
-        console.log(`Contractor ${contractor.contractor_name} has no responsible_user_id, skipping notification`);
+        console.log(`Contractor ${contractor.name} has no responsible_user_id, skipping notification`);
         continue;
       }
       
@@ -76,8 +76,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
       
       staffNotifications.get(contractor.responsible_user_id)!.contractors.push({
-        name: contractor.contractor_name,
-        company: contractor.contractor_company || null,
+        name: contractor.name,
+        company: contractor.company || null,
         siteName: siteMap.get(contractor.site_id) || "Unknown",
         signedInAt: contractor.signed_in_at,
       });

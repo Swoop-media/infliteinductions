@@ -23,6 +23,7 @@ interface SignedPerson {
   email?: string | null;
   phone?: string | null;
   visiting_user_id?: string | null;
+  responsible_user_id?: string | null;
 }
 
 interface SignOutFormProps {
@@ -189,6 +190,7 @@ export default function SignOutForm({ onBack, onSuccess }: SignOutFormProps) {
             site_id: person.site_id,
             course_completed: true,
             working_airside: false,
+            responsible_user_id: person.responsible_user_id || null,
           }),
         });
         if (!res.ok) {

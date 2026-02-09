@@ -40,8 +40,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: prequalSubmissions } = await sb
       .from("contractor_prequal_submissions")
       .select("*")
-      .ilike("contractor_name", signin.contractor_name)
-      .ilike("contractor_company", signin.contractor_company || "")
+      .ilike("contractor_name", signin.name)
+      .ilike("contractor_company", signin.company || "")
       .order("created_at", { ascending: false });
 
     const enrichedPrequal = [];
@@ -62,7 +62,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data: history } = await sb
       .from("contractor_signins")
       .select("*")
-      .ilike("contractor_name", signin.contractor_name)
+      .ilike("name", signin.name)
       .order("signed_in_at", { ascending: false });
 
     const enrichedHistory = [];
@@ -85,8 +85,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ...signin,
         site_name: siteName,
         course_title: courseTitle,
-        name: signin.contractor_name,
-        company: signin.contractor_company,
       },
       prequalSubmissions: enrichedPrequal,
       signInHistory: enrichedHistory,

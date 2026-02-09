@@ -47,8 +47,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const data = (rows || []).map((row: any) => ({
       ...row,
-      name: row.contractor_name,
-      company: row.contractor_company,
       site_name: row.site_id ? siteMap.get(row.site_id) || null : null,
     }));
 

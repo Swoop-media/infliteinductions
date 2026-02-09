@@ -17,8 +17,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { data, error } = await supabaseAdmin()
       .from("contractor_signins")
       .insert({
-        contractor_name,
-        contractor_company: contractor_company || null,
+        name: contractor_name,
+        company: contractor_company || null,
         site_id,
         course_id: course_id || null,
         course_completed: course_completed ?? false,
