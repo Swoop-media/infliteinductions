@@ -238,7 +238,7 @@ export default function ContractorVisitorFlow({
             </p>
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
               <p className="text-amber-800 font-medium">
-                Remember to sign out when you leave the site.
+                Please wait for someone to escort you to the job site.
               </p>
             </div>
           </div>
