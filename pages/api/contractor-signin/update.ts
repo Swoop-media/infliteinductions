@@ -1,10 +1,6 @@
+// @ts-nocheck
 import type { NextApiRequest, NextApiResponse } from "next";
-import { Pool } from "pg";
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -18,12 +14,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: "id is required" });
     }
 
-    const result = await pool.query(
-      `UPDATE contractor_signins SET signed_out_at = $1 WHERE id = $2 RETURNING *`,
-      [signed_out_at || new Date().toISOString(), id]
-    );
+    const { data, error } = await supabaseAdmin()
+      .from("contractor_signins")
+      .update({ signed_out_at: signed_out_at || new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
 
-    return res.status(200).json({ success: true, data: result.rows[0] });
+    if (error) throw error;
+
+    return res.status(200).json({ success: true, data });
   } catch (err: any) {
     console.error("Error updating contractor sign-in:", err);
     return res.status(500).json({ error: err.message || "Internal server error" });

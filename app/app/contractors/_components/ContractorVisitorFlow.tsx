@@ -214,6 +214,7 @@ export default function ContractorVisitorFlow({
             contractorName={contractorName}
             contractorCompany={contractorCompany}
             workingAirside={workingAirside}
+            responsibleUserId={sentToPersonId}
             onBack={() => setContractorStep("airside")}
             onComplete={() => setContractorStep("success")}
           />

@@ -11,6 +11,7 @@ interface ContractorCourseProps {
   contractorName: string;
   contractorCompany: string;
   workingAirside: boolean;
+  responsibleUserId?: string | null;
   onBack: () => void;
   onComplete: () => void;
 }
@@ -172,6 +173,7 @@ export default function ContractorCourse({
   contractorName, 
   contractorCompany,
   workingAirside,
+  responsibleUserId,
   onBack, 
   onComplete 
 }: ContractorCourseProps) {
@@ -250,6 +252,7 @@ export default function ContractorCourse({
           course_id: course?.id || null,
           course_completed: true,
           working_airside: workingAirside,
+          responsible_user_id: responsibleUserId || null,
         }),
       });
 

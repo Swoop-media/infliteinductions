@@ -19,7 +19,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const supabase = supabaseAdmin();
-    console.log("🕐 Running 5pm sign-out reminder job...");
+    console.log("Running 5pm sign-out reminder job...");
 
     const { data: sites } = await supabase
       .from("sites")
@@ -37,12 +37,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const { data: contractors, error: contractorsError } = await supabase
       .from("contractor_signins")
-      .select("id, name, site_id, company, signed_in_at")
+      .select("id, contractor_name, contractor_company, site_id, responsible_user_id, signed_in_at")
       .is("signed_out_at", null);
 
     if (contractorsError) {
       console.error("Error fetching contractors:", contractorsError);
     }
+
+    console.log(`Found ${visitors?.length || 0} visitors and ${contractors?.length || 0} contractors still signed in`);
 
     const staffNotifications: Map<string, {
       visitors: Array<{ name: string; siteName: string; signedInAt: string }>;
@@ -63,6 +65,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
+    for (const contractor of (contractors || [])) {
+      if (!contractor.responsible_user_id) {
+        console.log(`Contractor ${contractor.contractor_name} has no responsible_user_id, skipping notification`);
+        continue;
+      }
+      
+      if (!staffNotifications.has(contractor.responsible_user_id)) {
+        staffNotifications.set(contractor.responsible_user_id, { visitors: [], contractors: [] });
+      }
+      
+      staffNotifications.get(contractor.responsible_user_id)!.contractors.push({
+        name: contractor.contractor_name,
+        company: contractor.contractor_company || null,
+        siteName: siteMap.get(contractor.site_id) || "Unknown",
+        signedInAt: contractor.signed_in_at,
+      });
+    }
+
     let notificationsSent = 0;
     let notificationsFailed = 0;
 
@@ -70,7 +90,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (data.visitors.length === 0 && data.contractors.length === 0) continue;
 
       const lines: string[] = [
-        "⚠️ **Sign-out Reminder**",
+        "**Sign-out Reminder**",
         "",
         "The following people are still signed in and haven't signed out:",
         "",
@@ -85,7 +105,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             minute: "2-digit",
             hour12: true,
           });
-          lines.push(`• ${v.name} (${v.siteName}) - signed in at ${time}`);
+          lines.push(`- ${v.name} (${v.siteName}) - signed in at ${time}`);
         }
         lines.push("");
       }
@@ -99,7 +119,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             minute: "2-digit",
             hour12: true,
           });
-          lines.push(`• ${c.name}${c.company ? ` (${c.company})` : ""} at ${c.siteName} - signed in at ${time}`);
+          lines.push(`- ${c.name}${c.company ? ` (${c.company})` : ""} at ${c.siteName} - signed in at ${time}`);
         }
         lines.push("");
       }
@@ -112,18 +132,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const sent = await sendTeamsDMToAppUser(staffId, message);
         if (sent) {
           notificationsSent++;
-          console.log(`✅ Reminder sent to staff: ${staffId}`);
+          console.log(`Reminder sent to staff: ${staffId}`);
         } else {
-          console.log(`⚠️ No Teams link for staff: ${staffId}`);
+          console.log(`No Teams link for staff: ${staffId}`);
         }
       } catch (err) {
-        console.error(`❌ Failed to send reminder to ${staffId}:`, err);
+        console.error(`Failed to send reminder to ${staffId}:`, err);
         notificationsFailed++;
       }
     }
 
     const totalUnsignedOut = (visitors?.length || 0) + (contractors?.length || 0);
-    console.log(`📊 Sign-out reminder complete: ${totalUnsignedOut} people still signed in, ${notificationsSent} notifications sent`);
+    console.log(`Sign-out reminder complete: ${totalUnsignedOut} people still signed in, ${notificationsSent} notifications sent`);
 
     res.status(200).json({
       success: true,

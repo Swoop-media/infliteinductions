@@ -1,12 +1,6 @@
 // @ts-nocheck
 import type { NextApiRequest, NextApiResponse } from "next";
-import { Pool } from "pg";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false },
-});
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") {
@@ -17,35 +11,41 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const { days } = req.query;
     const daysBack = days ? parseInt(String(days)) : null;
 
-    let query = `SELECT id, contractor_name, contractor_company, site_id, course_id, 
-                        course_completed, working_airside, signed_in_at, signed_out_at, created_at
-                 FROM contractor_signins`;
+    const sb = supabaseAdmin();
+
+    let query = sb
+      .from("contractor_signins")
+      .select("*")
+      .order("signed_in_at", { ascending: false });
 
     if (daysBack) {
-      query += ` WHERE signed_in_at >= NOW() - INTERVAL '${daysBack} days'`;
+      const since = new Date();
+      since.setDate(since.getDate() - daysBack);
+      query = query.gte("signed_in_at", since.toISOString());
     }
 
-    query += ` ORDER BY signed_in_at DESC`;
+    const { data: rows, error } = await query;
 
-    const result = await pool.query(query);
+    if (error) {
+      console.error("Supabase query error:", error);
+      throw error;
+    }
 
-    const siteIds = [...new Set(result.rows.map(r => r.site_id).filter(Boolean))];
+    const siteIds = [...new Set((rows || []).map((r: any) => r.site_id).filter(Boolean))];
     const siteMap = new Map<string, string>();
 
     if (siteIds.length > 0) {
-      const { data: sites } = await supabaseAdmin()
+      const { data: sites } = await sb
         .from("sites")
         .select("id, name")
         .in("id", siteIds);
 
       if (sites) {
-        for (const s of sites) {
-          siteMap.set(s.id, s.name);
-        }
+        for (const s of sites) siteMap.set(s.id, s.name);
       }
     }
 
-    const data = result.rows.map((row) => ({
+    const data = (rows || []).map((row: any) => ({
       ...row,
       name: row.contractor_name,
       company: row.contractor_company,
