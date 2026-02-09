@@ -93,10 +93,16 @@ export default function PrequalReviewForm({ submission, currentUserId }: Prequal
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString("en-NZ", {
-      dateStyle: "medium",
-      timeStyle: "short",
-    });
+    const d = new Date(dateStr);
+    const day = d.getUTCDate();
+    const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const month = months[d.getUTCMonth()];
+    const year = d.getUTCFullYear();
+    const hours = d.getUTCHours();
+    const minutes = d.getUTCMinutes().toString().padStart(2, "0");
+    const ampm = hours >= 12 ? "pm" : "am";
+    const h12 = hours % 12 || 12;
+    return `${day} ${month} ${year}, ${h12}:${minutes} ${ampm} UTC`;
   };
 
   const getFileName = (path: string) => {
