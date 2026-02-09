@@ -19,9 +19,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const signinResult = await pool.query(
-      `SELECT cs.*, s.name as site_name
+      `SELECT cs.*, s.name as site_name, c.title as course_title
        FROM contractor_signins cs
-       LEFT JOIN sites s ON cs.site_id::uuid = s.id
+       LEFT JOIN sites s ON cs.site_id = s.id
+       LEFT JOIN courses c ON cs.course_id = c.id
        WHERE cs.id = $1`,
       [id]
     );
@@ -33,19 +34,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const signin = signinResult.rows[0];
 
     const prequalResult = await pool.query(
-      `SELECT cps.*, s.name as site_name
+      `SELECT cps.*, s.name as site_name, p.full_name as sent_to_name
        FROM contractor_prequal_submissions cps
        LEFT JOIN sites s ON cps.site_id::uuid = s.id
+       LEFT JOIN profiles p ON cps.sent_to_user_id::uuid = p.id
        WHERE LOWER(cps.contractor_name) = LOWER($1)
+         AND (
+           cps.contractor_company IS NULL AND $2::text IS NULL
+           OR LOWER(COALESCE(cps.contractor_company, '')) = LOWER(COALESCE($2::text, ''))
+         )
        ORDER BY cps.created_at DESC`,
-      [signin.contractor_name]
+      [signin.contractor_name, signin.contractor_company]
     );
 
     const allSigninsResult = await pool.query(
-      `SELECT id, site_id, signed_in_at, signed_out_at, course_completed, working_airside
-       FROM contractor_signins
-       WHERE LOWER(contractor_name) = LOWER($1) AND LOWER(COALESCE(contractor_company, '')) = LOWER(COALESCE($2, ''))
-       ORDER BY signed_in_at DESC`,
+      `SELECT cs.id, cs.site_id, cs.signed_in_at, cs.signed_out_at, cs.course_completed, cs.working_airside, cs.course_id, s.name as site_name, c.title as course_title
+       FROM contractor_signins cs
+       LEFT JOIN sites s ON cs.site_id = s.id
+       LEFT JOIN courses c ON cs.course_id = c.id
+       WHERE LOWER(cs.contractor_name) = LOWER($1) AND LOWER(COALESCE(cs.contractor_company, '')) = LOWER(COALESCE($2, ''))
+       ORDER BY cs.signed_in_at DESC`,
       [signin.contractor_name, signin.contractor_company]
     );
 

@@ -153,6 +153,9 @@ export default function ContractorDetail({ contractorId, onBack }: ContractorDet
                   <span className="text-amber-600">No</span>
                 )}
               </p>
+              {signin.course_title && (
+                <p className="text-sm text-gray-500 mt-0.5">{signin.course_title}</p>
+              )}
             </div>
             <div>
               <span className="text-xs text-gray-500 uppercase tracking-wide">Signed In</span>
@@ -193,6 +196,7 @@ export default function ContractorDetail({ contractorId, onBack }: ContractorDet
                       </div>
                       <p className="text-xs text-gray-400 mt-1">
                         Submitted: {formatDateTime(prequal.created_at)}
+                        {prequal.sent_to_name && ` | Sent to: ${prequal.sent_to_name}`}
                         {prequal.reviewed_at && ` | Reviewed: ${formatDateTime(prequal.reviewed_at)}`}
                       </p>
                     </div>
@@ -267,6 +271,7 @@ export default function ContractorDetail({ contractorId, onBack }: ContractorDet
                 <thead>
                   <tr className="border-b bg-gray-50">
                     <th className="text-left p-2 font-medium">Status</th>
+                    <th className="text-left p-2 font-medium">Site</th>
                     <th className="text-left p-2 font-medium">Signed In</th>
                     <th className="text-left p-2 font-medium">Signed Out</th>
                     <th className="text-left p-2 font-medium">Airside</th>
@@ -287,12 +292,13 @@ export default function ContractorDetail({ contractorId, onBack }: ContractorDet
                           </span>
                         )}
                       </td>
+                      <td className="p-2">{entry.site_name || "-"}</td>
                       <td className="p-2">{formatDateTime(entry.signed_in_at)}</td>
                       <td className="p-2">{formatDateTime(entry.signed_out_at)}</td>
                       <td className="p-2">{entry.working_airside ? "Yes" : "No"}</td>
                       <td className="p-2">
                         {entry.course_completed ? (
-                          <span className="text-green-600">Completed</span>
+                          <span className="text-green-600">{entry.course_title || "Completed"}</span>
                         ) : (
                           <span className="text-amber-600">Pending</span>
                         )}
