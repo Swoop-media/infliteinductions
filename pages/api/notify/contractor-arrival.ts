@@ -29,12 +29,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .eq("id", staffId)
       .single();
 
-    let baseUrl = "https://inflite.training";
-    if (process.env.NEXT_PUBLIC_APP_URL) {
-      baseUrl = process.env.NEXT_PUBLIC_APP_URL;
-    } else if (process.env.REPLIT_DEV_DOMAIN) {
-      baseUrl = `https://${process.env.REPLIT_DEV_DOMAIN}`;
-    }
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://training.inflite.nz";
     
     const reviewLink = submissionId 
       ? `${baseUrl}/app/contractor-prequal/${submissionId}`
