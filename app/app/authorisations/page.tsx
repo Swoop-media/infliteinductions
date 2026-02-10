@@ -19,6 +19,7 @@ type AuthorisationCompletionRow = {
   department: string | null;
   authorisation_title: string | null;
   valid_for_days: number | null;
+  restrictions: string | null;
 };
 
 const ITEMS_PER_PAGE = 50;
@@ -73,6 +74,7 @@ async function loadCompletedAuthorisationsWithFilters(
       user_id,
       authorisation_id,
       completed_at,
+      restrictions,
       profiles!authorisation_assignments_user_id_fkey(full_name, email, department),
       authorisations!inner(title, valid_for_days)
     `, { count: 'exact' })
@@ -165,6 +167,7 @@ async function loadCompletedAuthorisationsWithFilters(
     department: row.profiles?.department ?? null,
     authorisation_title: row.authorisations?.title ?? null,
     valid_for_days: row.authorisations?.valid_for_days ?? null,
+    restrictions: row.restrictions ?? null,
   }));
 
   return {
@@ -534,6 +537,11 @@ export default async function AuthorisationsPage({
                           <div className="text-xs text-gray-500">
                             Valid for: {auth.valid_for_days ? `${auth.valid_for_days} day${auth.valid_for_days > 1 ? 's' : ''}` : 'No expiry'}
                           </div>
+                          {auth.restrictions && (
+                            <div className="mt-1 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">
+                              <span className="font-medium">Restrictions:</span> {auth.restrictions}
+                            </div>
+                          )}
                         </td>
                         <td className="border-b px-4 py-3 text-sm">{completedDate}</td>
                         <td className="border-b px-4 py-3 text-sm">{dueDate}</td>

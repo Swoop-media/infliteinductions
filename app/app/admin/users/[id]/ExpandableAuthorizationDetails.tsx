@@ -30,6 +30,7 @@ interface CompletedAuthorization {
   due_date: string | null;
   days_until_expiry: number | null;
   status: 'current' | 'expiring_soon' | 'expired' | 'no_expiry';
+  restrictions?: string | null;
 }
 
 interface Props {
@@ -139,6 +140,11 @@ export default function ExpandableAuthorizationDetails({ authorizations, allAuth
                         </p>
                       )}
                     </div>
+                    {auth.restrictions && (
+                      <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 mt-1 inline-block">
+                        <span className="font-medium">Restrictions:</span> {auth.restrictions}
+                      </div>
+                    )}
                   </div>
                   {isExpanded ? (
                     <ChevronUp className="w-4 h-4 text-gray-500" />

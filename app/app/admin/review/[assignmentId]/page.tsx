@@ -690,16 +690,19 @@ async function approveAssignment(formData: FormData) {
     );
   }
 
+  const restrictionsText = (formData.get("restrictions") as string || "").trim() || null;
+
   // Update the authorisation assignment status to 'completed' and record approval details.
   // Use admin client to bypass RLS and ensure schema cache is up to date
-  // First update without expires_at to avoid schema cache issues
+  const updatePayload: Record<string, any> = {
+    assignment_status: "completed",
+    approved_at: approvalDate.toISOString(),
+    approved_by: user.id,
+    restrictions: restrictionsText,
+  };
   const { error: updateError } = await supabaseService
     .from("authorisation_assignments")
-    .update({ 
-      assignment_status: "completed",
-      approved_at: approvalDate.toISOString(),
-      approved_by: user.id
-    })
+    .update(updatePayload)
     .eq("id", assignmentId);
     
   if (updateError) {

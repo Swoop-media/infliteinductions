@@ -102,6 +102,7 @@ async function loadMyProfileAndLearning() {
       authorisation_id,
       assignment_status,
       completed_at,
+      restrictions,
       authorisations!inner(
         id,
         title,
@@ -556,6 +557,12 @@ export default async function MyProfilePage() {
                           <p className="text-xs text-gray-500 mt-1">
                             All {totalCourses} courses completed
                           </p>
+
+                          {assignment.restrictions && (
+                            <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-300 rounded px-3 py-2">
+                              <span className="font-semibold">Restrictions:</span> {assignment.restrictions}
+                            </div>
+                          )}
 
                           {assignment.courses.length > 0 && (
                             <div className="mt-2">

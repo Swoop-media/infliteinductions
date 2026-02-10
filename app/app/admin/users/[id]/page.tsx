@@ -127,6 +127,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
       assignment_status,
       created_at,
       completed_at,
+      restrictions,
       authorisations!inner(
         id,
         title,
@@ -279,7 +280,8 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
         valid_for_years: null,
         due_date: null,
         days_until_expiry: null,
-        status: 'no_expiry'
+        status: 'no_expiry',
+        restrictions: auth.restrictions || null,
       };
     }
 
@@ -300,7 +302,8 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
       valid_for_years: Math.round(validForDays / 365 * 100) / 100, // Convert days to years for display
       due_date: dueDate.toISOString(),
       days_until_expiry: daysUntilExpiry,
-      status
+      status,
+      restrictions: auth.restrictions || null,
     };
   });
 
