@@ -8,7 +8,7 @@ import { hasRole } from "@/lib/roles";
 import DocumentSummary from "./DocumentSummary";
 import DocumentRequirements from "./DocumentRequirements";
 import ExpandableCourseDetails from "./ExpandableCourseDetails";
-import ExpiryPreview from "./ExpiryPreview";
+import ApprovalSection from "./ApprovalSection";
 
 type Props = {
   params: Promise<{ assignmentId: string }>;
@@ -676,12 +676,19 @@ async function approveAssignment(formData: FormData) {
     valid_for_months: (ac.courses as any).valid_for_months
   })) || [];
   
-  const expiryDate = calculateAuthorizationExpiry(
-    approvalDate,
-    authorization?.valid_for_days || null,
-    documents || [],
-    coursesData
-  );
+  const customExpiryStr = formData.get("custom_expiry_date") as string | null;
+  let expiryDate: Date | null = null;
+
+  if (customExpiryStr) {
+    expiryDate = new Date(customExpiryStr + 'T00:00:00Z');
+  } else {
+    expiryDate = calculateAuthorizationExpiry(
+      approvalDate,
+      authorization?.valid_for_days || null,
+      documents || [],
+      coursesData
+    );
+  }
 
   // Update the authorisation assignment status to 'completed' and record approval details.
   // Use admin client to bypass RLS and ensure schema cache is up to date
@@ -852,26 +859,14 @@ export default async function ReviewAssignmentPage({ params }: Props) {
         />
       </div>
 
-      {/* Authorization Expiry Preview */}
-      <ExpiryPreview 
+      {/* Authorization Expiry Preview + Approval Actions */}
+      <ApprovalSection
+        assignmentId={resolvedParams.assignmentId}
         authValidForDays={authorisation.valid_for_days}
         documents={documents}
         courses={courses}
+        approveAction={approveAssignment}
       />
-
-      {/* Actions */}
-      <div className="rounded-xl border bg-white p-6">
-        <h2 className="text-lg font-semibold mb-4">Review Actions</h2>
-        <form action={approveAssignment} className="flex gap-4">
-          <input type="hidden" name="assignmentId" value={resolvedParams.assignmentId} />
-          <button className="rounded-md bg-green-600 px-6 py-2 text-sm text-white hover:bg-green-700">
-            Approve Authorisation
-          </button>
-        </form>
-        <p className="text-xs text-gray-500 mt-2">
-          Note: Review functionality will be implemented in the next phase
-        </p>
-      </div>
     </div>
   );
 }

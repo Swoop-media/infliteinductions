@@ -18,13 +18,17 @@ interface ExpiryPreviewProps {
     course_title: string;
     valid_for_months?: number | null;
   }>;
+  onCustomExpiryChange?: (date: string | null) => void;
 }
 
 export default function ExpiryPreview({ 
   authValidForDays, 
   documents, 
-  courses 
+  courses,
+  onCustomExpiryChange 
 }: ExpiryPreviewProps) {
+  const [showCustomExpiry, setShowCustomExpiry] = useState(false);
+  const [customExpiryDate, setCustomExpiryDate] = useState<string>('');
   // Use state to ensure the date is calculated only once on the client
   const [isClient, setIsClient] = useState(false);
   
@@ -169,6 +173,54 @@ export default function ExpiryPreview({
         <p className="text-xs text-blue-700">
           The authorization will expire on the earliest of: document expiry, course expiry, or authorization validity period
         </p>
+      </div>
+
+      <div className="mt-3 pt-3 border-t border-blue-200">
+        {!showCustomExpiry ? (
+          <button
+            type="button"
+            onClick={() => setShowCustomExpiry(true)}
+            className="inline-flex items-center gap-2 rounded-md border border-blue-300 bg-white px-3 py-1.5 text-sm font-medium text-blue-700 hover:bg-blue-50 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Custom Expiry Date
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-blue-900">Custom Expiry Date</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="date"
+                value={customExpiryDate}
+                onChange={(e) => {
+                  setCustomExpiryDate(e.target.value);
+                  onCustomExpiryChange?.(e.target.value || null);
+                }}
+                min={new Date().toISOString().split('T')[0]}
+                className="rounded-md border border-blue-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCustomExpiry(false);
+                  setCustomExpiryDate('');
+                  onCustomExpiryChange?.(null);
+                }}
+                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+            {customExpiryDate && (
+              <p className="text-xs text-amber-700 bg-amber-50 rounded px-2 py-1">
+                This will override the calculated expiry date above.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
