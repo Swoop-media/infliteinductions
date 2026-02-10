@@ -15,6 +15,7 @@ import UserNotifications from "./UserNotifications";
 import NotificationSubscriptions from "./NotificationSubscriptions";
 import CollapsibleSection from "./CollapsibleSection";
 import DepartmentAssignmentGroup from "./DepartmentAssignmentGroup";
+import SyncCourseStatusesButton from "./SyncCourseStatusesButton";
 
 
 
@@ -682,6 +683,9 @@ export default async function EditUserPage({
             count={allCourseAssignments.length}
             defaultOpen={false}
           >
+            <div className="mb-3">
+              <SyncCourseStatusesButton userId={resolvedParams.id} />
+            </div>
             {allCourseAssignments.length === 0 ? (
               <p className="text-sm text-gray-500">No course assignments found.</p>
             ) : (
