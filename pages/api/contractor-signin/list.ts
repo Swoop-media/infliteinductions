@@ -45,10 +45,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const data = (rows || []).map((row: any) => ({
-      ...row,
-      site_name: row.site_id ? siteMap.get(row.site_id) || null : null,
-    }));
+    const courseIds = [...new Set((rows || []).map((r: any) => r.course_id).filter(Boolean))];
+    const courseMap = new Map<string, { title: string; valid_for_days: number | null }>();
+
+    if (courseIds.length > 0) {
+      const { data: courses } = await sb
+        .from("courses")
+        .select("id, title, valid_for_days")
+        .in("id", courseIds);
+
+      if (courses) {
+        for (const c of courses) courseMap.set(c.id, { title: c.title, valid_for_days: c.valid_for_days });
+      }
+    }
+
+    const data = (rows || []).map((row: any) => {
+      const course = row.course_id ? courseMap.get(row.course_id) : null;
+      const validForDays = course?.valid_for_days ?? null;
+      let expiry_date: string | null = null;
+
+      if (row.course_completed && validForDays && validForDays > 0 && row.signed_in_at) {
+        const completedDate = new Date(row.signed_in_at);
+        completedDate.setDate(completedDate.getDate() + validForDays);
+        expiry_date = completedDate.toISOString();
+      }
+
+      return {
+        ...row,
+        site_name: row.site_id ? siteMap.get(row.site_id) || null : null,
+        course_title: course?.title || null,
+        valid_for_days: validForDays,
+        expiry_date,
+      };
+    });
 
     return res.status(200).json({ data });
   } catch (err: any) {

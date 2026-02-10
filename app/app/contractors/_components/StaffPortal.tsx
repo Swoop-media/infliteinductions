@@ -35,6 +35,9 @@ interface ContractorSignin {
   signed_in_at: string | null;
   signed_out_at: string | null;
   site_name?: string;
+  course_completed?: boolean;
+  valid_for_days?: number | null;
+  expiry_date?: string | null;
 }
 
 interface PrequalSubmission {
@@ -386,10 +389,15 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
                     <th className="text-left p-3 font-medium">Phone</th>
                     <th className="text-left p-3 font-medium">Email</th>
                     <th className="text-left p-3 font-medium">Signed In</th>
+                    <th className="text-left p-3 font-medium">Expiry</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredContractors.map((contractor) => (
+                  {filteredContractors.map((contractor) => {
+                    const isExpired = contractor.expiry_date
+                      ? new Date(contractor.expiry_date) < new Date()
+                      : false;
+                    return (
                     <tr
                       key={contractor.id}
                       className="border-b hover:bg-blue-50 cursor-pointer transition-colors"
@@ -404,8 +412,22 @@ export default function StaffPortal({ sites }: StaffPortalProps) {
                       <td className="p-3">
                         {formatDateTime(contractor.signed_in_at)}
                       </td>
+                      <td className="p-3">
+                        {contractor.expiry_date ? (
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            isExpired
+                              ? "bg-red-100 text-red-800"
+                              : "bg-green-100 text-green-800"
+                          }`}>
+                            {isExpired ? "Expired " : ""}{formatDateTime(contractor.expiry_date)}
+                          </span>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
