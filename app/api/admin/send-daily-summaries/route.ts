@@ -13,53 +13,63 @@ function calculateDaysUntilExpiry(dueDate: Date): number {
   return Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+async function chunkedIn(supabase: any, table: string, select: string, field: string, ids: string[], extraFilters?: (q: any) => any) {
+  const CHUNK_SIZE = 200;
+  const results: any[] = [];
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + CHUNK_SIZE);
+    let query = supabase.from(table).select(select).in(field, chunk);
+    if (extraFilters) query = extraFilters(query);
+    const { data } = await query;
+    if (data) results.push(...data);
+  }
+  return results;
+}
+
 async function fetchAuthorisationDueDates(supabase: any) {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - 730);
+
   const { data: assignments, error } = await supabase
     .from("authorisation_assignments")
     .select("id, user_id, authorisation_id, approved_at")
     .eq("assignment_status", "completed")
-    .not("approved_at", "is", null);
+    .not("approved_at", "is", null)
+    .gte("approved_at", cutoffDate.toISOString());
 
   if (error || !assignments || assignments.length === 0) return [];
 
   const authIds = [...new Set(assignments.map((a: any) => a.authorisation_id))];
   const userIds = [...new Set(assignments.map((a: any) => a.user_id))];
 
-  const [
-    { data: authorisations },
-    { data: profiles },
-    { data: authCourses },
-  ] = await Promise.all([
-    supabase.from("authorisations").select("id, title, valid_for_days, department").in("id", authIds),
-    supabase.from("profiles").select("id, full_name, email").in("id", userIds),
-    supabase.from("authorisation_courses").select("authorisation_id, course_id").in("authorisation_id", authIds),
+  const [authorisations, profiles, authCourses] = await Promise.all([
+    chunkedIn(supabase, "authorisations", "id, title, valid_for_days, department", "id", authIds),
+    chunkedIn(supabase, "profiles", "id, full_name, email", "id", userIds),
+    chunkedIn(supabase, "authorisation_courses", "authorisation_id, course_id", "authorisation_id", authIds),
   ]);
 
-  const authMap = new Map((authorisations || []).map((a: any) => [a.id, a]));
-  const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+  const authMap = new Map(authorisations.map((a: any) => [a.id, a]));
+  const profileMap = new Map(profiles.map((p: any) => [p.id, p]));
 
   const authCourseMap = new Map<string, string[]>();
-  (authCourses || []).forEach((ac: any) => {
+  authCourses.forEach((ac: any) => {
     const existing = authCourseMap.get(ac.authorisation_id) || [];
     existing.push(ac.course_id);
     authCourseMap.set(ac.authorisation_id, existing);
   });
 
-  const allCourseIds = [...new Set((authCourses || []).map((ac: any) => ac.course_id))];
+  const allCourseIds = [...new Set(authCourses.map((ac: any) => ac.course_id))];
 
   let documents: any[] = [];
   let courseAssignmentsData: any[] = [];
   let courses: any[] = [];
 
   if (allCourseIds.length > 0 && userIds.length > 0) {
-    const [docsRes, caRes, coursesRes] = await Promise.all([
-      supabase.from("learner_documents").select("id, user_id, course_id, expires_on").in("user_id", userIds).in("course_id", allCourseIds).not("expires_on", "is", null),
-      supabase.from("course_assignments").select("id, user_id, course_id, completed_at").in("user_id", userIds).in("course_id", allCourseIds).eq("role", "trainee").not("completed_at", "is", null),
-      supabase.from("courses").select("id, valid_for_months").in("id", allCourseIds),
+    [documents, courseAssignmentsData, courses] = await Promise.all([
+      chunkedIn(supabase, "learner_documents", "id, user_id, course_id, expires_on", "user_id", userIds, (q: any) => q.in("course_id", allCourseIds).not("expires_on", "is", null)),
+      chunkedIn(supabase, "course_assignments", "id, user_id, course_id, completed_at", "user_id", userIds, (q: any) => q.in("course_id", allCourseIds).eq("role", "trainee").not("completed_at", "is", null)),
+      chunkedIn(supabase, "courses", "id, valid_for_months", "id", allCourseIds),
     ]);
-    documents = docsRes.data || [];
-    courseAssignmentsData = caRes.data || [];
-    courses = coursesRes.data || [];
   }
 
   const userCourseDocMap = new Map<string, any[]>();
@@ -71,7 +81,7 @@ async function fetchAuthorisationDueDates(supabase: any) {
   });
 
   const courseValidityMap = new Map<string, number | null>();
-  (courses || []).forEach((c: any) => {
+  courses.forEach((c: any) => {
     courseValidityMap.set(c.id, c.valid_for_months);
   });
 
@@ -119,6 +129,8 @@ async function fetchAuthorisationDueDates(supabase: any) {
 
     const daysUntilExpiry = calculateDaysUntilExpiry(expiryDate);
 
+    if (daysUntilExpiry > 60) continue;
+
     results.push({
       user_id: assignment.user_id,
       user_name: profile?.full_name || profile?.email || "Unknown",
@@ -129,6 +141,64 @@ async function fetchAuthorisationDueDates(supabase: any) {
   }
 
   return results.sort((a, b) => a.days_until_expiry - b.days_until_expiry);
+}
+
+function buildSummaryMessage(expired: any[], due7: any[], due30: any[], due60: any[], totalItems: number): string {
+  const today = new Date().toLocaleDateString("en-NZ", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  let message = `📋 **Daily Authorisation Expiry Summary**\n`;
+  message += `📅 ${today}\n\n`;
+
+  if (totalItems === 0) {
+    message += `No authorisations due within 60 days.\n\n`;
+  } else {
+    if (expired.length > 0) {
+      message += `🔴 **Expired** (${expired.length})\n`;
+      for (const item of expired.slice(0, 15)) {
+        const daysText = item.days_until_expiry === 0
+          ? "expires today"
+          : `overdue by ${Math.abs(item.days_until_expiry)} days`;
+        message += `• ${item.authorisation_title} - ${item.user_name} (${daysText})\n`;
+      }
+      if (expired.length > 15) message += `• ... and ${expired.length - 15} more\n`;
+      message += `\n`;
+    }
+
+    if (due7.length > 0) {
+      message += `🟡 **Due within 7 days** (${due7.length})\n`;
+      for (const item of due7.slice(0, 15)) {
+        message += `• ${item.authorisation_title} - ${item.user_name} (${item.days_until_expiry} days)\n`;
+      }
+      if (due7.length > 15) message += `• ... and ${due7.length - 15} more\n`;
+      message += `\n`;
+    }
+
+    if (due30.length > 0) {
+      message += `🟠 **Due within 30 days** (${due30.length})\n`;
+      for (const item of due30.slice(0, 15)) {
+        message += `• ${item.authorisation_title} - ${item.user_name} (${item.days_until_expiry} days)\n`;
+      }
+      if (due30.length > 15) message += `• ... and ${due30.length - 15} more\n`;
+      message += `\n`;
+    }
+
+    if (due60.length > 0) {
+      message += `🔵 **Due within 60 days** (${due60.length})\n`;
+      for (const item of due60.slice(0, 15)) {
+        message += `• ${item.authorisation_title} - ${item.user_name} (${item.days_until_expiry} days)\n`;
+      }
+      if (due60.length > 15) message += `• ... and ${due60.length - 15} more\n`;
+      message += `\n`;
+    }
+  }
+
+  message += `View full reports: https://training.inflite.nz/app/admin`;
+  return message;
 }
 
 export async function POST(req: NextRequest) {
@@ -193,82 +263,33 @@ export async function POST(req: NextRequest) {
 
     const totalItems = expired.length + due7.length + due30.length + due60.length;
 
-    const results = [];
-    for (const recipient of recipientUsers) {
-      try {
-        const today = new Date().toLocaleDateString("en-NZ", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        });
+    const message = buildSummaryMessage(expired, due7, due30, due60, totalItems);
 
-        let message = `📋 **Daily Authorisation Expiry Summary**\n`;
-        message += `📅 ${today}\n\n`;
-
-        if (totalItems === 0) {
-          message += `No authorisations due within 60 days.\n\n`;
-        } else {
-          if (expired.length > 0) {
-            message += `🔴 **Expired** (${expired.length})\n`;
-            for (const item of expired.slice(0, 15)) {
-              const daysText = item.days_until_expiry === 0
-                ? "expires today"
-                : `overdue by ${Math.abs(item.days_until_expiry)} days`;
-              message += `• ${item.authorisation_title} - ${item.user_name} (${daysText})\n`;
-            }
-            if (expired.length > 15) message += `• ... and ${expired.length - 15} more\n`;
-            message += `\n`;
-          }
-
-          if (due7.length > 0) {
-            message += `🟡 **Due within 7 days** (${due7.length})\n`;
-            for (const item of due7.slice(0, 15)) {
-              message += `• ${item.authorisation_title} - ${item.user_name} (${item.days_until_expiry} days)\n`;
-            }
-            if (due7.length > 15) message += `• ... and ${due7.length - 15} more\n`;
-            message += `\n`;
-          }
-
-          if (due30.length > 0) {
-            message += `🟠 **Due within 30 days** (${due30.length})\n`;
-            for (const item of due30.slice(0, 15)) {
-              message += `• ${item.authorisation_title} - ${item.user_name} (${item.days_until_expiry} days)\n`;
-            }
-            if (due30.length > 15) message += `• ... and ${due30.length - 15} more\n`;
-            message += `\n`;
-          }
-
-          if (due60.length > 0) {
-            message += `🔵 **Due within 60 days** (${due60.length})\n`;
-            for (const item of due60.slice(0, 15)) {
-              message += `• ${item.authorisation_title} - ${item.user_name} (${item.days_until_expiry} days)\n`;
-            }
-            if (due60.length > 15) message += `• ... and ${due60.length - 15} more\n`;
-            message += `\n`;
-          }
-        }
-
-        message += `View full reports: https://training.inflite.nz/app/admin`;
-
+    const sendResults = await Promise.allSettled(
+      recipientUsers.map(async (recipient) => {
         await sendTeamsDMToAppUser(recipient.id, message);
-
-        results.push({
+        return {
           userId: recipient.id,
           userName: recipient.full_name || recipient.email,
           status: "success",
           itemsFound: totalItems,
-        });
-      } catch (error) {
-        console.error(`Failed to send to user ${recipient.id}:`, error);
-        results.push({
-          userId: recipient.id,
-          userName: recipient.full_name || recipient.email,
-          status: "failed",
-          error: error.message,
-        });
+        };
+      })
+    );
+
+    const results = sendResults.map((result, index) => {
+      if (result.status === "fulfilled") {
+        return result.value;
       }
-    }
+      const recipient = recipientUsers[index];
+      console.error(`Failed to send to user ${recipient.id}:`, result.reason);
+      return {
+        userId: recipient.id,
+        userName: recipient.full_name || recipient.email,
+        status: "failed",
+        error: result.reason?.message || "Unknown error",
+      };
+    });
 
     return NextResponse.json({
       success: true,
