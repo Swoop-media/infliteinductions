@@ -51,6 +51,7 @@ Preferred communication style: Simple, everyday language.
     - Paginated admin views (50 items/page) for efficient data display with smart ordering.
     - Site-based assignment UI for user management (profiles linked to sites table via site_id).
     - Collapsible sections in user edit pages for improved organization.
+- **Form Resubmission & Reassessment**: When a learner resubmits an equipment form on a completed course, the system resets assessment progress, moves the course back to the assessment area, and notifies all onsite assessors via Teams and in-app notifications (`/api/courses/[courseId]/form-resubmission`).
 - **Operations Notices Feature**: Allows creators to publish assignable notices with optional acknowledgement tracking, integrated with in-app and Teams notifications.
 - **SafeFLITE User Sync Webhook**: Integrates with SafeFLITE to sync user data upon creation, update, or archiving.
 

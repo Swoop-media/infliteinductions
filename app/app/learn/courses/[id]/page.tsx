@@ -1189,6 +1189,7 @@ export default async function LearnerCoursePage(props: {
                                 courseId={courseId}
                                 blockData={block.data}
                                 preview={preview}
+                                courseCompleted={assignment?.assignment_status === 'completed'}
                               />
                             </div>
                           )}

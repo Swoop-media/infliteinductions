@@ -49,6 +49,7 @@ export type NotificationType =
   | "issue_report"
   | "operations_notice_assigned"
   | "operations_notice_pending_ack"
+  | "form_resubmitted"
   | string;
 
 function formatTeamsText(
@@ -322,6 +323,17 @@ function formatTeamsText(
         payload?.authorizationTitle ? `• Authorization: ${payload.authorizationTitle}` : "",
         payload?.publishedBy ? `• Published by: ${payload.publishedBy}` : "",
         url ? `• View authorization: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "form_resubmitted":
+      return [
+        "📝 Equipment form resubmitted - Assessment required",
+        learner ? `• Trainee: ${learner}` : "",
+        course ? `• Course: ${course}` : "",
+        "• The trainee has updated their equipment form and needs reassessment",
+        url ? `• Train/Assess dashboard: ${url}` : "",
       ]
         .filter(Boolean)
         .join("\n");

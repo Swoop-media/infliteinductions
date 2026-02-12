@@ -20,12 +20,14 @@ interface EquipmentFormBlockProps {
   courseId: string;
   blockData: any;
   preview?: boolean;
+  courseCompleted?: boolean;
 }
 
 export default function EquipmentFormBlock({ 
   courseId, 
   blockData, 
-  preview = false 
+  preview = false,
+  courseCompleted = false
 }: EquipmentFormBlockProps) {
   const [equipment, setEquipment] = useState<EquipmentRequirement[]>([]);
   const [responses, setResponses] = useState<Record<string, string>>({});
@@ -161,7 +163,6 @@ export default function EquipmentFormBlock({
     
     setSaving(true);
     try {
-      // Save all responses to ensure they're up to date
       const savePromises = equipment
         .filter(item => responses[item.id]?.trim())
         .map(item => 
@@ -176,8 +177,24 @@ export default function EquipmentFormBlock({
         );
       
       await Promise.all(savePromises);
+
+      if (courseCompleted) {
+        try {
+          const resubResponse = await fetch(`/api/courses/${courseId}/form-resubmission`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          if (resubResponse.ok) {
+            const result = await resubResponse.json();
+            if (result.reassessment_triggered) {
+              console.log("Reassessment triggered, assessors notified:", result.assessors_notified);
+            }
+          }
+        } catch (resubError) {
+          console.error("Error triggering reassessment:", resubError);
+        }
+      }
       
-      // Mark as submitted and collapse the form
       setUserSubmitted(true);
       setIsExpanded(false);
       

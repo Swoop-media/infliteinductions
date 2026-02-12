@@ -24,10 +24,11 @@ interface FormInstance {
 
 interface EquipmentFormBlockV2Props {
   courseId: string;
-  instanceId?: string; // Optional: specific instance to show
+  instanceId?: string;
   userId: string;
   preview?: boolean;
   onComplete?: () => void;
+  courseCompleted?: boolean;
 }
 
 export default function EquipmentFormBlockV2({
@@ -35,7 +36,8 @@ export default function EquipmentFormBlockV2({
   instanceId,
   userId,
   preview = false,
-  onComplete
+  onComplete,
+  courseCompleted = false
 }: EquipmentFormBlockV2Props) {
   const [instances, setInstances] = useState<FormInstance[]>([]);
   const [responses, setResponses] = useState<Record<string, string>>({});
@@ -150,7 +152,6 @@ export default function EquipmentFormBlockV2({
     
     setSaving(true);
     try {
-      // Save all responses for this form
       const savePromises = instance.items
         .filter(item => {
           const key = `${instance.id}_${item.stable_id}`;
@@ -170,8 +171,24 @@ export default function EquipmentFormBlockV2({
         );
       
       await Promise.all(savePromises);
+
+      if (courseCompleted && instance.requires_assessor_confirmation) {
+        try {
+          const resubResponse = await fetch(`/api/courses/${courseId}/form-resubmission`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          if (resubResponse.ok) {
+            const result = await resubResponse.json();
+            if (result.reassessment_triggered) {
+              console.log("Reassessment triggered, assessors notified:", result.assessors_notified);
+            }
+          }
+        } catch (resubError) {
+          console.error("Error triggering reassessment:", resubError);
+        }
+      }
       
-      // Mark form as submitted and collapse
       setSubmittedForms(prev => ({ ...prev, [instance.id]: true }));
       setExpandedForms(prev => ({ ...prev, [instance.id]: false }));
       
