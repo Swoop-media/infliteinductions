@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import UnifiedVideoPlayer from "@/components/UnifiedVideoPlayer";
 
 interface VisitorFormData {
   name: string;
@@ -99,16 +100,11 @@ function BlockRenderer({ block }: { block: ContentBlock }) {
 
   if (kind === "video_embed") {
     const raw = String(data?.url ?? "");
-    const embedUrl = toEmbedUrl(raw);
     return raw ? (
-      <div className="aspect-video rounded-lg overflow-hidden">
-        <iframe
-          src={embedUrl}
-          className="w-full h-full"
-          allowFullScreen
-          title="Video"
-        />
-      </div>
+      <UnifiedVideoPlayer
+        videoUrl={raw}
+        title={data?.title || "Course Video"}
+      />
     ) : null;
   }
 

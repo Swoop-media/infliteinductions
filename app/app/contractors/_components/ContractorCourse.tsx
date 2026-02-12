@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabaseBrowser } from "@/lib/supabase/client";
+import UnifiedVideoPlayer from "@/components/UnifiedVideoPlayer";
 
 interface ContractorCourseProps {
   siteId: string;
@@ -112,16 +113,11 @@ function BlockRenderer({ block }: { block: ContentBlock }) {
   if (kind === "video_embed") {
     const url = String(data?.url ?? "");
     if (!url) return null;
-    const embedUrl = toEmbedUrl(url);
     return (
-      <div className="aspect-video w-full max-w-2xl">
-        <iframe
-          src={embedUrl}
-          className="h-full w-full rounded-md border"
-          allowFullScreen
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        />
-      </div>
+      <UnifiedVideoPlayer
+        videoUrl={url}
+        title={data?.title || "Course Video"}
+      />
     );
   }
 
