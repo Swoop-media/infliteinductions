@@ -189,8 +189,7 @@ export async function POST(request: NextRequest) {
             .update({
               assignment_status: 'assigned',
               completed_at: null,
-              updated_at: new Date().toISOString(),
-              created_by: adminUser.id // Track which admin created the retake
+              created_by: adminUser.id
             })
             .eq("id", existingAuthAssignment.id)
             .select()

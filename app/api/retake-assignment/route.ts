@@ -162,8 +162,7 @@ export async function POST(request: NextRequest) {
             .from("authorisation_assignments")
             .update({
               assignment_status: 'assigned',
-              completed_at: null,
-              updated_at: new Date().toISOString()
+              completed_at: null
             })
             .eq("id", existingAuthAssignment.id)
             .select()
