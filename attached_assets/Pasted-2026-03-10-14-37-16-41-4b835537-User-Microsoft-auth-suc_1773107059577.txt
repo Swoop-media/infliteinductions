@@ -1,0 +1,148 @@
+2026-03-10 14:37:16.41
+4b835537
+User
+Microsoft auth successful, redirecting to confirm: https://inflite-training.replit.app/auth/confirm?email=Levi.Daniel%40inflite.nz&password=ed0162db-f49c-4b2e-883a-c26fc7944bcc&next=%2Fapp%2Fhome
+2026-03-10 14:37:24.31
+4b835537
+User
+course_id: 'd902b535-c90f-4b8e-9176-98fd91517fbb',
+2026-03-10 14:37:24.31
+4b835537
+User
+completed_at: null,
+2026-03-10 14:37:24.31
+4b835537
+User
+course_id: '2c0153c4-820d-4cae-a8a3-43678ab2884b',
+2026-03-10 14:37:24.31
+4b835537
+User
+{
+2026-03-10 14:37:24.31
+4b835537
+User
+id: '582e0943-ab3d-430f-abfa-5acfbc707b55',
+2026-03-10 14:37:24.31
+4b835537
+User
+id: '1a29c080-a342-4730-b2fb-a06d770a1e0a',
+2026-03-10 14:37:24.31
+4b835537
+User
+courses: {
+2026-03-10 14:37:24.31
+4b835537
+User
+},
+2026-03-10 14:37:24.31
+4b835537
+User
+{
+2026-03-10 14:37:24.31
+4b835537
+User
+assignment_status: 'assigned',
+2026-03-10 14:37:24.31
+4b835537
+User
+id: '2c0153c4-820d-4cae-a8a3-43678ab2884b',
+2026-03-10 14:37:24.31
+4b835537
+User
+assignment_status: 'assigned',
+2026-03-10 14:37:24.31
+4b835537
+User
+},
+2026-03-10 14:37:24.31
+4b835537
+User
+id: 'fe18236a-51af-40f6-979d-bbdc15ccd908',
+2026-03-10 14:37:24.31
+4b835537
+User
+}
+2026-03-10 14:37:24.31
+4b835537
+User
+All course assignments: [
+2026-03-10 14:37:24.31
+4b835537
+User
+status: 'published'
+2026-03-10 14:37:24.31
+4b835537
+User
+status: 'published'
+2026-03-10 14:37:24.31
+4b835537
+User
+}
+2026-03-10 14:37:24.31
+4b835537
+User
+title: 'Reporting Training',
+2026-03-10 14:37:43.25
+4b835537
+User
+Course ID: d9286a8d-794e-49ef-8c03-1073c343aee0
+2026-03-10 14:37:43.25
+4b835537
+User
+Authorization ID from URL: undefined
+2026-03-10 14:37:59.49
+4b835537
+User
+moduleId: 'c0c56977-26c0-4471-b539-d8e2da41a2ef',
+2026-03-10 14:37:59.49
+4b835537
+User
+assignmentId: '93f5c1b8-71ca-402a-9ca1-495eff704d98',
+2026-03-10 14:37:59.49
+4b835537
+User
+userId: '7ed06557-c4fd-4de9-863c-8b5789485b6d',
+2026-03-10 14:37:59.49
+4b835537
+User
+}
+2026-03-10 14:37:59.49
+4b835537
+User
+Assignment progress request: {
+2026-03-10 14:37:59.49
+4b835537
+User
+completed: true
+2026-03-10 14:37:59.74
+4b835537
+User
+assignment: {
+2026-03-10 14:37:59.74
+4b835537
+User
+user_id: '7ed06557-c4fd-4de9-863c-8b5789485b6d',
+2026-03-10 14:37:59.74
+4b835537
+User
+course_id: 'd9286a8d-794e-49ef-8c03-1073c343aee0',
+2026-03-10 14:37:59.74
+4b835537
+User
+}
+2026-03-10 14:37:59.74
+4b835537
+User
+},
+2026-03-10 14:37:59.74
+4b835537
+User
+id: '93f5c1b8-71ca-402a-9ca1-495eff704d98',
+2026-03-10 14:37:59.74
+4b835537
+User
+Assignment verification: {
+2026-03-10 14:37:59.74
+4b835537
+User
+role: 'trainee'

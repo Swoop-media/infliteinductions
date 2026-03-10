@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import CompleteModuleButton from './CompleteModuleButton';
 import ContinueToNextCourseButton from './ContinueToNextCourseButton';
 import UnifiedVideoPlayer from "@/components/UnifiedVideoPlayer";
@@ -393,9 +394,10 @@ async function submitQuizAnswers(formData: FormData) {
       console.error("Failed to save quiz attempt:", attemptError);
     }
 
-    // Mark module as complete if passed
+    // Mark module as complete if passed - use admin client to bypass RLS
     if (passed) {
-      await supabase.from("assignment_progress").upsert([
+      const progressAdminClient = supabaseAdmin();
+      await progressAdminClient.from("assignment_progress").upsert([
         {
           assignment_id: assignmentId,
           module_id: moduleId,
@@ -581,8 +583,9 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
   // Get user for quiz attempts lookup
   const { data: { user } } = await supabase.auth.getUser();
 
-  // Check if quiz is already completed
-  const { data: progress } = await supabase.from("assignment_progress").select("module_id").eq("assignment_id", assignmentId).eq("module_id", moduleId).maybeSingle();
+  // Check if quiz is already completed - use admin client to bypass RLS
+  const adminQuizClient = supabaseAdmin();
+  const { data: progress } = await adminQuizClient.from("assignment_progress").select("module_id").eq("assignment_id", assignmentId).eq("module_id", moduleId).maybeSingle();
   const isCompleted = !!progress;
 
   if (isCompleted) {
@@ -808,8 +811,9 @@ export default async function LearnerCoursePage(props: {
     return (a.order_index ?? 0) - (b.order_index ?? 0);
   });
 
-  // Load assignment progress (skip in preview mode)
-  const { data: assignmentProgress } = !preview ? await supabase
+  // Load assignment progress (skip in preview mode) - use admin client to bypass RLS
+  const adminClient = supabaseAdmin();
+  const { data: assignmentProgress } = !preview ? await adminClient
     .from("assignment_progress")
     .select("module_id, completed_at")
     .eq("assignment_id", assignment.id) : { data: [] };

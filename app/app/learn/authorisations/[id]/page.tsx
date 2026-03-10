@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type RouteParams = { id: string };
 
@@ -100,7 +101,8 @@ export default async function LearnAuthorisationPage(props: {
       // Get progress if assignment exists
       let completedModules = [];
       if (courseAssignment) {
-        const { data: progress } = await supabase
+        const authAdminClient = supabaseAdmin();
+        const { data: progress } = await authAdminClient
           .from("assignment_progress")
           .select("module_id")
           .eq("assignment_id", courseAssignment.id);
