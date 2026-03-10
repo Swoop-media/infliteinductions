@@ -88,7 +88,6 @@ export async function POST(req: Request) {
         const enrollments = authCourses.map(ac => ({
           user_id,
           course_id: ac.course_id,
-          enrolled_at: new Date().toISOString(),
           status: "enrolled"
         }));
 

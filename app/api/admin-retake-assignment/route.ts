@@ -119,7 +119,6 @@ export async function POST(request: NextRequest) {
         .upsert({
           user_id: userId,
           course_id: courseId,
-          enrolled_at: new Date().toISOString(),
           status: "enrolled"
         }, {
           onConflict: 'user_id,course_id',
@@ -306,7 +305,6 @@ export async function POST(request: NextRequest) {
           .upsert({
             user_id: userId,
             course_id: authCourse.course_id,
-            enrolled_at: new Date().toISOString(),
             status: "enrolled"
           }, {
             onConflict: 'user_id,course_id',
