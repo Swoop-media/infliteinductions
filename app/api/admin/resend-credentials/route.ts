@@ -57,8 +57,9 @@ export async function POST(request: NextRequest) {
 
     try {
       const { client, fromEmail } = await getUncachableResendClient();
+      console.log("Resend config - fromEmail:", fromEmail, "toEmail:", profile.email);
 
-      await client.emails.send({
+      const emailResult = await client.emails.send({
         from: fromEmail,
         to: profile.email,
         subject: 'INFLITE Training - Your Updated Login Credentials',
@@ -94,11 +95,12 @@ export async function POST(request: NextRequest) {
         `
       });
 
-      console.log(`Credentials resent to ${profile.email}`);
+      console.log(`Credentials resent to ${profile.email}`, JSON.stringify(emailResult));
 
       return NextResponse.json({
         success: true,
         message: `New credentials sent to ${profile.email}`,
+        emailId: emailResult?.data?.id,
       });
     } catch (emailError) {
       console.error("Failed to send email:", emailError);
