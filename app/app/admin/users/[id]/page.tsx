@@ -17,6 +17,7 @@ import CollapsibleSection from "./CollapsibleSection";
 import DepartmentAssignmentGroup from "./DepartmentAssignmentGroup";
 import SyncCourseStatusesButton from "./SyncCourseStatusesButton";
 import ResetAllProgressButton from "./ResetAllProgressButton";
+import ResendCredentialsButton from "./ResendCredentialsButton";
 
 
 
@@ -505,6 +506,8 @@ export default async function EditUserPage({
                 Cancel
               </Link>
             </div>
+
+            <ResendCredentialsButton userId={resolvedParams.id} userEmail={profile.email || ""} />
           </form>
           
           {/* Notification Subscriptions */}

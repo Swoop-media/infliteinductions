@@ -181,6 +181,12 @@ export default function SignIn() {
               >
                 {isLoading ? "Signing in..." : "Sign in"}
               </button>
+
+              <div className="text-center">
+                <a href="/auth/reset-password" className="text-sm text-blue-600 hover:text-blue-700">
+                  Forgot your password?
+                </a>
+              </div>
             </form>
 
             <div className="flex items-center justify-between text-sm">
