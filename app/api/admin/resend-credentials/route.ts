@@ -29,14 +29,19 @@ export async function POST(request: NextRequest) {
 
     const adminClient = supabaseAdmin();
 
-    const { data: profile } = await adminClient
+    const { data: profile, error: profileError } = await adminClient
       .from("profiles")
-      .select("full_name, email, user_type")
+      .select("full_name, email")
       .eq("id", userId)
       .single();
 
+    if (profileError) {
+      console.error("Profile lookup error:", profileError);
+      return NextResponse.json({ error: "User profile not found", details: profileError.message }, { status: 404 });
+    }
+
     if (!profile || !profile.email) {
-      return NextResponse.json({ error: "User profile not found" }, { status: 404 });
+      return NextResponse.json({ error: "User profile has no email" }, { status: 404 });
     }
 
     const tempPassword = generateTempPassword();
