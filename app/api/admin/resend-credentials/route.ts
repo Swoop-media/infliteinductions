@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
 
     const { error: updateError } = await adminClient.auth.admin.updateUserById(userId, {
       password: tempPassword,
+      email_confirm: true,
     });
 
     if (updateError) {
