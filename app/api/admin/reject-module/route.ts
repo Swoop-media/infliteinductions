@@ -264,6 +264,35 @@ export async function POST(request: NextRequest) {
       // Don't block the rejection process if assessor notification fails
     }
 
+    // Post to Teams channels via webhook
+    try {
+      const { postToAuthChannels } = await import("@/lib/teams/channel-webhook");
+
+      let authTitle = "Authorization";
+      if (assignmentId) {
+        const { data: authAssign } = await adminClient
+          .from("authorisation_assignments")
+          .select("authorisations(title)")
+          .eq("id", assignmentId)
+          .single();
+        authTitle = (authAssign?.authorisations as any)?.title || authTitle;
+      }
+
+      await postToAuthChannels({
+        type: "rejected",
+        authorizationTitle: authTitle,
+        learnerName: traineeProfile?.full_name || traineeProfile?.email || "Unknown",
+        approverOrRejector: adminProfile?.full_name || adminUser.email || "Unknown",
+        moduleTitle: moduleTitle || "Module",
+        courseTitle: course?.title || "Course",
+        rejectionReason: rejectionReason,
+        url: assignmentId ? `/app/admin/review/${assignmentId}` : `/app/train-assess`,
+      });
+      console.log("✅ Module rejection posted to Teams channels");
+    } catch (webhookError) {
+      console.error("Failed to post rejection to Teams channels:", webhookError);
+    }
+
     console.log(
       `Module ${moduleId} rejected by ${adminUser.id} for user ${userId}. Reason: ${rejectionReason}`
     );

@@ -744,8 +744,33 @@ async function approveAssignment(formData: FormData) {
       console.log(`✅ Notification sent to trainee ${assignment.user_id} for authorization approval`);
     } catch (notifyError) {
       console.error("Failed to send notification:", notifyError);
-      // Don't block the approval process if notification fails
     }
+  }
+
+  // Post to Teams channels via webhook
+  try {
+    const { postToAuthChannels } = await import("@/lib/teams/channel-webhook");
+    const authorization = assignment.authorisations as any;
+
+    const { data: learnerProfile } = await supabaseService
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", assignment.user_id)
+      .single();
+
+    await postToAuthChannels({
+      type: "approved",
+      authorizationTitle: authorization?.title || "Authorization",
+      learnerName: learnerProfile?.full_name || learnerProfile?.email || "Unknown",
+      approverOrRejector: approverProfile?.full_name || user.email || "Unknown",
+      validFor: authorization?.valid_for_days || null,
+      expiryDate: expiryDate ? expiryDate.toISOString().split("T")[0] : null,
+      restrictions: restrictionsText,
+      url: `/app/admin/review/${assignmentId}`,
+    });
+    console.log("✅ Authorization approval posted to Teams channels");
+  } catch (webhookError) {
+    console.error("Failed to post to Teams channels:", webhookError);
   }
 
   // Redirect back to the admin dashboard with a success banner
