@@ -11,7 +11,6 @@ export interface PreQualFormData {
   scopeOfWork: string;
   companyName: string;
   companyRep: string;
-  siteContact: string;
   answers: Record<string, "yes" | "no" | "na">;
   insuranceTypes: string[];
   insuranceDetails: string;
@@ -25,25 +24,25 @@ type Answer = "yes" | "no" | "na";
 const SECTION_1_QUESTIONS = [
   {
     id: "1.1",
-    text: "Does the contractor operate a Health and Safety Management System aligned with recognised standards (e.g., ISO 45001, AS/NZS 4801) or an equivalent system appropriate to the scale and risk of their work?",
+    text: "Do you operate a Health and Safety Management System aligned with recognised standards (e.g., ISO 45001, AS/NZS 4801) or an equivalent system appropriate to the scale and risk of your work?",
     required: true,
     hasDetails: true,
     detailsField: "safetySystemDetails",
   },
   {
     id: "1.2",
-    text: "Does the contractor have a Health and Safety Policy, signed and dated by Senior Management within the last 2 years?",
+    text: "Do you have a Health and Safety Policy, signed and dated by Senior Management within the last 2 years?",
     required: true,
   },
   {
     id: "1.3",
-    text: "Can the contractor provide confirmation of relevant insurances?",
+    text: "Can you provide confirmation of relevant insurances?",
     required: true,
     hasInsurance: true,
   },
   {
     id: "1.4",
-    text: 'Does the contractor have documentation that references the Health and Safety at Work Act 2015 (HSWA)? e.g. manual, forms and templates',
+    text: 'Do you have documentation that references the Health and Safety at Work Act 2015 (HSWA)? e.g. manual, forms and templates',
     required: true,
   },
 ];
@@ -51,35 +50,35 @@ const SECTION_1_QUESTIONS = [
 const SECTION_2_QUESTIONS = [
   {
     id: "2.1",
-    text: "Does the contractor set annual H&S safety objectives to improve its safety performance?",
+    text: "Do you set annual H&S safety objectives to improve your safety performance?",
   },
   {
     id: "2.2",
-    text: "Does the contractor have systems to manage hazards and risks associated with the risk profile of their workplace activities?",
+    text: "Do you have systems to manage hazards and risks associated with the risk profile of your workplace activities?",
   },
   {
     id: "2.3",
-    text: "Does the contractor have systems to induct and train their workers suitable to the nature of their workplace activities?",
+    text: "Do you have systems to induct and train your workers suitable to the nature of your workplace activities?",
   },
   {
     id: "2.4",
-    text: "Does the contractor have a Training/Competency Register for its workers?",
+    text: "Do you have a Training/Competency Register for your workers?",
   },
   {
     id: "2.5",
-    text: "Does the contractor have documented systems for reporting and investigating accidents and incidents?",
+    text: "Do you have documented systems for reporting and investigating accidents and incidents?",
   },
   {
     id: "2.6",
-    text: "Does the contractor have systems to respond to an emergency should one occur?",
+    text: "Do you have systems to respond to an emergency should one occur?",
   },
   {
     id: "2.7",
-    text: "Does the contractor have systems to manage any subcontractors it might engage to complete any works?",
+    text: "Do you have systems to manage any subcontractors you might engage to complete any works?",
   },
   {
     id: "2.8",
-    text: "Is the contractor willing to consult, cooperate, and coordinate to keep people safe?",
+    text: "Are you willing to consult, cooperate, and coordinate to keep people safe?",
   },
 ];
 
@@ -90,7 +89,6 @@ export default function PreQualForm({ onComplete, onBack }: PreQualFormProps) {
   const [scopeOfWork, setScopeOfWork] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [companyRep, setCompanyRep] = useState("");
-  const [siteContact, setSiteContact] = useState("");
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [insuranceTypes, setInsuranceTypes] = useState<string[]>([]);
   const [insuranceDetails, setInsuranceDetails] = useState("");
@@ -154,7 +152,6 @@ export default function PreQualForm({ onComplete, onBack }: PreQualFormProps) {
       scopeOfWork,
       companyName,
       companyRep,
-      siteContact,
       answers,
       insuranceTypes,
       insuranceDetails,
@@ -269,23 +266,12 @@ export default function PreQualForm({ onComplete, onBack }: PreQualFormProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Company Representative *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Company Represented *</label>
             <input
               type="text"
               value={companyRep}
               onChange={(e) => setCompanyRep(e.target.value)}
               className="w-full border rounded-md px-3 py-2 text-sm"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">SITE Contact (if known)</label>
-            <input
-              type="text"
-              value={siteContact}
-              onChange={(e) => setSiteContact(e.target.value)}
-              className="w-full border rounded-md px-3 py-2 text-sm"
-              placeholder="Name of your INFLITE contact"
             />
           </div>
 

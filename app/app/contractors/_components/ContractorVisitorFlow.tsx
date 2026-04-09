@@ -157,7 +157,7 @@ export default function ContractorVisitorFlow({
         <PreQualForm
           onComplete={(data) => {
             setPrequalFormData(data);
-            setContractorName(data.companyRep);
+            setContractorName(data.contractorSignName);
             setContractorCompany(data.companyName);
             setContractorStep("sentto");
           }}
