@@ -10,6 +10,7 @@ import ContractorCourse from "./ContractorCourse";
 import StaffPortal from "./StaffPortal";
 import SignOutForm from "./SignOutForm";
 import PreQualificationCheck from "./PreQualificationCheck";
+import PreQualForm, { type PreQualFormData } from "./PreQualForm";
 import SiteSelection from "./SiteSelection";
 import PreQualSentToSelection from "./PreQualSentToSelection";
 import AirsideCheck from "./AirsideCheck";
@@ -18,7 +19,7 @@ import ContractorDetailsForm from "./ContractorDetailsForm";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 type SelectionType = "contractor" | "visitor" | "signout" | "inflite";
-type ContractorStep = "site" | "prequalification" | "details" | "sentto" | "airside" | "course" | "training" | "success";
+type ContractorStep = "site" | "prequalification" | "prequal_form" | "details" | "sentto" | "airside" | "course" | "training" | "success";
 type VisitorStep = "form" | "course" | "success";
 
 interface VisitorFormData {
@@ -50,6 +51,7 @@ export default function ContractorVisitorFlow({
   const [sentToPersonId, setSentToPersonId] = useState<string | null>(null);
   const [sentToPersonName, setSentToPersonName] = useState<string | null>(null);
   const [workingAirside, setWorkingAirside] = useState<boolean | null>(null);
+  const [prequalFormData, setPrequalFormData] = useState<PreQualFormData | null>(null);
   
   const [visitorStep, setVisitorStep] = useState<VisitorStep>("form");
   const [visitorFormData, setVisitorFormData] = useState<VisitorFormData | null>(null);
@@ -66,6 +68,7 @@ export default function ContractorVisitorFlow({
     setSentToPersonId(null);
     setSentToPersonName(null);
     setWorkingAirside(null);
+    setPrequalFormData(null);
     setVisitorStep("form");
     setVisitorFormData(null);
     setVisitorSiteName("");
@@ -81,6 +84,7 @@ export default function ContractorVisitorFlow({
           contractorCompany: contractorCompany || null,
           siteId: selectedSiteId,
           sentToUserId: personId,
+          prequalFormData: prequalFormData || null,
         }),
       });
 
@@ -142,11 +146,22 @@ export default function ContractorVisitorFlow({
       return (
         <PreQualificationCheck
           onYes={() => setContractorStep("details")}
-          onNo={() => {
-            alert("Please complete your pre-qualification before proceeding.");
-            resetFlow();
-          }}
+          onNo={() => setContractorStep("prequal_form")}
           onBack={() => setContractorStep("site")}
+        />
+      );
+    }
+
+    if (contractorStep === "prequal_form") {
+      return (
+        <PreQualForm
+          onComplete={(data) => {
+            setPrequalFormData(data);
+            setContractorName(data.companyRep);
+            setContractorCompany(data.companyName);
+            setContractorStep("sentto");
+          }}
+          onBack={() => setContractorStep("prequalification")}
         />
       );
     }

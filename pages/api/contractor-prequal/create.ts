@@ -8,20 +8,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { contractorName, contractorCompany, siteId, sentToUserId } = req.body;
+    const { contractorName, contractorCompany, siteId, sentToUserId, prequalFormData } = req.body;
 
     if (!contractorName || !siteId || !sentToUserId) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
+    const insertData: Record<string, any> = {
+      contractor_name: contractorName,
+      contractor_company: contractorCompany || null,
+      site_id: siteId,
+      sent_to_user_id: sentToUserId,
+    };
+
+    if (prequalFormData) {
+      insertData.notes = JSON.stringify(prequalFormData);
+    }
+
     const { data, error } = await supabaseAdmin()
       .from("contractor_prequal_submissions")
-      .insert({
-        contractor_name: contractorName,
-        contractor_company: contractorCompany || null,
-        site_id: siteId,
-        sent_to_user_id: sentToUserId,
-      })
+      .insert(insertData)
       .select("id")
       .single();
 
