@@ -10,6 +10,7 @@ import UnifiedVideoPlayer from "@/components/UnifiedVideoPlayer";
 import DocumentUploadBlock from './DocumentUploadBlock';
 import EquipmentFormBlock from '@/components/EquipmentFormBlock';
 import { ModuleType, BlockKind } from "@/lib/types/module";
+import DOMPurify from "isomorphic-dompurify";
 
 /**
  * Renders a course as a learner (assignments-only approach).
@@ -1220,7 +1221,7 @@ export default async function LearnerCoursePage(props: {
 
                             {currentModule.content && (
                               <div className="prose prose-sm max-w-none mb-6"
-                                   dangerouslySetInnerHTML={{ __html: currentModule.content }} />
+                                   dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(currentModule.content) }} />
                             )}
 
                             {/* Video content will be rendered through content blocks */}
