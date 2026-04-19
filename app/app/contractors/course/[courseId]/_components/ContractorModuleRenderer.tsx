@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import DOMPurify from "isomorphic-dompurify";
 import UnifiedVideoPlayer from "@/components/UnifiedVideoPlayer";
 import EquipmentFormBlock from "@/components/EquipmentFormBlock";
 
@@ -108,7 +109,7 @@ export default function ContractorModuleRenderer({
           <div
             key={block.id}
             className="prose max-w-none mb-6"
-            dangerouslySetInnerHTML={{ __html: data.text || "" }}
+            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(data.text || "") }}
           />
         );
 
