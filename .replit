@@ -60,3 +60,5 @@ integrations = ["resend:1.0.0"]
 
 [userenv.shared]
 NEXT_PUBLIC_SITE_URL = "https://training.inflite.nz"
+TEAMS_WEBHOOK_CHANNEL_1 = "https://charterinflight.webhook.office.com/webhookb2/eae6b5f1-2042-4323-a678-5e9071ba96a4@19b039d8-9be0-48db-9e5e-9449f1624368/IncomingWebhook/004937c69a3c42c2b8e194ffe94924a0/30decbd5-5cef-4e01-91bf-e853ad98bb32/V2_7lN0BWUuLze7u04Hkic69wJwhLnnd6ti7cQgyS_DtI1"
+TEAMS_WEBHOOK_CHANNEL_2 = "https://charterinflight.webhook.office.com/webhookb2/1d3786cf-9183-400f-a6b6-b0daf2217a66@19b039d8-9be0-48db-9e5e-9449f1624368/IncomingWebhook/fc5d804697444641ad56d40477007c88/30decbd5-5cef-4e01-91bf-e853ad98bb32/V2q2Q1f9oPSKKwElp_gi71Vb69l0QiXGVYbdG32F94O_s1"
