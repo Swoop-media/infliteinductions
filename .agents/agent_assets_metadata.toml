@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "lR-of04614DO4Bd7RTuLR"
+uri = "file://inflite-training-app.zip"
+type = "unspecified"
+title = "INFLITE Training App — Source Archive"
