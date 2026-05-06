@@ -31,6 +31,13 @@ export async function POST(request: NextRequest) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Build set of archived user IDs so their items are excluded from daily reports
+    const { data: archivedProfiles } = await supabase
+      .from("profiles")
+      .select("id")
+      .not("archived_at", "is", null);
+    const archivedUserIdSet = new Set((archivedProfiles || []).map(p => p.id));
+
     // Get Admin and Senior Management role IDs
     const { data: roles, error: rolesError } = await supabase
       .from("roles")
@@ -101,6 +108,7 @@ export async function POST(request: NextRequest) {
       thirtyDaysFromNow.setHours(23, 59, 59, 999); // End of the 30th day
       
       const assignmentsWithExpiry = authAssignments
+        .filter(assignment => !archivedUserIdSet.has(assignment.user_id))
         .map(assignment => {
           const auth = authMap.get(assignment.authorisation_id);
           if (!auth?.valid_for_days) return null;
@@ -155,7 +163,7 @@ export async function POST(request: NextRequest) {
     const day = String(thirtyDaysFromNowDate.getDate()).padStart(2, '0');
     const thirtyDaysStr = `${year}-${month}-${day}`;
     
-    const { data: docExpiries, error: docError } = await supabase
+    let docExpiriesQuery = supabase
       .from("learner_documents")
       .select(`
         id,
@@ -167,6 +175,14 @@ export async function POST(request: NextRequest) {
       .lte("expires_on", thirtyDaysStr)
       .order("expires_on", { ascending: true })
       .limit(50);
+    if (archivedUserIdSet.size > 0) {
+      docExpiriesQuery = docExpiriesQuery.not(
+        "user_id",
+        "in",
+        `(${[...archivedUserIdSet].join(",")})`
+      );
+    }
+    const { data: docExpiries, error: docError } = await docExpiriesQuery;
     
     // Get profiles for document expiries
     let docDetails = [];

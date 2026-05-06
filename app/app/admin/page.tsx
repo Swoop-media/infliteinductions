@@ -99,10 +99,10 @@ async function loadCompletedCoursesWithDueDates(q: string | null, page: number =
   const userIds = [...new Set(allAssignments.map(a => a.user_id))];
   const courseIds = [...new Set(allAssignments.map(a => a.course_id))];
 
-  // Get profiles
+  // Get profiles (exclude archived users from active views)
   const { data: profiles, error: profileError } = await supabase
     .from("profiles")
-    .select("id, full_name, email")
+    .select("id, full_name, email, archived_at")
     .in("id", userIds);
 
   if (profileError) throw new Error(profileError.message);
@@ -115,12 +115,17 @@ async function loadCompletedCoursesWithDueDates(q: string | null, page: number =
 
   if (courseError) throw new Error(courseError.message);
 
-  // Create lookup maps
-  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+  // Create lookup maps (skip archived profiles so their rows are dropped below)
+  const profileMap = new Map(
+    (profiles || []).filter(p => !p.archived_at).map(p => [p.id, p])
+  );
   const courseMap = new Map((courses || []).map(c => [c.id, c]));
 
   // Transform all data with calculated due dates
-  let completedCourses = allAssignments.map((assignment) => {
+  // Drop assignments belonging to archived users
+  let completedCourses = allAssignments
+    .filter(a => profileMap.has(a.user_id))
+    .map((assignment) => {
     const profile = profileMap.get(assignment.user_id);
     const course = courseMap.get(assignment.course_id);
 
@@ -229,10 +234,10 @@ async function loadInProgressCourses(q: string | null) {
   const courseIds = [...new Set(assignments.map(a => a.course_id))];
   const assignmentIds = assignments.map(a => a.id);
 
-  // Get profiles
+  // Get profiles (exclude archived users from active views)
   const { data: profiles, error: profileError } = await supabase
     .from("profiles")
-    .select("id, full_name, email")
+    .select("id, full_name, email, archived_at")
     .in("id", userIds);
 
   if (profileError) throw new Error(profileError.message);
@@ -262,10 +267,12 @@ async function loadInProgressCourses(q: string | null) {
 
   if (progressError) throw new Error(progressError.message);
 
-  // Create lookup maps
-  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+  // Create lookup maps (skip archived profiles so their assignments are dropped below)
+  const profileMap = new Map(
+    (profiles || []).filter(p => !p.archived_at).map(p => [p.id, p])
+  );
   const courseMap = new Map((courses || []).map(c => [c.id, c]));
-  
+
   // Count modules per course
   const moduleCounts = new Map();
   (courseModules || []).forEach(module => {
@@ -280,8 +287,10 @@ async function loadInProgressCourses(q: string | null) {
     completedCounts.set(p.assignment_id, count + 1);
   });
 
-  // Transform data
-  let inProgressCourses = assignments.map((assignment) => {
+  // Transform data (drop assignments belonging to archived users)
+  let inProgressCourses = assignments
+    .filter(a => profileMap.has(a.user_id))
+    .map((assignment) => {
     const profile = profileMap.get(assignment.user_id);
     const course = courseMap.get(assignment.course_id);
     const totalModules = moduleCounts.get(assignment.course_id) || 0;
@@ -472,14 +481,25 @@ async function loadUserDocuments(q: string | null, page: number = 1) {
   const PAGE_SIZE = 50;
   const offset = (page - 1) * PAGE_SIZE;
 
-  // First get total count
-  const { count: totalCount } = await supabase
+  // Get archived user IDs so their documents are excluded from active views
+  const { data: archivedProfiles } = await supabase
+    .from("profiles")
+    .select("id")
+    .not("archived_at", "is", null);
+  const archivedUserIds = (archivedProfiles || []).map(p => p.id);
+
+  // First get total count (excluding archived users)
+  let countQuery = supabase
     .from("learner_documents")
     .select("*", { count: "exact", head: true });
+  if (archivedUserIds.length > 0) {
+    countQuery = countQuery.not("user_id", "in", `(${archivedUserIds.join(",")})`);
+  }
+  const { count: totalCount } = await countQuery;
 
-  // Fetch documents with pagination
+  // Fetch documents with pagination (excluding archived users)
   // Order by expires_on to show expired and expiring soon documents first
-  const { data: documents, error: documentsError } = await supabase
+  let docQuery = supabase
     .from("learner_documents")
     .select(`
       id,
@@ -496,6 +516,10 @@ async function loadUserDocuments(q: string | null, page: number = 1) {
     `)
     .order("expires_on", { ascending: true, nullsFirst: false })
     .range(offset, offset + PAGE_SIZE - 1);
+  if (archivedUserIds.length > 0) {
+    docQuery = docQuery.not("user_id", "in", `(${archivedUserIds.join(",")})`);
+  }
+  const { data: documents, error: documentsError } = await docQuery;
 
   if (documentsError) throw new Error(documentsError.message);
   if (!documents || documents.length === 0) return { documents: [], totalPages: 0, currentPage: page, totalCount: totalCount || 0 };
@@ -507,10 +531,10 @@ async function loadUserDocuments(q: string | null, page: number = 1) {
   const courseIds = [...new Set(documents.map(d => d.course_id).filter(Boolean))];
   const moduleIds = [...new Set(documents.map(d => d.module_id).filter(Boolean))];
 
-  // Fetch profiles separately
+  // Fetch profiles separately (exclude archived users from active views)
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("id, full_name, email")
+    .select("id, full_name, email, archived_at")
     .in("id", userIds);
 
   if (profilesError) throw new Error(profilesError.message);
@@ -531,8 +555,10 @@ async function loadUserDocuments(q: string | null, page: number = 1) {
 
   if (modulesError) throw new Error(modulesError.message);
 
-  // Create lookup maps
-  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+  // Create lookup maps (skip archived profiles so their docs are filtered out below)
+  const profileMap = new Map(
+    (profiles || []).filter(p => !p.archived_at).map(p => [p.id, p])
+  );
   const courseMap = new Map((courses || []).map(c => [c.id, c]));
   const moduleMap = new Map((modules || []).map(m => [m.id, m]));
 
@@ -975,17 +1001,19 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null, page: n
 
   if (authError) throw new Error(authError.message);
 
-  // Get profiles
+  // Get profiles (exclude archived users from active views)
   const { data: profiles, error: profileError } = await supabase
     .from("profiles")
-    .select("id, full_name, email")
+    .select("id, full_name, email, archived_at")
     .in("id", userIds);
 
   if (profileError) throw new Error(profileError.message);
 
-  // Create lookup maps
+  // Create lookup maps (skip archived profiles so their authorisations are dropped)
   const authMap = new Map((authorisations || []).map(a => [a.id, a]));
-  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+  const profileMap = new Map(
+    (profiles || []).filter(p => !p.archived_at).map(p => [p.id, p])
+  );
 
   // Use admin client to bypass RLS for document and course queries
   const adminClient = supabaseAdmin();
@@ -1056,7 +1084,10 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null, page: n
   });
 
   // Transform all data with calculated expiry dates
-  let completedAuthorisations = allAssignments.map(assignment => {
+  // Drop assignments belonging to archived users
+  let completedAuthorisations = allAssignments
+    .filter(a => profileMap.has(a.user_id))
+    .map(assignment => {
     const auth = authMap.get(assignment.authorisation_id);
     const profile = profileMap.get(assignment.user_id);
     const completedAt = new Date(assignment.approved_at);
@@ -1458,21 +1489,27 @@ async function loadPendingAuthorisations(q: string | null) {
   if (!assignments || assignments.length === 0) return [];
 
   // Get user profiles separately to avoid relationship ambiguity
+  // Exclude archived users from pending approvals
   const userIds = [...new Set(assignments.map(a => a.user_id))];
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
-    .select("id, full_name, email")
+    .select("id, full_name, email, archived_at")
     .in("id", userIds);
 
   if (profilesError) throw new Error(profilesError.message);
 
-  // Create a lookup map for profiles
-  const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+  // Create a lookup map for profiles (skip archived users)
+  const profileMap = new Map(
+    (profiles || []).filter(p => !p.archived_at).map(p => [p.id, p])
+  );
 
   // For each completed authorisation, verify all courses are actually completed
   const pendingAuthorisations: PendingAuthorisationRow[] = [];
 
   for (const assignment of assignments) {
+    // Skip assignments belonging to archived users
+    if (!profileMap.has(assignment.user_id)) continue;
+
     // Get all courses for this authorisation
     const { data: authCourses, error: coursesError } = await supabase
       .from("authorisation_courses")

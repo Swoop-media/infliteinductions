@@ -54,6 +54,7 @@ Preferred communication style: Simple, everyday language.
 - **Form Resubmission & Reassessment**: When a learner resubmits an equipment form on a completed course, the system resets assessment progress, moves the course back to the assessment area, and notifies all onsite assessors via Teams and in-app notifications (`/api/courses/[courseId]/form-resubmission`).
 - **Operations Notices Feature**: Allows creators to publish assignable notices with optional acknowledgement tracking, integrated with in-app and Teams notifications.
 - **SafeFLITE User Sync Webhook**: Integrates with SafeFLITE to sync user data upon creation, update, or archiving.
+- **Archived User Visibility**: Users archived via `/app/admin/users/archived` (`profiles.archived_at IS NOT NULL`) are kept in the database for record-keeping but excluded from active admin views and notifications. Filtering is applied in: Due Dates - Courses, Due Dates - Authorisations, Due Dates - Documents, Course Progress, Pending Authorisations (`app/admin/page.tsx`), and the daily admin expiry report Teams bot summaries (`/api/notifications/daily-admin-report`). Restoring a user via the archived page re-includes them automatically.
 
 # External Dependencies
 
