@@ -205,20 +205,45 @@ export default function AuthorisationOverviewMatrix({
     setVisibleStatuses(next);
   }
 
-  const tableUsers = useMemo(
+  const baseUsers = useMemo(
     () =>
       users
         .filter((u) => selectedUsers.has(u.id))
         .sort((a, b) => (a.full_name || "").localeCompare(b.full_name || "")),
     [users, selectedUsers]
   );
-  const tableAuths = useMemo(
+  const baseAuths = useMemo(
     () =>
       authorisations
         .filter((a) => selectedAuths.has(a.id))
         .sort((a, b) => a.title.localeCompare(b.title)),
     [authorisations, selectedAuths]
   );
+
+  // Status-aware filtering: drop users/auths that have no cells matching the
+  // currently visible statuses so the table only shows what the user asked for.
+  const { tableUsers, tableAuths, hiddenUsersCount, hiddenAuthsCount } = useMemo(() => {
+    const userHas: Record<string, boolean> = {};
+    const authHas: Record<string, boolean> = {};
+    baseUsers.forEach((u) => {
+      const comps = completions[u.id] || {};
+      baseAuths.forEach((a) => {
+        const info = cellInfo(comps[a.id]);
+        if (visibleStatuses.has(info.status)) {
+          userHas[u.id] = true;
+          authHas[a.id] = true;
+        }
+      });
+    });
+    const tu = baseUsers.filter((u) => userHas[u.id]);
+    const ta = baseAuths.filter((a) => authHas[a.id]);
+    return {
+      tableUsers: tu,
+      tableAuths: ta,
+      hiddenUsersCount: baseUsers.length - tu.length,
+      hiddenAuthsCount: baseAuths.length - ta.length,
+    };
+  }, [baseUsers, baseAuths, completions, visibleStatuses]);
 
   // ---- Aggregations for charts ----
   const stats = useMemo(() => {
@@ -742,40 +767,53 @@ export default function AuthorisationOverviewMatrix({
         </div>
       </div>
 
+      {/* Status filter — visible before & after Generate so users can shape the output up front */}
+      {(selectedUsers.size > 0 || selectedAuths.size > 0) && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-gray-50 px-3 py-2">
+          <span className="text-sm font-medium mr-1">Include statuses:</span>
+          {(["overdue", "due_soon", "in_date", "never"] as StatusKey[]).map((s) => {
+            const on = visibleStatuses.has(s);
+            const meta = STATUS_META[s];
+            const count = generated ? stats.totals[s] : null;
+            return (
+              <button
+                key={s}
+                type="button"
+                onClick={() => toggleStatus(s)}
+                className="text-xs rounded-full px-3 py-1 border transition"
+                style={{
+                  background: on ? meta.bg : "#ffffff",
+                  color: on ? meta.text : "#374151",
+                  borderColor: meta.bg,
+                }}
+              >
+                {meta.label}
+                {count !== null && ` (${count})`}
+              </button>
+            );
+          })}
+          {generated && (hiddenUsersCount > 0 || hiddenAuthsCount > 0) && (
+            <span className="text-xs text-gray-600 ml-2">
+              {hiddenUsersCount > 0 && `${hiddenUsersCount} staff`}
+              {hiddenUsersCount > 0 && hiddenAuthsCount > 0 && " and "}
+              {hiddenAuthsCount > 0 && `${hiddenAuthsCount} authorisation${hiddenAuthsCount === 1 ? "" : "s"}`}
+              {" hidden by status filter"}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Output */}
       {generated && (
         <>
-          {tableUsers.length > 0 && tableAuths.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium mr-1">Show:</span>
-              {(["overdue", "due_soon", "in_date", "never"] as StatusKey[]).map((s) => {
-                const on = visibleStatuses.has(s);
-                const meta = STATUS_META[s];
-                return (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => toggleStatus(s)}
-                    className="text-xs rounded-full px-3 py-1 border transition"
-                    style={{
-                      background: on ? meta.bg : "#ffffff",
-                      color: on ? meta.text : "#374151",
-                      borderColor: meta.bg,
-                    }}
-                  >
-                    {meta.label} ({stats.totals[s]})
-                  </button>
-                );
-              })}
-              <span className="text-xs text-gray-500 ml-2">
-                {stats.matches.length} matching of {tableUsers.length * tableAuths.length} cells
-              </span>
-            </div>
-          )}
-          {tableUsers.length === 0 || tableAuths.length === 0 ? (
+          {baseUsers.length === 0 || baseAuths.length === 0 ? (
             <p className="text-sm text-gray-600">
               Select at least one staff member and one authorisation, then click Generate.
             </p>
+          ) : tableUsers.length === 0 || tableAuths.length === 0 ? (
+            <div className="rounded-md border bg-amber-50 border-amber-200 px-4 py-3 text-sm text-amber-900">
+              No staff or authorisations match the selected statuses. Turn on more statuses above to show results.
+            </div>
           ) : view === "matrix" ? (
             <div className="overflow-auto border rounded-md">
               <table className="min-w-full border-collapse text-xs">
@@ -824,20 +862,19 @@ export default function AuthorisationOverviewMatrix({
                         </th>
                         {tableAuths.map((a) => {
                           const info = cellInfo(userComps[a.id]);
-                          const hidden = !visibleStatuses.has(info.status);
                           return (
                             <td
                               key={a.id}
                               className="border px-1 py-1 text-center font-medium"
                               style={{
-                                background: hidden ? "#f3f4f6" : info.bg,
-                                color: hidden ? "#d1d5db" : info.text,
+                                background: info.bg,
+                                color: info.text,
                                 minWidth: 110,
                                 maxWidth: 140,
                               }}
-                              title={hidden ? `${STATUS_META[info.status].label} (hidden)` : info.title}
+                              title={info.title}
                             >
-                              {hidden ? "—" : info.label}
+                              {info.label}
                             </td>
                           );
                         })}
