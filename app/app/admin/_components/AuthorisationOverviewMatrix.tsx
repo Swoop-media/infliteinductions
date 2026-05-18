@@ -116,8 +116,8 @@ export default function AuthorisationOverviewMatrix({
   const [selectedDepartments, setSelectedDepartments] = useState<Set<string>>(new Set());
   const [generated, setGenerated] = useState(false);
   const [view, setView] = useState<"matrix" | "charts">("matrix");
-  const [chartStatuses, setChartStatuses] = useState<Set<StatusKey>>(
-    new Set<StatusKey>(["overdue", "due_soon"])
+  const [visibleStatuses, setVisibleStatuses] = useState<Set<StatusKey>>(
+    new Set<StatusKey>(["overdue", "due_soon", "in_date", "never"])
   );
 
   // Derive available sites and departments from the loaded data
@@ -199,10 +199,10 @@ export default function AuthorisationOverviewMatrix({
   }
 
   function toggleStatus(s: StatusKey) {
-    const next = new Set(chartStatuses);
+    const next = new Set(visibleStatuses);
     if (next.has(s)) next.delete(s);
     else next.add(s);
-    setChartStatuses(next);
+    setVisibleStatuses(next);
   }
 
   const tableUsers = useMemo(
@@ -243,14 +243,14 @@ export default function AuthorisationOverviewMatrix({
         totals[info.status]++;
         perUser.get(u.id)![info.status]++;
         perAuth.get(a.id)![info.status]++;
-        if (chartStatuses.has(info.status)) {
+        if (visibleStatuses.has(info.status)) {
           matches.push([u.id, a.id, info.status, info.title]);
         }
       });
     });
 
     return { totals, perUser, perAuth, matches };
-  }, [tableUsers, tableAuths, completions, chartStatuses]);
+  }, [tableUsers, tableAuths, completions, visibleStatuses]);
 
   // Lookup maps for rendering match rows by id
   const userById = useMemo(
@@ -745,6 +745,33 @@ export default function AuthorisationOverviewMatrix({
       {/* Output */}
       {generated && (
         <>
+          {tableUsers.length > 0 && tableAuths.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium mr-1">Show:</span>
+              {(["overdue", "due_soon", "in_date", "never"] as StatusKey[]).map((s) => {
+                const on = visibleStatuses.has(s);
+                const meta = STATUS_META[s];
+                return (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => toggleStatus(s)}
+                    className="text-xs rounded-full px-3 py-1 border transition"
+                    style={{
+                      background: on ? meta.bg : "#ffffff",
+                      color: on ? meta.text : "#374151",
+                      borderColor: meta.bg,
+                    }}
+                  >
+                    {meta.label} ({stats.totals[s]})
+                  </button>
+                );
+              })}
+              <span className="text-xs text-gray-500 ml-2">
+                {stats.matches.length} matching of {tableUsers.length * tableAuths.length} cells
+              </span>
+            </div>
+          )}
           {tableUsers.length === 0 || tableAuths.length === 0 ? (
             <p className="text-sm text-gray-600">
               Select at least one staff member and one authorisation, then click Generate.
@@ -797,19 +824,20 @@ export default function AuthorisationOverviewMatrix({
                         </th>
                         {tableAuths.map((a) => {
                           const info = cellInfo(userComps[a.id]);
+                          const hidden = !visibleStatuses.has(info.status);
                           return (
                             <td
                               key={a.id}
                               className="border px-1 py-1 text-center font-medium"
                               style={{
-                                background: info.bg,
-                                color: info.text,
+                                background: hidden ? "#f3f4f6" : info.bg,
+                                color: hidden ? "#d1d5db" : info.text,
                                 minWidth: 110,
                                 maxWidth: 140,
                               }}
-                              title={info.title}
+                              title={hidden ? `${STATUS_META[info.status].label} (hidden)` : info.title}
                             >
-                              {info.label}
+                              {hidden ? "—" : info.label}
                             </td>
                           );
                         })}
@@ -822,49 +850,30 @@ export default function AuthorisationOverviewMatrix({
           ) : (
             // CHARTS VIEW
             <div className="space-y-4">
-              {/* Status filter chips */}
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-medium mr-1">Show:</span>
-                {(["overdue", "due_soon", "in_date", "never"] as StatusKey[]).map((s) => {
-                  const on = chartStatuses.has(s);
-                  const meta = STATUS_META[s];
-                  return (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => toggleStatus(s)}
-                      className="text-xs rounded-full px-3 py-1 border transition"
-                      style={{
-                        background: on ? meta.bg : "#ffffff",
-                        color: on ? meta.text : "#374151",
-                        borderColor: meta.bg,
-                      }}
-                    >
-                      {meta.label} ({stats.totals[s]})
-                    </button>
-                  );
-                })}
-                <span className="text-xs text-gray-500 ml-2">
-                  {stats.matches.length} matching of {tableUsers.length * tableAuths.length} cells
-                </span>
-              </div>
-
               {/* Summary cards */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {(["overdue", "due_soon", "in_date", "never"] as StatusKey[]).map((s) => {
                   const meta = STATUS_META[s];
                   const total = tableUsers.length * tableAuths.length;
                   const pct = total > 0 ? Math.round((stats.totals[s] / total) * 100) : 0;
+                  const on = visibleStatuses.has(s);
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={s}
-                      className="rounded-md border p-3"
+                      onClick={() => toggleStatus(s)}
+                      className={`text-left rounded-md border p-3 transition ${
+                        on ? "hover:bg-gray-50" : "opacity-40 hover:opacity-60"
+                      }`}
                       style={{ borderLeft: `6px solid ${meta.bg}` }}
+                      title={on ? `Click to hide ${meta.label}` : `Click to show ${meta.label}`}
                     >
-                      <div className="text-xs text-gray-500">{meta.label}</div>
+                      <div className="text-xs text-gray-500">
+                        {meta.label}{!on && " (hidden)"}
+                      </div>
                       <div className="text-2xl font-bold tabular-nums">{stats.totals[s]}</div>
                       <div className="text-xs text-gray-500">{pct}% of cells</div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -881,7 +890,7 @@ export default function AuthorisationOverviewMatrix({
                         overdue: 0,
                         never: 0,
                       };
-                      const segments = (Array.from(chartStatuses) as StatusKey[]).map(
+                      const segments = (Array.from(visibleStatuses) as StatusKey[]).map(
                         (k) => ({ key: k, value: counts[k] })
                       );
                       return {
@@ -906,7 +915,7 @@ export default function AuthorisationOverviewMatrix({
                         overdue: 0,
                         never: 0,
                       };
-                      const segments = (Array.from(chartStatuses) as StatusKey[]).map(
+                      const segments = (Array.from(visibleStatuses) as StatusKey[]).map(
                         (k) => ({ key: k, value: counts[k] })
                       );
                       return {
