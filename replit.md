@@ -39,7 +39,7 @@ Preferred communication style: Simple, everyday language.
 ## Core Features & Design Patterns
 - **Hybrid Rendering**: Server-side rendering for performance, client-side for interactivity.
 - **Authorization Expiry**: Calculates expiry based on the earliest of document, course, or authorization validity.
-- **Notification System**: In-app and Microsoft Teams notifications for events like course assignment, rejections, expiry reminders, and pending approvals, managed by scheduled jobs. Authorization approvals and rejections are also posted to two Teams channels via incoming webhooks (`TEAMS_WEBHOOK_CHANNEL_1`, `TEAMS_WEBHOOK_CHANNEL_2`) using Adaptive Cards (`lib/teams/channel-webhook.ts`).
+- **Notification System**: In-app and Microsoft Teams notifications for events like course assignment, rejections, expiry reminders, and pending approvals, managed by scheduled jobs. Authorization approvals and rejections are also posted to two Teams channels via incoming webhooks (`TEAMS_WEBHOOK_CHANNEL_1`, `TEAMS_WEBHOOK_CHANNEL_2`) using Adaptive Cards (`lib/teams/channel-webhook.ts`). Issue reports submitted via the "Report Issue" button are posted as an Adaptive Card to a dedicated Teams channel webhook (`TEAMS_WEBHOOK_REPORT_ISSUE`) — no per-user proactive bot message or per-admin in-app notification is sent.
 - **Admin Diagnostic Tools**: Production-ready and RLS-secured tools for diagnosing authorization and document visibility issues (`/app/admin/diagnose-authorizations`, `/app/admin/diagnose-documents`).
 - **UI/UX Decisions**:
     - Learner interface focuses on content delivery with minimal distractions.

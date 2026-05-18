@@ -95,6 +95,118 @@ function buildAdaptiveCard(payload: WebhookPayload) {
   };
 }
 
+interface IssueReportWebhookPayload {
+  reporterName: string;
+  reporterEmail: string;
+  message: string;
+  pageUrl?: string;
+  userAgent?: string;
+  platform?: string;
+  viewport?: string;
+  attachmentsCount?: number;
+  timestamp?: string;
+}
+
+function buildIssueReportCard(payload: IssueReportWebhookPayload) {
+  const facts: { title: string; value: string }[] = [
+    { title: "Reporter", value: payload.reporterName },
+    { title: "Email", value: payload.reporterEmail || "Not available" },
+  ];
+
+  if (payload.pageUrl) facts.push({ title: "Page", value: payload.pageUrl });
+  if (payload.platform) facts.push({ title: "Platform", value: payload.platform });
+  if (payload.viewport) facts.push({ title: "Viewport", value: payload.viewport });
+  if (payload.userAgent) facts.push({ title: "User Agent", value: payload.userAgent });
+  if (typeof payload.attachmentsCount === "number") {
+    facts.push({ title: "Attachments", value: String(payload.attachmentsCount) });
+  }
+  if (payload.timestamp) facts.push({ title: "Reported at", value: payload.timestamp });
+
+  const body: any[] = [
+    {
+      type: "TextBlock",
+      size: "Medium",
+      weight: "Bolder",
+      text: "🐞 Issue Reported",
+      color: "Attention",
+    },
+    {
+      type: "FactSet",
+      facts,
+    },
+    {
+      type: "TextBlock",
+      text: "**Description:**",
+      weight: "Bolder",
+      spacing: "Medium",
+    },
+    {
+      type: "TextBlock",
+      text: payload.message,
+      wrap: true,
+    },
+  ];
+
+  if (payload.pageUrl) {
+    body.push({
+      type: "ActionSet",
+      actions: [
+        {
+          type: "Action.OpenUrl",
+          title: "Open Page",
+          url: payload.pageUrl,
+        },
+      ],
+    });
+  }
+
+  return {
+    type: "message",
+    attachments: [
+      {
+        contentType: "application/vnd.microsoft.card.adaptive",
+        contentUrl: null,
+        content: {
+          $schema: "http://adaptivecards.io/schemas/adaptive-card.json",
+          type: "AdaptiveCard",
+          version: "1.4",
+          body,
+        },
+      },
+    ],
+  };
+}
+
+export async function postIssueReportToChannel(
+  payload: IssueReportWebhookPayload
+): Promise<boolean> {
+  const url = process.env.TEAMS_WEBHOOK_REPORT_ISSUE;
+  if (!url) {
+    console.warn("TEAMS_WEBHOOK_REPORT_ISSUE not configured");
+    return false;
+  }
+
+  const card = buildIssueReportCard(payload);
+
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(card),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      console.error(`❌ Report Issue webhook failed (${res.status}):`, text);
+      return false;
+    }
+    console.log("✅ Report Issue webhook posted successfully");
+    return true;
+  } catch (err) {
+    console.error("❌ Report Issue webhook error:", err);
+    return false;
+  }
+}
+
 export async function postToAuthChannels(payload: WebhookPayload): Promise<void> {
   if (WEBHOOK_URLS.length === 0) {
     console.warn("No Teams webhook channel URLs configured");
