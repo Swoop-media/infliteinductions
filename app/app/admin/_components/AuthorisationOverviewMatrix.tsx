@@ -112,32 +112,76 @@ export default function AuthorisationOverviewMatrix({
   const [authQuery, setAuthQuery] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [selectedAuths, setSelectedAuths] = useState<Set<string>>(new Set());
+  const [selectedSites, setSelectedSites] = useState<Set<string>>(new Set());
+  const [selectedDepartments, setSelectedDepartments] = useState<Set<string>>(new Set());
   const [generated, setGenerated] = useState(false);
   const [view, setView] = useState<"matrix" | "charts">("matrix");
   const [chartStatuses, setChartStatuses] = useState<Set<StatusKey>>(
     new Set<StatusKey>(["overdue", "due_soon"])
   );
 
+  // Derive available sites and departments from the loaded data
+  const NO_SITE = "__no_site__";
+  const NO_DEPT = "__no_dept__";
+
+  const siteOptions = useMemo(() => {
+    const set = new Set<string>();
+    let hasNone = false;
+    users.forEach((u) => {
+      if (u.site_name) set.add(u.site_name);
+      else hasNone = true;
+    });
+    const arr = Array.from(set).sort((a, b) => a.localeCompare(b));
+    if (hasNone) arr.push(NO_SITE);
+    return arr;
+  }, [users]);
+
+  const departmentOptions = useMemo(() => {
+    const set = new Set<string>();
+    let hasNone = false;
+    authorisations.forEach((a) => {
+      if (a.department) set.add(a.department);
+      else hasNone = true;
+    });
+    const arr = Array.from(set).sort((a, b) => a.localeCompare(b));
+    if (hasNone) arr.push(NO_DEPT);
+    return arr;
+  }, [authorisations]);
+
   const filteredUsers = useMemo(() => {
     const q = userQuery.trim().toLowerCase();
-    if (!q) return users;
-    return users.filter(
-      (u) =>
+    return users.filter((u) => {
+      // Site filter
+      if (selectedSites.size > 0) {
+        const key = u.site_name || NO_SITE;
+        if (!selectedSites.has(key)) return false;
+      }
+      // Search filter
+      if (!q) return true;
+      return (
         (u.full_name?.toLowerCase().includes(q) ?? false) ||
         (u.email?.toLowerCase().includes(q) ?? false) ||
         (u.site_name?.toLowerCase().includes(q) ?? false)
-    );
-  }, [users, userQuery]);
+      );
+    });
+  }, [users, userQuery, selectedSites]);
 
   const filteredAuths = useMemo(() => {
     const q = authQuery.trim().toLowerCase();
-    if (!q) return authorisations;
-    return authorisations.filter(
-      (a) =>
+    return authorisations.filter((a) => {
+      // Department filter
+      if (selectedDepartments.size > 0) {
+        const key = a.department || NO_DEPT;
+        if (!selectedDepartments.has(key)) return false;
+      }
+      // Search filter
+      if (!q) return true;
+      return (
         a.title.toLowerCase().includes(q) ||
         (a.department?.toLowerCase().includes(q) ?? false)
-    );
-  }, [authorisations, authQuery]);
+      );
+    });
+  }, [authorisations, authQuery, selectedDepartments]);
 
   function toggle(set: Set<string>, id: string, setter: (s: Set<string>) => void) {
     const next = new Set(set);
@@ -489,6 +533,44 @@ export default function AuthorisationOverviewMatrix({
             placeholder="Search staff, email, site..."
             className="w-full rounded border px-2 py-1 text-sm mb-2"
           />
+          {siteOptions.length > 0 && (
+            <div className="mb-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] uppercase tracking-wide text-gray-500">
+                  Filter by site {selectedSites.size > 0 && `(${selectedSites.size})`}
+                </span>
+                {selectedSites.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSites(new Set())}
+                    className="text-[11px] text-gray-500 hover:text-gray-700 underline"
+                  >
+                    Clear sites
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {siteOptions.map((s) => {
+                  const active = selectedSites.has(s);
+                  const label = s === NO_SITE ? "(No site)" : s;
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => toggle(selectedSites, s, setSelectedSites)}
+                      className={`text-[11px] px-2 py-0.5 rounded-full border transition ${
+                        active
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="max-h-64 overflow-auto border rounded">
             {filteredUsers.map((u) => (
               <label
@@ -541,6 +623,44 @@ export default function AuthorisationOverviewMatrix({
             placeholder="Search authorisation or department..."
             className="w-full rounded border px-2 py-1 text-sm mb-2"
           />
+          {departmentOptions.length > 0 && (
+            <div className="mb-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] uppercase tracking-wide text-gray-500">
+                  Filter by department {selectedDepartments.size > 0 && `(${selectedDepartments.size})`}
+                </span>
+                {selectedDepartments.size > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDepartments(new Set())}
+                    className="text-[11px] text-gray-500 hover:text-gray-700 underline"
+                  >
+                    Clear departments
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {departmentOptions.map((d) => {
+                  const active = selectedDepartments.has(d);
+                  const label = d === NO_DEPT ? "(No department)" : d;
+                  return (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => toggle(selectedDepartments, d, setSelectedDepartments)}
+                      className={`text-[11px] px-2 py-0.5 rounded-full border transition ${
+                        active
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           <div className="max-h-64 overflow-auto border rounded">
             {filteredAuths.map((a) => (
               <label
