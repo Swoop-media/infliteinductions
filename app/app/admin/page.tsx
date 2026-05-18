@@ -11,16 +11,18 @@ import SortableUsersTable from "./_components/SortableUsersTable";
 import SortableAuthorisationsTable from "./_components/SortableAuthorisationsTable";
 import SortableDocumentsTable from "./_components/SortableDocumentsTable";
 import SortableCourseProgressTable from "./_components/SortableCourseProgressTable";
+import AuthorisationOverviewMatrix from "./_components/AuthorisationOverviewMatrix";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorizationExpiry";
 
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "due_dates_courses" | "due_dates_authorisations" | "course_progress" | "users" | "pending_authorisations" | "documents";
+type TabKey = "overview" | "due_dates_courses" | "due_dates_authorisations" | "course_progress" | "users" | "pending_authorisations" | "documents";
 
 function tabFromSearch(sp: Record<string, string | string[] | undefined>): TabKey {
   const raw = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab || "";
+  if (raw === "overview") return "overview";
   if (raw === "users") return "users";
   if (raw === "due_dates_authorisations") return "due_dates_authorisations";
   if (raw === "course_progress") return "course_progress";
@@ -637,6 +639,7 @@ export default async function AdminPage({
     parseInt((Array.isArray(resolvedSearchParams?.page) ? resolvedSearchParams?.page[0] : resolvedSearchParams?.page) ?? "1");
 
   const tabs: { key: TabKey; label: string; href: string }[] = [
+    { key: "overview", label: "Overview", href: "/app/admin?tab=overview" },
     { key: "due_dates_courses", label: "Due Dates - Courses", href: "/app/admin?tab=due_dates_courses" },
     { key: "due_dates_authorisations", label: "Due Dates - Authorisations", href: "/app/admin?tab=due_dates_authorisations" },
     { key: "course_progress", label: "Course Progress", href: "/app/admin?tab=course_progress" },
@@ -703,7 +706,9 @@ export default async function AdminPage({
       </div>
 
       <div className="rounded-xl border bg-white p-4">
-        {tab === "due_dates_courses" ? (
+        {tab === "overview" ? (
+          <OverviewSection />
+        ) : tab === "due_dates_courses" ? (
           <DueDatesCourseSection q={q} page={page} />
         ) : tab === "due_dates_authorisations" ? (
           <DueDatesAuthorisationSection q={q} page={page} />
@@ -724,6 +729,195 @@ export default async function AdminPage({
 /* --------------------------
    SUBSECTIONS
 ---------------------------*/
+
+async function loadAuthorisationOverview() {
+  "use server";
+  noStore();
+  const allowed = (await hasRole("Admin")) || (await hasRole("Trainers and Assessors"));
+  if (!allowed) redirect("/app/home?banner=no_access");
+
+  const supabase = supabaseAdmin();
+
+  // Sites lookup
+  const { data: allSites } = await supabase.from("sites").select("id, name");
+  const siteMap = new Map((allSites || []).map((s: any) => [s.id, s.name]));
+
+  // Active (non-archived) users
+  const { data: profiles, error: profErr } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, site_id")
+    .is("archived_at", null)
+    .order("full_name", { ascending: true });
+  if (profErr) throw new Error(profErr.message);
+
+  const users = (profiles || []).map((p: any) => ({
+    id: p.id,
+    full_name: p.full_name,
+    email: p.email,
+    site_name: p.site_id ? siteMap.get(p.site_id) || null : null,
+  }));
+
+  // All authorisations
+  const { data: auths, error: authErr } = await supabase
+    .from("authorisations")
+    .select("id, title, department, valid_for_days")
+    .order("title", { ascending: true });
+  if (authErr) throw new Error(authErr.message);
+
+  const authList = (auths || []).map((a: any) => ({
+    id: a.id,
+    title: a.title,
+    department: a.department ?? null,
+  }));
+
+  // Completed authorisation assignments
+  const { data: assignments, error: asnErr } = await supabase
+    .from("authorisation_assignments")
+    .select("id, user_id, authorisation_id, approved_at")
+    .eq("assignment_status", "completed")
+    .not("approved_at", "is", null);
+  if (asnErr) throw new Error(asnErr.message);
+
+  const userIdSet = new Set(users.map((u) => u.id));
+  const authValidityMap = new Map<string, number | null>(
+    (auths || []).map((a: any) => [a.id, a.valid_for_days ?? null])
+  );
+
+  const filteredAssignments = (assignments || []).filter(
+    (a: any) => userIdSet.has(a.user_id) && authValidityMap.has(a.authorisation_id)
+  );
+
+  const authIds = [...new Set(filteredAssignments.map((a: any) => a.authorisation_id))];
+  const userIds = [...new Set(filteredAssignments.map((a: any) => a.user_id))];
+
+  // Auth -> courses mapping
+  const { data: authCourses } = authIds.length
+    ? await supabase
+        .from("authorisation_courses")
+        .select("authorisation_id, course_id")
+        .in("authorisation_id", authIds)
+    : { data: [] as any[] };
+
+  const authCourseMap = new Map<string, string[]>();
+  (authCourses || []).forEach((ac: any) => {
+    const list = authCourseMap.get(ac.authorisation_id) || [];
+    list.push(ac.course_id);
+    authCourseMap.set(ac.authorisation_id, list);
+  });
+
+  const allCourseIds = [
+    ...new Set((authCourses || []).map((ac: any) => ac.course_id)),
+  ];
+
+  // Course validity
+  const { data: courseRows } = allCourseIds.length
+    ? await supabase
+        .from("courses")
+        .select("id, valid_for_months")
+        .in("id", allCourseIds)
+    : { data: [] as any[] };
+  const courseValidityMap = new Map<string, number | null>(
+    (courseRows || []).map((c: any) => [c.id, c.valid_for_months ?? null])
+  );
+
+  // Documents with expiry (for users x courses)
+  let documents: any[] = [];
+  if (allCourseIds.length && userIds.length) {
+    const { data: docs } = await supabase
+      .from("learner_documents")
+      .select("user_id, course_id, expires_on")
+      .in("user_id", userIds)
+      .in("course_id", allCourseIds)
+      .not("expires_on", "is", null);
+    documents = docs || [];
+  }
+  const userCourseDocMap = new Map<string, any[]>();
+  documents.forEach((d: any) => {
+    const k = `${d.user_id}_${d.course_id}`;
+    const arr = userCourseDocMap.get(k) || [];
+    arr.push(d);
+    userCourseDocMap.set(k, arr);
+  });
+
+  // Course assignments (for course-based expiry)
+  let courseAssignments: any[] = [];
+  if (allCourseIds.length && userIds.length) {
+    const { data: ca } = await supabase
+      .from("course_assignments")
+      .select("user_id, course_id, completed_at")
+      .in("user_id", userIds)
+      .in("course_id", allCourseIds)
+      .eq("role", "trainee")
+      .not("completed_at", "is", null);
+    courseAssignments = ca || [];
+  }
+  const userCourseAsnMap = new Map<string, any>();
+  courseAssignments.forEach((ca: any) => {
+    userCourseAsnMap.set(`${ca.user_id}_${ca.course_id}`, ca);
+  });
+
+  // For each (user, auth), keep latest approval; compute expiry
+  const completions: Record<string, Record<string, { approved_at: string; expires_at: string | null }>> = {};
+
+  filteredAssignments.forEach((asn: any) => {
+    const userId = asn.user_id;
+    const authId = asn.authorisation_id;
+    const approvedAt = asn.approved_at as string;
+
+    const existing = completions[userId]?.[authId];
+    if (existing && new Date(existing.approved_at) >= new Date(approvedAt)) {
+      return; // keep newer
+    }
+
+    const courseIds = authCourseMap.get(authId) || [];
+    const userDocs: any[] = [];
+    const userCourses: any[] = [];
+    courseIds.forEach((cid) => {
+      const k = `${userId}_${cid}`;
+      const docs = userCourseDocMap.get(k) || [];
+      userDocs.push(...docs);
+      const validForMonths = courseValidityMap.get(cid);
+      const courseAsn = userCourseAsnMap.get(k);
+      if (validForMonths && courseAsn?.completed_at) {
+        userCourses.push({ valid_for_months: validForMonths, completed_at: courseAsn.completed_at });
+      }
+    });
+
+    const expiry = calculateAuthorizationExpiry(
+      new Date(approvedAt),
+      authValidityMap.get(authId) ?? null,
+      userDocs.map((d) => ({ expires_on: d.expires_on })),
+      userCourses
+    );
+
+    if (!completions[userId]) completions[userId] = {};
+    completions[userId][authId] = {
+      approved_at: approvedAt,
+      expires_at: expiry ? expiry.toISOString() : null,
+    };
+  });
+
+  return { users, authorisations: authList, completions };
+}
+
+async function OverviewSection() {
+  const { users, authorisations, completions } = await loadAuthorisationOverview();
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Authorisation Overview</h2>
+        <p className="text-sm text-gray-600">
+          Pick the staff and authorisations you want to see, then generate a matrix of completions and expiry dates.
+        </p>
+      </div>
+      <AuthorisationOverviewMatrix
+        users={users}
+        authorisations={authorisations}
+        completions={completions}
+      />
+    </div>
+  );
+}
 
 async function DueDatesCourseSection({ q, page = 1 }: { q: string | null; page?: number }) {
   const result = await loadCompletedCoursesWithDueDates(q, page);
