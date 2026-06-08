@@ -1,0 +1,1 @@
+- [jsdom server-external](jsdom-server-external.md) — isomorphic-dompurify/jsdom must stay in next.config serverExternalPackages or production build fails with ENOENT on default-stylesheet.css.

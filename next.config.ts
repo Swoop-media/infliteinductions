@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
     // your project has type errors.
     ignoreBuildErrors: true,
   },
+
+  // Keep jsdom (pulled in by isomorphic-dompurify) un-bundled so it can load
+  // its own asset files (e.g. default-stylesheet.css) at runtime. Bundling it
+  // into .next/server breaks those relative file reads and fails the build.
+  serverExternalPackages: ["isomorphic-dompurify", "jsdom"],
   
   experimental: {
     serverActions: {
