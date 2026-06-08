@@ -1,1 +1,2 @@
 - [jsdom server-external](jsdom-server-external.md) — isomorphic-dompurify/jsdom must stay in next.config serverExternalPackages or production build fails with ENOENT on default-stylesheet.css.
+- [Deployment package manager (pnpm)](deployment-package-manager.md) — repo is pnpm-only; a stray package-lock.json makes Replit run npm install and the deploy fails at the install step.
