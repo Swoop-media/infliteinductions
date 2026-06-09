@@ -18,7 +18,7 @@ import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorization
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "overview" | "due_dates_courses" | "due_dates_authorisations" | "course_progress" | "users" | "pending_authorisations" | "documents";
+type TabKey = "overview" | "due_dates_courses" | "due_dates_authorisations" | "course_progress" | "users" | "pending_authorisations" | "documents" | "sites_jobs";
 
 function tabFromSearch(sp: Record<string, string | string[] | undefined>): TabKey {
   const raw = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab || "";
@@ -28,6 +28,7 @@ function tabFromSearch(sp: Record<string, string | string[] | undefined>): TabKe
   if (raw === "course_progress") return "course_progress";
   if (raw === "pending_authorisations") return "pending_authorisations";
   if (raw === "documents") return "documents";
+  if (raw === "sites_jobs") return "sites_jobs";
   return "due_dates_courses";
 }
 
@@ -44,6 +45,12 @@ function banner(ok?: string | null, error?: string | null) {
       ok === "role_granted" ? "Role granted." :
       ok === "role_revoked" ? "Role revoked." :
       ok === "profile_saved" ? "Profile saved." :
+      ok === "site_added" ? "Site added." :
+      ok === "site_activated" ? "Site activated." :
+      ok === "site_deactivated" ? "Site deactivated." :
+      ok === "job_added" ? "Job description added." :
+      ok === "job_activated" ? "Job description activated." :
+      ok === "job_deactivated" ? "Job description deactivated." :
       "Done.";
     return (
       <div className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-800">
@@ -625,6 +632,9 @@ export default async function AdminPage({
   // Check if user has Authorization Approver role for pending_authorisations tab
   const isAuthorizationApprover = await hasRole("Authorization Approver");
 
+  // Sites & Jobs management is Admin-only
+  const isAdmin = await hasRole("Admin");
+
   const resolvedSearchParams = await searchParams;
   const tab = tabFromSearch(resolvedSearchParams ?? {});
   const ok =
@@ -646,7 +656,12 @@ export default async function AdminPage({
     { key: "documents", label: "Due Dates - Documents", href: "/app/admin?tab=documents" },
     { key: "users", label: "Users & Roles", href: "/app/admin?tab=users" },
   ];
-  
+
+  // Only show the Sites & Jobs management tab to Admins
+  if (isAdmin) {
+    tabs.push({ key: "sites_jobs", label: "Sites & Jobs", href: "/app/admin?tab=sites_jobs" });
+  }
+
   // Only add pending_authorisations tab if user has Authorization Approver role
   if (isAuthorizationApprover) {
     tabs.push({ key: "pending_authorisations", label: "Pending Authorisations", href: "/app/admin?tab=pending_authorisations" });
@@ -718,6 +733,8 @@ export default async function AdminPage({
           <DocumentsSection q={q} page={page} />
         ) : tab === "users" ? (
           <UsersSection q={q} page={page} />
+        ) : tab === "sites_jobs" ? (
+          <SitesAndJobsSection />
         ) : (
           <PendingAuthorisationsSection q={q} />
         )}
@@ -915,6 +932,140 @@ async function OverviewSection() {
         authorisations={authorisations}
         completions={completions}
       />
+    </div>
+  );
+}
+
+/* --------------------------
+   SITES & JOB DESCRIPTIONS
+---------------------------*/
+type ManagedItem = { id: string; name: string; active: boolean };
+
+async function loadSitesAndJobs() {
+  "use server";
+  noStore();
+  const isAdmin = await hasRole("Admin");
+  if (!isAdmin) redirect("/app/home?banner=no_access");
+
+  const supabase = supabaseAdmin();
+
+  const { data: sites, error: sitesErr } = await supabase
+    .from("sites")
+    .select("id, name, active")
+    .order("name", { ascending: true });
+  if (sitesErr) throw new Error(sitesErr.message);
+
+  const { data: jobs, error: jobsErr } = await supabase
+    .from("job_descriptions")
+    .select("id, name, active")
+    .order("name", { ascending: true });
+  if (jobsErr) throw new Error(jobsErr.message);
+
+  return {
+    sites: (sites || []) as ManagedItem[],
+    jobs: (jobs || []) as ManagedItem[],
+  };
+}
+
+function ManagedListCard({
+  title,
+  description,
+  items,
+  createAction,
+  toggleAction,
+  inputPlaceholder,
+}: {
+  title: string;
+  description: string;
+  items: ManagedItem[];
+  createAction: string;
+  toggleAction: string;
+  inputPlaceholder: string;
+}) {
+  return (
+    <div className="rounded-lg border bg-white p-4 space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <p className="text-sm text-gray-600">{description}</p>
+      </div>
+
+      <form action={createAction} method="post" className="flex items-center gap-2">
+        <input
+          name="name"
+          required
+          placeholder={inputPlaceholder}
+          className="flex-1 rounded-md border px-3 py-2 text-sm"
+        />
+        <button className="rounded-md bg-black px-3 py-2 text-sm text-white hover:bg-gray-800">
+          Add
+        </button>
+      </form>
+
+      <div className="divide-y rounded-md border">
+        {items.length === 0 ? (
+          <div className="px-3 py-3 text-sm text-gray-500">Nothing here yet.</div>
+        ) : (
+          items.map((item) => (
+            <div key={item.id} className="flex items-center justify-between px-3 py-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm">{item.name}</span>
+                {!item.active && (
+                  <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                    Inactive
+                  </span>
+                )}
+              </div>
+              <form action={toggleAction} method="post">
+                <input type="hidden" name="id" value={item.id} />
+                <input type="hidden" name="active" value={String(item.active)} />
+                <button
+                  className={[
+                    "rounded-md border px-2 py-1 text-xs",
+                    item.active
+                      ? "text-amber-700 border-amber-300 hover:bg-amber-50"
+                      : "text-green-700 border-green-300 hover:bg-green-50",
+                  ].join(" ")}
+                >
+                  {item.active ? "Deactivate" : "Activate"}
+                </button>
+              </form>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+async function SitesAndJobsSection() {
+  const { sites, jobs } = await loadSitesAndJobs();
+  return (
+    <div className="space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold">Sites &amp; Job Descriptions</h2>
+        <p className="text-sm text-gray-600">
+          Manage the sites and job descriptions that can be assigned to users. Only active
+          entries appear in the user edit dropdowns.
+        </p>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ManagedListCard
+          title="Sites"
+          description={`${sites.length} total`}
+          items={sites}
+          createAction="/app/admin/sites/create"
+          toggleAction="/app/admin/sites/toggle"
+          inputPlaceholder="New site name"
+        />
+        <ManagedListCard
+          title="Job Descriptions"
+          description={`${jobs.length} total`}
+          items={jobs}
+          createAction="/app/admin/job-descriptions/create"
+          toggleAction="/app/admin/job-descriptions/toggle"
+          inputPlaceholder="New job description"
+        />
+      </div>
     </div>
   );
 }

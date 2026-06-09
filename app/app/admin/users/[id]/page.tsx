@@ -24,18 +24,6 @@ import ResendCredentialsButton from "./ResendCredentialsButton";
 // These will be loaded from the database
 // const DEPARTMENTS - removed, loading from database instead
 
-const JOBS = [
-  "Front of house",
-  "Ground crew",
-  "Tandem master",
-  "Camera flyer",
-  "Driver",
-  "Packer",
-  "Helicopter pilot",
-  "Fixed wing pilot",
-  "Engineer",
-];
-
 // Raw types from Supabase query results
 type CourseAssignmentWithCourse = {
   id: any;
@@ -386,6 +374,19 @@ export default async function EditUserPage({
     .eq("active", true)
     .order("name");
 
+  // Fetch job descriptions from database
+  const { data: jobDescriptions } = await supabase
+    .from("job_descriptions")
+    .select("id, name, active")
+    .eq("active", true)
+    .order("name");
+
+  // Include the current value even if it has been deactivated/removed from the list
+  const jobOptions = (jobDescriptions || []).map((j) => j.name);
+  if (profile?.job_description && !jobOptions.includes(profile.job_description)) {
+    jobOptions.unshift(profile.job_description);
+  }
+
   const ok =
     (Array.isArray(resolvedSearchParams?.ok) ? resolvedSearchParams?.ok[0] : resolvedSearchParams?.ok) ?? null;
   const error =
@@ -492,7 +493,7 @@ export default async function EditUserPage({
                 className="rounded-md border px-3 py-2 text-sm"
               >
                 <option value="">—</option>
-                {JOBS.map((j) => (
+                {jobOptions.map((j) => (
                   <option key={j} value={j}>
                     {j}
                   </option>
