@@ -48,9 +48,11 @@ function banner(ok?: string | null, error?: string | null) {
       ok === "site_added" ? "Site added." :
       ok === "site_activated" ? "Site activated." :
       ok === "site_deactivated" ? "Site deactivated." :
+      ok === "site_renamed" ? "Site updated." :
       ok === "job_added" ? "Job description added." :
       ok === "job_activated" ? "Job description activated." :
       ok === "job_deactivated" ? "Job description deactivated." :
+      ok === "job_renamed" ? "Job description updated." :
       "Done.";
     return (
       <div className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-800">
@@ -973,6 +975,7 @@ function ManagedListCard({
   items,
   createAction,
   toggleAction,
+  renameAction,
   inputPlaceholder,
 }: {
   title: string;
@@ -980,6 +983,7 @@ function ManagedListCard({
   items: ManagedItem[];
   createAction: string;
   toggleAction: string;
+  renameAction: string;
   inputPlaceholder: string;
 }) {
   return (
@@ -1006,15 +1010,24 @@ function ManagedListCard({
           <div className="px-3 py-3 text-sm text-gray-500">Nothing here yet.</div>
         ) : (
           items.map((item) => (
-            <div key={item.id} className="flex items-center justify-between px-3 py-2">
-              <div className="flex items-center gap-2">
-                <span className="text-sm">{item.name}</span>
+            <div key={item.id} className="flex items-center gap-2 px-3 py-2">
+              <form action={renameAction} method="post" className="flex flex-1 items-center gap-2">
+                <input type="hidden" name="id" value={item.id} />
+                <input
+                  name="name"
+                  defaultValue={item.name}
+                  required
+                  className="flex-1 rounded-md border px-2 py-1 text-sm"
+                />
                 {!item.active && (
                   <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
                     Inactive
                   </span>
                 )}
-              </div>
+                <button className="rounded-md border px-2 py-1 text-xs text-blue-700 border-blue-300 hover:bg-blue-50">
+                  Save
+                </button>
+              </form>
               <form action={toggleAction} method="post">
                 <input type="hidden" name="id" value={item.id} />
                 <input type="hidden" name="active" value={String(item.active)} />
@@ -1055,6 +1068,7 @@ async function SitesAndJobsSection() {
           items={sites}
           createAction="/app/admin/sites/create"
           toggleAction="/app/admin/sites/toggle"
+          renameAction="/app/admin/sites/rename"
           inputPlaceholder="New site name"
         />
         <ManagedListCard
@@ -1063,6 +1077,7 @@ async function SitesAndJobsSection() {
           items={jobs}
           createAction="/app/admin/job-descriptions/create"
           toggleAction="/app/admin/job-descriptions/toggle"
+          renameAction="/app/admin/job-descriptions/rename"
           inputPlaceholder="New job description"
         />
       </div>
