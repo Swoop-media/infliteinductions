@@ -110,7 +110,7 @@ export default async function TrainAssessPage() {
     const traineeUserIds = [...new Set(traineeAssignments.map(a => a.user_id))];
     const { data: allProfiles } = await supabaseService
       .from("profiles")
-      .select("id, full_name, email, department")
+      .select("id, full_name, email, department, archived_at")
       .in("id", traineeUserIds);
 
     // Create lookup map for profiles
@@ -141,6 +141,13 @@ export default async function TrainAssessPage() {
       const traineeId = assignment.user_id;
       const assignmentId = assignment.id;
       
+      // Skip assignments for archived trainees - they should not appear in any
+      // pending list (training or assessment). Restoring the user re-includes them.
+      const traineeProfile = profilesMap.get(traineeId);
+      if (traineeProfile?.archived_at) {
+        continue;
+      }
+
       // Skip assignments that are already marked as completed at the assignment level
       // These are fully done and shouldn't appear in pending lists
       if (assignment.assignment_status === 'completed') {
@@ -176,7 +183,6 @@ export default async function TrainAssessPage() {
         : onsiteTrainingComplete;
 
       // Use pre-fetched profile and course data from maps
-      const traineeProfile = profilesMap.get(traineeId);
       const courseInfo = coursesMap.get(courseId);
       
       const traineeName = traineeProfile?.full_name || traineeProfile?.email || "Unknown";
