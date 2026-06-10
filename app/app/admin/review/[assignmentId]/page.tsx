@@ -25,16 +25,30 @@ async function loadUserAuthorisationsOverview(userId: string, currentAuthId: str
   const { supabaseAdmin } = await import("@/lib/supabase/admin");
   const supabase = supabaseAdmin();
 
-  const { data: assignments } = await supabase
+  const { data: assignments, error: assignmentsError } = await supabase
     .from("authorisation_assignments")
-    .select("id, authorisation_id, assignment_status, expires_at, approved_at, assigned_at")
+    .select("id, authorisation_id, assignment_status, completed_at, created_at")
     .eq("user_id", userId);
 
+  if (assignmentsError) {
+    console.error(
+      "loadUserAuthorisationsOverview: failed to load authorisation_assignments:",
+      assignmentsError.message
+    );
+  }
+
   // Connections for the authorisation under review (read from either side).
-  const { data: conns } = await supabase
+  const { data: conns, error: connsError } = await supabase
     .from("authorisation_connections")
     .select("authorisation_id_a, authorisation_id_b")
     .or(`authorisation_id_a.eq.${currentAuthId},authorisation_id_b.eq.${currentAuthId}`);
+
+  if (connsError) {
+    console.error(
+      "loadUserAuthorisationsOverview: failed to load authorisation_connections:",
+      connsError.message
+    );
+  }
 
   const connectedIds = new Set<string>();
   (conns || []).forEach((c) => {
@@ -68,8 +82,7 @@ async function loadUserAuthorisationsOverview(userId: string, currentAuthId: str
       authorisationId: a.authorisation_id,
       title: titleMap.get(a.authorisation_id) || "Unknown authorisation",
       status: a.assignment_status,
-      expiresAt: a.expires_at,
-      approvedAt: a.approved_at,
+      completedAt: a.completed_at,
       isConnected: connectedIds.has(a.authorisation_id),
       isCurrent: a.authorisation_id === currentAuthId,
     };
@@ -84,8 +97,7 @@ async function loadUserAuthorisationsOverview(userId: string, currentAuthId: str
         authorisationId: id,
         title: titleMap.get(id) || "Unknown authorisation",
         status: "not_assigned",
-        expiresAt: null,
-        approvedAt: null,
+        completedAt: null,
         isConnected: true,
         isCurrent: false,
       });

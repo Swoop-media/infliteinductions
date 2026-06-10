@@ -5,8 +5,7 @@ type AuthorisationOverviewItem = {
   authorisationId: string;
   title: string;
   status: string;
-  expiresAt: string | null;
-  approvedAt: string | null;
+  completedAt: string | null;
   isConnected: boolean;
   isCurrent: boolean;
 };
@@ -46,8 +45,8 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function AuthorisationRow({ item }: { item: AuthorisationOverviewItem }) {
-  const showExpiry =
-    item.expiresAt && (item.status === "completed" || item.status === "approved" || item.status === "expired");
+  const showCompleted =
+    item.completedAt && (item.status === "completed" || item.status === "approved");
   return (
     <div
       className={[
@@ -73,8 +72,8 @@ function AuthorisationRow({ item }: { item: AuthorisationOverviewItem }) {
             </span>
           )}
         </div>
-        {showExpiry && (
-          <p className="mt-0.5 text-xs text-gray-500">Expires {formatDate(item.expiresAt)}</p>
+        {showCompleted && (
+          <p className="mt-0.5 text-xs text-gray-500">Completed {formatDate(item.completedAt)}</p>
         )}
       </div>
       <StatusBadge status={item.status} />
