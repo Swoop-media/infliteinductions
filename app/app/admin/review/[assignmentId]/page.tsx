@@ -869,6 +869,20 @@ export default async function ReviewAssignmentPage({ params }: Props) {
   const { assignment, authorisation, profile, courses, documents, documentRequirements, responsiblePerson } = await loadAssignmentDetails(resolvedParams.assignmentId);
   const { items: userAuthorisations } = await loadUserAuthorisationsOverview(profile.id, authorisation.id);
 
+  // Connected authorisations the learner does not currently hold/approved. We treat
+  // "held" as completed/approved; anything else connected (not assigned, in progress,
+  // pending, expired, revoked) is surfaced as a non-blocking warning at approval time.
+  const missingConnectedAuthorisations = userAuthorisations
+    .filter(
+      (i) =>
+        i.isConnected &&
+        !i.isCurrent &&
+        i.status !== "completed" &&
+        i.status !== "approved"
+    )
+    .map((i) => ({ title: i.title, status: i.status }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -982,6 +996,8 @@ export default async function ReviewAssignmentPage({ params }: Props) {
         documents={documents}
         courses={courses}
         approveAction={approveAssignment}
+        currentAuthTitle={authorisation.title}
+        missingConnectedAuthorisations={missingConnectedAuthorisations}
       />
     </div>
   );
