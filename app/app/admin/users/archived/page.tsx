@@ -88,7 +88,7 @@ export default async function ArchivedUsersPage() {
           </p>
         </div>
         <Link
-          href="/app/admin/users"
+          href="/app/admin?tab=users"
           className="rounded-md bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
         >
           Back to Active Users
