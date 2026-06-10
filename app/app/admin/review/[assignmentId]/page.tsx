@@ -9,10 +9,91 @@ import DocumentSummary from "./DocumentSummary";
 import DocumentRequirements from "./DocumentRequirements";
 import ExpandableCourseDetails from "./ExpandableCourseDetails";
 import ApprovalSection from "./ApprovalSection";
+import UserAuthorisationsBox from "./UserAuthorisationsBox";
 
 type Props = {
   params: Promise<{ assignmentId: string }>;
 };
+
+// Load every authorisation assigned to a user, with title/status/expiry, and flag
+// the ones connected (per the Connected Authorisation Map) to the authorisation
+// currently under review. Connections are bidirectional.
+async function loadUserAuthorisationsOverview(userId: string, currentAuthId: string) {
+  "use server";
+  noStore();
+
+  const { supabaseAdmin } = await import("@/lib/supabase/admin");
+  const supabase = supabaseAdmin();
+
+  const { data: assignments } = await supabase
+    .from("authorisation_assignments")
+    .select("id, authorisation_id, assignment_status, expires_at, approved_at, assigned_at")
+    .eq("user_id", userId);
+
+  // Connections for the authorisation under review (read from either side).
+  const { data: conns } = await supabase
+    .from("authorisation_connections")
+    .select("authorisation_id_a, authorisation_id_b")
+    .or(`authorisation_id_a.eq.${currentAuthId},authorisation_id_b.eq.${currentAuthId}`);
+
+  const connectedIds = new Set<string>();
+  (conns || []).forEach((c) => {
+    const other =
+      c.authorisation_id_a === currentAuthId ? c.authorisation_id_b : c.authorisation_id_a;
+    if (other) connectedIds.add(other);
+  });
+
+  // Resolve titles for everything we need to display (assigned + connected).
+  const titleIds = Array.from(
+    new Set([
+      ...(assignments || []).map((a) => a.authorisation_id),
+      ...Array.from(connectedIds),
+    ])
+  );
+
+  const titleMap = new Map<string, string>();
+  if (titleIds.length > 0) {
+    const { data: auths } = await supabase
+      .from("authorisations")
+      .select("id, title")
+      .in("id", titleIds);
+    (auths || []).forEach((a) => titleMap.set(a.id, a.title));
+  }
+
+  const assignedAuthIds = new Set<string>();
+  const items = (assignments || []).map((a) => {
+    assignedAuthIds.add(a.authorisation_id);
+    return {
+      assignmentId: a.id,
+      authorisationId: a.authorisation_id,
+      title: titleMap.get(a.authorisation_id) || "Unknown authorisation",
+      status: a.assignment_status,
+      expiresAt: a.expires_at,
+      approvedAt: a.approved_at,
+      isConnected: connectedIds.has(a.authorisation_id),
+      isCurrent: a.authorisation_id === currentAuthId,
+    };
+  });
+
+  // Surface connected authorisations that the user has NOT been assigned, so the
+  // approver can spot a missing prerequisite (e.g. "High Altitude" not held).
+  connectedIds.forEach((id) => {
+    if (!assignedAuthIds.has(id)) {
+      items.push({
+        assignmentId: null,
+        authorisationId: id,
+        title: titleMap.get(id) || "Unknown authorisation",
+        status: "not_assigned",
+        expiresAt: null,
+        approvedAt: null,
+        isConnected: true,
+        isCurrent: false,
+      });
+    }
+  });
+
+  return { items };
+}
 
 // Helper function to map equipment IDs to names
 function getEquipmentNameFromId(equipmentId: string): string {
@@ -786,6 +867,7 @@ export default async function ReviewAssignmentPage({ params }: Props) {
 
   const resolvedParams = await params;
   const { assignment, authorisation, profile, courses, documents, documentRequirements, responsiblePerson } = await loadAssignmentDetails(resolvedParams.assignmentId);
+  const { items: userAuthorisations } = await loadUserAuthorisationsOverview(profile.id, authorisation.id);
 
   return (
     <div className="space-y-6">
@@ -863,6 +945,12 @@ export default async function ReviewAssignmentPage({ params }: Props) {
           )}
         </div>
       </div>
+
+      {/* User's full authorisations picture with connected ones highlighted */}
+      <UserAuthorisationsBox
+        items={userAuthorisations}
+        currentAuthTitle={authorisation.title}
+      />
 
       {/* Document Requirements and Summary */}
       <DocumentRequirements 
