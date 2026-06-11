@@ -97,15 +97,15 @@ export async function POST(request: NextRequest) {
       Array.from(pendingByNotice.values()).flat()
     )];
 
-    let userProfileMap = new Map<string, { full_name: string | null; email: string | null }>();
+    let userProfileMap = new Map<string, { full_name: string | null; email: string | null; archived_at: string | null }>();
     if (allPendingUserIds.length > 0) {
       const { data: profiles } = await supabase
         .from("profiles")
-        .select("id, full_name, email")
+        .select("id, full_name, email, archived_at")
         .in("id", allPendingUserIds);
       
       for (const p of (profiles || [])) {
-        userProfileMap.set(p.id, { full_name: p.full_name, email: p.email });
+        userProfileMap.set(p.id, { full_name: p.full_name, email: p.email, archived_at: p.archived_at });
       }
     }
 
@@ -126,8 +126,13 @@ export async function POST(request: NextRequest) {
     const noticesUrl = toAbsoluteUrl("/app/creator?tab=operations-notices");
 
     for (const notice of notices) {
-      const pendingUserIds = pendingByNotice.get(notice.id) || [];
-      
+      const allNoticePendingIds = pendingByNotice.get(notice.id) || [];
+      // Exclude archived users - they should not appear in the pending list
+      const pendingUserIds = allNoticePendingIds.filter(uid => {
+        const profile = userProfileMap.get(uid);
+        return !profile?.archived_at;
+      });
+
       if (pendingUserIds.length === 0) {
         continue;
       }

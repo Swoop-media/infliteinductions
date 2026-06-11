@@ -44,7 +44,7 @@ async function fetchAuthorisationDueDates(supabase: any) {
 
   const [authorisations, profiles, authCourses] = await Promise.all([
     chunkedIn(supabase, "authorisations", "id, title, valid_for_days, department", "id", authIds),
-    chunkedIn(supabase, "profiles", "id, full_name, email", "id", userIds),
+    chunkedIn(supabase, "profiles", "id, full_name, email, archived_at", "id", userIds),
     chunkedIn(supabase, "authorisation_courses", "authorisation_id, course_id", "authorisation_id", authIds),
   ]);
 
@@ -96,6 +96,8 @@ async function fetchAuthorisationDueDates(supabase: any) {
   for (const assignment of assignments) {
     const auth = authMap.get(assignment.authorisation_id);
     const profile = profileMap.get(assignment.user_id);
+    // Skip archived users - they should not appear in the expiry summary
+    if (profile?.archived_at) continue;
     const approvedAt = new Date(assignment.approved_at);
     const validForDays = auth?.valid_for_days ?? null;
 
