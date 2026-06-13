@@ -416,7 +416,7 @@ async function syncCourseToSafeflite(courseId: string) {
     external_id: course.id,
     course_title: course.title || "Untitled Course",
     course_status: course.status || undefined,
-    preview_url: toAbsoluteUrl(`/courses/${course.id}`),
+    preview_url: toAbsoluteUrl(`/app/learn/courses/${course.id}?preview=1`),
     risk_ids: Array.isArray(course.safeflite_risk_ids) ? course.safeflite_risk_ids : [],
     archived: isArchived,
   });
