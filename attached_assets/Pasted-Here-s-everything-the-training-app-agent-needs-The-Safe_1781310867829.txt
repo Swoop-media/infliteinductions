@@ -1,0 +1,61 @@
+Here's everything the training-app agent needs. The SafeFLITE side is fully built, deployed, and verified — nothing more is required there. The training app integrates purely by calling two HTTP endpoints; it never touches SafeFLITE's database directly.
+
+Handoff brief — integrate the training app with SafeFLITE
+Mental model
+Each course in the training app becomes one read-only "control" against SafeFLITE risks. SafeFLITE stores only a pointer — the course's external_id, a preview_url, and snapshot of title/status. It never copies course content. Investigators click through to the live course via the preview URL. So the training app's job is just: (1) let course authors pick which SafeFLITE risks a course mitigates, and (2) push that selection to SafeFLITE whenever it changes.
+
+Connection details
+Base URL: https://yakvuypqwqhdtkpgqdcf.supabase.co/functions/v1/
+Auth: every call sends header Authorization: Bearer <TRAINING_CONTROL_SECRET>
+The secret is already set on the SafeFLITE Supabase project. You must store the same value in the training app's server-side environment (e.g. TRAINING_CONTROL_SECRET). ⚠️ Never expose it in browser/client code — all calls go from the training app's backend.
+Endpoint 1 — risk picker (read)
+GET /functions/v1/list-risks with the Bearer header. Returns the live SafeFLITE risk register:
+
+{ "ok": true, "count": 2, "risks": [
+  { "id": "uuid", "risk_code": "ER-01", "title": "…", "is_enterprise": true,  "risk_kind": "enterprise",   "status": "active" },
+  { "id": "uuid", "risk_code": "CR-001","title": "…", "is_enterprise": false, "risk_kind": "contributing", "status": "active" }
+]}
+
+Use this to render a "which risks does this course mitigate?" multi-select in the course editor. Store the selected id values (UUIDs) — those are what you send back. (Archived risks are already excluded; capped at 5000.)
+
+Endpoint 2 — course sync (write)
+POST /functions/v1/upsert-training-control with the Bearer header + JSON body:
+
+{
+  "external_id": "course-123",        // REQUIRED, stable & immutable per course
+  "course_title": "Working at Heights",// REQUIRED (display snapshot)
+  "course_status": "published",        // optional: published | draft | archived
+  "preview_url": "https://training.example.com/courses/course-123", // REQUIRED, absolute http(s)
+  "risk_ids": ["uuid", "uuid"],        // the ticked SafeFLITE risk ids from list-risks
+  "archived": false                    // optional: true = course archived / unlink all risks
+}
+
+Success → 200 {"ok":true,"action_id":"…","is_active":true,"active_risk_links":2,"deactivated_risk_links":0}.
+
+Call it whenever a course is saved, its risk ticks change, or it's archived. It's idempotent on external_id — calling repeatedly is safe; it just reconciles. Unticked/archived risks are marked inactive (kept for audit), never deleted.
+
+What the training app must build
+Server-side config: store the base URL + TRAINING_CONTROL_SECRET (backend env only).
+Risk picker UI in the course editor, backed by a backend call to list-risks.
+A stable, immutable external_id per course (your course's primary key is fine — just never change it).
+A sync call to upsert-training-control on course save / risk-selection change / archive. Best to make this a backend function the editor calls after save.
+A preview_url page — a standalone, viewable page for one course that SafeFLITE investigators can open in a new tab. Important auth consideration: you share the same Entra ID tenant, so the cleanest approach is that this preview page requires the viewer to be logged into Entra (an investigator already is). Decide whether the preview is Entra-gated or public-by-link; either works, but it must be reachable from an investigator's browser.
+Other things required / good to know
+Field name gotcha: the title field is course_title, not title (that one tripped up our own smoke test).
+risk_ids must be the SafeFLITE risk UUIDs from list-risks — non-UUIDs are silently dropped.
+Read-only in SafeFLITE: training controls can't be edited or unlinked inside SafeFLITE — this endpoint is the only way to change them. That's enforced at the DB layer, so your sync is the single source of truth.
+No SafeFLITE DB access needed and no schema changes on your side — you only talk to these two endpoints.
+Quick test the training-app agent can run (backend)
+# 1. list risks
+curl -s https://yakvuypqwqhdtkpgqdcf.supabase.co/functions/v1/list-risks \
+  -H "Authorization: Bearer $TRAINING_CONTROL_SECRET" | jq
+# 2. upsert a course against one risk id from step 1
+curl -s -X POST https://yakvuypqwqhdtkpgqdcf.supabase.co/functions/v1/upsert-training-control \
+  -H "Authorization: Bearer $TRAINING_CONTROL_SECRET" -H "Content-Type: application/json" \
+  -d '{"external_id":"course-123","course_title":"Working at Heights","preview_url":"https://training.example.com/courses/course-123","risk_ids":["<risk-uuid>"]}' | jq
+
+Both returning ok:true means the integration is live.
+
+The canonical version of this contract also lives in your SafeFLITE repo at docs/training-control-integration.md if you want to reference it later. The follow-up task #63 already tracks building this training-app side.
+
+One thing only you can decide: how the preview_url page should be secured (Entra-gated vs. link-accessible). Want me to recommend a specific approach for that, or is this enough to hand off?
