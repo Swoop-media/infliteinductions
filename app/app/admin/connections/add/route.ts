@@ -27,33 +27,76 @@ export async function POST(req: Request) {
   const supabase = supabaseAdmin();
   const form = await req.formData();
   const auth = String(form.get("auth") || "").trim();
-  const target = String(form.get("target") || "").trim();
+
+  // Accept one or many targets (multi-select tick list). Falls back to the legacy
+  // single "target" field.
+  const targets = Array.from(
+    new Set(
+      form
+        .getAll("target")
+        .map((t) => String(t || "").trim())
+        .filter(Boolean)
+    )
+  );
 
   const back = await makeURL(`/app/admin/connections${auth ? `?auth=${auth}` : ""}`);
 
-  if (!auth || !target) {
-    back.searchParams.set("error", "Both authorisations are required.");
+  if (!auth || targets.length === 0) {
+    back.searchParams.set("error", "Select at least one authorisation to connect.");
     return seeOther(back);
   }
 
-  if (!UUID_RE.test(auth) || !UUID_RE.test(target)) {
+  if (!UUID_RE.test(auth) || targets.some((t) => !UUID_RE.test(t))) {
     back.searchParams.set("error", "Invalid authorisation selected.");
     return seeOther(back);
   }
 
-  if (auth === target) {
+  if (targets.some((t) => t === auth)) {
     back.searchParams.set("error", "An authorisation cannot be connected to itself.");
     return seeOther(back);
   }
 
-  const { error } = await supabase
+  // Skip targets already connected in this direction so re-ticking an existing one
+  // is a no-op instead of an error.
+  const { data: existing } = await supabase
     .from("authorisation_connections")
-    .insert({ authorisation_id_a: auth, authorisation_id_b: target });
+    .select("authorisation_id_b")
+    .eq("authorisation_id_a", auth);
+  const already = new Set((existing || []).map((r) => r.authorisation_id_b));
 
-  if (error) {
+  const toAdd = targets.filter((t) => !already.has(t));
+
+  if (toAdd.length === 0) {
+    back.searchParams.set("ok", "connection_added");
+    return seeOther(back);
+  }
+
+  // Insert per-row so a single reverse-pair conflict (blocked by the legacy
+  // order-independent unique index pre-migration-005) doesn't abort the rest.
+  let added = 0;
+  let blocked = 0;
+  let otherError: string | null = null;
+
+  for (const t of toAdd) {
+    const { error } = await supabase
+      .from("authorisation_connections")
+      .insert({ authorisation_id_a: auth, authorisation_id_b: t });
+    if (!error) {
+      added += 1;
+    } else if (error.code === "23505") {
+      blocked += 1;
+    } else {
+      otherError = error.message;
+    }
+  }
+
+  if (otherError) {
+    back.searchParams.set("error", otherError);
+  } else if (blocked > 0) {
+    const addedMsg = added > 0 ? `${added} added. ` : "";
     back.searchParams.set(
       "error",
-      error.code === "23505" ? "These authorisations are already connected." : error.message
+      `${addedMsg}${blocked} blocked because they already exist in the reverse direction. Apply migration 005 to allow two-way connections.`
     );
   } else {
     back.searchParams.set("ok", "connection_added");

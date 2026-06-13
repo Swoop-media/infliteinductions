@@ -37,11 +37,13 @@ async function loadUserAuthorisationsOverview(userId: string, currentAuthId: str
     );
   }
 
-  // Connections for the authorisation under review (read from either side).
+  // Connections chosen FOR the authorisation under review. Directional: only the
+  // authorisations selected for this one (rows where it is authorisation_id_a) are
+  // shown — not authorisations that merely point back to it.
   const { data: conns, error: connsError } = await supabase
     .from("authorisation_connections")
     .select("authorisation_id_a, authorisation_id_b")
-    .or(`authorisation_id_a.eq.${currentAuthId},authorisation_id_b.eq.${currentAuthId}`);
+    .eq("authorisation_id_a", currentAuthId);
 
   if (connsError) {
     console.error(
@@ -52,9 +54,7 @@ async function loadUserAuthorisationsOverview(userId: string, currentAuthId: str
 
   const connectedIds = new Set<string>();
   (conns || []).forEach((c) => {
-    const other =
-      c.authorisation_id_a === currentAuthId ? c.authorisation_id_b : c.authorisation_id_a;
-    if (other) connectedIds.add(other);
+    if (c.authorisation_id_b) connectedIds.add(c.authorisation_id_b);
   });
 
   // Resolve titles for everything we need to display (assigned + connected).
