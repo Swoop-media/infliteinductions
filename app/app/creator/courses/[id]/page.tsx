@@ -469,6 +469,10 @@ async function updateCourseDetails(formData: FormData) {
       : Array.from(new Set(tagsCsv.split(",").map((t) => t.trim()).filter(Boolean)));
 
   // NEW: SafeFLITE risk ids (checkbox group) -> text[]
+  // Only trust the submitted checkboxes when the picker actually rendered (i.e. the
+  // SafeFLITE risk register loaded). If SafeFLITE was unreachable the picker is hidden
+  // and submits nothing — in that case we must NOT clobber the saved risk IDs.
+  const riskPickerAvailable = String(formData.get("risk_picker_available") || "") === "1";
   const safefliteRiskIds = Array.from(
     new Set(formData.getAll("safeflite_risk_ids").map((v) => String(v).trim()).filter(Boolean))
   );
@@ -502,7 +506,7 @@ async function updateCourseDetails(formData: FormData) {
   // NEW fields
   updatePayload.department = department;
   updatePayload.tags = tags;
-  updatePayload.safeflite_risk_ids = safefliteRiskIds;
+  if (riskPickerAvailable) updatePayload.safeflite_risk_ids = safefliteRiskIds;
   updatePayload.for_contractors = externalContractors;
   updatePayload.contractor_flow_type = externalContractors ? contractorFlowType : null;
   updatePayload.contractor_site_id = externalContractors ? contractorSiteId : null;
@@ -1007,6 +1011,11 @@ function DetailsTab({
 
         {/* SafeFLITE Risks */}
         <div className="grid gap-1">
+          <input
+            type="hidden"
+            name="risk_picker_available"
+            value={safefliteRisks.length > 0 ? "1" : "0"}
+          />
           <label className="text-sm">SafeFLITE Risks</label>
           <div className="text-xs text-gray-500">
             Tick the SafeFLITE risks this course helps mitigate. Saving will sync the selection to SafeFLITE.
