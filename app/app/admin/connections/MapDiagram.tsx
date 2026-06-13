@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 type Node = { id: string; title: string };
 type Edge = { a: string; b: string };
+type Pos = { x: number; y: number };
 
 const CARD_W = 168;
 const CARD_H = 44;
@@ -17,31 +18,61 @@ const PAD_Y = 40;
 export default function MapDiagram({
   nodes,
   edges,
+  savedPositions = {},
 }: {
   nodes: Node[];
   edges: Edge[];
+  savedPositions?: Record<string, Pos>;
 }) {
   const [focusId, setFocusId] = useState<string>("");
+  // Manual position overrides (saved layout seeds these; dragging updates them).
+  const [overrides, setOverrides] = useState<Record<string, Pos>>(savedPositions);
+  const [dirty, setDirty] = useState(false);
+  const [status, setStatus] = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const { layoutNodes, layoutEdges, width, height } = useMemo(() => {
+  // Dragging/saving only makes sense for the full map: focus mode uses a transient
+  // focus-only layout, so persisting those coordinates would corrupt the global map.
+  const canEdit = !focusId;
+
+  // Keep manual overrides in sync if the saved layout prop changes (e.g. the page
+  // re-renders with freshly loaded positions without a full remount).
+  useEffect(() => {
+    setOverrides(savedPositions);
+    setDirty(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(savedPositions)]);
+
+  const svgRef = useRef<SVGSVGElement | null>(null);
+  const dragRef = useRef<{
+    id: string;
+    pointerId: number;
+    startX: number;
+    startY: number;
+    origX: number;
+    origY: number;
+    moved: boolean;
+  } | null>(null);
+
+  // ---- Automatic tree layout (used for any node without a manual override) ----
+  const { activeNodes, activeEdges, autoPos, outgoing } = useMemo(() => {
     const connectedIds = new Set<string>();
     edges.forEach((e) => {
       connectedIds.add(e.a);
       connectedIds.add(e.b);
     });
 
-    let activeNodes = nodes.filter((n) => connectedIds.has(n.id));
-    let activeEdges = edges;
+    let aNodes = nodes.filter((n) => connectedIds.has(n.id));
+    let aEdges = edges;
 
-    // Optional focus: show only the focused node and its direct connections.
     if (focusId) {
       const neighbours = new Set<string>([focusId]);
       edges.forEach((e) => {
         if (e.a === focusId) neighbours.add(e.b);
         if (e.b === focusId) neighbours.add(e.a);
       });
-      activeNodes = nodes.filter((n) => neighbours.has(n.id));
-      activeEdges = edges.filter(
+      aNodes = nodes.filter((n) => neighbours.has(n.id));
+      aEdges = edges.filter(
         (e) =>
           neighbours.has(e.a) &&
           neighbours.has(e.b) &&
@@ -49,28 +80,23 @@ export default function MapDiagram({
       );
     }
 
-    const activeIds = new Set(activeNodes.map((n) => n.id));
-    activeEdges = activeEdges.filter((e) => activeIds.has(e.a) && activeIds.has(e.b));
+    const ids = new Set(aNodes.map((n) => n.id));
+    aEdges = aEdges.filter((e) => ids.has(e.a) && ids.has(e.b));
 
-    // Outgoing adjacency: an arrow points from an authorisation to the ones it
-    // connects to (its prerequisites). Things nothing points away from (e.g.
-    // INFLITE General Induction) sit at the top.
-    const outgoing = new Map<string, string[]>();
-    activeEdges.forEach((e) => {
-      if (!outgoing.has(e.a)) outgoing.set(e.a, []);
-      outgoing.get(e.a)!.push(e.b);
+    const out = new Map<string, string[]>();
+    aEdges.forEach((e) => {
+      if (!out.has(e.a)) out.set(e.a, []);
+      out.get(e.a)!.push(e.b);
     });
 
-    // Level = longest chain of outgoing edges from a node, with a cycle guard so
-    // two-way connections don't loop forever. Level 0 = top (prerequisites).
     const memo = new Map<string, number>();
     const onStack = new Set<string>();
     const levelOf = (id: string): number => {
       if (memo.has(id)) return memo.get(id)!;
       onStack.add(id);
       let best = 0;
-      for (const next of outgoing.get(id) || []) {
-        if (onStack.has(next)) continue; // break cycle
+      for (const next of out.get(id) || []) {
+        if (onStack.has(next)) continue;
         best = Math.max(best, 1 + levelOf(next));
       }
       onStack.delete(id);
@@ -79,7 +105,7 @@ export default function MapDiagram({
     };
 
     const byLevel = new Map<number, Node[]>();
-    activeNodes.forEach((n) => {
+    aNodes.forEach((n) => {
       const lvl = levelOf(n.id);
       if (!byLevel.has(lvl)) byLevel.set(lvl, []);
       byLevel.get(lvl)!.push(n);
@@ -90,47 +116,47 @@ export default function MapDiagram({
 
     const maxRow = Math.max(1, ...levels.map((l) => byLevel.get(l)!.length));
     const w = Math.max(560, maxRow * SLOT + PAD_X * 2);
-    const h = Math.max(320, (levels.length - 1) * LEVEL_GAP + PAD_Y * 2 + CARD_H);
 
-    const pos = new Map<string, { x: number; y: number }>();
+    const p = new Map<string, Pos>();
     levels.forEach((l, li) => {
       const row = byLevel.get(l)!;
       const n = row.length;
       row.forEach((node, i) => {
         const x = ((i + 1) / (n + 1)) * (w - PAD_X * 2) + PAD_X;
         const y = PAD_Y + HALF_H + li * LEVEL_GAP;
-        pos.set(node.id, { x, y });
+        p.set(node.id, { x, y });
       });
     });
 
-    const laidOutNodes = activeNodes
-      .filter((n) => pos.has(n.id))
-      .map((n) => ({ ...n, ...pos.get(n.id)! }));
-
-    const laidOutEdges = activeEdges
-      .map((e) => {
-        const p1 = pos.get(e.a);
-        const p2 = pos.get(e.b);
-        if (!p1 || !p2) return null;
-        const reciprocal = (outgoing.get(e.b) || []).includes(e.a);
-        return { a: e.a, b: e.b, p1, p2, reciprocal };
-      })
-      .filter(Boolean) as {
-      a: string;
-      b: string;
-      p1: { x: number; y: number };
-      p2: { x: number; y: number };
-      reciprocal: boolean;
-    }[];
-
-    return { layoutNodes: laidOutNodes, layoutEdges: laidOutEdges, width: w, height: h };
+    return { activeNodes: aNodes, activeEdges: aEdges, autoPos: p, outgoing: out };
   }, [nodes, edges, focusId]);
 
-  // Clip a line from a card centre to the card's border in the direction of `to`.
-  function clipToCard(
-    center: { x: number; y: number },
-    to: { x: number; y: number }
-  ) {
+  // Resolve a node's position: manual override wins, else automatic layout.
+  const posOf = (id: string): Pos => overrides[id] || autoPos.get(id) || { x: 0, y: 0 };
+
+  const layoutNodes = activeNodes
+    .filter((n) => autoPos.has(n.id) || overrides[n.id])
+    .map((n) => ({ ...n, ...posOf(n.id) }));
+
+  // Canvas size grows to fit dragged-out cards.
+  const width = Math.max(
+    560,
+    ...layoutNodes.map((n) => n.x + HALF_W + PAD_X)
+  );
+  const height = Math.max(
+    320,
+    ...layoutNodes.map((n) => n.y + HALF_H + PAD_Y)
+  );
+
+  const layoutEdges = activeEdges
+    .map((e) => {
+      const p1 = posOf(e.a);
+      const p2 = posOf(e.b);
+      const reciprocal = (outgoing.get(e.b) || []).includes(e.a);
+      return { a: e.a, b: e.b, p1, p2, reciprocal };
+    });
+
+  function clipToCard(center: Pos, to: Pos): Pos {
     const dx = to.x - center.x;
     const dy = to.y - center.y;
     if (dx === 0 && dy === 0) return center;
@@ -140,11 +166,7 @@ export default function MapDiagram({
     return { x: center.x + dx * s, y: center.y + dy * s };
   }
 
-  function edgePath(
-    p1: { x: number; y: number },
-    p2: { x: number; y: number },
-    bowed: boolean
-  ) {
+  function edgePath(p1: Pos, p2: Pos, bowed: boolean) {
     const start = clipToCard(p1, p2);
     const end = clipToCard(p2, p1);
     const dx = end.x - start.x;
@@ -152,18 +174,112 @@ export default function MapDiagram({
     const len = Math.hypot(dx, dy) || 1;
     const ux = dx / len;
     const uy = dy / len;
-    // pull the tip back a touch so the arrowhead doesn't sit on the border
     const ex = end.x - ux * 3;
     const ey = end.y - uy * 3;
-    if (!bowed) {
-      return `M ${start.x} ${start.y} L ${ex} ${ey}`;
-    }
+    if (!bowed) return `M ${start.x} ${start.y} L ${ex} ${ey}`;
     const nx = -uy;
     const ny = ux;
     const bow = Math.min(34, len * 0.16);
     const mx = (start.x + ex) / 2 + nx * bow;
     const my = (start.y + ey) / 2 + ny * bow;
     return `M ${start.x} ${start.y} Q ${mx} ${my} ${ex} ${ey}`;
+  }
+
+  // ---- Dragging (SVG units == pixels because viewBox matches width/height) ----
+  function onPointerDown(e: React.PointerEvent, id: string) {
+    if (!canEdit) return;
+    e.preventDefault();
+    const cur = posOf(id);
+    dragRef.current = {
+      id,
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      origX: cur.x,
+      origY: cur.y,
+      moved: false,
+    };
+    (e.currentTarget as Element).setPointerCapture(e.pointerId);
+  }
+
+  function onPointerMove(e: React.PointerEvent) {
+    const d = dragRef.current;
+    if (!d || d.pointerId !== e.pointerId) return;
+    const dx = e.clientX - d.startX;
+    const dy = e.clientY - d.startY;
+    if (!d.moved && Math.hypot(dx, dy) < 3) return;
+    d.moved = true;
+    const nx = Math.max(HALF_W, d.origX + dx);
+    const ny = Math.max(HALF_H, d.origY + dy);
+    setOverrides((prev) => ({ ...prev, [d.id]: { x: nx, y: ny } }));
+  }
+
+  function onPointerUp(e: React.PointerEvent) {
+    const d = dragRef.current;
+    if (!d || d.pointerId !== e.pointerId) return;
+    if (d.moved) {
+      setDirty(true);
+      setStatus(null);
+    }
+    dragRef.current = null;
+  }
+
+  async function saveLayout() {
+    setSaving(true);
+    setStatus(null);
+    try {
+      // Persist only manually placed nodes — never the transient auto layout.
+      const positions = Object.entries(overrides).map(([id, p]) => ({
+        id,
+        x: p.x,
+        y: p.y,
+      }));
+      const res = await fetch("/app/admin/connections/positions/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ positions }),
+      });
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        setDirty(false);
+        setStatus({ kind: "ok", msg: "Layout saved." });
+      } else {
+        setStatus({
+          kind: "err",
+          msg:
+            (json && json.error) ||
+            "Could not save layout. The positions table may not exist yet (apply migration 006).",
+        });
+      }
+    } catch {
+      setStatus({ kind: "err", msg: "Could not save layout (network error)." });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function resetLayout() {
+    setSaving(true);
+    setStatus(null);
+    try {
+      const res = await fetch("/app/admin/connections/positions/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reset: true }),
+      });
+      const json = await res.json();
+      if (res.ok && json.ok) {
+        setOverrides({});
+        setDirty(false);
+        setStatus({ kind: "ok", msg: "Reset to automatic layout." });
+      } else {
+        setStatus({ kind: "err", msg: (json && json.error) || "Could not reset layout." });
+      }
+    } catch {
+      setStatus({ kind: "err", msg: "Could not reset layout (network error)." });
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -187,11 +303,44 @@ export default function MapDiagram({
               </option>
             ))}
         </select>
-        <span className="text-xs text-gray-500">
-          Arrows point upward to the connected authorisations. Prerequisites sit at
-          the top; roles branch out below. Two arrows mean both are connected.
-        </span>
+
+        <div className="ml-auto flex items-center gap-2">
+          {status && (
+            <span
+              className={[
+                "text-xs",
+                status.kind === "ok" ? "text-green-600" : "text-red-600",
+              ].join(" ")}
+            >
+              {status.msg}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={saveLayout}
+            disabled={saving || !dirty || !canEdit}
+            className="rounded-md bg-black px-3 py-1.5 text-sm text-white hover:bg-gray-800 disabled:opacity-40"
+          >
+            {saving ? "Saving…" : "Save layout"}
+          </button>
+          <button
+            type="button"
+            onClick={resetLayout}
+            disabled={saving}
+            className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50 disabled:opacity-40"
+          >
+            Reset to auto
+          </button>
+        </div>
       </div>
+
+      <p className="text-xs text-gray-500">
+        {canEdit
+          ? "Drag any box to reposition it, then Save layout. "
+          : "Switch to “Show all connections” to drag boxes and save the layout. "}
+        Arrows point upward to the connected authorisations — prerequisites at the
+        top, roles below. Two arrows mean both are connected.
+      </p>
 
       {layoutNodes.length === 0 ? (
         <div className="rounded-md border bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
@@ -200,10 +349,14 @@ export default function MapDiagram({
       ) : (
         <div className="max-h-[72vh] overflow-auto rounded-lg border bg-gradient-to-b from-gray-50 to-white">
           <svg
+            ref={svgRef}
             width={width}
             height={height}
             viewBox={`0 0 ${width} ${height}`}
-            className="block"
+            className="block touch-none select-none"
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerLeave={onPointerUp}
           >
             <defs>
               <marker
@@ -239,6 +392,8 @@ export default function MapDiagram({
                   y={n.y - HALF_H}
                   width={CARD_W}
                   height={CARD_H}
+                  onPointerDown={(e) => onPointerDown(e, n.id)}
+                  style={{ cursor: canEdit ? "grab" : "default" }}
                 >
                   <div
                     className={[

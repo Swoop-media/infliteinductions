@@ -26,6 +26,7 @@ async function loadData(selectedId: string | null, includeAll: boolean) {
   let connectedIds = new Set<string>();
   let connectionRowByOtherId = new Map<string, string>();
   let allEdges: { a: string; b: string }[] = [];
+  let savedPositions: Record<string, { x: number; y: number }> = {};
 
   // Directional connections chosen FOR the selected authorisation (it is the source).
   if (selectedId) {
@@ -58,6 +59,19 @@ async function loadData(selectedId: string | null, includeAll: boolean) {
         .filter((c) => c.authorisation_id_a && c.authorisation_id_b)
         .map((c) => ({ a: c.authorisation_id_a, b: c.authorisation_id_b }));
     }
+
+    // Saved (dragged) layout positions, if any. Degrade gracefully if the table
+    // has not been created yet (migration 006 not applied).
+    const { data: positions, error: posErr } = await supabase
+      .from("authorisation_map_positions")
+      .select("authorisation_id, x, y");
+    if (posErr) {
+      console.error("Failed to load authorisation map positions:", posErr.message);
+    } else {
+      (positions || []).forEach((p) => {
+        if (p.authorisation_id) savedPositions[p.authorisation_id] = { x: p.x, y: p.y };
+      });
+    }
   }
 
   return {
@@ -65,6 +79,7 @@ async function loadData(selectedId: string | null, includeAll: boolean) {
     connectedIds,
     connectionRowByOtherId,
     allEdges,
+    savedPositions,
   };
 }
 
@@ -105,10 +120,8 @@ export default async function ConnectionMapPage({
   const error = pick(sp, "error");
   const tab = pick(sp, "tab") === "map" ? "map" : "connect";
 
-  const { authorisations, connectedIds, connectionRowByOtherId, allEdges } = await loadData(
-    selectedId,
-    tab === "map"
-  );
+  const { authorisations, connectedIds, connectionRowByOtherId, allEdges, savedPositions } =
+    await loadData(selectedId, tab === "map");
 
   const selected = selectedId ? authorisations.find((a) => a.id === selectedId) : null;
   const titleById = new Map(authorisations.map((a) => [a.id, a.title]));
@@ -294,6 +307,7 @@ export default async function ConnectionMapPage({
           <MapDiagram
             nodes={authorisations.map((a) => ({ id: a.id, title: a.title }))}
             edges={allEdges}
+            savedPositions={savedPositions}
           />
         </div>
       )}
