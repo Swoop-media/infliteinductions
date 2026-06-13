@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { hasRole } from "@/lib/roles";
 import MapDiagram from "./MapDiagram";
+import AuthorisationPicker from "./AuthorisationPicker";
+import AddConnectionsForm from "./AddConnectionsForm";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -19,7 +21,7 @@ async function loadData(selectedId: string | null, includeAll: boolean) {
 
   const { data: authorisations, error } = await supabase
     .from("authorisations")
-    .select("id, title")
+    .select("id, title, department")
     .order("title", { ascending: true });
   if (error) throw new Error(error.message);
 
@@ -192,27 +194,7 @@ export default async function ConnectionMapPage({
             <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 mb-3">
               Authorisations ({authorisations.length})
             </h2>
-            <div className="max-h-[70vh] overflow-y-auto divide-y rounded-md border">
-              {authorisations.length === 0 ? (
-                <div className="px-3 py-3 text-sm text-gray-500">No authorisations found.</div>
-              ) : (
-                authorisations.map((a) => {
-                  const active = a.id === selectedId;
-                  return (
-                    <Link
-                      key={a.id}
-                      href={`/app/admin/connections?tab=connect&auth=${a.id}`}
-                      className={[
-                        "block px-3 py-2 text-sm",
-                        active ? "bg-black text-white" : "hover:bg-gray-50",
-                      ].join(" ")}
-                    >
-                      {a.title}
-                    </Link>
-                  );
-                })
-              )}
-            </div>
+            <AuthorisationPicker authorisations={authorisations} selectedId={selectedId} />
           </div>
 
           {/* Connection editor */}
@@ -271,31 +253,7 @@ export default async function ConnectionMapPage({
                       All other authorisations are already connected.
                     </p>
                   ) : (
-                    <form action="/app/admin/connections/add" method="post" className="space-y-3">
-                      <input type="hidden" name="auth" value={selected.id} />
-                      <p className="text-xs text-gray-500">
-                        Tick all the authorisations to connect, then add them at once.
-                      </p>
-                      <div className="max-h-[40vh] overflow-y-auto divide-y rounded-md border">
-                        {candidates.map((a) => (
-                          <label
-                            key={a.id}
-                            className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer"
-                          >
-                            <input
-                              type="checkbox"
-                              name="target"
-                              value={a.id}
-                              className="h-4 w-4 rounded border-gray-300"
-                            />
-                            <span>{a.title}</span>
-                          </label>
-                        ))}
-                      </div>
-                      <button className="rounded-md bg-black px-4 py-2 text-sm text-white hover:bg-gray-800">
-                        Add selected connections
-                      </button>
-                    </form>
+                    <AddConnectionsForm authId={selected.id} candidates={candidates} />
                   )}
                 </div>
               </>
@@ -305,7 +263,11 @@ export default async function ConnectionMapPage({
       ) : (
         <div className="rounded-xl border bg-white p-4">
           <MapDiagram
-            nodes={authorisations.map((a) => ({ id: a.id, title: a.title }))}
+            nodes={authorisations.map((a) => ({
+              id: a.id,
+              title: a.title,
+              department: a.department ?? null,
+            }))}
             edges={allEdges}
             savedPositions={savedPositions}
           />

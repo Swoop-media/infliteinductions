@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { buildColorMap, deptKey, NO_DEPT } from "./_deptGroup";
 
-type Node = { id: string; title: string };
+type Node = { id: string; title: string; department: string | null };
 type Edge = { a: string; b: string };
 type Pos = { x: number; y: number };
 
@@ -15,6 +16,8 @@ const LEVEL_GAP = 124;
 const PAD_X = 48;
 const PAD_Y = 40;
 
+const markerId = (color: string) => `arrow-${color.replace("#", "")}`;
+
 export default function MapDiagram({
   nodes,
   edges,
@@ -24,6 +27,7 @@ export default function MapDiagram({
   edges: Edge[];
   savedPositions?: Record<string, Pos>;
 }) {
+  const [deptFilter, setDeptFilter] = useState<string>(""); // "" = all departments
   const [focusId, setFocusId] = useState<string>("");
   // Manual position overrides (saved layout seeds these; dragging updates them).
   const [overrides, setOverrides] = useState<Record<string, Pos>>(savedPositions);
@@ -31,9 +35,9 @@ export default function MapDiagram({
   const [status, setStatus] = useState<{ kind: "ok" | "err"; msg: string } | null>(null);
   const [saving, setSaving] = useState(false);
 
-  // Dragging/saving only makes sense for the full map: focus mode uses a transient
-  // focus-only layout, so persisting those coordinates would corrupt the global map.
-  const canEdit = !focusId;
+  // Dragging/saving only applies to the full, unfiltered map: filtering or focusing
+  // produces a transient layout, so persisting those coordinates would corrupt it.
+  const canEdit = !deptFilter && !focusId;
 
   // Keep manual overrides in sync if the saved layout prop changes (e.g. the page
   // re-renders with freshly loaded positions without a full remount).
@@ -42,6 +46,36 @@ export default function MapDiagram({
     setDirty(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(savedPositions)]);
+
+  // Stable department -> colour map and node -> department lookup.
+  const colorMap = useMemo(
+    () => buildColorMap(nodes.map((n) => n.department)),
+    [nodes]
+  );
+  const nodeDept = useMemo(() => {
+    const m = new Map<string, string>();
+    nodes.forEach((n) => m.set(n.id, deptKey(n.department)));
+    return m;
+  }, [nodes]);
+  const colorFor = (id: string) => colorMap.get(nodeDept.get(id) || NO_DEPT) || "#6b7280";
+
+  // Departments that actually have at least one connected authorisation.
+  const departmentOptions = useMemo(() => {
+    const connected = new Set<string>();
+    edges.forEach((e) => {
+      connected.add(e.a);
+      connected.add(e.b);
+    });
+    const set = new Set<string>();
+    nodes.forEach((n) => {
+      if (connected.has(n.id)) set.add(deptKey(n.department));
+    });
+    return Array.from(set).sort((a, b) => {
+      if (a === NO_DEPT) return 1;
+      if (b === NO_DEPT) return -1;
+      return a.localeCompare(b);
+    });
+  }, [nodes, edges]);
 
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<{
@@ -55,7 +89,7 @@ export default function MapDiagram({
   } | null>(null);
 
   // ---- Automatic tree layout (used for any node without a manual override) ----
-  const { activeNodes, activeEdges, autoPos, outgoing } = useMemo(() => {
+  const { activeNodes, activeEdges, autoPos, outgoing, scopeNodes } = useMemo(() => {
     const connectedIds = new Set<string>();
     edges.forEach((e) => {
       connectedIds.add(e.a);
@@ -65,14 +99,33 @@ export default function MapDiagram({
     let aNodes = nodes.filter((n) => connectedIds.has(n.id));
     let aEdges = edges;
 
+    // Department scope: show the chosen department's authorisations plus anything
+    // they connect to (or that connects to them), so connections stay visible.
+    if (deptFilter) {
+      const inDept = new Set(
+        aNodes.filter((n) => deptKey(n.department) === deptFilter).map((n) => n.id)
+      );
+      const keep = new Set<string>(inDept);
+      edges.forEach((e) => {
+        if (inDept.has(e.a)) keep.add(e.b);
+        if (inDept.has(e.b)) keep.add(e.a);
+      });
+      aNodes = nodes.filter((n) => keep.has(n.id));
+      aEdges = edges.filter((e) => inDept.has(e.a) || inDept.has(e.b));
+    }
+
+    // The department-scoped node set (before focus) drives the Focus dropdown.
+    const scoped = aNodes.slice().sort((a, b) => a.title.localeCompare(b.title));
+
+    // Focus scope: a single authorisation and its direct connections.
     if (focusId) {
       const neighbours = new Set<string>([focusId]);
-      edges.forEach((e) => {
+      aEdges.forEach((e) => {
         if (e.a === focusId) neighbours.add(e.b);
         if (e.b === focusId) neighbours.add(e.a);
       });
-      aNodes = nodes.filter((n) => neighbours.has(n.id));
-      aEdges = edges.filter(
+      aNodes = aNodes.filter((n) => neighbours.has(n.id));
+      aEdges = aEdges.filter(
         (e) =>
           neighbours.has(e.a) &&
           neighbours.has(e.b) &&
@@ -128,8 +181,14 @@ export default function MapDiagram({
       });
     });
 
-    return { activeNodes: aNodes, activeEdges: aEdges, autoPos: p, outgoing: out };
-  }, [nodes, edges, focusId]);
+    return {
+      activeNodes: aNodes,
+      activeEdges: aEdges,
+      autoPos: p,
+      outgoing: out,
+      scopeNodes: scoped,
+    };
+  }, [nodes, edges, focusId, deptFilter]);
 
   // Resolve a node's position: manual override wins, else automatic layout.
   const posOf = (id: string): Pos => overrides[id] || autoPos.get(id) || { x: 0, y: 0 };
@@ -139,22 +198,33 @@ export default function MapDiagram({
     .map((n) => ({ ...n, ...posOf(n.id) }));
 
   // Canvas size grows to fit dragged-out cards.
-  const width = Math.max(
-    560,
-    ...layoutNodes.map((n) => n.x + HALF_W + PAD_X)
-  );
-  const height = Math.max(
-    320,
-    ...layoutNodes.map((n) => n.y + HALF_H + PAD_Y)
-  );
+  const width = Math.max(560, ...layoutNodes.map((n) => n.x + HALF_W + PAD_X));
+  const height = Math.max(320, ...layoutNodes.map((n) => n.y + HALF_H + PAD_Y));
 
-  const layoutEdges = activeEdges
-    .map((e) => {
-      const p1 = posOf(e.a);
-      const p2 = posOf(e.b);
-      const reciprocal = (outgoing.get(e.b) || []).includes(e.a);
-      return { a: e.a, b: e.b, p1, p2, reciprocal };
+  const layoutEdges = activeEdges.map((e) => {
+    const p1 = posOf(e.a);
+    const p2 = posOf(e.b);
+    const reciprocal = (outgoing.get(e.b) || []).includes(e.a);
+    return { a: e.a, b: e.b, p1, p2, reciprocal, color: colorFor(e.a) };
+  });
+
+  // Departments present in the current view, for the legend/key.
+  const legend = useMemo(() => {
+    const seen = new Map<string, string>();
+    layoutNodes.forEach((n) => {
+      const d = deptKey(n.department);
+      if (!seen.has(d)) seen.set(d, colorMap.get(d) || "#6b7280");
     });
+    return Array.from(seen.entries()).sort((a, b) => {
+      if (a[0] === NO_DEPT) return 1;
+      if (b[0] === NO_DEPT) return -1;
+      return a[0].localeCompare(b[0]);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutNodes, colorMap]);
+
+  // Distinct arrow colours that need a marker definition.
+  const markerColors = Array.from(new Set(layoutEdges.map((e) => e.color)));
 
   function clipToCard(center: Pos, to: Pos): Pos {
     const dx = to.x - center.x;
@@ -286,6 +356,25 @@ export default function MapDiagram({
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
         <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          Department
+        </label>
+        <select
+          value={deptFilter}
+          onChange={(e) => {
+            setDeptFilter(e.target.value);
+            setFocusId(""); // focus selection may not exist in the new scope
+          }}
+          className="rounded-md border px-3 py-1.5 text-sm"
+        >
+          <option value="">All departments</option>
+          {departmentOptions.map((d) => (
+            <option key={d} value={d}>
+              {d}
+            </option>
+          ))}
+        </select>
+
+        <label className="ml-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
           Focus
         </label>
         <select
@@ -294,14 +383,11 @@ export default function MapDiagram({
           className="rounded-md border px-3 py-1.5 text-sm"
         >
           <option value="">Show all connections</option>
-          {nodes
-            .slice()
-            .sort((a, b) => a.title.localeCompare(b.title))
-            .map((n) => (
-              <option key={n.id} value={n.id}>
-                {n.title}
-              </option>
-            ))}
+          {scopeNodes.map((n) => (
+            <option key={n.id} value={n.id}>
+              {n.title}
+            </option>
+          ))}
         </select>
 
         <div className="ml-auto flex items-center gap-2">
@@ -337,10 +423,29 @@ export default function MapDiagram({
       <p className="text-xs text-gray-500">
         {canEdit
           ? "Drag any box to reposition it, then Save layout. "
-          : "Switch to “Show all connections” to drag boxes and save the layout. "}
+          : "Switch to “All departments” and “Show all connections” to drag boxes and save the layout. "}
         Arrows point upward to the connected authorisations — prerequisites at the
-        top, roles below. Two arrows mean both are connected.
+        top, roles below. Two arrows mean both are connected. Colours show the
+        department each authorisation belongs to.
       </p>
+
+      {/* Department key */}
+      {legend.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-md border bg-gray-50 px-3 py-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Key
+          </span>
+          {legend.map(([dept, color]) => (
+            <span key={dept} className="flex items-center gap-1.5 text-xs text-gray-700">
+              <span
+                className="inline-block h-3 w-3 rounded-sm"
+                style={{ backgroundColor: color }}
+              />
+              {dept}
+            </span>
+          ))}
+        </div>
+      )}
 
       {layoutNodes.length === 0 ? (
         <div className="rounded-md border bg-gray-50 px-4 py-8 text-center text-sm text-gray-500">
@@ -359,17 +464,20 @@ export default function MapDiagram({
             onPointerLeave={onPointerUp}
           >
             <defs>
-              <marker
-                id="arrowhead"
-                markerWidth="9"
-                markerHeight="9"
-                refX="7"
-                refY="3"
-                orient="auto"
-                markerUnits="strokeWidth"
-              >
-                <path d="M0,0 L7,3 L0,6 Z" fill="#3b82f6" />
-              </marker>
+              {markerColors.map((color) => (
+                <marker
+                  key={color}
+                  id={markerId(color)}
+                  markerWidth="9"
+                  markerHeight="9"
+                  refX="7"
+                  refY="3"
+                  orient="auto"
+                  markerUnits="strokeWidth"
+                >
+                  <path d="M0,0 L7,3 L0,6 Z" fill={color} />
+                </marker>
+              ))}
             </defs>
 
             {layoutEdges.map((e, i) => (
@@ -377,14 +485,15 @@ export default function MapDiagram({
                 key={`${e.a}-${e.b}-${i}`}
                 d={edgePath(e.p1, e.p2, e.reciprocal)}
                 fill="none"
-                stroke="#93c5fd"
+                stroke={e.color}
                 strokeWidth={1.75}
-                markerEnd="url(#arrowhead)"
+                markerEnd={`url(#${markerId(e.color)})`}
               />
             ))}
 
             {layoutNodes.map((n) => {
               const isFocus = n.id === focusId;
+              const color = colorFor(n.id);
               return (
                 <foreignObject
                   key={n.id}
@@ -396,13 +505,13 @@ export default function MapDiagram({
                   style={{ cursor: canEdit ? "grab" : "default" }}
                 >
                   <div
-                    className={[
-                      "flex h-full w-full items-center justify-center rounded-lg border px-2 text-center text-[11px] font-medium leading-tight shadow-sm",
-                      isFocus
-                        ? "border-gray-900 bg-gray-900 text-white"
-                        : "border-blue-200 bg-white text-gray-800",
-                    ].join(" ")}
+                    className="flex h-full w-full items-center justify-center rounded-lg border-2 px-2 text-center text-[11px] font-medium leading-tight shadow-sm"
                     title={n.title}
+                    style={{
+                      borderColor: isFocus ? "#111827" : color,
+                      backgroundColor: isFocus ? "#111827" : "#fff",
+                      color: isFocus ? "#fff" : "#1f2937",
+                    }}
                   >
                     <span
                       style={{

@@ -1,3 +1,4 @@
 - [jsdom server-external](jsdom-server-external.md) — isomorphic-dompurify/jsdom must stay in next.config serverExternalPackages or production build fails with ENOENT on default-stylesheet.css.
 - [Deployment package manager (pnpm)](deployment-package-manager.md) — repo is pnpm-only; a stray package-lock.json makes Replit run npm install and the deploy fails at the install step.
 - [DB schema migrations](db-schema-migrations.md) — schema changes must also be committed as a SQL file in app/migrations/ (not just applied to the live Supabase DB) or other envs break.
+- [Collapsible form submit](collapsible-form-submit.md) — inputs in collapsed/conditionally-rendered sections don't POST; drive payload from state via hidden inputs.
