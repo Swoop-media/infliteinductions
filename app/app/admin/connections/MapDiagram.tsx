@@ -5,6 +5,15 @@ import { useMemo, useState } from "react";
 type Node = { id: string; title: string };
 type Edge = { a: string; b: string };
 
+const CARD_W = 168;
+const CARD_H = 44;
+const HALF_W = CARD_W / 2;
+const HALF_H = CARD_H / 2;
+const SLOT = CARD_W + 56;
+const LEVEL_GAP = 124;
+const PAD_X = 48;
+const PAD_Y = 40;
+
 export default function MapDiagram({
   nodes,
   edges,
@@ -79,21 +88,17 @@ export default function MapDiagram({
     const levels = Array.from(byLevel.keys()).sort((a, b) => a - b);
     levels.forEach((l) => byLevel.get(l)!.sort((a, b) => a.title.localeCompare(b.title)));
 
-    const slot = 220;
-    const levelGap = 130;
-    const padX = 60;
-    const padY = 70;
     const maxRow = Math.max(1, ...levels.map((l) => byLevel.get(l)!.length));
-    const w = Math.max(640, maxRow * slot + padX * 2);
-    const h = Math.max(360, (levels.length - 1) * levelGap + padY * 2);
+    const w = Math.max(560, maxRow * SLOT + PAD_X * 2);
+    const h = Math.max(320, (levels.length - 1) * LEVEL_GAP + PAD_Y * 2 + CARD_H);
 
     const pos = new Map<string, { x: number; y: number }>();
     levels.forEach((l, li) => {
       const row = byLevel.get(l)!;
       const n = row.length;
       row.forEach((node, i) => {
-        const x = ((i + 1) / (n + 1)) * (w - padX * 2) + padX;
-        const y = padY + li * levelGap;
+        const x = ((i + 1) / (n + 1)) * (w - PAD_X * 2) + PAD_X;
+        const y = PAD_Y + HALF_H + li * LEVEL_GAP;
         pos.set(node.id, { x, y });
       });
     });
@@ -107,7 +112,6 @@ export default function MapDiagram({
         const p1 = pos.get(e.a);
         const p2 = pos.get(e.b);
         if (!p1 || !p2) return null;
-        // Detect a reciprocal pair so we can bow the two arrows apart.
         const reciprocal = (outgoing.get(e.b) || []).includes(e.a);
         return { a: e.a, b: e.b, p1, p2, reciprocal };
       })
@@ -122,33 +126,44 @@ export default function MapDiagram({
     return { layoutNodes: laidOutNodes, layoutEdges: laidOutEdges, width: w, height: h };
   }, [nodes, edges, focusId]);
 
-  const nodeR = 6;
+  // Clip a line from a card centre to the card's border in the direction of `to`.
+  function clipToCard(
+    center: { x: number; y: number },
+    to: { x: number; y: number }
+  ) {
+    const dx = to.x - center.x;
+    const dy = to.y - center.y;
+    if (dx === 0 && dy === 0) return center;
+    const sx = dx !== 0 ? HALF_W / Math.abs(dx) : Infinity;
+    const sy = dy !== 0 ? HALF_H / Math.abs(dy) : Infinity;
+    const s = Math.min(sx, sy);
+    return { x: center.x + dx * s, y: center.y + dy * s };
+  }
 
   function edgePath(
     p1: { x: number; y: number },
     p2: { x: number; y: number },
     bowed: boolean
   ) {
-    const dx = p2.x - p1.x;
-    const dy = p2.y - p1.y;
+    const start = clipToCard(p1, p2);
+    const end = clipToCard(p2, p1);
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
     const len = Math.hypot(dx, dy) || 1;
     const ux = dx / len;
     const uy = dy / len;
-    const trim = nodeR + 5;
-    const sx = p1.x + ux * trim;
-    const sy = p1.y + uy * trim;
-    const ex = p2.x - ux * trim;
-    const ey = p2.y - uy * trim;
+    // pull the tip back a touch so the arrowhead doesn't sit on the border
+    const ex = end.x - ux * 3;
+    const ey = end.y - uy * 3;
     if (!bowed) {
-      return `M ${sx} ${sy} L ${ex} ${ey}`;
+      return `M ${start.x} ${start.y} L ${ex} ${ey}`;
     }
-    // left-hand normal so A→B and B→A bow to opposite sides (two visible arrows).
     const nx = -uy;
     const ny = ux;
-    const bow = Math.min(36, len * 0.16);
-    const mx = (sx + ex) / 2 + nx * bow;
-    const my = (sy + ey) / 2 + ny * bow;
-    return `M ${sx} ${sy} Q ${mx} ${my} ${ex} ${ey}`;
+    const bow = Math.min(34, len * 0.16);
+    const mx = (start.x + ex) / 2 + nx * bow;
+    const my = (start.y + ey) / 2 + ny * bow;
+    return `M ${start.x} ${start.y} Q ${mx} ${my} ${ex} ${ey}`;
   }
 
   return (
@@ -173,9 +188,8 @@ export default function MapDiagram({
             ))}
         </select>
         <span className="text-xs text-gray-500">
-          Arrows point upward from an authorisation to the ones connected to it.
-          Prerequisites sit at the top; roles branch out below. Two arrows mean both
-          are connected to each other.
+          Arrows point upward to the connected authorisations. Prerequisites sit at
+          the top; roles branch out below. Two arrows mean both are connected.
         </span>
       </div>
 
@@ -184,7 +198,7 @@ export default function MapDiagram({
           No connections to display yet.
         </div>
       ) : (
-        <div className="max-h-[72vh] overflow-auto rounded-md border bg-gray-50">
+        <div className="max-h-[72vh] overflow-auto rounded-lg border bg-gradient-to-b from-gray-50 to-white">
           <svg
             width={width}
             height={height}
@@ -194,14 +208,14 @@ export default function MapDiagram({
             <defs>
               <marker
                 id="arrowhead"
-                markerWidth="10"
-                markerHeight="10"
-                refX="8"
+                markerWidth="9"
+                markerHeight="9"
+                refX="7"
                 refY="3"
                 orient="auto"
                 markerUnits="strokeWidth"
               >
-                <path d="M0,0 L8,3 L0,6 Z" fill="#2563eb" />
+                <path d="M0,0 L7,3 L0,6 Z" fill="#3b82f6" />
               </marker>
             </defs>
 
@@ -210,33 +224,43 @@ export default function MapDiagram({
                 key={`${e.a}-${e.b}-${i}`}
                 d={edgePath(e.p1, e.p2, e.reciprocal)}
                 fill="none"
-                stroke="#2563eb"
-                strokeWidth={1.5}
+                stroke="#93c5fd"
+                strokeWidth={1.75}
                 markerEnd="url(#arrowhead)"
-                opacity={0.75}
               />
             ))}
 
             {layoutNodes.map((n) => {
               const isFocus = n.id === focusId;
               return (
-                <g key={n.id}>
-                  <circle
-                    cx={n.x}
-                    cy={n.y}
-                    r={isFocus ? nodeR + 2 : nodeR}
-                    fill={isFocus ? "#111827" : "#2563eb"}
-                  />
-                  <text
-                    x={n.x}
-                    y={n.y - 12}
-                    textAnchor="middle"
-                    fontSize={12}
-                    fill="#111827"
+                <foreignObject
+                  key={n.id}
+                  x={n.x - HALF_W}
+                  y={n.y - HALF_H}
+                  width={CARD_W}
+                  height={CARD_H}
+                >
+                  <div
+                    className={[
+                      "flex h-full w-full items-center justify-center rounded-lg border px-2 text-center text-[11px] font-medium leading-tight shadow-sm",
+                      isFocus
+                        ? "border-gray-900 bg-gray-900 text-white"
+                        : "border-blue-200 bg-white text-gray-800",
+                    ].join(" ")}
+                    title={n.title}
                   >
-                    {n.title}
-                  </text>
-                </g>
+                    <span
+                      style={{
+                        display: "-webkit-box",
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: "vertical",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {n.title}
+                    </span>
+                  </div>
+                </foreignObject>
               );
             })}
           </svg>
