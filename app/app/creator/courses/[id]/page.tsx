@@ -5,6 +5,12 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import ResitNotificationMenu from "./_components/ResitNotificationMenu";
+import { toAbsoluteUrl } from "@/lib/utils/url";
+import {
+  listSafefliteRisks,
+  upsertTrainingControl,
+  type SafefliteRisk,
+} from "@/lib/webhooks/safeflite-control";
 
 /** Types & helpers */
 type ModuleType =
@@ -391,6 +397,31 @@ async function deleteModuleAction(formData: FormData) {
   redirect(next);
 }
 
+/**
+ * Push the current course snapshot to SafeFLITE. Non-blocking: any failure is
+ * logged inside upsertTrainingControl and never throws.
+ */
+async function syncCourseToSafeflite(courseId: string) {
+  const { data: course } = await supabaseAdmin()
+    .from("courses")
+    .select("id, title, status, safeflite_risk_ids")
+    .eq("id", courseId)
+    .maybeSingle();
+
+  if (!course) return;
+
+  const isArchived = course.status === "archived";
+
+  await upsertTrainingControl({
+    external_id: course.id,
+    course_title: course.title || "Untitled Course",
+    course_status: course.status || undefined,
+    preview_url: toAbsoluteUrl(`/courses/${course.id}`),
+    risk_ids: Array.isArray(course.safeflite_risk_ids) ? course.safeflite_risk_ids : [],
+    archived: isArchived,
+  });
+}
+
 async function updateCourseStatusAction(formData: FormData) {
   "use server";
   const supabase = await createSupabaseServer();
@@ -402,6 +433,9 @@ async function updateCourseStatusAction(formData: FormData) {
 
   const { error } = await supabase.from("courses").update({ status }).eq("id", courseId);
   if (error) throw new Error(error.message);
+
+  // Sync status change (incl. archive/unarchive) to SafeFLITE
+  await syncCourseToSafeflite(courseId);
 
   revalidatePath(buildCourseUrl(courseId));
   redirect(next);
@@ -434,6 +468,11 @@ async function updateCourseDetails(formData: FormData) {
       ? []
       : Array.from(new Set(tagsCsv.split(",").map((t) => t.trim()).filter(Boolean)));
 
+  // NEW: SafeFLITE risk ids (checkbox group) -> text[]
+  const safefliteRiskIds = Array.from(
+    new Set(formData.getAll("safeflite_risk_ids").map((v) => String(v).trim()).filter(Boolean))
+  );
+
   // NEW: external contractors checkbox
   const externalContractors = formData.get("external_contractors") === "on";
   const flowType = String(formData.get("contractor_flow_type") || "").trim() || null;
@@ -463,6 +502,7 @@ async function updateCourseDetails(formData: FormData) {
   // NEW fields
   updatePayload.department = department;
   updatePayload.tags = tags;
+  updatePayload.safeflite_risk_ids = safefliteRiskIds;
   updatePayload.for_contractors = externalContractors;
   updatePayload.contractor_flow_type = externalContractors ? contractorFlowType : null;
   updatePayload.contractor_site_id = externalContractors ? contractorSiteId : null;
@@ -471,6 +511,9 @@ async function updateCourseDetails(formData: FormData) {
   // Use admin client to bypass schema cache issues with newer columns
   const { error } = await supabaseAdmin().from("courses").update(updatePayload).eq("id", courseId);
   if (error) throw new Error(`Save failed: ${error.message}`);
+
+  // Push the updated risk selection + snapshot to SafeFLITE
+  await syncCourseToSafeflite(courseId);
 
   revalidatePath(buildCourseUrl(courseId));
   redirect(next);
@@ -725,12 +768,13 @@ export default async function CourseEditorPage(props: {
   }
 
   const supabaseForSites = await createSupabaseServer();
-  const [digitalTraining, quizModules, onsiteTraining, onsiteAssessment, sitesResult] = await Promise.all([
+  const [digitalTraining, quizModules, onsiteTraining, onsiteAssessment, sitesResult, safefliteRisks] = await Promise.all([
     loadModules(courseId, "digital_training"),
     loadModules(courseId, "digital_assessment_quiz"),
     loadModules(courseId, "onsite_training"),
     loadModules(courseId, "onsite_assessment"),
     supabaseForSites.from("sites").select("id, name").eq("active", true).order("name"),
+    listSafefliteRisks(),
   ]);
   const sites = sitesResult.data || [];
 
@@ -811,6 +855,7 @@ export default async function CourseEditorPage(props: {
             course={course}
             courseUrlFor={(notice: string) => buildCourseUrl(courseId, "details", notice)}
             sites={sites}
+            safefliteRisks={safefliteRisks}
           />
         )}
 
@@ -875,10 +920,12 @@ function DetailsTab({
   course,
   courseUrlFor,
   sites,
+  safefliteRisks,
 }: {
   course: any;
   courseUrlFor: (notice: string) => string;
   sites: { id: string; name: string }[];
+  safefliteRisks: SafefliteRisk[];
 }) {
   const title = (course?.title as string) ?? "";
   const description = (course?.description as string) ?? "";
@@ -891,6 +938,11 @@ function DetailsTab({
   const department = (course?.department as string | null) ?? "";
   const tagsArray: string[] = Array.isArray(course?.tags) ? course.tags : [];
   const tagsCsv = tagsArray.join(", ");
+
+  const selectedRiskIds: string[] = Array.isArray(course?.safeflite_risk_ids)
+    ? course.safeflite_risk_ids
+    : [];
+  const selectedRiskSet = new Set(selectedRiskIds);
 
   return (
     <div className="space-y-8">
@@ -951,6 +1003,45 @@ function DetailsTab({
             placeholder="e.g. safety, refresher, induction"
           />
           <div className="text-xs text-gray-500">Comma-separated. Used later for search & filtering.</div>
+        </div>
+
+        {/* SafeFLITE Risks */}
+        <div className="grid gap-1">
+          <label className="text-sm">SafeFLITE Risks</label>
+          <div className="text-xs text-gray-500">
+            Tick the SafeFLITE risks this course helps mitigate. Saving will sync the selection to SafeFLITE.
+          </div>
+          {safefliteRisks.length === 0 ? (
+            <div className="rounded-md border bg-gray-50 px-3 py-2 text-sm text-gray-500">
+              No SafeFLITE risks available right now. You can still save the course; the risk
+              selection can be updated once the SafeFLITE connection is reachable.
+            </div>
+          ) : (
+            <div className="max-h-64 overflow-y-auto rounded-md border divide-y">
+              {safefliteRisks.map((risk) => (
+                <label
+                  key={risk.id}
+                  className="flex items-start gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
+                >
+                  <input
+                    type="checkbox"
+                    name="safeflite_risk_ids"
+                    value={risk.id}
+                    defaultChecked={selectedRiskSet.has(risk.id)}
+                    className="mt-1"
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium">{risk.risk_code}</span>
+                    {" — "}
+                    {risk.title}
+                    <span className="ml-2 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                      {risk.risk_kind}
+                    </span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* External Contractors */}
