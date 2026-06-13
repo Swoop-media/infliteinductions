@@ -31,6 +31,7 @@ export default async function CoursePreviewPage(props: {
     .from("courses")
     .select("id, title, description, status, department, valid_for_days")
     .eq("id", courseId)
+    .eq("status", "published")
     .maybeSingle();
 
   if (!course) {
