@@ -40,6 +40,11 @@ export const DEPT_PALETTE = [
 
 export const NO_DEPT_COLOR = "#6b7280"; // gray
 
+// Fixed colours for specific departments that should always read the same way.
+const FIXED_DEPT_COLORS: Record<string, string> = {
+  General: "#111827", // black — kept distinct from the pink used for Skydive
+};
+
 // Build a stable department -> colour map. Sorting first keeps colours stable
 // regardless of the order departments happen to appear in the data.
 export function buildColorMap(departments: (string | null | undefined)[]): Map<string, string> {
@@ -47,7 +52,15 @@ export function buildColorMap(departments: (string | null | undefined)[]): Map<s
     .filter((d) => d !== NO_DEPT)
     .sort((a, b) => a.localeCompare(b));
   const map = new Map<string, string>();
-  keys.forEach((d, i) => map.set(d, DEPT_PALETTE[i % DEPT_PALETTE.length]));
+  let i = 0;
+  keys.forEach((d) => {
+    if (FIXED_DEPT_COLORS[d]) {
+      map.set(d, FIXED_DEPT_COLORS[d]);
+    } else {
+      map.set(d, DEPT_PALETTE[i % DEPT_PALETTE.length]);
+      i++;
+    }
+  });
   map.set(NO_DEPT, NO_DEPT_COLOR);
   return map;
 }
