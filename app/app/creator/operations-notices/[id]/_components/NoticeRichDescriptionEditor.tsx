@@ -9,8 +9,6 @@ import { Color } from '@tiptap/extension-color';
 import { Image } from '@tiptap/extension-image';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { FontFamily } from '@tiptap/extension-font-family';
-import Link from '@tiptap/extension-link';
-import Underline from '@tiptap/extension-underline';
 import { FileText, Upload, Link as LinkIcon, ImageIcon, X } from 'lucide-react';
 
 interface NoticeRichDescriptionEditorProps {
@@ -38,14 +36,22 @@ export default function NoticeRichDescriptionEditor({
 
   const editor = useEditor({
     extensions: [
+      // StarterKit v3 already bundles the Link and Underline extensions, so they
+      // are configured here rather than added separately (adding them again causes
+      // a "Duplicate extension names" crash).
       StarterKit.configure({
         heading: {
           levels: [1, 2, 3],
         },
+        link: {
+          openOnClick: false,
+          HTMLAttributes: {
+            class: 'text-blue-600 underline hover:text-blue-800',
+          },
+        },
       }),
       TextStyle,
       Color,
-      Underline,
       Image.configure({
         inline: false,
         allowBase64: true,
@@ -58,12 +64,6 @@ export default function NoticeRichDescriptionEditor({
       }),
       FontFamily.configure({
         types: ['textStyle'],
-      }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: 'text-blue-600 underline hover:text-blue-800',
-        },
       }),
     ],
     content: initialContent,
