@@ -59,6 +59,21 @@ export default function CompleteModuleButton({
 
       // Success - refresh the page to show updated progress and handle next module navigation
       router.refresh();
+
+      // The next module renders inside the scrollable content area without a full
+      // navigation, so the scroll position would otherwise stay at the bottom.
+      // Reset it to the top so the learner starts from the beginning of the item.
+      const scrollToTop = () => {
+        const container = document.getElementById("course-content-scroll");
+        if (container) {
+          container.scrollTo({ top: 0 });
+        } else {
+          window.scrollTo({ top: 0 });
+        }
+      };
+      scrollToTop();
+      // Run again after the refreshed content paints, in case it grows the page.
+      requestAnimationFrame(scrollToTop);
     } catch (error) {
       console.error('Failed to complete module:', error);
       

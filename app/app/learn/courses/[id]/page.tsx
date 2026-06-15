@@ -1037,7 +1037,7 @@ export default async function LearnerCoursePage(props: {
         </div>
 
         {/* Module Content */}
-        <div className="flex-1 overflow-y-auto">
+        <div id="course-content-scroll" className="flex-1 overflow-y-auto">
           {searchParams?.error === "completion_failed" && (
             <div className="mx-auto max-w-4xl p-6">
               <div className="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
