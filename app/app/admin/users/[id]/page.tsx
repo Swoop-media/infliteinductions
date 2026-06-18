@@ -363,7 +363,7 @@ export default async function EditUserPage({
   const supabase = supabaseAdmin();
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, full_name, email, site_id, job_description")
+    .select("id, full_name, email, site_id, department, job_description")
     .eq("id", resolvedParams.id)
     .maybeSingle();
 
@@ -373,6 +373,19 @@ export default async function EditUserPage({
     .select("id, name, active")
     .eq("active", true)
     .order("name");
+
+  // Fetch departments from database
+  const { data: departments } = await supabase
+    .from("departments")
+    .select("id, name, active")
+    .eq("active", true)
+    .order("name");
+
+  // Include the current value even if it has been deactivated/removed from the list
+  const departmentOptions = (departments || []).map((d) => d.name);
+  if (profile?.department && !departmentOptions.includes(profile.department)) {
+    departmentOptions.unshift(profile.department);
+  }
 
   // Fetch job descriptions from database
   const { data: jobDescriptions } = await supabase
@@ -467,6 +480,22 @@ export default async function EditUserPage({
                 value={profile.email ?? ""}
                 className="rounded-md border bg-gray-50 px-3 py-2 text-sm"
               />
+            </div>
+
+            <div className="grid gap-1">
+              <label className="text-sm font-medium">Department</label>
+              <select
+                name="department"
+                defaultValue={profile.department ?? ""}
+                className="rounded-md border px-3 py-2 text-sm"
+              >
+                <option value="">—</option>
+                {departmentOptions.map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="grid gap-1">

@@ -24,6 +24,7 @@ export async function POST(req: Request) {
   const user_id = String(form.get("user_id") || "").trim();
   const full_name = String(form.get("full_name") || "").trim();
   const site_id = String(form.get("site_id") || "");
+  const department = String(form.get("department") || "");
   const job_description = String(form.get("job_description") || "");
 
   const back = await makeURL(`/app/admin/users/${user_id}`);
@@ -34,7 +35,7 @@ export async function POST(req: Request) {
 
   const { error } = await supabase
     .from("profiles")
-    .update({ full_name, site_id: site_id || null, job_description: job_description || null })
+    .update({ full_name, site_id: site_id || null, department: department || null, job_description: job_description || null })
     .eq("id", user_id);
 
   if (error) {

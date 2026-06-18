@@ -36,12 +36,11 @@ export default function NewUserForm({
     const department = formData.get('department') as string;
     const jobDescription = formData.get('job_description') as string;
 
-    // Get selected courses and authorizations from checkboxes
-    const courseInputs = e.currentTarget.querySelectorAll('input[name="courses"]:checked');
-    const authInputs = e.currentTarget.querySelectorAll('input[name="authorizations"]:checked');
-    
-    const courseIds = Array.from(courseInputs).map((input: any) => input.value);
-    const authIds = Array.from(authInputs).map((input: any) => input.value);
+    // Selected courses and authorizations come from React state so that
+    // collapsed department sections (whose checkboxes aren't rendered) are
+    // still included in the submission.
+    const courseIds = selectedCourses;
+    const authIds = selectedAuths;
 
     try {
       if (userType === 'external') {
@@ -239,6 +238,10 @@ export default function NewUserForm({
       <AssignmentSections 
         authorizations={authorizations}
         courses={courses}
+        selectedAuthIds={selectedAuths}
+        onAuthSelectionChange={setSelectedAuths}
+        selectedCourseIds={selectedCourses}
+        onCourseSelectionChange={setSelectedCourses}
       />
 
       <div className="flex gap-3">

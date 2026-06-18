@@ -1,18 +1,24 @@
 'use client';
 
-import { useState } from 'react';
 import DepartmentAssignmentBase, { AssignmentItem } from '../DepartmentAssignmentBase';
 
 interface AssignmentSectionsProps {
   authorizations: AssignmentItem[];
   courses: AssignmentItem[];
+  selectedAuthIds: string[];
+  onAuthSelectionChange: (ids: string[]) => void;
+  selectedCourseIds: string[];
+  onCourseSelectionChange: (ids: string[]) => void;
 }
 
-export default function AssignmentSections({ authorizations, courses }: AssignmentSectionsProps) {
-  // Manage selected state for each section
-  const [selectedAuthIds, setSelectedAuthIds] = useState<string[]>([]);
-  const [selectedCourseIds, setSelectedCourseIds] = useState<string[]>([]);
-  
+export default function AssignmentSections({
+  authorizations,
+  courses,
+  selectedAuthIds,
+  onAuthSelectionChange,
+  selectedCourseIds,
+  onCourseSelectionChange,
+}: AssignmentSectionsProps) {
   return (
     <>
       {/* Authorizations Section (Top) */}
@@ -22,9 +28,8 @@ export default function AssignmentSections({ authorizations, courses }: Assignme
           <DepartmentAssignmentBase
             items={authorizations}
             selectedIds={selectedAuthIds}
-            onSelectionChange={setSelectedAuthIds}
-            inputName="authorization_ids"
-            renderMode="form-inputs"
+            onSelectionChange={onAuthSelectionChange}
+            renderMode="none"
           />
         </div>
       )}
@@ -36,9 +41,8 @@ export default function AssignmentSections({ authorizations, courses }: Assignme
           <DepartmentAssignmentBase
             items={courses}
             selectedIds={selectedCourseIds}
-            onSelectionChange={setSelectedCourseIds}
-            inputName="course_ids"
-            renderMode="form-inputs"
+            onSelectionChange={onCourseSelectionChange}
+            renderMode="none"
           />
         </div>
       )}
