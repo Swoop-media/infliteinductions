@@ -41,7 +41,11 @@ export async function POST(request: Request) {
     }
     
     const supabase = await createSupabaseRoute(true); // Admin client
-    
+
+    // Cookie-bound client to identify the admin performing this action
+    const supabaseAuth = await createSupabaseRoute(false);
+    const { data: { user: actingUser } } = await supabaseAuth.auth.getUser();
+
     // Generate temporary password
     const tempPassword = generateTempPassword();
     
@@ -90,18 +94,29 @@ export async function POST(request: Request) {
     // Assign role based on user type
     const roleName = userType === 'external_contractor' 
       ? 'Trainers and Assessors' 
-      : 'User';
-    
-    const { error: roleError } = await supabase
-      .from('user_roles')
-      .insert({
-        user_id: authUser.user.id,
-        role_name: roleName,
-        created_at: new Date().toISOString()
-      });
-    
-    if (roleError) {
-      console.error('Role assignment error:', roleError);
+      : 'General';
+
+    const { data: roleRow } = await supabase
+      .from('roles')
+      .select('id')
+      .eq('name', roleName)
+      .maybeSingle();
+
+    if (roleRow) {
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: authUser.user.id,
+          role_id: roleRow.id,
+          granted_by: actingUser?.id || authUser.user.id,
+          granted_at: new Date().toISOString()
+        });
+
+      if (roleError) {
+        console.error('Role assignment error:', roleError);
+      }
+    } else {
+      console.error(`Role assignment error: role "${roleName}" not found`);
     }
     
     // Assign courses if provided
@@ -109,11 +124,10 @@ export async function POST(request: Request) {
       const courseAssignments = courseIds.map((courseId: string) => ({
         user_id: authUser.user.id,
         course_id: courseId,
+        created_by: actingUser?.id || authUser.user.id,
+        role: 'trainee',
         assignment_status: 'assigned',
-        assigned_by: 'Admin', // You might want to get the actual admin's name
-        assigned_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        assigned_at: new Date().toISOString()
       }));
       
       const { error: courseError } = await supabase
@@ -122,6 +136,18 @@ export async function POST(request: Request) {
       
       if (courseError) {
         console.error('Course assignment error:', courseError);
+      } else {
+        const enrollments = courseIds.map((courseId: string) => ({
+          user_id: authUser.user.id,
+          course_id: courseId,
+          status: 'enrolled'
+        }));
+        const { error: enrollError } = await supabase
+          .from('course_enrolments')
+          .upsert(enrollments, { onConflict: 'user_id,course_id', ignoreDuplicates: false });
+        if (enrollError) {
+          console.error('Course enrollment error:', enrollError);
+        }
       }
     }
     
@@ -130,11 +156,9 @@ export async function POST(request: Request) {
       const authAssignments = authorizationIds.map((authId: string) => ({
         user_id: authUser.user.id,
         authorisation_id: authId,
-        assignment_status: 'assigned',
-        assigned_by: 'Admin', // You might want to get the actual admin's name
-        assigned_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_by: actingUser?.id || authUser.user.id,
+        role: 'trainee',
+        assignment_status: 'assigned'
       }));
       
       const { error: authError } = await supabase

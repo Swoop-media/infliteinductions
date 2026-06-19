@@ -21,7 +21,11 @@ export async function POST(request: Request) {
     }
 
     const supabase = await createSupabaseRoute(true);
-    
+
+    // Cookie-bound client to identify the admin performing this action
+    const supabaseAuth = await createSupabaseRoute(false);
+    const { data: { user: actingUser } } = await supabaseAuth.auth.getUser();
+
     let userId: string;
     let existingUser = false;
 
@@ -138,23 +142,34 @@ export async function POST(request: Request) {
       }
     }
     
-    const { data: existingRole } = await supabase
+    const { data: existingRoles } = await supabase
       .from('user_roles')
-      .select('id')
+      .select('user_id')
       .eq('user_id', userId)
-      .single();
+      .limit(1);
 
-    if (!existingRole) {
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: userId,
-          role_name: 'User',
-          created_at: new Date().toISOString()
-        });
-      
-      if (roleError) {
-        console.error('Role assignment error:', roleError);
+    if (!existingRoles || existingRoles.length === 0) {
+      const { data: defaultRole } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', 'General')
+        .maybeSingle();
+
+      if (defaultRole) {
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role_id: defaultRole.id,
+            granted_by: actingUser?.id || userId,
+            granted_at: new Date().toISOString()
+          });
+
+        if (roleError) {
+          console.error('Role assignment error:', roleError);
+        }
+      } else {
+        console.error('Role assignment error: default "General" role not found');
       }
     }
     
@@ -171,11 +186,10 @@ export async function POST(request: Request) {
         const courseAssignments = newCourseIds.map((courseId: string) => ({
           user_id: userId,
           course_id: courseId,
+          created_by: actingUser?.id || userId,
+          role: 'trainee',
           assignment_status: 'assigned',
-          assigned_by: 'Admin',
-          assigned_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          assigned_at: new Date().toISOString()
         }));
         
         const { error: courseError } = await supabase
@@ -184,6 +198,18 @@ export async function POST(request: Request) {
         
         if (courseError) {
           console.error('Course assignment error:', courseError);
+        } else {
+          const enrollments = newCourseIds.map((courseId: string) => ({
+            user_id: userId,
+            course_id: courseId,
+            status: 'enrolled'
+          }));
+          const { error: enrollError } = await supabase
+            .from('course_enrolments')
+            .upsert(enrollments, { onConflict: 'user_id,course_id', ignoreDuplicates: false });
+          if (enrollError) {
+            console.error('Course enrollment error:', enrollError);
+          }
         }
       }
     }
@@ -201,11 +227,9 @@ export async function POST(request: Request) {
         const authAssignments = newAuthIds.map((authId: string) => ({
           user_id: userId,
           authorisation_id: authId,
-          assignment_status: 'assigned',
-          assigned_by: 'Admin',
-          assigned_at: new Date().toISOString(),
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_by: actingUser?.id || userId,
+          role: 'trainee',
+          assignment_status: 'assigned'
         }));
         
         const { error: authError } = await supabase
