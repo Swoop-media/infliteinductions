@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       // Don't fail the request if logging fails
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, sentToTeams: sent });
 
   } catch (error) {
     console.error("❌ Issue report error:", error);

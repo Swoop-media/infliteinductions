@@ -104,12 +104,17 @@ export default function ReportIssueButton({ userId }: ReportIssueProps) {
       });
 
       if (response.ok) {
+        const result = await response.json().catch(() => ({}));
         // Reset form
         setUrl("");
         setDescription("");
         setAttachments([]);
         setIsOpen(false);
-        alert("Issue reported successfully! We'll get back to you soon.");
+        if (result.sentToTeams === false) {
+          alert("Your report was saved, but it could not be delivered to the Teams channel. Please let an administrator know the Teams webhook needs attention.");
+        } else {
+          alert("Issue reported successfully! We'll get back to you soon.");
+        }
       } else {
         throw new Error('Failed to submit report');
       }
