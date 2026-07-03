@@ -60,3 +60,7 @@ integrations = ["resend:1.0.0"]
 
 [userenv.shared]
 NEXT_PUBLIC_SITE_URL = "https://training.inflite.nz"
+
+[postMerge]
+path = "scripts/post-merge.sh"
+timeoutMs = 120000
