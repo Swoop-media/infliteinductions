@@ -40,10 +40,6 @@ author = "agent"
 task = "workflow.run"
 args = "Next.js Development Server"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Start application"
-
 [[workflows.workflow]]
 name = "Next.js Development Server"
 author = "agent"
@@ -55,18 +51,6 @@ outputType = "webview"
 task = "shell.exec"
 args = "npm run dev -- --port 5000"
 waitForPort = 5000
-
-[[workflows.workflow]]
-name = "Start application"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npm run dev"
-waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [agent]
 expertMode = true

@@ -9,6 +9,7 @@ import ContinueToNextCourseButton from './ContinueToNextCourseButton';
 import UnifiedVideoPlayer from "@/components/UnifiedVideoPlayer";
 import DocumentUploadBlock from './DocumentUploadBlock';
 import EquipmentFormBlock from '@/components/EquipmentFormBlock';
+import PeerReviewPanel from './PeerReviewPanel';
 import { ModuleType, BlockKind } from "@/lib/types/module";
 import DOMPurify from "isomorphic-dompurify";
 
@@ -284,7 +285,8 @@ async function submitQuizAnswers(formData: FormData) {
   const quizId = formData.get("quizId") as string;
   const courseId = formData.get("courseId") as string;
   const authorizationId = formData.get("authorizationId") as string;
-  const preview = formData.get("preview") === "1";
+  const review = formData.get("review") === "1";
+  const preview = formData.get("preview") === "1" || review;
 
   // In preview mode, don't save to database but still calculate actual score
   if (preview) {
@@ -408,13 +410,14 @@ async function submitQuizAnswers(formData: FormData) {
     }
   }
 
-  // Redirect with results (include preview flag if in preview mode)
-  const redirectUrl = `/app/learn/courses/${courseId}?module=${moduleId}&quiz=result&score=${scorePercent}&passed=${passed ? '1' : '0'}${preview ? '&preview=1' : ''}${authorizationId ? `&auth=${authorizationId}` : ''}`;
+  // Redirect with results (include preview/review flag if in preview or review mode)
+  const modeParam = review ? '&review=1' : preview ? '&preview=1' : '';
+  const redirectUrl = `/app/learn/courses/${courseId}?module=${moduleId}&quiz=result&score=${scorePercent}&passed=${passed ? '1' : '0'}${modeParam}${authorizationId ? `&auth=${authorizationId}` : ''}`;
   redirect(redirectUrl);
 }
 
 // Component to render quiz questions
-async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }: { moduleId: string; assignmentId: string; preview?: boolean; authorizationId?: string }) {
+async function QuizRenderer({ moduleId, assignmentId, preview, review, authorizationId }: { moduleId: string; assignmentId: string; preview?: boolean; review?: boolean; authorizationId?: string }) {
   "use server";
   const supabase = await createSupabaseServer();
 
@@ -619,6 +622,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       <input type="hidden" name="courseId" value={moduleData.course_id} />
       <input type="hidden" name="authorizationId" value={authorizationId || ""} />
       <input type="hidden" name="preview" value={preview ? "1" : ""} />
+      <input type="hidden" name="review" value={review ? "1" : ""} />
 
       <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
       <p className="text-sm text-gray-600 mb-6">Answer all questions to complete the quiz.</p>
@@ -645,7 +649,20 @@ async function QuizRenderer({ moduleId, assignmentId, preview, authorizationId }
       })}
 
       <div className="flex justify-end pt-6 border-t">
-        {preview ? (
+        {review ? (
+          <div className="w-full space-y-3">
+            <div className="bg-purple-50 p-3 rounded-lg">
+              <p className="text-sm text-purple-800 text-center">
+                <strong>Peer Review Mode:</strong> You can submit the quiz to see how it scores. Nothing will be saved.
+              </p>
+            </div>
+            <div className="flex justify-end">
+              <button type="submit" className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+                Submit Quiz
+              </button>
+            </div>
+          </div>
+        ) : preview ? (
           <div className="bg-blue-50 p-4 rounded-lg w-full">
             <p className="text-sm text-blue-800 text-center">
               <strong>Preview Mode:</strong> Quiz submission is disabled in preview mode. In a real course, learners would submit their answers here.
@@ -669,6 +686,7 @@ interface LearnerCourseSearchParams {
   passed?: string;
   error?: string;
   preview?: string;
+  review?: string;
   success?: string;
 }
 
@@ -680,7 +698,9 @@ export default async function LearnerCoursePage(props: {
   const searchParams = await props.searchParams;
   const selectedModuleId = searchParams?.module;
   const authorizationId = searchParams?.auth;
-  const preview = searchParams?.preview === '1'; // Extract preview flag
+  const review = searchParams?.review === '1'; // Peer review mode - behaves like preview but with full onsite visibility and a review sign-off panel
+  const preview = searchParams?.preview === '1' || review; // Extract preview flag (review mode implies preview behaviour)
+  const modeParam = review ? '&review=1' : preview ? '&preview=1' : '';
   const showQuiz = searchParams?.quiz === 'start'; // Check if quiz should be displayed
   const quizResult = searchParams?.quiz === 'result'; // Check if showing quiz results
   const quizScore = searchParams?.score ? parseInt(searchParams.score) : null;
@@ -927,6 +947,24 @@ export default async function LearnerCoursePage(props: {
   // Helper to check if a module is completed
   const moduleCompleted = (moduleId: string) => completedModules.has(moduleId);
 
+  // In peer review mode, get the reviewer's display name for the sign-off panel
+  let reviewerName = "";
+  if (review) {
+    const { data: reviewerProfile } = await supabase
+      .from("profiles")
+      .select("full_name, first_name, last_name, email")
+      .eq("id", user.id)
+      .maybeSingle();
+    reviewerName =
+      reviewerProfile?.full_name ||
+      (reviewerProfile?.first_name && reviewerProfile?.last_name
+        ? `${reviewerProfile.first_name} ${reviewerProfile.last_name}`.trim()
+        : null) ||
+      reviewerProfile?.email ||
+      user.email ||
+      "Reviewer";
+  }
+
   return (
     <div className="flex h-screen">
       {/* Left Sidebar */}
@@ -973,7 +1011,7 @@ export default async function LearnerCoursePage(props: {
               return (
                 <Link
                   key={module.id}
-                  href={isUnlocked ? `/app/learn/courses/${courseId}?module=${module.id}${preview ? '&preview=1' : ''}${authorizationId ? `&auth=${authorizationId}` : ''}` : '#'}
+                  href={isUnlocked ? `/app/learn/courses/${courseId}?module=${module.id}${modeParam}${authorizationId ? `&auth=${authorizationId}` : ''}` : '#'}
                   className={`
                     block p-3 rounded-lg border text-sm transition-all
                     ${isCurrent
@@ -1015,7 +1053,11 @@ export default async function LearnerCoursePage(props: {
       <div className="flex-1 flex flex-col">
         {/* Top Navigation */}
         <div className="p-3 border-b bg-white">
-          {preview && (
+          {review ? (
+            <div className="mb-4 rounded-md border border-purple-300 bg-purple-50 px-3 py-2 text-sm text-purple-900">
+              📝 <strong>Peer Review Mode</strong> - You are reviewing this course as a learner would see it. All modules are unlocked, nothing is saved, and you can record your review using the panel at the bottom right.
+            </div>
+          ) : preview && (
             <div className="mb-4 rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-900">
               🔍 <strong>Preview Mode</strong> - You are testing this course as a creator. No progress will be saved and all modules are unlocked.
             </div>
@@ -1080,6 +1122,7 @@ export default async function LearnerCoursePage(props: {
                         moduleId={currentModule.id}
                         assignmentId={assignment.id}
                         preview={preview}
+                        review={review}
                         authorizationId={authorizationId}
                       />
                     )}
@@ -1112,7 +1155,7 @@ export default async function LearnerCoursePage(props: {
                                   You need {quizPassMark}% or higher to pass. Review the material and try again.
                                 </p>
                                 <Link
-                                  href={`/app/learn/courses/${courseId}?module=${currentModule.id}&quiz=start${authorizationId ? `&auth=${authorizationId}` : ''}`}
+                                  href={`/app/learn/courses/${courseId}?module=${currentModule.id}&quiz=start${modeParam}${authorizationId ? `&auth=${authorizationId}` : ''}`}
                                   className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
                                 >
                                   Try Again
@@ -1120,7 +1163,7 @@ export default async function LearnerCoursePage(props: {
                               </div>
                             )}
                             <Link
-                              href={`/app/learn/courses/${courseId}?module=${currentModule.id}${authorizationId ? `&auth=${authorizationId}` : ''}`}
+                              href={`/app/learn/courses/${courseId}?module=${currentModule.id}${modeParam}${authorizationId ? `&auth=${authorizationId}` : ''}`}
                               className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium ml-2"
                             >
                               Back to Module
@@ -1142,6 +1185,13 @@ export default async function LearnerCoursePage(props: {
                           <div className="flex items-center gap-2">
                             {isCurrentModuleCompleted && !preview ? (
                               <span className="text-sm text-green-600">✓ Complete</span>
+                            ) : review ? (
+                              <Link
+                                href={`/app/learn/courses/${courseId}?module=${currentModule.id}&quiz=start${modeParam}${authorizationId ? `&auth=${authorizationId}` : ''}`}
+                                className="inline-flex items-center px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 font-medium text-sm"
+                              >
+                                Start Quiz
+                              </Link>
                             ) : (
                               <span className="text-sm text-gray-600">Use the button below to start</span>
                             )}
@@ -1275,10 +1325,32 @@ export default async function LearnerCoursePage(props: {
                               {onsiteRequirements.map((req, index) => (
                                 <div key={req.id || index} className="flex items-start space-x-2">
                                   <div className="flex-shrink-0 w-1.5 h-1.5 bg-gray-400 rounded-full mt-2"></div>
-                                  <span className="text-sm text-gray-700">{req.label || req.description}</span>
+                                  <div className="flex-1">
+                                    <span className="text-sm text-gray-700">{req.label || req.description}</span>
+                                    {review && (
+                                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                                        {req.field_type && (
+                                          <span className="inline-block rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-800 capitalize">
+                                            {String(req.field_type).replace(/_/g, ' ')}
+                                          </span>
+                                        )}
+                                        {req.required && (
+                                          <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800">Required</span>
+                                        )}
+                                        {req.help_text && (
+                                          <span className="text-xs text-gray-500">{req.help_text}</span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
+                            {review && (
+                              <p className="mt-3 text-xs text-purple-700">
+                                📝 Peer review: these are the items the onsite trainer will work through with the learner.
+                              </p>
+                            )}
                           </div>
                         )}
                         
@@ -1331,10 +1403,32 @@ export default async function LearnerCoursePage(props: {
                               {onsiteRequirements.map((req, index) => (
                                 <div key={req.id || index} className="flex items-start space-x-2">
                                   <div className="flex-shrink-0 w-1.5 h-1.5 bg-gray-400 rounded-full mt-2"></div>
-                                  <span className="text-sm text-gray-700">{req.label || req.description}</span>
+                                  <div className="flex-1">
+                                    <span className="text-sm text-gray-700">{req.label || req.description}</span>
+                                    {review && (
+                                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                                        {req.field_type && (
+                                          <span className="inline-block rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-800 capitalize">
+                                            {String(req.field_type).replace(/_/g, ' ')}
+                                          </span>
+                                        )}
+                                        {req.required && (
+                                          <span className="inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-800">Required</span>
+                                        )}
+                                        {req.help_text && (
+                                          <span className="text-xs text-gray-500">{req.help_text}</span>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
                                 </div>
                               ))}
                             </div>
+                            {review && (
+                              <p className="mt-3 text-xs text-purple-700">
+                                📝 Peer review: these are the criteria the onsite assessor will mark the learner against.
+                              </p>
+                            )}
                           </div>
                         )}
                         
@@ -1518,6 +1612,11 @@ export default async function LearnerCoursePage(props: {
           )}
         </div>
       </div>
+
+      {/* Peer review sign-off panel */}
+      {review && (
+        <PeerReviewPanel courseId={courseId} reviewerName={reviewerName} />
+      )}
     </div>
   );
 }

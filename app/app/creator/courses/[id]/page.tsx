@@ -782,6 +782,22 @@ export default async function CourseEditorPage(props: {
   ]);
   const sites = sitesResult.data || [];
 
+  // Load peer review history (degrade gracefully if the table hasn't been created yet)
+  let peerReviews: any[] = [];
+  try {
+    const adminClient = supabaseAdmin();
+    const { data: reviewsData, error: reviewsError } = await adminClient
+      .from("course_peer_reviews")
+      .select("id, reviewer_id, reviewer_name, review_date, notes, created_at")
+      .eq("course_id", courseId)
+      .order("created_at", { ascending: false });
+    if (!reviewsError && reviewsData) {
+      peerReviews = reviewsData;
+    }
+  } catch (e) {
+    console.warn("Failed to load peer reviews:", e);
+  }
+
   const tabs: { key: TabKey; href: string }[] = [
     { key: "details", href: buildCourseUrl(courseId, "details") },
     { key: "digital_training", href: buildCourseUrl(courseId, "digital_training") },
@@ -822,6 +838,14 @@ export default async function CourseEditorPage(props: {
           >
             Test as learner
           </Link>
+          <Link
+            href={`/app/learn/courses/${course.id}?review=1`}
+            className="rounded-md border border-purple-300 bg-purple-50 px-3 py-1 text-sm text-purple-800 hover:bg-purple-100"
+            title="Walk through the full course as a learner and record a peer review"
+            target="_blank"
+          >
+            Peer review
+          </Link>
           <Link href="/app/creator" className="rounded-md border px-3 py-1 text-sm">Back</Link>
         </div>
       </div>
@@ -855,12 +879,15 @@ export default async function CourseEditorPage(props: {
       {/* Active tab content */}
       <div className="rounded-xl border p-4">
         {activeTab === "details" && (
-          <DetailsTab
-            course={course}
-            courseUrlFor={(notice: string) => buildCourseUrl(courseId, "details", notice)}
-            sites={sites}
-            safefliteRisks={safefliteRisks}
-          />
+          <>
+            <DetailsTab
+              course={course}
+              courseUrlFor={(notice: string) => buildCourseUrl(courseId, "details", notice)}
+              sites={sites}
+              safefliteRisks={safefliteRisks}
+            />
+            <PeerReviewsSection reviews={peerReviews} />
+          </>
         )}
 
         {activeTab === "digital_training" && (
@@ -907,6 +934,57 @@ export default async function CourseEditorPage(props: {
           <AssignmentsLoader courseId={courseId} searchParams={searchParams} />
         )}
       </div>
+    </div>
+  );
+}
+
+/** PEER REVIEWS SECTION (shown under the Details tab) */
+function PeerReviewsSection({ reviews }: { reviews: any[] }) {
+  return (
+    <div className="mt-6 border-t pt-6">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Peer Reviews</h2>
+          <p className="text-sm text-gray-600">
+            Reviews recorded from full course walkthroughs (use the "Peer review" button above to start one).
+          </p>
+        </div>
+        {reviews.length > 0 && (
+          <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-800">
+            {reviews.length} review{reviews.length === 1 ? "" : "s"}
+          </span>
+        )}
+      </div>
+
+      {reviews.length === 0 ? (
+        <p className="rounded-md border border-dashed bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+          No peer reviews recorded yet.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {reviews.map((review) => (
+            <div key={review.id} className="rounded-md border bg-white p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-base">📝</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {review.reviewer_name || "Unknown reviewer"}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  Reviewed on{" "}
+                  {review.review_date
+                    ? new Date(`${review.review_date}T00:00:00`).toLocaleDateString()
+                    : new Date(review.created_at).toLocaleDateString()}
+                </div>
+              </div>
+              {review.notes && (
+                <p className="mt-2 whitespace-pre-wrap text-sm text-gray-700">{review.notes}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
