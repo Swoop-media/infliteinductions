@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
       "/api/notifications/document-expiry",
       "/api/notifications/authorization-expiry", 
       "/api/notifications/retake-reminders",
-      "/api/notifications/daily-admin-report"
+      "/api/notifications/daily-admin-report",
+      "/api/authorization-auto-fix"
     ]
   });
 }
@@ -41,7 +42,8 @@ export async function POST(request: NextRequest) {
       { name: 'documentExpiry', url: `${baseUrl}/api/notifications/document-expiry` },
       { name: 'authorizationExpiry', url: `${baseUrl}/api/notifications/authorization-expiry` },
       { name: 'retakeReminders', url: `${baseUrl}/api/notifications/retake-reminders` },
-      { name: 'dailyAdminReport', url: `${baseUrl}/api/notifications/daily-admin-report` }
+      { name: 'dailyAdminReport', url: `${baseUrl}/api/notifications/daily-admin-report` },
+      { name: 'authorizationAutoFix', url: `${baseUrl}/api/authorization-auto-fix` }
     ];
 
     const jobPromises = jobs.map(async (job) => {

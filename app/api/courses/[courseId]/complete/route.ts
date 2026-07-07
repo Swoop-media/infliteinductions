@@ -99,112 +99,24 @@ export async function POST(
       console.log("RPC function not available or failed:", rpcError);
     }
 
-    // Check if authorization should be marked as pending_approval
-    // First, find all authorizations that include this course
-    const { data: authCourses } = await supabase
-      .from("authorisation_courses")
-      .select("authorisation_id")
-      .eq("course_id", courseId);
-
-    if (authCourses && authCourses.length > 0) {
-      console.log(`Course ${courseId} is part of ${authCourses.length} authorization(s)`);
-      
-      // For each authorization, check if all courses are completed
-      for (const authCourse of authCourses) {
-        const authId = authCourse.authorisation_id;
-        
-        // Get all courses for this authorization
-        const { data: allAuthCourses } = await supabase
-          .from("authorisation_courses")
-          .select("course_id")
-          .eq("authorisation_id", authId);
-
-        const courseIds = allAuthCourses?.map(ac => ac.course_id) || [];
-        
-        console.log(`Checking authorization ${authId}: ${courseIds.length} total courses`);
-
-        // Check if all courses are completed for this user
-        const { data: completedCourses } = await supabase
-          .from("course_assignments")
-          .select("course_id")
-          .eq("user_id", assignment.user_id)
-          .eq("role", "trainee")
-          .eq("assignment_status", "completed")
-          .in("course_id", courseIds);
-
-        const allCompleted = completedCourses?.length === courseIds.length && courseIds.length > 0;
-        
-        console.log(`Authorization ${authId}: ${completedCourses?.length}/${courseIds.length} courses completed`);
-
-        if (allCompleted) {
-          // Check if there's an existing authorization assignment
-          const { data: existingAuth } = await supabase
-            .from("authorisation_assignments")
-            .select("id, assignment_status")
-            .eq("user_id", assignment.user_id)
-            .eq("authorisation_id", authId)
-            .eq("role", "trainee")
-            .single();
-
-          if (existingAuth && 
-              existingAuth.assignment_status !== 'completed' && 
-              existingAuth.assignment_status !== 'pending_approval') {
-            // Update authorization status to pending_approval
-            // Note: Removing updated_at to avoid PostgREST schema cache issues
-            const { error: authUpdateError } = await supabase
-              .from("authorisation_assignments")
-              .update({
-                assignment_status: 'pending_approval',
-                completed_at: new Date().toISOString()
-              })
-              .eq("id", existingAuth.id);
-
-            if (authUpdateError) {
-              console.error("Error updating authorization status:", authUpdateError);
-            } else {
-              console.log(`✅ Authorization ${authId} updated to pending_approval for user ${assignment.user_id}`);
-              
-              // Send notification about authorization pending approval
-              try {
-                // Get authorization details
-                const { data: authDetails } = await supabase
-                  .from("authorisations")
-                  .select("title")
-                  .eq("id", authId)
-                  .single();
-                
-                // Get user profile
-                const { data: userProfile } = await supabase
-                  .from("profiles")
-                  .select("full_name, email")
-                  .eq("id", assignment.user_id)
-                  .single();
-                
-                if (authDetails && userProfile) {
-                  const { notifyRole } = await import("@/lib/notifications/dispatcher");
-                  await notifyRole(
-                    "Authorization Approver",
-                    "authorisation_pending_approval",
-                    {
-                      authorizationTitle: authDetails.title,
-                      learnerName: userProfile.full_name || userProfile.email,
-                      learner_email: userProfile.email,
-                      assignmentId: existingAuth.id,
-                      url: `/app/admin/review/${existingAuth.id}`
-                    }
-                  );
-                  console.log("📧 Notification sent for pending authorization approval");
-                }
-              } catch (notifyError) {
-                console.error("Failed to send notification:", notifyError);
-                // Don't fail the update if notification fails
-              }
-            }
-          } else {
-            console.log(`Authorization already in status: ${existingAuth?.assignment_status}`);
-          }
-        }
+    // Automatically fix the trainee's authorisation statuses now that a course
+    // was completed (moves them to in_progress / pending_approval as needed and
+    // notifies Authorization Approvers). Uses the shared auto-fix module.
+    try {
+      const { autoFixAuthorisationAssignments } = await import("@/lib/authorizations/auto-fix");
+      const autoFixResult = await autoFixAuthorisationAssignments({
+        userId: assignment.user_id,
+        trigger: "assessor_course_completion"
+      });
+      if (autoFixResult.fixed.length > 0) {
+        console.log(`✅ Auto-fixed ${autoFixResult.fixed.length} authorisation assignment(s) for user ${assignment.user_id}`);
       }
+      if (autoFixResult.errors.length > 0) {
+        console.error("Auto-fix errors:", autoFixResult.errors);
+      }
+    } catch (autoFixError) {
+      console.error("Authorisation auto-fix failed:", autoFixError);
+      // Don't fail course completion if the auto-fix fails
     }
 
     return NextResponse.json({ 

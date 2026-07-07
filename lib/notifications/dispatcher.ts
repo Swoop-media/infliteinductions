@@ -41,6 +41,7 @@ export type NotificationType =
   | "document_expiry_daily"
   | "daily_auth_expiry_report"
   | "daily_doc_expiry_report"
+  | "auth_autofix_report"
   | "onsite_training_ready"
   | "onsite_assessment_ready"
   | "course_completed"
@@ -397,6 +398,20 @@ function formatTeamsText(
         `• Total expiring soon: ${authCount} authorization${authCount !== 1 ? 's' : ''}`,
         authSummary ? `• Summary:\n\n${authSummary}` : "",
         url ? `• View full report: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+    case "auth_autofix_report":
+      const fixCount = payload?.count || 0;
+      const fixSummary = Array.isArray(payload?.summary)
+        ? payload.summary.join("\n\n")
+        : payload?.summary || "";
+      return [
+        "🔧 Automatic Authorisation Fix Report",
+        `• Corrected: ${fixCount} authorisation${fixCount !== 1 ? 's' : ''}`,
+        fixSummary ? `• Details:\n\n${fixSummary}` : "",
+        url ? `• Diagnose tool: ${url}` : "",
       ]
         .filter(Boolean)
         .join("\n\n");

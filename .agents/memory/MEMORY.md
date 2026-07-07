@@ -4,3 +4,4 @@
 - [Collapsible form submit](collapsible-form-submit.md) — inputs in collapsed/conditionally-rendered sections don't POST; drive payload from state via hidden inputs.
 - [User assignment insert schema](user-assignment-inserts.md) — create-user routes must mirror the assign-* routes; wrong insert shapes there fail silently (console.error only).
 - [Creator-area role gating](creator-area-role-gating.md) — API routes writing creator-visible data must check hasRole server-side; service-role inserts bypass RLS, auth check alone is not enough.
+- [Notification type enum](notif-type-enum.md) — notifications.type is Postgres enum notif_type; new types need a migration or in-app inserts fail silently (Teams DM still sends).

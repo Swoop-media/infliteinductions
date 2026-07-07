@@ -199,6 +199,9 @@ export default function DiagnoseAuthorizationsPage() {
             <p className="text-sm text-blue-800 mt-2">
               <strong>Comprehensive Fix:</strong> Updates all authorization assignments to pending_approval status where all related courses have been completed.
             </p>
+            <p className="text-sm text-blue-800 mt-2">
+              <strong>Automatic Fixing:</strong> Stuck authorizations are now corrected automatically — immediately when a learner completes a course, and by a daily safety-net sweep. When the sweep fixes anything, Admins and Senior Management receive a summary notification. This page remains available for manual spot checks.
+            </p>
           </div>
         </div>
       </div>
