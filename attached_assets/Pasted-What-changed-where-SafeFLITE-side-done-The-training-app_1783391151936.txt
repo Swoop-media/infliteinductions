@@ -1,0 +1,26 @@
+What changed where
+SafeFLITE side (done): The training app gets its risk list from a SafeFLITE endpoint (list-risks). It now also returns parent_risk_id — the link from each CR to its parent ER — which the training app needs to build the hierarchy. Without this, it could only show the flat list you see today.
+
+One deployment step for you: Edge functions aren't auto-deployed (same as migrations). Deploy the updated function from the Supabase dashboard or CLI:
+
+supabase functions deploy list-risks
+
+It's backwards-compatible — the training app keeps working as-is until you update it.
+
+Training app side (their agent): the search bar and the ER-collapsed hierarchical picker are UI changes in the training app. Here's the prompt to give that agent:
+
+Improve the "SafeFLITE Risks" picker in the course creator (Details tab)
+
+The course creator currently shows SafeFLITE risks as a flat scrollable checkbox list. Replace it with a searchable, hierarchical picker that mirrors SafeFLITE's risk register layout.
+
+Data source: The SafeFLITE list-risks endpoint (GET /functions/v1/list-risks, bearer TRAINING_CONTROL_SECRET) now returns a new field per risk: parent_risk_id. For contributing risks (CRs) it holds the id of their parent enterprise risk (ER); it's null for ERs, legacy risks, and unparented CRs. Existing fields are unchanged: id, risk_code (e.g. "ER-001", "CR-053", or null for legacy), title, is_enterprise, risk_kind ("enterprise" | "contributing" | null), status.
+
+Required UI:
+
+Search bar at the top of the picker: filters by risk code or title (case-insensitive substring). While a search is active, show all matching risks; if a CR matches, also show its parent ER as the group header (auto-expanded). Clearing the search returns to the collapsed hierarchy.
+Hierarchical list, ER-first: group risks under their parent ER, sorted by ER code (ER-001, ER-002, …). Each ER row is collapsed by default with a chevron to expand and reveal its child CRs (sorted by CR code). Visually distinguish ER rows (bolder, code badge) from indented CR rows — similar to SafeFLITE's register: chevron + code badge + title per row.
+Selection: both ERs and CRs remain individually checkable (checkbox per row), exactly as today — ticking an ER must NOT auto-tick its children, and vice versa. Keep sending the same risk_ids array (selected risk UUIDs) to upsert-training-control on save; no contract change there.
+Buckets for non-hierarchy risks: CRs whose parent_risk_id is null (or whose parent isn't in the returned list) go in an "Other contributing risks" group at the bottom; risks with risk_kind = null go in a "Legacy risks" group below that. Don't drop any risk from the picker.
+Selected-state visibility: show a count of selected risks on each collapsed ER header (e.g. "2 selected") so ticks inside collapsed groups aren't invisible, and keep already-ticked rows checked when re-opening an existing course.
+Keep everything else about the course form unchanged, including when the sync to SafeFLITE fires.
+

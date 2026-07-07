@@ -3,11 +3,13 @@ const SAFEFLITE_FUNCTIONS_BASE =
 
 export interface SafefliteRisk {
   id: string;
-  risk_code: string;
+  risk_code: string | null;
   title: string;
   is_enterprise: boolean;
-  risk_kind: string;
+  risk_kind: string | null;
   status: string;
+  /** Parent enterprise risk id for contributing risks; null for ERs, legacy risks, and unparented CRs. May be absent until the SafeFLITE list-risks function is redeployed. */
+  parent_risk_id?: string | null;
 }
 
 export interface UpsertTrainingControlPayload {

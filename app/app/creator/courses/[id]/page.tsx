@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import ResitNotificationMenu from "./_components/ResitNotificationMenu";
+import SafefliteRiskPicker from "./SafefliteRiskPicker";
 import { toAbsoluteUrl } from "@/lib/utils/url";
 import {
   listSafefliteRisks,
@@ -1024,7 +1025,6 @@ function DetailsTab({
   const selectedRiskIds: string[] = Array.isArray(course?.safeflite_risk_ids)
     ? course.safeflite_risk_ids
     : [];
-  const selectedRiskSet = new Set(selectedRiskIds);
 
   return (
     <div className="space-y-8">
@@ -1104,30 +1104,10 @@ function DetailsTab({
               selection can be updated once the SafeFLITE connection is reachable.
             </div>
           ) : (
-            <div className="max-h-64 overflow-y-auto rounded-md border divide-y">
-              {safefliteRisks.map((risk) => (
-                <label
-                  key={risk.id}
-                  className="flex items-start gap-3 px-3 py-2 hover:bg-gray-50 cursor-pointer"
-                >
-                  <input
-                    type="checkbox"
-                    name="safeflite_risk_ids"
-                    value={risk.id}
-                    defaultChecked={selectedRiskSet.has(risk.id)}
-                    className="mt-1"
-                  />
-                  <span className="text-sm">
-                    <span className="font-medium">{risk.risk_code}</span>
-                    {" — "}
-                    {risk.title}
-                    <span className="ml-2 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                      {risk.risk_kind}
-                    </span>
-                  </span>
-                </label>
-              ))}
-            </div>
+            <SafefliteRiskPicker
+              risks={safefliteRisks}
+              initialSelectedIds={selectedRiskIds}
+            />
           )}
         </div>
 
