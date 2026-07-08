@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    // Get all users with their Teams link status
+    // Get all active users with their Teams link status (archived users excluded)
     const { data: users, error: usersError } = await supabase
       .from("profiles")
       .select(`
@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
         email,
         full_name
       `)
+      .is("archived_at", null)
       .order('full_name', { ascending: true });
 
     if (usersError) {
