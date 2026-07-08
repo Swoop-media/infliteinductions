@@ -73,6 +73,11 @@ interface ModuleProgress {
       }>;
     }>;
   };
+  quiz_review_comments?: Array<{
+    reviewer_name: string;
+    comments: string;
+    updated_at: string;
+  }>;
   onsite_responses?: Array<{
     requirement_id: string;
     requirement_label: string;
@@ -503,6 +508,23 @@ export default function ExpandableCourseDetails({ courses, assignmentId, userId 
                               {module.quiz_info && (!module.quiz_attempts || module.quiz_attempts.length === 0) && (
                                 <div className="text-sm text-gray-500 italic">
                                   No quiz attempts recorded
+                                </div>
+                              )}
+
+                              {/* Onsite reviewer comments on this quiz */}
+                              {module.quiz_review_comments && module.quiz_review_comments.length > 0 && (
+                                <div className="space-y-2 border rounded-lg p-3 bg-amber-50">
+                                  <p className="text-sm font-medium text-amber-900">
+                                    Onsite Reviewer Comments:
+                                  </p>
+                                  {module.quiz_review_comments.map((review, idx) => (
+                                    <div key={idx} className="bg-white rounded p-2 text-sm">
+                                      <p className="text-xs text-gray-500">
+                                        {review.reviewer_name} — {formatDateTimeSafe(review.updated_at)}
+                                      </p>
+                                      <p className="whitespace-pre-wrap">{review.comments}</p>
+                                    </div>
+                                  ))}
                                 </div>
                               )}
                             </div>

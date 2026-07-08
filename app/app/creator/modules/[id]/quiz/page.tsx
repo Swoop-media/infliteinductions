@@ -254,6 +254,14 @@ async function updateSettings(formData: FormData) {
       shuffle: getBool(formData, "shuffle"),
       show_feedback: getBool(formData, "show_feedback"),
       time_limit_seconds: getInt(formData, "time_limit_seconds"),
+      reviewable_onsite: getBool(formData, "reviewable_onsite"),
+    },
+    {
+      pass_mark: getInt(formData, "pass_mark"),
+      max_attempts: getInt(formData, "max_attempts"),
+      shuffle: getBool(formData, "shuffle"),
+      show_feedback: getBool(formData, "show_feedback"),
+      time_limit_seconds: getInt(formData, "time_limit_seconds"),
     },
     {
       pass_mark: getInt(formData, "pass_mark"),
@@ -826,6 +834,16 @@ export default async function QuizEditorPage(props: {
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" name="show_feedback" defaultChecked={Boolean(pick(quiz, ["show_feedback"], true))} />
             Show answer feedback after submit
+          </label>
+
+          <label className="flex items-center gap-2 text-sm sm:col-span-2">
+            <input type="checkbox" name="reviewable_onsite" defaultChecked={Boolean(pick(quiz, ["reviewable_onsite"], false))} />
+            <span>
+              Reviewable by onsite trainer/assessor
+              <span className="block text-xs text-gray-500">
+                Shows the learner&apos;s quiz answers to the onsite trainer/assessor during onsite training or assessment, with a comments box for their review.
+              </span>
+            </span>
           </label>
 
           <label className="grid gap-1">

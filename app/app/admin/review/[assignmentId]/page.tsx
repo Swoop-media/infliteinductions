@@ -318,6 +318,35 @@ async function loadAssignmentDetails(assignmentId: string) {
     .in("question_id", questionIds)
     .order("order_index", { ascending: true });
 
+  // Fetch onsite quiz review comments (tolerant if table doesn't exist yet)
+  let quizOnsiteReviews: any[] = [];
+  if (quizIds.length > 0) {
+    try {
+      const { data: reviewRows, error: reviewErr } = await supabase
+        .from("quiz_onsite_reviews")
+        .select("quiz_id, reviewer_id, comments, updated_at")
+        .in("quiz_id", quizIds)
+        .eq("learner_id", assignment.user_id)
+        .order("updated_at", { ascending: false });
+      if (!reviewErr && reviewRows && reviewRows.length > 0) {
+        const reviewerIds = [...new Set(reviewRows.map(r => r.reviewer_id))];
+        const { data: reviewerProfiles } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", reviewerIds);
+        const reviewerNames = new Map(
+          (reviewerProfiles || []).map(p => [p.id, p.full_name || p.email || "Reviewer"])
+        );
+        quizOnsiteReviews = reviewRows.map(r => ({
+          quiz_id: r.quiz_id,
+          reviewer_name: reviewerNames.get(r.reviewer_id) || "Reviewer",
+          comments: r.comments,
+          updated_at: r.updated_at,
+        }));
+      }
+    } catch {}
+  }
+
   // Fetch onsite training and assessment responses with trainer info
   const { data: requirementResponses } = await supabase
     .from("requirement_responses")
@@ -506,6 +535,11 @@ async function loadAssignmentDetails(assignmentId: string) {
         };
       });
 
+      // Onsite reviewer comments for this module's quiz
+      const moduleQuizReviewComments = moduleQuiz
+        ? quizOnsiteReviews.filter(r => r.quiz_id === moduleQuiz.id)
+        : [];
+
       // Get all requirements for this module
       const moduleRequirements = allOnsiteRequirements?.filter(
         req => req.module_id === module.id
@@ -597,6 +631,7 @@ async function loadAssignmentDetails(assignmentId: string) {
           pass_mark: moduleQuiz.pass_mark || 70,
           questions: questionsWithOptions
         } : undefined,
+        quiz_review_comments: moduleQuizReviewComments.length > 0 ? moduleQuizReviewComments : undefined,
         onsite_responses: moduleOnsiteResponses,
         equipment_requirements: includeEquipmentAssessment && equipmentRequirements.length > 0 ? equipmentRequirements : undefined,
         has_onsite_requirements: moduleOnsiteResponses.length > 0,
