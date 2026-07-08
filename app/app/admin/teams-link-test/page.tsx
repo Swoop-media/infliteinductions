@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { AlertCircle, CheckCircle2, Loader2, Users, Send, XCircle, RefreshCw, Search } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Users, Send, XCircle, RefreshCw, Search, FileDown } from 'lucide-react';
 import Link from "next/link";
 
 interface User {
@@ -137,16 +137,144 @@ export default function TeamsLinkTestPage() {
 
   const filteredUsers = getFilteredUsers();
 
+  const exportPdf = async () => {
+    const { default: jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 40;
+    let y = margin;
+
+    const addPageIfNeeded = (needed: number) => {
+      if (y + needed > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+      }
+    };
+
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Teams Link Test Report", margin, y);
+    y += 18;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(100);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, margin, y);
+    y += 20;
+    doc.setTextColor(0);
+
+    // Test results (if a test has been run)
+    if (testResults.length > 0) {
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Test Results (${testResults.length})`, margin, y);
+      y += 16;
+      doc.setFontSize(9);
+
+      for (const r of testResults) {
+        addPageIfNeeded(60);
+        doc.setFont("helvetica", "bold");
+        doc.text(`${r.full_name} (${r.email})`, margin, y);
+        y += 12;
+        doc.setFont("helvetica", "normal");
+        if (r.success) {
+          doc.setTextColor(0, 128, 0);
+          doc.text("Message sent successfully via Teams", margin + 10, y);
+        } else {
+          doc.setTextColor(200, 0, 0);
+          doc.text(`Failed: ${r.error || "Failed to send message"}`, margin + 10, y);
+        }
+        doc.setTextColor(0);
+        y += 12;
+        doc.text(`Teams Link: ${r.hasTeamsLink ? "Linked" : "Not linked"}`, margin + 10, y);
+        y += 12;
+        if (r.diagnostics) {
+          const lines = doc.splitTextToSize(
+            `Issue: ${r.diagnostics.issue} — Suggestion: ${r.diagnostics.suggestion}`,
+            pageWidth - margin * 2 - 10
+          );
+          addPageIfNeeded(lines.length * 11 + 6);
+          doc.text(lines, margin + 10, y);
+          y += lines.length * 11;
+        }
+        if (r.lastActivity) {
+          doc.text(`Last Activity: ${new Date(r.lastActivity).toLocaleString()}`, margin + 10, y);
+          y += 12;
+        }
+        y += 8;
+      }
+      y += 10;
+    }
+
+    // User list (current filter)
+    addPageIfNeeded(40);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    const filterLabel = filterLinked === "all" ? "All Users" : filterLinked === "linked" ? "Linked Only" : "Unlinked Only";
+    doc.text(`User List — ${filterLabel} (${filteredUsers.length})`, margin, y);
+    y += 16;
+
+    // Table header
+    const cols = [
+      { label: "Name", x: margin, w: 150 },
+      { label: "Email", x: margin + 155, w: 180 },
+      { label: "Teams Status", x: margin + 340, w: 80 },
+      { label: "Last Activity", x: margin + 425, w: 90 },
+    ];
+    const drawHeader = () => {
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin - 4, y - 9, pageWidth - margin * 2 + 8, 14, "F");
+      cols.forEach(c => doc.text(c.label.toUpperCase(), c.x, y));
+      y += 14;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+    };
+    drawHeader();
+
+    for (const u of filteredUsers) {
+      if (y + 14 > pageHeight - margin) {
+        doc.addPage();
+        y = margin;
+        drawHeader();
+      }
+      doc.text(String(u.full_name || "").slice(0, 40), cols[0].x, y);
+      doc.text(String(u.email || "").slice(0, 45), cols[1].x, y);
+      doc.text(u.has_teams_link ? "Linked" : "Not Linked", cols[2].x, y);
+      doc.text(u.last_activity ? new Date(u.last_activity).toLocaleDateString() : "Never", cols[3].x, y);
+      y += 14;
+    }
+
+    doc.save(`teams-link-test-${new Date().toISOString().slice(0, 10)}.pdf`);
+  };
+
   return (
     <div className="container mx-auto py-8 max-w-7xl">
       <div className="mb-8">
-        <Link href="/admin" className="text-blue-600 hover:text-blue-800 mb-4 inline-block">
+        <Link href="/app/admin" className="text-blue-600 hover:text-blue-800 mb-4 inline-block">
           ← Back to Admin
         </Link>
-        <h1 className="text-2xl font-bold">Teams Link Test Tool</h1>
-        <p className="text-gray-600 mt-2">
-          Test Microsoft Teams bot connections for selected users and diagnose any issues
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">Teams Link Test Tool</h1>
+            <p className="text-gray-600 mt-2">
+              Test Microsoft Teams bot connections for selected users and diagnose any issues
+            </p>
+          </div>
+          <button
+            onClick={exportPdf}
+            disabled={loading || users.length === 0}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border ${
+              loading || users.length === 0
+                ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <FileDown className="h-4 w-4" />
+            Export PDF
+          </button>
+        </div>
       </div>
 
       {/* Test Results Section */}
