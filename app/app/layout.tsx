@@ -50,7 +50,7 @@ export default async function AppSectionLayout({
               <img
                 src="/induction-logo.png"
                 alt="INDUCTION"
-                className="h-6 w-auto"
+                className="h-8 w-auto mr-2"
               />
             </Link>
             <Link href="/app/home">Home</Link>
