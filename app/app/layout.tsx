@@ -44,13 +44,13 @@ export default async function AppSectionLayout({
   return (
     <div className="min-h-screen">
       <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5">
-          <nav className="flex items-center gap-4 text-sm">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2.5">
+          <nav className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
             <Link href="/app/home" className="flex shrink-0 items-center">
               <img
                 src="/induction-logo.png"
                 alt="INDUCTION"
-                className="h-7 w-auto"
+                className="h-5 w-auto"
               />
             </Link>
             <Link href="/app/home" className="whitespace-nowrap hover:text-blue-600">Home</Link>
