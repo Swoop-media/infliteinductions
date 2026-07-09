@@ -9,6 +9,11 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 export const metadata: Metadata = {
   title: "INFLITE Induction & Training",
   description: "Company LMS for inductions, training, and authorisations.",
+  icons: {
+    icon: "/favicon.png",
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
