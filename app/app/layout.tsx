@@ -44,8 +44,8 @@ export default async function AppSectionLayout({
   return (
     <div className="min-h-screen">
       <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2.5">
-          <nav className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2">
+          <nav className="flex items-center gap-2.5 text-xs">
             <Link href="/app/home" className="flex shrink-0 items-center">
               <img
                 src="/induction-logo.png"
@@ -61,7 +61,7 @@ export default async function AppSectionLayout({
             {showAuthorisationsButton && (
               <Link 
                 href="/app/authorisations" 
-                className="whitespace-nowrap rounded-md bg-green-600 px-3 py-1.5 text-white hover:bg-green-700"
+                className="whitespace-nowrap rounded-md bg-green-600 px-2.5 py-1 text-white hover:bg-green-700"
               >
                 Authorisations
               </Link>
@@ -69,21 +69,21 @@ export default async function AppSectionLayout({
             {showAuthorisationsButton && (
               <Link 
                 href="/app/operations-notices" 
-                className="whitespace-nowrap rounded-md bg-orange-500 px-3 py-1.5 text-white hover:bg-orange-600"
+                className="whitespace-nowrap rounded-md bg-orange-500 px-2.5 py-1 text-white hover:bg-orange-600"
               >
                 Operations Notices
               </Link>
             )}
           </nav>
 
-          <nav className="flex shrink-0 items-center gap-2">
+          <nav className="flex shrink-0 items-center gap-1.5">
             <ContractorsButton />
             <ReportIssueButton userId={user?.id} />
             <NotificationsBell />
             {user ? (
-              <SignOutButton className="whitespace-nowrap rounded-md border px-3 py-1.5 text-sm" />
+              <SignOutButton className="whitespace-nowrap rounded-md border px-2.5 py-1 text-xs" />
             ) : (
-              <Link href="/auth/signin" className="whitespace-nowrap rounded-md border px-3 py-1.5 text-sm">
+              <Link href="/auth/signin" className="whitespace-nowrap rounded-md border px-2.5 py-1 text-xs">
                 Sign in
               </Link>
             )}

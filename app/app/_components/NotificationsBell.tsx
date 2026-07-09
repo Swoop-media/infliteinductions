@@ -80,7 +80,7 @@ export default function NotificationsBell() {
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="relative rounded-md border px-3 py-1 text-sm"
+        className="relative rounded-md border px-2.5 py-1 text-xs"
         title="Notifications"
       >
         Notifications

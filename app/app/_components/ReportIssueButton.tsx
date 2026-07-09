@@ -132,7 +132,7 @@ export default function ReportIssueButton({ userId }: ReportIssueProps) {
         variant="ghost"
         size="sm"
         onClick={() => setIsOpen(true)}
-        className="flex items-center gap-2 hover:bg-red-50 hover:text-red-600"
+        className="flex items-center gap-1.5 text-xs hover:bg-red-50 hover:text-red-600"
         title="Report an issue"
       >
         <Bug className="h-4 w-4" />
