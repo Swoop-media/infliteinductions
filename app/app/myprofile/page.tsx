@@ -379,6 +379,14 @@ export default async function MyProfilePage() {
                   <p className="text-xs text-gray-500 mt-1">
                     Send "link {linkCode.code}" to the bot in Teams
                   </p>
+                  <a
+                    href={`https://teams.microsoft.com/l/chat/0/0?users=28:dc8a23c4-a57f-4e10-8543-05397e1b4ae3&message=${encodeURIComponent(`link ${linkCode.code}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-block rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-700"
+                  >
+                    Open the bot in Teams
+                  </a>
                 </div>
               ) : (
                 <form action={async () => {
