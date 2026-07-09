@@ -44,24 +44,24 @@ export default async function AppSectionLayout({
   return (
     <div className="min-h-screen">
       <header className="border-b bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-2.5">
           <nav className="flex items-center gap-4 text-sm">
-            <Link href="/app/home" className="flex items-center">
+            <Link href="/app/home" className="flex shrink-0 items-center">
               <img
                 src="/induction-logo.png"
                 alt="INDUCTION"
-                className="h-8 w-auto mr-2"
+                className="h-7 w-auto"
               />
             </Link>
-            <Link href="/app/home">Home</Link>
-            <Link href="/app/myprofile">My Profile</Link>
-            <Link href="/app/creator">Creator</Link>
-            <Link href="/app/train-assess">Train/Assess</Link>
-            <Link href="/app/admin">Admin</Link>
+            <Link href="/app/home" className="whitespace-nowrap hover:text-blue-600">Home</Link>
+            <Link href="/app/myprofile" className="whitespace-nowrap hover:text-blue-600">My Profile</Link>
+            <Link href="/app/creator" className="whitespace-nowrap hover:text-blue-600">Creator</Link>
+            <Link href="/app/train-assess" className="whitespace-nowrap hover:text-blue-600">Train/Assess</Link>
+            <Link href="/app/admin" className="whitespace-nowrap hover:text-blue-600">Admin</Link>
             {showAuthorisationsButton && (
               <Link 
                 href="/app/authorisations" 
-                className="rounded-md bg-green-600 px-3 py-1 text-white hover:bg-green-700"
+                className="whitespace-nowrap rounded-md bg-green-600 px-3 py-1.5 text-white hover:bg-green-700"
               >
                 Authorisations
               </Link>
@@ -69,21 +69,21 @@ export default async function AppSectionLayout({
             {showAuthorisationsButton && (
               <Link 
                 href="/app/operations-notices" 
-                className="rounded-md bg-orange-500 px-3 py-1 text-white hover:bg-orange-600"
+                className="whitespace-nowrap rounded-md bg-orange-500 px-3 py-1.5 text-white hover:bg-orange-600"
               >
                 Operations Notices
               </Link>
             )}
           </nav>
 
-          <nav className="flex items-center gap-2">
+          <nav className="flex shrink-0 items-center gap-2">
             <ContractorsButton />
             <ReportIssueButton userId={user?.id} />
             <NotificationsBell />
             {user ? (
-              <SignOutButton className="rounded-md border px-3 py-1 text-sm" />
+              <SignOutButton className="whitespace-nowrap rounded-md border px-3 py-1.5 text-sm" />
             ) : (
-              <Link href="/auth/signin" className="rounded-md border px-3 py-1 text-sm">
+              <Link href="/auth/signin" className="whitespace-nowrap rounded-md border px-3 py-1.5 text-sm">
                 Sign in
               </Link>
             )}
