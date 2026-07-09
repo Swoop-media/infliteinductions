@@ -7,6 +7,7 @@ import NotificationsBell from "./_components/NotificationsBell";
 import SignOutButton from "./_components/SignOutButton";
 import ReportIssueButton from "./_components/ReportIssueButton"; // Assuming ReportIssueButton is in this path
 import ContractorsButton from "./_components/ContractorsButton";
+import AppSwitcher from "./_components/AppSwitcher";
 
 export const metadata = {
   title: "Training Platform",
@@ -46,13 +47,7 @@ export default async function AppSectionLayout({
       <header className="border-b bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2">
           <nav className="flex items-center gap-2.5 text-xs">
-            <Link href="/app/home" className="flex shrink-0 items-center">
-              <img
-                src="/induction-logo.png"
-                alt="TRAINING"
-                className="h-5 w-auto"
-              />
-            </Link>
+            <AppSwitcher />
             <Link href="/app/home" className="whitespace-nowrap hover:text-blue-600">Home</Link>
             <Link href="/app/myprofile" className="whitespace-nowrap hover:text-blue-600">My Profile</Link>
             <Link href="/app/creator" className="whitespace-nowrap hover:text-blue-600">Creator</Link>
