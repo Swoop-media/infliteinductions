@@ -49,7 +49,7 @@ export default async function AppSectionLayout({
             <Link href="/app/home" className="flex shrink-0 items-center">
               <img
                 src="/induction-logo.png"
-                alt="INDUCTION"
+                alt="TRAINING"
                 className="h-5 w-auto"
               />
             </Link>
