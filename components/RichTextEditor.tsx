@@ -8,20 +8,22 @@ import { Color } from '@tiptap/extension-color';
 import { Image } from '@tiptap/extension-image';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { FontFamily } from '@tiptap/extension-font-family';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 interface RichTextEditorProps {
   initialContent?: string;
   onChange?: (html: string) => void;
   placeholder?: string;
   moduleId?: string;
+  onEditorReady?: (editor: any) => void;
 }
 
 export default function RichTextEditor({ 
   initialContent = '', 
   onChange, 
   placeholder = 'Write your content…',
-  moduleId
+  moduleId,
+  onEditorReady
 }: RichTextEditorProps) {
   const [imageUrl, setImageUrl] = useState('');
   const [showImageDialog, setShowImageDialog] = useState(false);
@@ -123,6 +125,22 @@ export default function RichTextEditor({
     },
     immediatelyRender: false,
   });
+
+  // Expose the live editor instance so the parent can read the current HTML
+  // directly at save time (avoids relying on a possibly-stale React state closure).
+  useEffect(() => {
+    if (editor && onEditorReady) onEditorReady(editor);
+  }, [editor, onEditorReady]);
+
+  // When fresh server content arrives (e.g. after a save + reload), sync it into
+  // the editor. This only runs when `initialContent` actually changes, so it never
+  // clobbers the user's in-progress edits.
+  useEffect(() => {
+    if (editor && typeof initialContent === 'string' && initialContent !== editor.getHTML()) {
+      editor.commands.setContent(initialContent, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialContent, editor]);
 
   const addImage = useCallback(() => {
     if (imageUrl && editor) {

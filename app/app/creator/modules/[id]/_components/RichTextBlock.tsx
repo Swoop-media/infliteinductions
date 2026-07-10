@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 
 // Dynamically import the editor to avoid SSR issues
@@ -25,14 +25,19 @@ export default function RichTextBlock({
 }: RichTextBlockProps) {
   const [content, setContent] = useState(initialContent);
   const [isPending, startTransition] = useTransition();
+  const editorRef = useRef<any>(null);
+  const handleEditorReady = useCallback((ed: any) => { editorRef.current = ed; }, []);
 
   return (
     <form action={() => {
       startTransition(async () => {
+        // Read the live HTML straight from the editor at save time so the edit is
+        // never lost to a stale React state closure. Fall back to tracked state.
+        const html = editorRef.current ? editorRef.current.getHTML() : content;
         const formData = new FormData();
         formData.set('module_id', moduleId);
         formData.set('block_id', blockId);
-        formData.set('text', content);
+        formData.set('text', html);
         await updateAction(formData);
       });
     }} className="space-y-2">
@@ -40,6 +45,7 @@ export default function RichTextBlock({
       <RichTextEditor
         initialContent={initialContent}
         onChange={setContent}
+        onEditorReady={handleEditorReady}
         placeholder="Write your content with formatting…"
         moduleId={moduleId}
       />
