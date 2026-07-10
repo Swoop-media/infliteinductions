@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import RichTextBlock from "./_components/RichTextBlock";
 import UnifiedVideoPlayer from '@/components/UnifiedVideoPlayer';
@@ -101,10 +102,21 @@ async function getEquipmentCount(courseId: string) {
   return count || 0;
 }
 
+/** Only Course Creators / Senior management / Admin may edit module blocks. */
+async function assertCanEditBlocks() {
+  "use server";
+  const canEdit =
+    (await hasRole("Course Creators")) ||
+    (await hasRole("Senior management")) ||
+    (await hasRole("Admin"));
+  if (!canEdit) throw new Error("Not authorised");
+}
+
 /** Actions: create / delete / move / update blocks */
 async function createBlock(formData: FormData) {
   "use server";
-  const supabase = await createSupabaseServer();
+  await assertCanEditBlocks();
+  const supabase = supabaseAdmin();
   const moduleId = String(formData.get("module_id") || "");
   const kind = String(formData.get("kind") || "") as BlockKind;
   if (!moduleId || !kind) throw new Error("Missing fields");
@@ -147,7 +159,8 @@ async function createBlock(formData: FormData) {
 
 async function deleteBlock(formData: FormData) {
   "use server";
-  const supabase = await createSupabaseServer();
+  await assertCanEditBlocks();
+  const supabase = supabaseAdmin();
   const moduleId = String(formData.get("module_id") || "");
   const blockId = String(formData.get("block_id") || "");
   if (!moduleId || !blockId) throw new Error("Missing fields");
@@ -191,7 +204,8 @@ async function deleteBlock(formData: FormData) {
 
 async function moveBlock(formData: FormData) {
   "use server";
-  const supabase = await createSupabaseServer();
+  await assertCanEditBlocks();
+  const supabase = supabaseAdmin();
   const moduleId = String(formData.get("module_id") || "");
   const blockId = String(formData.get("block_id") || "");
   const direction = String(formData.get("direction") || "up"); // up|down
@@ -240,7 +254,8 @@ async function moveBlock(formData: FormData) {
 /** Update forms per kind */
 async function updateRichText(formData: FormData) {
   "use server";
-  const supabase = await createSupabaseServer();
+  await assertCanEditBlocks();
+  const supabase = supabaseAdmin();
   const moduleId = String(formData.get("module_id") || "");
   const blockId = String(formData.get("block_id") || "");
   const text = String(formData.get("text") || "");
@@ -258,7 +273,8 @@ async function updateRichText(formData: FormData) {
 
 async function updateLink(formData: FormData) {
   "use server";
-  const supabase = await createSupabaseServer();
+  await assertCanEditBlocks();
+  const supabase = supabaseAdmin();
   const moduleId = String(formData.get("module_id") || "");
   const blockId = String(formData.get("block_id") || "");
   const url = String(formData.get("url") || "");
@@ -277,7 +293,8 @@ async function updateLink(formData: FormData) {
 
 async function updateVideo(formData: FormData) {
   "use server";
-  const supabase = await createSupabaseServer();
+  await assertCanEditBlocks();
+  const supabase = supabaseAdmin();
   const moduleId = String(formData.get("module_id") || "");
   const blockId = String(formData.get("block_id") || "");
   const url = String(formData.get("url") || "");
@@ -302,7 +319,8 @@ async function updateVideo(formData: FormData) {
 
 async function uploadFileBlock(formData: FormData) {
   "use server";
-  const supabase = await createSupabaseServer();
+  await assertCanEditBlocks();
+  const supabase = supabaseAdmin();
   const moduleId = String(formData.get("module_id") || "");
   const blockId = String(formData.get("block_id") || "");
   const display = String(formData.get("display") || "").trim().slice(0, 200);
@@ -359,7 +377,8 @@ async function uploadFileBlock(formData: FormData) {
 
 async function clearFileBlock(formData: FormData) {
   "use server";
-  const supabase = await createSupabaseServer();
+  await assertCanEditBlocks();
+  const supabase = supabaseAdmin();
   const moduleId = String(formData.get("module_id") || "");
   const blockId = String(formData.get("block_id") || "");
   if (!moduleId || !blockId) throw new Error("Missing fields");
@@ -387,7 +406,8 @@ async function clearFileBlock(formData: FormData) {
 
 async function updateRequestDoc(formData: FormData) {
   "use server";
-  const supabase = await createSupabaseServer();
+  await assertCanEditBlocks();
+  const supabase = supabaseAdmin();
   const moduleId = String(formData.get("module_id") || "");
   const blockId = String(formData.get("block_id") || "");
   const label = String(formData.get("label") || "").trim().slice(0, 200) || "Please upload the requested document.";
