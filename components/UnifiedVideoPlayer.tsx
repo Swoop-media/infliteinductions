@@ -334,17 +334,52 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
         )}
       </div>
 
+      {/* SharePoint sign-in helper (embedded player can't detect auth failures) */}
+      {(videoSource === "sharepoint" || videoSource === "stream") && !error && (
+        <div className="mt-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+          <span className="font-medium">Video not playing?</span>{" "}
+          You may need to sign in to Microsoft first:{" "}
+          <button
+            onClick={openInNewTab}
+            className="font-medium underline hover:text-blue-900"
+          >
+            open the video in a new tab
+          </button>
+          , sign in there, then come back and{" "}
+          <button
+            onClick={handleRetry}
+            className="font-medium underline hover:text-blue-900"
+          >
+            reload the player
+          </button>
+          .
+        </div>
+      )}
+
       {/* Always visible action bar */}
       <div className="mt-2 flex items-center justify-between">
-        <Button
-          onClick={openInNewTab}
-          variant="outline"
-          size="sm"
-          className="flex items-center space-x-2"
-        >
-          <ExternalLink className="w-4 h-4" />
-          <span>Open in New Tab</span>
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={openInNewTab}
+            variant="outline"
+            size="sm"
+            className="flex items-center space-x-2"
+          >
+            <ExternalLink className="w-4 h-4" />
+            <span>Open in New Tab</span>
+          </Button>
+          {(videoSource === "sharepoint" || videoSource === "stream") && (
+            <Button
+              onClick={handleRetry}
+              variant="outline"
+              size="sm"
+              className="flex items-center space-x-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Reload player</span>
+            </Button>
+          )}
+        </div>
         
         {/* Optional: Show current video source for debugging */}
         {process.env.NODE_ENV === "development" && (
