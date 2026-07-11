@@ -19,6 +19,7 @@ interface AuthorisationCompletionRow {
   authorisation_title: string | null;
   department: string | null;
   valid_for_days: number | null;
+  superseded?: boolean;
 }
 
 interface Props {
@@ -247,7 +248,14 @@ export default function SortableAuthorisationsTable({ completedAuthorisations }:
                 {displayDueDate(auth.expires_at)}
               </td>
               <td className="px-4 py-3 text-sm">
-                {getStatusDisplay(auth.expires_at)}
+                <div className="flex flex-col gap-1">
+                  {getStatusDisplay(auth.expires_at)}
+                  {auth.superseded && (
+                    <span className="inline-flex w-fit items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                      Retake in progress
+                    </span>
+                  )}
+                </div>
               </td>
             </tr>
           ))}

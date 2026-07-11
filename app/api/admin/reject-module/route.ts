@@ -297,6 +297,23 @@ export async function POST(request: NextRequest) {
       `Module ${moduleId} rejected by ${adminUser.id} for user ${userId}. Reason: ${rejectionReason}`
     );
 
+    // Audit trail (best-effort)
+    try {
+      const { logUserAudit } = await import("@/lib/audit");
+      await logUserAudit({
+        userId,
+        actorId: adminUser.id,
+        action: "module_rejected",
+        details: {
+          course_title: course?.title ?? null,
+          module_title: moduleTitle ?? null,
+          reason: rejectionReason || null,
+        },
+      });
+    } catch (auditErr) {
+      console.error("Audit log failed for module rejection:", auditErr);
+    }
+
     return NextResponse.json({
       success: true,
       message: "Module progress rejected successfully",

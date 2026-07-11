@@ -875,6 +875,24 @@ async function approveAssignment(formData: FormData) {
     }
   }
 
+  // Audit trail (best-effort)
+  try {
+    const { logUserAudit } = await import("@/lib/audit");
+    await logUserAudit({
+      userId: assignment.user_id,
+      actorId: user.id,
+      action: "authorisation_approved",
+      details: {
+        authorisation_id: assignment.authorisation_id,
+        authorisation_title: (assignment.authorisations as any)?.title ?? null,
+        expires_at: expiryDate ? expiryDate.toISOString() : null,
+        restrictions: restrictionsText,
+      },
+    });
+  } catch (auditErr) {
+    console.error("Audit log failed for approval:", auditErr);
+  }
+
   // Post to Teams channels via webhook
   try {
     const { postToAuthChannels } = await import("@/lib/teams/channel-webhook");

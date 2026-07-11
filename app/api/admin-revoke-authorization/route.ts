@@ -3,6 +3,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { NextResponse } from "next/server";
+import { logUserAudit } from "@/lib/audit";
 
 export async function POST(request: Request) {
   try {
@@ -104,6 +105,25 @@ export async function POST(request: Request) {
         }
       }
 
+      // Audit trail (best-effort)
+      try {
+        const { data: revokedAuth } = authorizationId
+          ? await supabase.from("authorisations").select("title").eq("id", authorizationId).maybeSingle()
+          : { data: null };
+        await logUserAudit({
+          userId,
+          actorId: user.id,
+          action: "authorisation_revoked",
+          details: {
+            authorisation_id: authorizationId ?? null,
+            authorisation_title: revokedAuth?.title ?? null,
+            reason: reason || "Revoked by admin",
+          },
+        });
+      } catch (auditErr) {
+        console.error("Audit log failed for revocation:", auditErr);
+      }
+
       return NextResponse.json({ 
         success: true,
         message: "Authorization revoked successfully"
@@ -126,6 +146,25 @@ export async function POST(request: Request) {
           { error: "Failed to revoke course" },
           { status: 500 }
         );
+      }
+
+      // Audit trail (best-effort)
+      try {
+        const { data: revokedCourse } = courseId
+          ? await supabase.from("courses").select("title").eq("id", courseId).maybeSingle()
+          : { data: null };
+        await logUserAudit({
+          userId,
+          actorId: user.id,
+          action: "course_revoked",
+          details: {
+            course_id: courseId ?? null,
+            course_title: revokedCourse?.title ?? null,
+            reason: reason || "Revoked by admin",
+          },
+        });
+      } catch (auditErr) {
+        console.error("Audit log failed for course revocation:", auditErr);
       }
 
       return NextResponse.json({ 

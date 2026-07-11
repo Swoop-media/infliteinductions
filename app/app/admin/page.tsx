@@ -1353,13 +1353,14 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null, page: n
     .not("approved_at", "is", null);
 
   if (assignError) throw new Error(assignError.message);
-  if (!allAssignments || allAssignments.length === 0) {
-    return { authorisations: [], totalPages: 0, currentPage: page, totalCount: 0 };
-  }
+
+  // NOTE: no early return when there are no live completed assignments —
+  // superseded history rows (retake in progress) must still be shown below.
+  const liveAssignments = allAssignments || [];
 
   // Get unique authorisation IDs and user IDs
-  const authIds = [...new Set(allAssignments.map(a => a.authorisation_id))];
-  const userIds = [...new Set(allAssignments.map(a => a.user_id))];
+  const authIds = [...new Set(liveAssignments.map(a => a.authorisation_id))];
+  const userIds = [...new Set(liveAssignments.map(a => a.user_id))];
 
   // Get authorisations
   const { data: authorisations, error: authError } = await supabase
@@ -1453,7 +1454,7 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null, page: n
 
   // Transform all data with calculated expiry dates
   // Drop assignments belonging to archived users
-  let completedAuthorisations = allAssignments
+  let completedAuthorisations = liveAssignments
     .filter(a => profileMap.has(a.user_id))
     .map(assignment => {
     const auth = authMap.get(assignment.authorisation_id);
@@ -1502,6 +1503,80 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null, page: n
       valid_for_days: auth?.valid_for_days ?? null,
     };
   });
+
+  // Include superseded authorisations (retake in progress) from history so the
+  // old credential keeps showing as expired until the replacement is approved.
+  // Degrades gracefully if the history table doesn't exist yet (migration 010).
+  try {
+    const { data: historyRows } = await adminClient
+      .from("authorisation_assignment_history")
+      .select("id, user_id, authorisation_id, approved_at, completed_at, expires_at, superseded_at")
+      .order("superseded_at", { ascending: false });
+
+    if (historyRows && historyRows.length > 0) {
+      // A history row is only shown while there is no live completed
+      // (approved) assignment for the same user + authorisation.
+      const liveCompletedKeys = new Set(liveAssignments.map(a => `${a.user_id}_${a.authorisation_id}`));
+      const seenKeys = new Set<string>();
+      const pendingHistory: any[] = [];
+      for (const h of historyRows) {
+        const key = `${h.user_id}_${h.authorisation_id}`;
+        if (liveCompletedKeys.has(key) || seenKeys.has(key)) continue;
+        seenKeys.add(key);
+        pendingHistory.push(h);
+      }
+
+      if (pendingHistory.length > 0) {
+        const histUserIds = [...new Set(pendingHistory.map(h => h.user_id))];
+        const histAuthIds = [...new Set(pendingHistory.map(h => h.authorisation_id))];
+
+        const { data: histProfiles } = await adminClient
+          .from("profiles")
+          .select("id, full_name, email, archived_at")
+          .in("id", histUserIds);
+        const histProfileMap = new Map(
+          (histProfiles || []).filter((p: any) => !p.archived_at).map((p: any) => [p.id, p])
+        );
+
+        const { data: histAuths } = await adminClient
+          .from("authorisations")
+          .select("id, title, valid_for_days, department")
+          .in("id", histAuthIds);
+        const histAuthMap = new Map((histAuths || []).map((a: any) => [a.id, a]));
+
+        for (const h of pendingHistory) {
+          const profile = histProfileMap.get(h.user_id);
+          if (!profile) continue; // archived or missing user
+          const auth = histAuthMap.get(h.authorisation_id);
+
+          // Prefer the expiry stored at snapshot time; otherwise fall back to
+          // approved_at + valid_for_days.
+          let expiresAt = h.expires_at ?? null;
+          if (!expiresAt && h.approved_at && auth?.valid_for_days) {
+            const d = new Date(h.approved_at);
+            d.setUTCDate(d.getUTCDate() + auth.valid_for_days);
+            expiresAt = d.toISOString();
+          }
+
+          completedAuthorisations.push({
+            assignment_id: `history_${h.id}`,
+            user_id: h.user_id,
+            authorisation_id: h.authorisation_id,
+            approved_at: h.approved_at ?? h.completed_at ?? h.superseded_at,
+            expires_at: expiresAt,
+            full_name: profile.full_name ?? null,
+            email: profile.email ?? null,
+            authorisation_title: auth?.title ?? null,
+            department: auth?.department ?? null,
+            valid_for_days: auth?.valid_for_days ?? null,
+            superseded: true,
+          });
+        }
+      }
+    }
+  } catch (historyErr) {
+    console.error("Could not load authorisation history for due dates:", historyErr);
+  }
 
   // Apply search filter if provided BEFORE sorting
   if (q && q.trim()) {

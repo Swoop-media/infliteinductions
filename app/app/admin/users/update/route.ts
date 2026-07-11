@@ -6,6 +6,8 @@ import { headers } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { syncUserToSafeflite } from "@/lib/webhooks/safeflite-sync";
+import { createSupabaseServer } from "@/lib/supabase/server";
+import { logUserAudit } from "@/lib/audit";
 
 async function makeURL(path: string): Promise<URL> {
   const h = await headers();
@@ -33,6 +35,13 @@ export async function POST(req: Request) {
     return NextResponse.redirect(back);
   }
 
+  // Snapshot current values so we can record what changed
+  const { data: beforeProfile } = await supabase
+    .from("profiles")
+    .select("full_name, site_id, department, job_description")
+    .eq("id", user_id)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("profiles")
     .update({ full_name, site_id: site_id || null, department: department || null, job_description: job_description || null })
@@ -42,6 +51,31 @@ export async function POST(req: Request) {
     back.searchParams.set("error", error.message);
   } else {
     back.searchParams.set("ok", "profile_saved");
+
+    // Audit trail (best-effort)
+    try {
+      const newValues: Record<string, any> = {
+        full_name,
+        site_id: site_id || null,
+        department: department || null,
+        job_description: job_description || null,
+      };
+      const changedFields = Object.keys(newValues).filter(
+        (k) => (beforeProfile ? beforeProfile[k] ?? null : null) !== newValues[k]
+      );
+      if (changedFields.length > 0) {
+        const serverClient = await createSupabaseServer();
+        const { data: { user: actor } } = await serverClient.auth.getUser();
+        await logUserAudit({
+          userId: user_id,
+          actorId: actor?.id ?? null,
+          action: "profile_updated",
+          details: { changed_fields: changedFields },
+        });
+      }
+    } catch (auditErr) {
+      console.error("Audit log failed for profile update:", auditErr);
+    }
 
     // Fetch updated profile to sync to SafeFLITE
     const { data: profile } = await supabase

@@ -3,6 +3,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
+import { logUserAudit } from "@/lib/audit";
+import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorizationExpiry";
+
+// Best-effort history snapshot of a completed course assignment before it is
+// reset for a retake. Never blocks the retake if it fails (e.g. migration 010
+// not applied yet).
+async function snapshotCourseAssignment(adminClient: any, assignment: any, adminId: string) {
+  try {
+    const { error } = await adminClient.from("course_assignment_history").insert({
+      assignment_id: assignment.id,
+      user_id: assignment.user_id,
+      course_id: assignment.course_id,
+      assignment_status: assignment.assignment_status,
+      completed_at: assignment.completed_at,
+      superseded_by: adminId,
+      reason: "retake",
+    });
+    if (error) console.error("[retake] Could not snapshot course assignment history:", error.message);
+  } catch (e) {
+    console.error("[retake] Unexpected error snapshotting course history:", e);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,7 +49,7 @@ export async function POST(request: NextRequest) {
       // First check if an assignment already exists
       const { data: existingAssignment, error: checkError } = await adminClient
         .from("course_assignments")
-        .select("id, assignment_status")
+        .select("id, assignment_status, completed_at, user_id, course_id")
         .eq("user_id", userId)
         .eq("course_id", courseId)
         .eq("role", 'trainee')
@@ -46,6 +68,9 @@ export async function POST(request: NextRequest) {
       if (existingAssignment) {
         // If assignment exists and is completed, reset it for retaking
         if (existingAssignment.assignment_status === 'completed') {
+          // Preserve the old completed record in the user's training history
+          await snapshotCourseAssignment(adminClient, existingAssignment, adminUser.id);
+
           // Delete any existing progress records to start fresh
           const { error: deleteProgressError } = await adminClient
             .from("assignment_progress")
@@ -129,6 +154,16 @@ export async function POST(request: NextRequest) {
         console.error("Error updating course enrollment:", enrollmentError);
       }
 
+      // Audit trail
+      const { data: retakeCourse } = await adminClient
+        .from("courses").select("title").eq("id", courseId).maybeSingle();
+      await logUserAudit({
+        userId,
+        actorId: adminUser.id,
+        action: "course_retake",
+        details: { course_id: courseId, course_title: retakeCourse?.title ?? null },
+      });
+
       return NextResponse.json({ 
         success: true,
         type: 'course',
@@ -163,7 +198,7 @@ export async function POST(request: NextRequest) {
       // Check if authorization assignment already exists
       const { data: existingAuthAssignment, error: checkAuthError } = await adminClient
         .from("authorisation_assignments")
-        .select("id, assignment_status")
+        .select("id, assignment_status, completed_at, approved_at, approved_by, restrictions, user_id, authorisation_id")
         .eq("user_id", userId)
         .eq("authorisation_id", authorizationId)
         .eq("role", 'trainee')
@@ -182,6 +217,69 @@ export async function POST(request: NextRequest) {
       if (existingAuthAssignment) {
         // If authorization assignment exists and is completed, reset it
         if (existingAuthAssignment.assignment_status === 'completed') {
+          // Preserve the old completed authorisation in the user's training
+          // history BEFORE resetting anything, including the expiry date it
+          // had at this moment (computed while course completions still exist).
+          try {
+            const courseIdsForAuth = authCourses.map((ac: any) => ac.course_id);
+
+            const { data: authRecord } = await adminClient
+              .from("authorisations")
+              .select("valid_for_days")
+              .eq("id", authorizationId)
+              .maybeSingle();
+
+            const { data: authDocs } = await adminClient
+              .from("learner_documents")
+              .select("expires_on")
+              .eq("user_id", userId)
+              .in("course_id", courseIdsForAuth.length > 0 ? courseIdsForAuth : ["none"])
+              .not("expires_on", "is", null);
+
+            const { data: completedAuthCourses } = await adminClient
+              .from("course_assignments")
+              .select("course_id, completed_at, courses!course_assignments_course_id_fkey(valid_for_months)")
+              .eq("user_id", userId)
+              .eq("role", "trainee")
+              .in("course_id", courseIdsForAuth.length > 0 ? courseIdsForAuth : ["none"])
+              .not("completed_at", "is", null);
+
+            const approvedAt = existingAuthAssignment.approved_at
+              ? new Date(existingAuthAssignment.approved_at)
+              : (existingAuthAssignment.completed_at ? new Date(existingAuthAssignment.completed_at) : new Date());
+
+            const expiryDate = calculateAuthorizationExpiry(
+              approvedAt,
+              authRecord?.valid_for_days ?? null,
+              (authDocs || []).map((d: any) => ({ expires_on: d.expires_on })),
+              (completedAuthCourses || []).map((ca: any) => ({
+                valid_for_months: ca.courses?.valid_for_months ?? null,
+                completed_at: ca.completed_at,
+              }))
+            );
+
+            const { error: historyError } = await adminClient
+              .from("authorisation_assignment_history")
+              .insert({
+                assignment_id: existingAuthAssignment.id,
+                user_id: userId,
+                authorisation_id: authorizationId,
+                assignment_status: existingAuthAssignment.assignment_status,
+                completed_at: existingAuthAssignment.completed_at,
+                approved_at: existingAuthAssignment.approved_at,
+                approved_by: existingAuthAssignment.approved_by,
+                restrictions: existingAuthAssignment.restrictions,
+                expires_at: expiryDate ? expiryDate.toISOString() : null,
+                superseded_by: adminUser.id,
+                reason: "retake",
+              });
+            if (historyError) {
+              console.error("[retake] Could not snapshot authorisation history:", historyError.message);
+            }
+          } catch (snapshotError) {
+            console.error("[retake] Unexpected error snapshotting authorisation history:", snapshotError);
+          }
+
           // Update the existing authorization assignment to reset it
           const { data: updatedAuthAssignment, error: updateAuthError } = await adminClient
             .from("authorisation_assignments")
@@ -244,7 +342,7 @@ export async function POST(request: NextRequest) {
         // Check if course assignment exists
         const { data: existingCourseAssignment, error: checkCourseError } = await adminClient
           .from("course_assignments")
-          .select("id, assignment_status")
+          .select("id, assignment_status, completed_at, user_id, course_id")
           .eq("user_id", userId)
           .eq("course_id", authCourse.course_id)
           .eq("role", 'trainee')
@@ -256,6 +354,11 @@ export async function POST(request: NextRequest) {
         }
 
         if (existingCourseAssignment) {
+          // Preserve old completed course records in the training history
+          if (existingCourseAssignment.assignment_status === 'completed' && existingCourseAssignment.completed_at) {
+            await snapshotCourseAssignment(adminClient, existingCourseAssignment, adminUser.id);
+          }
+
           // Delete any existing progress records
           await adminClient
             .from("assignment_progress")
@@ -313,6 +416,20 @@ export async function POST(request: NextRequest) {
       }
 
       console.log(`Admin ${adminUser.id} reset/created ${resetCourseAssignments.length} course assignments for authorization retake`);
+
+      // Audit trail
+      const { data: retakeAuth } = await adminClient
+        .from("authorisations").select("title").eq("id", authorizationId).maybeSingle();
+      await logUserAudit({
+        userId,
+        actorId: adminUser.id,
+        action: "authorisation_retake",
+        details: {
+          authorisation_id: authorizationId,
+          authorisation_title: retakeAuth?.title ?? null,
+          courses_reset: resetCourseAssignments.length,
+        },
+      });
 
       return NextResponse.json({ 
         success: true,

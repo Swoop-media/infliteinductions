@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
+import { logUserAudit } from "@/lib/audit";
 
 async function makeURL(path: string): Promise<URL> {
   const h = await headers();
@@ -90,6 +91,22 @@ export async function POST(req: Request) {
       );
     } catch {
       // Ignore notification errors
+    }
+
+    // Audit trail (best-effort)
+    try {
+      const { data: assignedCourses } = await supabase
+        .from("courses")
+        .select("title")
+        .in("id", course_ids);
+      await logUserAudit({
+        userId: user_id,
+        actorId: user.id,
+        action: "course_assigned",
+        details: { course_titles: (assignedCourses || []).map(c => c.title) },
+      });
+    } catch (auditErr) {
+      console.error("Audit log failed for course assignment:", auditErr);
     }
 
     back.searchParams.set("ok", "courses_assigned");

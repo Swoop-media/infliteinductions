@@ -4,9 +4,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { syncUserToSafeflite } from "@/lib/webhooks/safeflite-sync";
+import { createSupabaseServer } from "@/lib/supabase/server";
+import { logUserAudit } from "@/lib/audit";
+import { hasRole } from "@/lib/roles";
 
 export async function POST(request: NextRequest) {
   try {
+    // Require an authenticated admin before any service-role write
+    const serverClient = await createSupabaseServer();
+    const { data: { user: actor }, error: actorError } = await serverClient.auth.getUser();
+    if (actorError || !actor) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    const isAdmin = await hasRole("Admin");
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const { userId } = await request.json();
 
     if (!userId) {
@@ -39,6 +53,13 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("Successfully archived user:", userId);
+
+    // Audit trail (best-effort)
+    await logUserAudit({
+      userId,
+      actorId: actor.id,
+      action: "user_archived",
+    });
 
     // Fetch user profile to sync to SafeFLITE
     const { data: profile } = await supabase

@@ -6,6 +6,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { syncUserToSafeflite } from "@/lib/webhooks/safeflite-sync";
+import { logUserAudit } from "@/lib/audit";
 
 export async function POST(request: Request) {
   try {
@@ -41,6 +42,13 @@ export async function POST(request: Request) {
       console.error("Restore error:", restoreError);
       return NextResponse.json({ error: "Failed to restore user" }, { status: 500 });
     }
+
+    // Audit trail (best-effort)
+    await logUserAudit({
+      userId,
+      actorId: user.id,
+      action: "user_restored",
+    });
 
     // Fetch user profile to sync to SafeFLITE
     const { data: profile } = await admin

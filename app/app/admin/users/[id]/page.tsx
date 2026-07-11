@@ -73,6 +73,72 @@ type CompletedAuthorization = {
 async function loadUserAssignmentsAndAvailable(userId: string) {
   const supabase = await createSupabaseServer();
 
+  // History snapshots + audit log live in deny-all RLS tables → service role.
+  // All best-effort: degrade gracefully if migration 010 is not applied yet.
+  const { supabaseAdmin: getAdminClient } = await import("@/lib/supabase/admin");
+  const adminClient = getAdminClient();
+
+  let authHistoryRows: any[] = [];
+  let courseHistoryRows: any[] = [];
+  let auditLogRows: any[] = [];
+  try {
+    const [authHistRes, courseHistRes, auditRes] = await Promise.all([
+      adminClient
+        .from("authorisation_assignment_history")
+        .select("id, authorisation_id, assignment_status, completed_at, approved_at, restrictions, expires_at, superseded_at, reason")
+        .eq("user_id", userId)
+        .order("superseded_at", { ascending: false }),
+      adminClient
+        .from("course_assignment_history")
+        .select("id, course_id, assignment_status, completed_at, superseded_at, reason")
+        .eq("user_id", userId)
+        .order("superseded_at", { ascending: false }),
+      adminClient
+        .from("user_audit_log")
+        .select("id, actor_name, action, details, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
+    authHistoryRows = authHistRes.data || [];
+    courseHistoryRows = courseHistRes.data || [];
+    auditLogRows = auditRes.data || [];
+  } catch (histErr) {
+    console.error("Could not load history/audit for user:", histErr);
+  }
+
+  // Titles for history entries
+  const histAuthIds = [...new Set(authHistoryRows.map((h) => h.authorisation_id))];
+  const histCourseIds = [...new Set(courseHistoryRows.map((h) => h.course_id))];
+  const [histAuthsRes, histCoursesRes] = await Promise.all([
+    histAuthIds.length > 0
+      ? adminClient.from("authorisations").select("id, title").in("id", histAuthIds)
+      : Promise.resolve({ data: [] }),
+    histCourseIds.length > 0
+      ? adminClient.from("courses").select("id, title").in("id", histCourseIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const histAuthTitleMap = new Map((histAuthsRes.data || []).map((a: any) => [a.id, a.title]));
+  const histCourseTitleMap = new Map((histCoursesRes.data || []).map((c: any) => [c.id, c.title]));
+
+  const authorizationHistory = authHistoryRows.map((h) => ({
+    id: h.id,
+    authorization_title: histAuthTitleMap.get(h.authorisation_id) || "Unknown Authorization",
+    completed_at: h.completed_at,
+    approved_at: h.approved_at,
+    expires_at: h.expires_at,
+    restrictions: h.restrictions || null,
+    superseded_at: h.superseded_at,
+    reason: h.reason,
+  }));
+  const courseHistory = courseHistoryRows.map((h) => ({
+    id: h.id,
+    course_title: histCourseTitleMap.get(h.course_id) || "Unknown Course",
+    completed_at: h.completed_at,
+    superseded_at: h.superseded_at,
+    reason: h.reason,
+  }));
+
   // Get all course assignments (both completed and in-progress)
   const { data: allCourseAssignments } = await supabase
     .from("course_assignments")
@@ -317,8 +383,46 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
     allAuthAssignments: allAuthAssignments || [],
     onsiteAssignments: onsiteAssignments || [],
     availableCourses: availableCourses || [],
-    availableAuthorizations: availableAuthorizations || []
+    availableAuthorizations: availableAuthorizations || [],
+    authorizationHistory,
+    courseHistory,
+    auditLog: auditLogRows
   };
+}
+
+// Human-friendly labels for audit log actions
+function auditActionLabel(action: string): string {
+  const labels: Record<string, string> = {
+    profile_updated: "Profile updated",
+    authorisation_assigned: "Authorisation assigned",
+    course_assigned: "Course assigned",
+    authorisation_retake: "Authorisation retake started",
+    course_retake: "Course retake started",
+    authorisation_approved: "Authorisation approved",
+    authorisation_rejected: "Authorisation rejected",
+    module_rejected: "Module rejected",
+    authorisation_revoked: "Authorisation revoked",
+    course_revoked: "Course revoked",
+    user_archived: "User archived",
+    user_restored: "User restored",
+  };
+  return labels[action] || action.replace(/_/g, " ");
+}
+
+function auditDetailsSummary(details: any): string | null {
+  if (!details || typeof details !== "object") return null;
+  const parts: string[] = [];
+  if (details.authorisation_title) parts.push(details.authorisation_title);
+  if (details.course_title) parts.push(details.course_title);
+  if (details.module_title) parts.push(details.module_title);
+  if (Array.isArray(details.authorisation_titles) && details.authorisation_titles.length > 0)
+    parts.push(details.authorisation_titles.join(", "));
+  if (Array.isArray(details.course_titles) && details.course_titles.length > 0)
+    parts.push(details.course_titles.join(", "));
+  if (details.reason) parts.push(`Reason: ${details.reason}`);
+  if (Array.isArray(details.changed_fields) && details.changed_fields.length > 0)
+    parts.push(`Changed: ${details.changed_fields.join(", ")}`);
+  return parts.length > 0 ? parts.join(" — ") : null;
 }
 
 function getStatusColor(status: string) {
@@ -427,8 +531,16 @@ export default async function EditUserPage({
     allAuthAssignments, 
     onsiteAssignments,
     availableCourses, 
-    availableAuthorizations 
+    availableAuthorizations,
+    authorizationHistory,
+    courseHistory,
+    auditLog
   } = await loadUserAssignmentsAndAvailable(resolvedParams.id);
+
+  const currentAuthorizations = processedAuthorizations.filter((a: any) => a.status !== 'expired');
+  const expiredAuthorizations = processedAuthorizations.filter((a: any) => a.status === 'expired');
+  const currentCompletedCourses = processedCourses.filter((c: any) => c.status !== 'expired');
+  const expiredCompletedCourses = processedCourses.filter((c: any) => c.status === 'expired');
 
   return (
     <div className="space-y-6 p-6">
@@ -620,17 +732,74 @@ export default async function EditUserPage({
           {/* Completed Authorizations */}
           <CollapsibleSection
             title="Completed Authorizations"
-            count={processedAuthorizations.length}
+            count={currentAuthorizations.length}
             defaultOpen={false}
           >
-            {processedAuthorizations.length === 0 ? (
+            {currentAuthorizations.length === 0 ? (
               <p className="text-sm text-gray-500">No completed authorizations found.</p>
             ) : (
               <ExpandableAuthorizationDetails
-                authorizations={processedAuthorizations}
+                authorizations={currentAuthorizations}
                 allAuthAssignments={allAuthAssignments}
                 userId={resolvedParams.id}
               />
+            )}
+          </CollapsibleSection>
+
+          {/* Expired Authorisations (incl. superseded/retaken history) */}
+          <CollapsibleSection
+            title="Expired Authorisations"
+            count={expiredAuthorizations.length + authorizationHistory.length}
+            defaultOpen={false}
+          >
+            {expiredAuthorizations.length === 0 && authorizationHistory.length === 0 ? (
+              <p className="text-sm text-gray-500">No expired authorisations found.</p>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {expiredAuthorizations.map((auth: any) => (
+                  <div key={auth.assignment_id} className="flex items-center justify-between p-3 border border-red-200 rounded-md bg-red-50">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-sm text-red-900">{auth.authorization_title}</h3>
+                      <p className="text-xs text-gray-600">
+                        Completed: {auth.completed_at ? new Date(auth.completed_at).toLocaleDateString() : 'N/A'}
+                      </p>
+                      {auth.due_date && (
+                        <p className="text-xs text-red-700">
+                          Expired: {new Date(auth.due_date).toLocaleDateString()}
+                        </p>
+                      )}
+                      {auth.restrictions && (
+                        <p className="text-xs text-gray-600 italic">Restrictions: {auth.restrictions}</p>
+                      )}
+                    </div>
+                    <span className="ml-3 inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-red-100 text-red-700">
+                      Expired
+                    </span>
+                  </div>
+                ))}
+                {authorizationHistory.map((h: any) => (
+                  <div key={h.id} className="flex items-center justify-between p-3 border border-gray-300 rounded-md bg-gray-50">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-sm text-gray-900">{h.authorization_title}</h3>
+                      <p className="text-xs text-gray-600">
+                        Completed: {h.completed_at ? new Date(h.completed_at).toLocaleDateString() : 'N/A'}
+                        {h.approved_at ? ` · Approved: ${new Date(h.approved_at).toLocaleDateString()}` : ''}
+                      </p>
+                      {h.expires_at && (
+                        <p className="text-xs text-gray-600">
+                          Expiry at time of retake: {new Date(h.expires_at).toLocaleDateString()}
+                        </p>
+                      )}
+                      {h.restrictions && (
+                        <p className="text-xs text-gray-600 italic">Restrictions: {h.restrictions}</p>
+                      )}
+                    </div>
+                    <span className="ml-3 inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700">
+                      Superseded — retaken {h.superseded_at ? new Date(h.superseded_at).toLocaleDateString() : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </CollapsibleSection>
 
@@ -695,14 +864,14 @@ export default async function EditUserPage({
           {/* Completed Courses */}
           <CollapsibleSection
             title="Completed Courses"
-            count={processedCourses.length}
+            count={currentCompletedCourses.length}
             defaultOpen={false}
           >
-            {processedCourses.length === 0 ? (
+            {currentCompletedCourses.length === 0 ? (
               <p className="text-sm text-gray-500">No completed courses found.</p>
             ) : (
               <ExpandableCourseDetails 
-                courses={processedCourses.map(course => ({
+                courses={currentCompletedCourses.map(course => ({
                   course_id: course.course_id,
                   course_title: course.course_title,
                   assignment_status: 'completed',
@@ -711,6 +880,51 @@ export default async function EditUserPage({
                 userId={resolvedParams.id}
                 type="courses"
               />
+            )}
+          </CollapsibleSection>
+
+          {/* Expired Courses (incl. superseded/retaken history) */}
+          <CollapsibleSection
+            title="Expired Courses"
+            count={expiredCompletedCourses.length + courseHistory.length}
+            defaultOpen={false}
+          >
+            {expiredCompletedCourses.length === 0 && courseHistory.length === 0 ? (
+              <p className="text-sm text-gray-500">No expired courses found.</p>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {expiredCompletedCourses.map((course: any) => (
+                  <div key={course.assignment_id} className="flex items-center justify-between p-3 border border-red-200 rounded-md bg-red-50">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-sm text-red-900">{course.course_title}</h3>
+                      <p className="text-xs text-gray-600">
+                        Completed: {course.completed_at ? new Date(course.completed_at).toLocaleDateString() : 'N/A'}
+                      </p>
+                      {course.due_date && (
+                        <p className="text-xs text-red-700">
+                          Expired: {new Date(course.due_date).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    <span className="ml-3 inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-red-100 text-red-700">
+                      Expired
+                    </span>
+                  </div>
+                ))}
+                {courseHistory.map((h: any) => (
+                  <div key={h.id} className="flex items-center justify-between p-3 border border-gray-300 rounded-md bg-gray-50">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-sm text-gray-900">{h.course_title}</h3>
+                      <p className="text-xs text-gray-600">
+                        Completed: {h.completed_at ? new Date(h.completed_at).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
+                    <span className="ml-3 inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700">
+                      Superseded — retaken {h.superseded_at ? new Date(h.superseded_at).toLocaleDateString() : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </CollapsibleSection>
 
@@ -806,6 +1020,37 @@ export default async function EditUserPage({
               userId={profile.id}
             />
           )}
+
+          {/* Audit Log */}
+          <CollapsibleSection
+            title="Audit Log"
+            count={auditLog.length}
+            defaultOpen={false}
+          >
+            {auditLog.length === 0 ? (
+              <p className="text-sm text-gray-500">No recorded changes for this user yet.</p>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {auditLog.map((entry: any) => (
+                  <div key={entry.id} className="p-3 border rounded-md bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{auditActionLabel(entry.action)}</span>
+                      <span className="text-xs text-gray-500">
+                        {new Date(entry.created_at).toLocaleDateString()}{' '}
+                        {new Date(entry.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    {auditDetailsSummary(entry.details) && (
+                      <p className="text-xs text-gray-600 mt-1">{auditDetailsSummary(entry.details)}</p>
+                    )}
+                    <p className="text-xs text-gray-500 mt-1">
+                      By: {entry.actor_name || 'System'}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CollapsibleSection>
         </div>
       </div>
     </div>
