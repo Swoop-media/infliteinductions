@@ -1,0 +1,35 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.16",
+  "version": "1.0.1",
+  "id": "7e943680-9a7c-40ef-a5a2-93f62401a6c9",
+  "developer": {
+    "name": "INFLITE",
+    "websiteUrl": "https://training.inflite.nz",
+    "privacyUrl": "https://training.inflite.nz/privacy",
+    "termsOfUseUrl": "https://training.inflite.nz/terms"
+  },
+  "name": {
+    "short": "INFLITE communications",
+    "full": "INFLITE communications"
+  },
+  "description": {
+    "short": "Sends course notifications to you in Teams.",
+    "full": "The INFLITE communications bot sends you notifications from the INFLITE Induction & Training platform, including course assignments, reminders, and authorisation updates. Link your account by messaging the bot."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#FFFFFF",
+  "bots": [
+    {
+      "botId": "dc8a23c4-a57f-4e10-8543-05397e1b4ae3",
+      "scopes": ["personal"],
+      "supportsFiles": false,
+      "isNotificationOnly": false
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": ["training.inflite.nz"]
+}

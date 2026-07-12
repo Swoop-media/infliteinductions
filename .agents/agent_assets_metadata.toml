@@ -6,3 +6,9 @@ id = "lR-of04614DO4Bd7RTuLR"
 uri = "file://inflite-training-app.zip"
 type = "unspecified"
 title = "INFLITE Training App — Source Archive"
+
+[[outputs]]
+id = "MoLKFdXk5BCd3P5o2QD88"
+uri = "file://inflite-communications-teams-app.zip"
+type = "unspecified"
+title = "INFLITE communications — Teams app package (v1.0.1)"
