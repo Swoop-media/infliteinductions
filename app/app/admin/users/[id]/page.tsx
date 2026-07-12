@@ -183,6 +183,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
       assignment_status,
       created_at,
       completed_at,
+      approved_at,
       restrictions,
       authorisations!inner(
         id,
@@ -363,6 +364,31 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
     };
   });
 
+  // Live assignments whose status is 'expired' (lapsed or revoked) — these are
+  // not "completed" any more so they never reach processedAuthorizations, but
+  // they should still show under Expired Authorisations.
+  const expiredStatusAuthorizations = (authWithCourses || [])
+    .filter((a: any) => a.assignment_status === 'expired')
+    .map((a: any) => {
+      const validForDays = a.authorisations?.valid_for_days || null;
+      const baseDate = a.approved_at || a.completed_at;
+      let dueDate: string | null = null;
+      if (baseDate && validForDays) {
+        const d = new Date(baseDate);
+        d.setDate(d.getDate() + validForDays);
+        dueDate = d.toISOString();
+      }
+      return {
+        assignment_id: a.id,
+        authorization_title: a.authorisations?.title || 'Unknown Authorization',
+        completed_at: a.completed_at,
+        approved_at: a.approved_at,
+        due_date: dueDate,
+        restrictions: a.restrictions || null,
+        status: 'expired' as const,
+      };
+    });
+
   // Process revoked authorizations
   const processedRevokedAuthorizations = (revokedAuthWithCourses || []).map((auth: any) => ({
     assignment_id: auth.id,
@@ -377,6 +403,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
   return { 
     processedCourses, 
     processedAuthorizations,
+    expiredStatusAuthorizations,
     processedRevokedAuthorizations, 
     uploadedDocuments: uploadedDocuments || [],
     allCourseAssignments: allCourseAssignments || [],
@@ -525,6 +552,7 @@ export default async function EditUserPage({
   const { 
     processedCourses, 
     processedAuthorizations,
+    expiredStatusAuthorizations,
     processedRevokedAuthorizations, 
     uploadedDocuments, 
     allCourseAssignments, 
@@ -538,7 +566,10 @@ export default async function EditUserPage({
   } = await loadUserAssignmentsAndAvailable(resolvedParams.id);
 
   const currentAuthorizations = processedAuthorizations.filter((a: any) => a.status !== 'expired');
-  const expiredAuthorizations = processedAuthorizations.filter((a: any) => a.status === 'expired');
+  const expiredAuthorizations = [
+    ...processedAuthorizations.filter((a: any) => a.status === 'expired'),
+    ...(expiredStatusAuthorizations || []),
+  ];
   const currentCompletedCourses = processedCourses.filter((c: any) => c.status !== 'expired');
   const expiredCompletedCourses = processedCourses.filter((c: any) => c.status === 'expired');
 
