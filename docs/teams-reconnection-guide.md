@@ -1,7 +1,9 @@
 # Teams Bot Re-connection Guide
 
 ## Updating the Bot's Name or Logo
-The bot's display name and icon in Teams are NOT stored in this codebase. They come from a Teams app package (manifest.json + color.png + outline.png) uploaded to the Teams admin center (admin.teams.microsoft.com → Teams apps → Manage apps → find the app → "Upload file" under New version).
+The bot's display name and icon in Teams are NOT stored in this codebase. The app was originally created in the **Teams Developer Portal** (dev.teams.microsoft.com → Apps → "INFLITE communication", App ID `36b1d7be-7e60-4a27-8199-af9ccaee352c`). Edit the name under Basic information and the icons under Branding there, then Publish → Publish to your org.
+
+Note: the Teams admin center (admin.teams.microsoft.com) shows a DIFFERENT id in its URL/About tab (`7e943680-...`) — that is an internal catalog id, not the app's manifest ID. Uploading a zip with that id as the manifest `id` fails with a generic "We can't upload the app" error. Always use the Developer Portal App ID.
 
 A ready-to-edit copy of the app package now lives in `teams-app-package/` (zip: `inflite-communications-teams-app.zip`). To change the name/logo again:
 1. Edit `teams-app-package/manifest.json` (bump the `version`, e.g. 1.0.1 → 1.0.2) and/or replace the icon PNGs (color.png must be 192x192, outline.png must be 32x32 white-on-transparent).

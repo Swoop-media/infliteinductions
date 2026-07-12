@@ -2,8 +2,8 @@
 name: Teams app package (bot name/logo)
 description: Where the Teams bot's display name and icon live and how to update them
 ---
-The Teams bot's display name and icon are NOT in the codebase — they come from a Teams app package (manifest.json + 192x192 color.png + 32x32 white outline.png) uploaded to the Teams admin center.
+The Teams bot's display name and icon are NOT in the codebase — the app lives in the Teams Developer Portal (dev.teams.microsoft.com), where name/icons are edited and published to the org.
 
-**Why:** The original package was uploaded directly to Microsoft and never committed, so it was unfindable. A reconstructed copy now lives in `teams-app-package/` with upload steps documented in `docs/teams-reconnection-guide.md`.
+**Why:** The original app was created via Dev Portal and never committed. Also, the Teams admin center shows an *internal catalog id* in its URL/About tab that differs from the real manifest App ID — building a package with the catalog id makes the admin-center "new version" upload fail with a generic "We can't upload the app" error.
 
-**How to apply:** To rename/re-icon the bot, edit the package, bump manifest `version`, re-zip flat, and upload as "New version" in Teams admin center. Keep `id` (Teams app ID) and `botId` (Microsoft App ID) unchanged.
+**How to apply:** Edit via Dev Portal (Basic information + Branding) and Publish → Publish to your org. A reconstructed package copy lives in `teams-app-package/` with the correct Dev Portal App ID; process documented in `docs/teams-reconnection-guide.md`. Icons: 192x192 color, 32x32 white-on-transparent outline.

@@ -2,7 +2,7 @@
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
   "manifestVersion": "1.16",
   "version": "1.0.1",
-  "id": "7e943680-9a7c-40ef-a5a2-93f62401a6c9",
+  "id": "36b1d7be-7e60-4a27-8199-af9ccaee352c",
   "developer": {
     "name": "INFLITE",
     "websiteUrl": "https://training.inflite.nz",

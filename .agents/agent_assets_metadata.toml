@@ -12,3 +12,15 @@ id = "MoLKFdXk5BCd3P5o2QD88"
 uri = "file://inflite-communications-teams-app.zip"
 type = "unspecified"
 title = "INFLITE communications — Teams app package (v1.0.1)"
+
+[[outputs]]
+id = "pu_XSSQpai1ulN0fPLmjX"
+uri = "file://teams-app-package/inflite-color-icon-192.png"
+type = "image"
+title = "Color icon (192x192) — for Branding page"
+
+[[outputs]]
+id = "Be-HAZ-XkTVLSMz00XgWe"
+uri = "file://teams-app-package/inflite-outline-icon-32.png"
+type = "image"
+title = "Outline icon (32x32) — for Branding page"
