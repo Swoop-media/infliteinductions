@@ -573,6 +573,15 @@ export default async function EditUserPage({
   const currentCompletedCourses = processedCourses.filter((c: any) => c.status !== 'expired');
   const expiredCompletedCourses = processedCourses.filter((c: any) => c.status === 'expired');
 
+  // Split uploaded documents by expiry date
+  const docsNow = new Date();
+  const expiredDocuments = uploadedDocuments.filter(
+    (d: any) => d.expires_on && new Date(d.expires_on) < docsNow
+  );
+  const currentDocuments = uploadedDocuments.filter(
+    (d: any) => !d.expires_on || new Date(d.expires_on) >= docsNow
+  );
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
@@ -777,6 +786,113 @@ export default async function EditUserPage({
             )}
           </CollapsibleSection>
 
+          {/* Completed Courses */}
+          <CollapsibleSection
+            title="Completed Courses"
+            count={currentCompletedCourses.length}
+            defaultOpen={false}
+          >
+            {currentCompletedCourses.length === 0 ? (
+              <p className="text-sm text-gray-500">No completed courses found.</p>
+            ) : (
+              <ExpandableCourseDetails 
+                courses={currentCompletedCourses.map(course => ({
+                  course_id: course.course_id,
+                  course_title: course.course_title,
+                  assignment_status: 'completed',
+                  completed_at: course.completed_at
+                }))}
+                userId={resolvedParams.id}
+                type="courses"
+              />
+            )}
+          </CollapsibleSection>
+
+          {/* Current Authorization Assignments */}
+          <CollapsibleSection
+            title="Current Authorization Assignments"
+            count={allAuthAssignments.filter(a => a.assignment_status !== 'revoked').length}
+            defaultOpen={false}
+          >
+            {allAuthAssignments.filter(a => a.assignment_status !== 'revoked').length === 0 ? (
+              <p className="text-sm text-gray-500">No authorization assignments found.</p>
+            ) : (
+              <ExpandableCourseDetails 
+                authorizations={allAuthAssignments
+                  .filter(assignment => assignment.assignment_status !== 'revoked')
+                  .map(assignment => ({
+                    authorization_id: assignment.authorisation_id,
+                    authorization_title: assignment.authorisations?.title || 'Unknown Authorization',
+                    assignment_status: assignment.assignment_status,
+                    completed_at: assignment.completed_at
+                  }))}
+                userId={resolvedParams.id}
+                type="authorizations"
+              />
+            )}
+          </CollapsibleSection>
+
+          {/* Current Course Assignments */}
+          <CollapsibleSection
+            title="Current Course Assignments"
+            count={allCourseAssignments.length}
+            defaultOpen={false}
+          >
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <SyncCourseStatusesButton userId={resolvedParams.id} />
+              <ResetAllProgressButton userId={resolvedParams.id} />
+            </div>
+            {allCourseAssignments.length === 0 ? (
+              <p className="text-sm text-gray-500">No course assignments found.</p>
+            ) : (
+              <ExpandableCourseDetails 
+                courses={allCourseAssignments.map(assignment => ({
+                  course_id: assignment.course_id,
+                  course_title: assignment.courses?.title || 'Unknown Course',
+                  assignment_status: assignment.assignment_status,
+                  completed_at: assignment.completed_at
+                }))}
+                userId={resolvedParams.id}
+                type="courses"
+              />
+            )}
+          </CollapsibleSection>
+
+          {/* Uploaded Documents (current / not expired) */}
+          <div className="rounded-lg border bg-white p-4">
+            <h2 className="text-lg font-medium mb-4">Uploaded Documents ({currentDocuments.length})</h2>
+            {currentDocuments.length === 0 ? (
+              <p className="text-sm text-gray-500">No uploaded documents found.</p>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {currentDocuments.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-sm">{doc.title}</h3>
+                      <p className="text-xs text-gray-600">
+                        Course: {(doc.courses as any)?.title || 'Unknown'}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        Module: {(doc.course_modules as any)?.title || 'Unknown'}
+                      </p>
+                      <p className="text-xs text-gray-600">
+                        Uploaded: {new Date(doc.created_at).toLocaleDateString()}
+                      </p>
+                      {doc.expires_on && (
+                        <p className="text-xs text-gray-600">
+                          Expires: {new Date(doc.expires_on).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                    <div className="ml-3">
+                      <DocumentViewButton filePath={doc.file_path} title={doc.title} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {/* Expired Authorisations (incl. superseded/retaken history) */}
           <CollapsibleSection
             title="Expired Authorisations"
@@ -868,52 +984,6 @@ export default async function EditUserPage({
             </div>
           )}
 
-          {/* Current Authorization Assignments */}
-          <CollapsibleSection
-            title="Current Authorization Assignments"
-            count={allAuthAssignments.filter(a => a.assignment_status !== 'revoked').length}
-            defaultOpen={false}
-          >
-            {allAuthAssignments.filter(a => a.assignment_status !== 'revoked').length === 0 ? (
-              <p className="text-sm text-gray-500">No authorization assignments found.</p>
-            ) : (
-              <ExpandableCourseDetails 
-                authorizations={allAuthAssignments
-                  .filter(assignment => assignment.assignment_status !== 'revoked')
-                  .map(assignment => ({
-                    authorization_id: assignment.authorisation_id,
-                    authorization_title: assignment.authorisations?.title || 'Unknown Authorization',
-                    assignment_status: assignment.assignment_status,
-                    completed_at: assignment.completed_at
-                  }))}
-                userId={resolvedParams.id}
-                type="authorizations"
-              />
-            )}
-          </CollapsibleSection>
-
-          {/* Completed Courses */}
-          <CollapsibleSection
-            title="Completed Courses"
-            count={currentCompletedCourses.length}
-            defaultOpen={false}
-          >
-            {currentCompletedCourses.length === 0 ? (
-              <p className="text-sm text-gray-500">No completed courses found.</p>
-            ) : (
-              <ExpandableCourseDetails 
-                courses={currentCompletedCourses.map(course => ({
-                  course_id: course.course_id,
-                  course_title: course.course_title,
-                  assignment_status: 'completed',
-                  completed_at: course.completed_at
-                }))}
-                userId={resolvedParams.id}
-                type="courses"
-              />
-            )}
-          </CollapsibleSection>
-
           {/* Expired Courses (incl. superseded/retaken history) */}
           <CollapsibleSection
             title="Expired Courses"
@@ -959,43 +1029,20 @@ export default async function EditUserPage({
             )}
           </CollapsibleSection>
 
-          {/* Current Course Assignments */}
+          {/* Expired Documents */}
           <CollapsibleSection
-            title="Current Course Assignments"
-            count={allCourseAssignments.length}
+            title="Expired Documents"
+            count={expiredDocuments.length}
             defaultOpen={false}
           >
-            <div className="mb-3 flex flex-wrap items-center gap-3">
-              <SyncCourseStatusesButton userId={resolvedParams.id} />
-              <ResetAllProgressButton userId={resolvedParams.id} />
-            </div>
-            {allCourseAssignments.length === 0 ? (
-              <p className="text-sm text-gray-500">No course assignments found.</p>
+            {expiredDocuments.length === 0 ? (
+              <p className="text-sm text-gray-500">No expired documents found.</p>
             ) : (
-              <ExpandableCourseDetails 
-                courses={allCourseAssignments.map(assignment => ({
-                  course_id: assignment.course_id,
-                  course_title: assignment.courses?.title || 'Unknown Course',
-                  assignment_status: assignment.assignment_status,
-                  completed_at: assignment.completed_at
-                }))}
-                userId={resolvedParams.id}
-                type="courses"
-              />
-            )}
-          </CollapsibleSection>
-
-          {/* Uploaded Documents */}
-          <div className="rounded-lg border bg-white p-4">
-            <h2 className="text-lg font-medium mb-4">Uploaded Documents ({uploadedDocuments.length})</h2>
-            {uploadedDocuments.length === 0 ? (
-              <p className="text-sm text-gray-500">No uploaded documents found.</p>
-            ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
-                {uploadedDocuments.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between p-3 border rounded-md bg-gray-50">
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {expiredDocuments.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-3 border border-red-200 rounded-md bg-red-50">
                     <div className="flex-1">
-                      <h3 className="font-medium text-sm">{doc.title}</h3>
+                      <h3 className="font-medium text-sm text-red-900">{doc.title}</h3>
                       <p className="text-xs text-gray-600">
                         Course: {(doc.courses as any)?.title || 'Unknown'}
                       </p>
@@ -1005,20 +1052,21 @@ export default async function EditUserPage({
                       <p className="text-xs text-gray-600">
                         Uploaded: {new Date(doc.created_at).toLocaleDateString()}
                       </p>
-                      {doc.expires_on && (
-                        <p className="text-xs text-gray-600">
-                          Expires: {new Date(doc.expires_on).toLocaleDateString()}
-                        </p>
-                      )}
+                      <p className="text-xs text-red-700">
+                        Expired: {new Date(doc.expires_on).toLocaleDateString()}
+                      </p>
                     </div>
-                    <div className="ml-3">
+                    <div className="flex items-center gap-2 ml-3">
+                      <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-red-100 text-red-700">
+                        Expired
+                      </span>
                       <DocumentViewButton filePath={doc.file_path} title={doc.title} />
                     </div>
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </CollapsibleSection>
 
           {/* Assign New Authorizations */}
           {availableAuthorizations.length > 0 && (
