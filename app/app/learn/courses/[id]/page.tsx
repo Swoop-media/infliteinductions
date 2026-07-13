@@ -421,12 +421,36 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
   "use server";
   const supabase = await createSupabaseServer();
 
-  // Get module data first
-  const { data: moduleData } = await supabase
-    .from("course_modules")
-    .select("course_id, type")
-    .eq("id", moduleId)
-    .single();
+  // Fetch everything keyed on moduleId in parallel (RLS-scoped queries + auth)
+  const [
+    { data: moduleData },
+    quizByModule,
+    { data: { user } },
+  ] = await Promise.all([
+    supabase
+      .from("course_modules")
+      .select("course_id, type")
+      .eq("id", moduleId)
+      .single(),
+    supabase
+      .from("quizzes")
+      .select("id, pass_mark, max_attempts, shuffle")
+      .eq("module_id", moduleId)
+      .maybeSingle(),
+    supabase.auth.getUser(),
+  ]);
+
+  // Service-role completion check only after the user is confirmed (skip fake preview assignment)
+  let progress = null;
+  if (user && assignmentId && assignmentId !== "preview") {
+    const { data } = await supabaseAdmin()
+      .from("assignment_progress")
+      .select("module_id")
+      .eq("assignment_id", assignmentId)
+      .eq("module_id", moduleId)
+      .maybeSingle();
+    progress = data;
+  }
 
   if (!moduleData || moduleData.type !== "digital_assessment_quiz") {
     return (
@@ -441,12 +465,9 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
     );
   }
 
-  // First, try to get quiz by module_id
-  let { data: quizData, error: quizErr } = await supabase
-    .from("quizzes")
-    .select("id, pass_mark, max_attempts, shuffle")
-    .eq("module_id", moduleId)
-    .maybeSingle();
+  // Quiz by module_id was fetched in the parallel batch above
+  let quizData = quizByModule.data;
+  let quizErr = quizByModule.error;
 
   // If no quiz found by module_id, try by course_id (fallback for legacy quizzes)
   if (quizErr || !quizData) {
@@ -584,12 +605,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
     questions = fallbackQuestions;
   }
 
-  // Get user for quiz attempts lookup
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // Check if quiz is already completed - use admin client to bypass RLS
-  const adminQuizClient = supabaseAdmin();
-  const { data: progress } = await adminQuizClient.from("assignment_progress").select("module_id").eq("assignment_id", assignmentId).eq("module_id", moduleId).maybeSingle();
+  // Completion status was fetched in the parallel batch above (admin client bypasses RLS)
   const isCompleted = !!progress;
 
   if (isCompleted) {
@@ -716,23 +732,105 @@ export default async function LearnerCoursePage(props: {
   } = await supabase.auth.getUser();
   if (userErr || !user) redirect("/auth/login");
 
-  // In preview mode, skip assignment check for course creators
-  let assignment = null;
-  if (!preview) {
-    // Must have a trainee assignment for this course
-    const { data: assignmentData, error: assignmentErr } = await supabase
+  // Load everything that only depends on user/course ids in parallel.
+  // (Auth was already checked above, so this is safe to fan out.)
+  const loadAuthContext = async () => {
+    if (!authorizationId) return { auth: null as any, authCourses: null as any[] | null };
+    const [{ data: auth }, { data: authCourses }] = await Promise.all([
+      supabase
+        .from("authorisations")
+        .select("id, title")
+        .eq("id", authorizationId)
+        .single(),
+      supabase
+        .from("authorisation_courses")
+        .select(`
+          course_id,
+          order_index,
+          courses!inner(id, title)
+        `)
+        .eq("authorisation_id", authorizationId)
+        .order("order_index", { ascending: true }),
+    ]);
+    return { auth, authCourses };
+  };
+
+  // Assignment row + its progress in one branch (progress needs the assignment id)
+  const loadAssignmentAndProgress = async () => {
+    const { data: userAssignment } = await supabase
       .from("course_assignments")
-      .select("id, role, assignment_status")
+      .select("*")
       .eq("course_id", courseId)
       .eq("user_id", user.id)
       .eq("role", "trainee")
-      .single();
+      .maybeSingle();
 
-    if (assignmentErr || !assignmentData) {
-      console.error("No trainee assignment", assignmentErr);
+    if (preview || !userAssignment) {
+      return { userAssignment: userAssignment ?? null, assignmentProgress: [] as any[] };
+    }
+    // Use admin client to bypass RLS for progress rows
+    const { data: assignmentProgress } = await supabaseAdmin()
+      .from("assignment_progress")
+      .select("module_id, completed_at")
+      .eq("assignment_id", userAssignment.id);
+    return { userAssignment, assignmentProgress: assignmentProgress ?? [] };
+  };
+
+  const loadReviewerProfile = async () => {
+    if (!review) return null;
+    const { data } = await supabase
+      .from("profiles")
+      .select("full_name, first_name, last_name, email")
+      .eq("id", user.id)
+      .maybeSingle();
+    return data;
+  };
+
+  const [
+    { data: course, error: courseErr },
+    { auth: authRow, authCourses },
+    { data: modules, error: modErr },
+    { userAssignment, assignmentProgress },
+    { data: userDocuments },
+    reviewerProfile,
+  ] = await Promise.all([
+    supabase
+      .from("courses")
+      .select("id, title, description, status")
+      .eq("id", courseId)
+      .single(),
+    loadAuthContext(),
+    supabase
+      .from("course_modules")
+      .select("id, course_id, title, type, order_index, stage")
+      .eq("course_id", courseId)
+      .order("order_index", { ascending: true }),
+    loadAssignmentAndProgress(),
+    supabase
+      .from("learner_documents")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("course_id", courseId),
+    loadReviewerProfile(),
+  ]);
+
+  if (courseErr || !course) {
+    console.error("Course load error", courseErr);
+    notFound();
+  }
+  if (modErr) {
+    console.error("Modules load error", modErr);
+    notFound();
+  }
+
+  // In preview mode, skip assignment check for course creators
+  let assignment = null;
+  if (!preview) {
+    if (!userAssignment) {
+      console.error("No trainee assignment for course", courseId);
       redirect("/app/learn?error=not_assigned");
     }
-    assignment = assignmentData;
+    assignment = userAssignment;
   } else {
     // For preview mode, create a fake assignment object
     assignment = {
@@ -742,80 +840,23 @@ export default async function LearnerCoursePage(props: {
     };
   }
 
-  // Load course
-  const { data: course, error: courseErr } = await supabase
-    .from("courses")
-    .select("id, title, description, status")
-    .eq("id", courseId)
-    .single();
-  if (courseErr || !course) {
-    console.error("Course load error", courseErr);
-    notFound();
-  }
-
   // Check if this course is part of an authorization
   let authorizationContext = null;
   let nextCourseInAuth = null;
 
-  console.log('Authorization ID from URL:', authorizationId);
-  console.log('Course ID:', courseId);
+  if (authRow && authCourses) {
+    const currentIndex = authCourses.findIndex((ac: any) => ac.course_id === courseId);
 
-  if (authorizationId) {
-    // Load authorization details
-    const { data: auth } = await supabase
-      .from("authorisations")
-      .select("id, title")
-      .eq("id", authorizationId)
-      .single();
-
-    if (auth) {
-      // Load all courses in this authorization
-      const { data: authCourses } = await supabase
-        .from("authorisation_courses")
-        .select(`
-          course_id,
-          order_index,
-          courses!inner(id, title)
-        `)
-        .eq("authorisation_id", authorizationId)
-        .order("order_index", { ascending: true });
-
-      if (authCourses) {
-        console.log('Authorization courses:', authCourses.map(ac => ({ 
-          id: ac.course_id, 
-          title: ac.courses?.title 
-        })));
-        console.log('Current course ID:', courseId);
-        
-        const currentIndex = authCourses.findIndex(ac => ac.course_id === courseId);
-        console.log('Current index:', currentIndex, 'Total courses:', authCourses.length);
-        
-        if (currentIndex !== -1 && currentIndex + 1 < authCourses.length) {
-          nextCourseInAuth = authCourses[currentIndex + 1];
-          console.log('Next course in auth:', nextCourseInAuth.courses?.title);
-        } else {
-          console.log('No next course - either last course or not found');
-        }
-
-        authorizationContext = {
-          ...auth,
-          courses: authCourses,
-          currentIndex: currentIndex + 1,
-          totalCourses: authCourses.length
-        };
-      }
+    if (currentIndex !== -1 && currentIndex + 1 < authCourses.length) {
+      nextCourseInAuth = authCourses[currentIndex + 1];
     }
-  }
 
-  // Load modules
-  const { data: modules, error: modErr } = await supabase
-    .from("course_modules")
-    .select("id, course_id, title, type, order_index, stage")
-    .eq("course_id", course.id)
-    .order("order_index", { ascending: true });
-  if (modErr) {
-    console.error("Modules load error", modErr);
-    notFound();
+    authorizationContext = {
+      ...authRow,
+      courses: authCourses,
+      currentIndex: currentIndex + 1,
+      totalCourses: authCourses.length
+    };
   }
 
   // Split modules by type
@@ -831,13 +872,6 @@ export default async function LearnerCoursePage(props: {
     if (ta !== tb) return ta - tb;
     return (a.order_index ?? 0) - (b.order_index ?? 0);
   });
-
-  // Load assignment progress (skip in preview mode) - use admin client to bypass RLS
-  const adminClient = supabaseAdmin();
-  const { data: assignmentProgress } = !preview ? await adminClient
-    .from("assignment_progress")
-    .select("module_id, completed_at")
-    .eq("assignment_id", assignment.id) : { data: [] };
 
   // In preview mode, no modules are locked and none are marked as completed
   const completedModules = preview ? new Set() : new Set((assignmentProgress ?? []).map(p => p.module_id));
@@ -865,51 +899,58 @@ export default async function LearnerCoursePage(props: {
     currentModule = sortedModules[sortedModules.length - 1];
   }
 
-  // Load blocks for current module
-  let blocks: any[] = [];
-  let blockErr = null;
-
-  if (currentModule && currentModule.type !== 'digital_assessment_quiz') {
+  // Load everything that depends on the current module in parallel
+  const loadBlocks = async () => {
+    if (!currentModule || currentModule.type === 'digital_assessment_quiz') {
+      return { blocks: [] as any[] };
+    }
     const { data: blocksData, error: blocksError } = await supabase
       .from("module_content_blocks")
       .select("id, module_id, kind, data, order_index")
       .eq("module_id", currentModule.id)
       .order("order_index", { ascending: true });
-
-    blocks = blocksData || [];
-    blockErr = blocksError;
-
-    if (blockErr) {
-      console.error("Blocks load error for module", currentModule.id, blockErr);
+    if (blocksError) {
+      console.error("Blocks load error for module", currentModule.id, blocksError);
     }
-  }
+    return { blocks: blocksData || [] };
+  };
 
-  // Fetch onsite requirements for onsite modules
-  let onsiteRequirements = null;
-  if (currentModule?.type === 'onsite_training' || currentModule?.type === 'onsite_assessment') {
+  const loadOnsiteRequirements = async () => {
+    if (currentModule?.type !== 'onsite_training' && currentModule?.type !== 'onsite_assessment') {
+      return null;
+    }
     const { data: requirements } = await supabase
       .from("onsite_requirements")
       .select("*")
       .eq("module_id", currentModule.id)
       .order("order_index", { ascending: true });
-    onsiteRequirements = requirements;
-  }
+    return requirements;
+  };
 
-  // Get user's assignment for this course
-  const { data: userAssignment } = await supabase
-    .from("course_assignments")
-    .select("*")
-    .eq("course_id", courseId)
-    .eq("user_id", user.id)
-    .eq("role", "trainee")
-    .maybeSingle();
+  const loadQuizPassMark = async () => {
+    // Fetch quiz pass mark only if current module is a quiz and we're showing results
+    if (currentModule?.type !== 'digital_assessment_quiz' || !quizResult) return 80;
+    // Try to get quiz by module_id first
+    const { data: quiz } = await supabase
+      .from("quizzes")
+      .select("pass_mark")
+      .eq("module_id", currentModule.id)
+      .maybeSingle();
+    if (quiz?.pass_mark) return quiz.pass_mark;
+    // Fallback: try to get quiz by course_id
+    const { data: courseQuiz } = await supabase
+      .from("quizzes")
+      .select("pass_mark")
+      .eq("course_id", courseId)
+      .maybeSingle();
+    return courseQuiz?.pass_mark ?? 80;
+  };
 
-  // Get user's uploaded documents for this course
-  const { data: userDocuments } = await supabase
-    .from("learner_documents")
-    .select("*")
-    .eq("user_id", user.id)
-    .eq("course_id", courseId);
+  const [{ blocks }, onsiteRequirements, quizPassMark] = await Promise.all([
+    loadBlocks(),
+    loadOnsiteRequirements(),
+    loadQuizPassMark(),
+  ]);
 
   const currentModuleIndex = currentModule ? sortedModules.findIndex(m => m.id === currentModule!.id) : -1;
   const isCurrentModuleCompleted = currentModule ? completedModules.has(currentModule.id) : false;
@@ -918,43 +959,12 @@ export default async function LearnerCoursePage(props: {
     sortedModules.slice(0, currentModuleIndex).every(m => completedModules.has(m.id))
   ) : false);
 
-  // Fetch quiz data if current module is a quiz and we're showing results
-  let quizPassMark = 80; // Default pass mark
-  if (currentModule?.type === 'digital_assessment_quiz' && quizResult) {
-    // Try to get quiz by module_id first
-    const { data: quiz } = await supabase
-      .from("quizzes")
-      .select("pass_mark")
-      .eq("module_id", currentModule.id)
-      .maybeSingle();
-    
-    if (quiz?.pass_mark) {
-      quizPassMark = quiz.pass_mark;
-    } else {
-      // Fallback: try to get quiz by course_id
-      const { data: courseQuiz } = await supabase
-        .from("quizzes")
-        .select("pass_mark")
-        .eq("course_id", courseId)
-        .maybeSingle();
-      
-      if (courseQuiz?.pass_mark) {
-        quizPassMark = courseQuiz.pass_mark;
-      }
-    }
-  }
-
   // Helper to check if a module is completed
   const moduleCompleted = (moduleId: string) => completedModules.has(moduleId);
 
-  // In peer review mode, get the reviewer's display name for the sign-off panel
+  // In peer review mode, the reviewer's display name for the sign-off panel
   let reviewerName = "";
   if (review) {
-    const { data: reviewerProfile } = await supabase
-      .from("profiles")
-      .select("full_name, first_name, last_name, email")
-      .eq("id", user.id)
-      .maybeSingle();
     reviewerName =
       reviewerProfile?.full_name ||
       (reviewerProfile?.first_name && reviewerProfile?.last_name
