@@ -73,63 +73,44 @@ async function loadAuth(authId: string) {
 async function loadResponsiblePersons() {
   "use server";
   const supabase = await createSupabaseServer();
-  
-  // First get the role IDs for "Senior Management" and "Admin"
-  const { data: roles, error: rolesError } = await supabase
-    .from("roles")
-    .select("id, name")
-    .in("name", ["Senior Management", "Admin"]);
-  
-  if (rolesError) {
-    console.error("Error loading roles:", rolesError);
-    return [];
-  }
-  
-  if (!roles || roles.length === 0) {
-    console.log("No Senior Management or Admin roles found");
-    return [];
-  }
-  
-  const roleIds = roles.map(r => r.id);
-  const roleMap = new Map(roles.map(r => [r.id, r.name]));
-  
-  // Get user_ids who have these roles
+
+  // Single joined query: user_roles + role name filter in one round trip
   const { data: userRoles, error: userRolesError } = await supabase
     .from("user_roles")
-    .select("user_id, role_id")
-    .in("role_id", roleIds);
-  
+    .select("user_id, roles!inner(name)")
+    .in("roles.name", ["Senior Management", "Admin"]);
+
   if (userRolesError) {
     console.error("Error loading user roles:", userRolesError);
     return [];
   }
-  
+
   if (!userRoles || userRoles.length === 0) {
     console.log("No users with Senior Management or Admin roles found");
     return [];
   }
-  
+
   // Get unique user IDs
   const userIds = [...new Set(userRoles.map(ur => ur.user_id))];
-  
+
   // Get the profiles for those users
   const { data: profiles, error: profilesError } = await supabase
     .from("profiles")
     .select("id, full_name, email")
     .in("id", userIds);
-  
+
   if (profilesError) {
     console.error("Error loading profiles:", profilesError);
     return [];
   }
-  
+
   // Create a map of user roles
   const userRolesMap = new Map();
-  userRoles.forEach(ur => {
+  userRoles.forEach((ur: any) => {
     if (!userRolesMap.has(ur.user_id)) {
       userRolesMap.set(ur.user_id, []);
     }
-    const roleName = roleMap.get(ur.role_id);
+    const roleName = ur.roles?.name;
     if (roleName && !userRolesMap.get(ur.user_id).includes(roleName)) {
       userRolesMap.get(ur.user_id).push(roleName);
     }
@@ -289,12 +270,16 @@ async function removeCourseAction(form: FormData) {
     .eq("authorisation_id", authId)
     .order("order_index");
   if (rest?.length) {
+    const updates: Promise<any>[] = [];
     for (let i = 0; i < rest.length; i++) {
       const r = rest[i] as any;
       if (r.order_index !== i) {
-        await supabase.from("authorisation_courses").update({ order_index: i }).eq("id", r.id);
+        updates.push(
+          supabase.from("authorisation_courses").update({ order_index: i }).eq("id", r.id).then()
+        );
       }
     }
+    await Promise.all(updates);
   }
 
   revalidatePath(buildUrl(authId));
@@ -429,7 +414,61 @@ export default async function Page(props: {
     (Array.isArray(search.notice) ? search.notice[0] : search.notice) || undefined
   );
 
+  const q = (Array.isArray(search.q) ? search.q[0] : search.q) ?? "";
+  const dept = (Array.isArray(search.dept) ? search.dept[0] : search.dept) ?? "";
+  const tag = (Array.isArray(search.tag) ? search.tag[0] : search.tag) ?? "";
+
+  // Assignments preload (and optional search)
+  const loadAssignmentsData = async () => {
+    const profileMap = new Map<string, { id: string; full_name: string|null; email: string|null }>();
+    if (activeTab !== "assignments") {
+      return { assignments: [] as any[], profileMap, assignSearchResults: [] as any[] };
+    }
+    const supabase = await createSupabaseServer();
+    const loadRowsAndProfiles = async () => {
+      const { data: rows } = await supabase
+        .from("authorisation_assignments")
+        .select("id, user_id, authorisation_id, role, created_at, created_by")
+        .eq("authorisation_id", id)
+        .order("created_at", { ascending: false });
+      const userIds = Array.from(new Set((rows ?? []).map((r: any) => r.user_id)));
+      if (userIds.length) {
+        const { data: profs } = await supabase
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", userIds);
+        (profs ?? []).forEach((p: any) => profileMap.set(p.id, p));
+      }
+      return rows ?? [];
+    };
+    const [assignments, assignSearchResults] = await Promise.all([
+      loadRowsAndProfiles(),
+      searchProfilesByQuery(q),
+    ]);
+    return { assignments, profileMap, assignSearchResults };
+  };
+
+  // Phase 1: auth + existence check (loadAuth redirects if signed out).
   const { auth, err } = await loadAuth(id);
+
+  // Phase 2: only after auth is confirmed, load the active tab's data in parallel.
+  const [
+    allDepartments,
+    responsiblePersons,
+    chosenCourses,
+    searchResults,
+    assignmentsData,
+  ] =
+    !err && auth
+      ? await Promise.all([
+          activeTab === "details" || activeTab === "courses" ? loadAllDepartments() : Promise.resolve([] as string[]),
+          activeTab === "details" ? loadResponsiblePersons() : Promise.resolve([] as any[]),
+          activeTab === "courses" ? loadChosenCourses(id) : Promise.resolve([] as any[]),
+          activeTab === "courses" ? searchPublishedCourses(q, dept, tag) : Promise.resolve([] as any[]),
+          loadAssignmentsData(),
+        ])
+      : [[], [], [], [], { assignments: [], profileMap: new Map(), assignSearchResults: [] }];
+
   if (err || !auth) {
     return (
       <div className="p-6">
@@ -440,50 +479,7 @@ export default async function Page(props: {
     );
   }
 
-  // Load departments and responsible persons for details and courses tabs
-  let allDepartments: string[] = [];
-  let responsiblePersons: any[] = [];
-  if (activeTab === "details" || activeTab === "courses") {
-    allDepartments = await loadAllDepartments();
-  }
-  if (activeTab === "details") {
-    responsiblePersons = await loadResponsiblePersons();
-  }
-
-  // Preload depending on tab
-  let chosenCourses: any[] = [];
-  let searchResults: any[] = [];
-  if (activeTab === "courses") {
-    chosenCourses = await loadChosenCourses(id);
-    const q = (Array.isArray(search.q) ? search.q[0] : search.q) ?? "";
-    const dept = (Array.isArray(search.dept) ? search.dept[0] : search.dept) ?? "";
-    const tag = (Array.isArray(search.tag) ? search.tag[0] : search.tag) ?? "";
-    searchResults = await searchPublishedCourses(q, dept, tag);
-  }
-
-  // Assignments preload (and optional search)
-  let assignments: any[] = [];
-  let profileMap = new Map<string, { id: string; full_name: string|null; email: string|null }>();
-  let assignSearchResults: any[] = [];
-  if (activeTab === "assignments") {
-    const supabase = await createSupabaseServer();
-    const { data: rows } = await supabase
-      .from("authorisation_assignments")
-      .select("id, user_id, authorisation_id, role, created_at, created_by")
-      .eq("authorisation_id", id)
-      .order("created_at", { ascending: false });
-    assignments = rows ?? [];
-    const userIds = Array.from(new Set((rows ?? []).map((r: any) => r.user_id)));
-    if (userIds.length) {
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, full_name, email")
-        .in("id", userIds);
-      (profs ?? []).forEach((p: any) => profileMap.set(p.id, p));
-    }
-    const q = (Array.isArray(search.q) ? search.q[0] : search.q) ?? "";
-    assignSearchResults = await searchProfilesByQuery(q);
-  }
+  const { assignments, profileMap, assignSearchResults } = assignmentsData;
 
   const tabs: { key: TabKey; href: string }[] = [
     { key: "details", href: buildUrl(id, "details") },

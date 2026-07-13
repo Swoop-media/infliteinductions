@@ -361,10 +361,12 @@ export default async function CreatorHome({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   // Guard: redirect unauthorized users to Home with banner
-  const canAccess =
-    (await hasRole("Course Creators")) ||
-    (await hasRole("Senior management")) ||
-    (await hasRole("Admin"));
+  const [isCreator, isSenior, isAdmin] = await Promise.all([
+    hasRole("Course Creators"),
+    hasRole("Senior management"),
+    hasRole("Admin"),
+  ]);
+  const canAccess = isCreator || isSenior || isAdmin;
   if (!canAccess) {
     redirect("/app/home?banner=no_access");
   }
@@ -377,23 +379,31 @@ export default async function CreatorHome({
 
   const supabase = await createSupabaseServer();
 
+  // Only fetch the list for the tab that is actually shown
+  const emptyResult = Promise.resolve({ data: [] as any[] });
   const [{ data: courses = [] as CourseRow[] }, { data: authzs = [] as AuthzRow[] }, { data: notices = [] as NoticeRow[] }] =
     await Promise.all([
-      supabase
-        .from("courses")
-        .select("id,title,status,updated_at,created_at,tags,department")
-        .order("updated_at", { ascending: false })
-        .limit(500),
-      supabase
-        .from("authorisations")
-        .select("id,title,status,updated_at,created_at,department")
-        .order("updated_at", { ascending: false })
-        .limit(500),
-      supabase
-        .from("operations_notices")
-        .select("id,title,status,updated_at,created_at,department,require_acknowledgement")
-        .order("updated_at", { ascending: false })
-        .limit(500),
+      tab === "courses"
+        ? supabase
+            .from("courses")
+            .select("id,title,status,updated_at,created_at,tags,department")
+            .order("updated_at", { ascending: false })
+            .limit(500)
+        : emptyResult,
+      tab === "authorisations"
+        ? supabase
+            .from("authorisations")
+            .select("id,title,status,updated_at,created_at,department")
+            .order("updated_at", { ascending: false })
+            .limit(500)
+        : emptyResult,
+      tab === "operations-notices"
+        ? supabase
+            .from("operations_notices")
+            .select("id,title,status,updated_at,created_at,department,require_acknowledgement")
+            .order("updated_at", { ascending: false })
+            .limit(500)
+        : emptyResult,
     ]);
 
   return (

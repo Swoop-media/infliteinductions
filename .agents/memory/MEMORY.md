@@ -6,3 +6,4 @@
 - [Creator-area role gating](creator-area-role-gating.md) — API routes writing creator-visible data must check hasRole server-side; service-role inserts bypass RLS, auth check alone is not enough.
 - [Notification type enum](notif-type-enum.md) — notifications.type is Postgres enum notif_type; new types need a migration or in-app inserts fail silently (Teams DM still sends).
 - [Teams app package](teams-app-package.md) — bot's Teams display name/icon are not in code; edit teams-app-package/, bump version, upload zip as new version in Teams admin center.
+- [Parallel loaders auth-first](parallel-loaders-auth-first.md) — when parallelizing page loaders, auth/existence check must resolve first; service-role queries must never race the auth redirect.

@@ -21,9 +21,14 @@ export interface UpsertTrainingControlPayload {
   archived?: boolean;
 }
 
+/** Short-lived in-memory cache so page loads aren't blocked by the external service. */
+let risksCache: { risks: SafefliteRisk[]; fetchedAt: number } | null = null;
+const RISKS_CACHE_TTL_MS = 60_000;
+
 /**
  * Fetch the live SafeFLITE risk register. Returns an empty array if the secret
- * is not configured or the call fails (non-blocking).
+ * is not configured or the call fails (non-blocking). Results are cached in
+ * memory for 60s and the request times out after 5s.
  */
 export async function listSafefliteRisks(): Promise<SafefliteRisk[]> {
   const secret = process.env.TRAINING_CONTROL_SECRET;
@@ -33,6 +38,10 @@ export async function listSafefliteRisks(): Promise<SafefliteRisk[]> {
     return [];
   }
 
+  if (risksCache && Date.now() - risksCache.fetchedAt < RISKS_CACHE_TTL_MS) {
+    return risksCache.risks;
+  }
+
   try {
     const response = await fetch(`${SAFEFLITE_FUNCTIONS_BASE}/list-risks`, {
       method: "GET",
@@ -40,24 +49,28 @@ export async function listSafefliteRisks(): Promise<SafefliteRisk[]> {
         Authorization: `Bearer ${secret}`,
       },
       cache: "no-store",
+      signal: AbortSignal.timeout(5000),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`SafeFLITE list-risks failed (${response.status}):`, errorText);
-      return [];
+      return risksCache?.risks ?? [];
     }
 
     const data = await response.json();
     if (!data?.ok || !Array.isArray(data.risks)) {
       console.error("SafeFLITE list-risks returned unexpected payload:", data);
-      return [];
+      return risksCache?.risks ?? [];
     }
 
-    return data.risks as SafefliteRisk[];
+    const risks = data.risks as SafefliteRisk[];
+    risksCache = { risks, fetchedAt: Date.now() };
+    return risks;
   } catch (error) {
     console.error("SafeFLITE list-risks error:", error);
-    return [];
+    // Serve stale cache rather than nothing if the external service is down
+    return risksCache?.risks ?? [];
   }
 }
 

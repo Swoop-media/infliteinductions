@@ -386,12 +386,16 @@ async function deleteModuleAction(formData: FormData) {
     .order("order_index", { ascending: true });
 
   if (rest && rest.length) {
+    const updates: Promise<any>[] = [];
     for (let i = 0; i < rest.length; i++) {
       const r = rest[i] as any;
       if (r.order_index !== i) {
-        await supabase.from("course_modules").update({ order_index: i }).eq("id", r.id);
+        updates.push(
+          supabase.from("course_modules").update({ order_index: i }).eq("id", r.id).then()
+        );
       }
     }
+    await Promise.all(updates);
   }
 
   revalidatePath(buildCourseUrl(courseId));
@@ -761,7 +765,67 @@ export default async function CourseEditorPage(props: {
     (Array.isArray(searchParams?.notice) ? searchParams?.notice[0] : searchParams?.notice) || undefined;
   const banner = noticeMessage(noticeCode);
 
+  // Only load what the active tab actually needs, and load it all in parallel
+  // with the course itself (instead of a sequential waterfall).
+  const isModuleTab =
+    activeTab === "digital_training" ||
+    activeTab === "digital_assessment_quiz" ||
+    activeTab === "onsite_training" ||
+    activeTab === "onsite_assessment";
+
+  const loadDetailsData = async () => {
+    if (activeTab !== "details") {
+      return { sites: [] as { id: string; name: string }[], safefliteRisks: [] as SafefliteRisk[], peerReviews: [] as any[] };
+    }
+    const supabaseForSites = await createSupabaseServer();
+
+    const loadPeerReviews = async () => {
+      // Degrade gracefully if the table hasn't been created yet
+      try {
+        const adminClient = supabaseAdmin();
+        const { data: reviewsData, error: reviewsError } = await adminClient
+          .from("course_peer_reviews")
+          .select("id, reviewer_id, reviewer_name, review_date, notes, created_at")
+          .eq("course_id", courseId)
+          .order("created_at", { ascending: false });
+        if (!reviewsError && reviewsData) return reviewsData;
+      } catch (e) {
+        console.warn("Failed to load peer reviews:", e);
+      }
+      return [] as any[];
+    };
+
+    const loadRisks = async () => {
+      // The SafeFLITE risk register lives on an external service; never let it
+      // block the page for long or fail the render.
+      try {
+        return await listSafefliteRisks();
+      } catch (e) {
+        console.warn("Failed to load SafeFLITE risks:", e);
+        return [] as SafefliteRisk[];
+      }
+    };
+
+    const [sitesResult, safefliteRisks, peerReviews] = await Promise.all([
+      supabaseForSites.from("sites").select("id, name").eq("active", true).order("name"),
+      loadRisks(),
+      loadPeerReviews(),
+    ]);
+    return { sites: sitesResult.data || [], safefliteRisks, peerReviews };
+  };
+
+  // Phase 1: auth + course existence check (loadCourse redirects if signed out).
   const { course, err } = await loadCourse(courseId);
+
+  // Phase 2: only after auth is confirmed, load the active tab's data in parallel.
+  const [activeModules, detailsData] =
+    !err && course
+      ? await Promise.all([
+          isModuleTab ? loadModules(courseId, activeTab as ModuleType) : Promise.resolve([]),
+          loadDetailsData(),
+        ])
+      : [[], { sites: [], safefliteRisks: [], peerReviews: [] }];
+
   if (err || !course) {
     return (
       <div className="p-6">
@@ -772,32 +836,7 @@ export default async function CourseEditorPage(props: {
     );
   }
 
-  const supabaseForSites = await createSupabaseServer();
-  const [digitalTraining, quizModules, onsiteTraining, onsiteAssessment, sitesResult, safefliteRisks] = await Promise.all([
-    loadModules(courseId, "digital_training"),
-    loadModules(courseId, "digital_assessment_quiz"),
-    loadModules(courseId, "onsite_training"),
-    loadModules(courseId, "onsite_assessment"),
-    supabaseForSites.from("sites").select("id, name").eq("active", true).order("name"),
-    listSafefliteRisks(),
-  ]);
-  const sites = sitesResult.data || [];
-
-  // Load peer review history (degrade gracefully if the table hasn't been created yet)
-  let peerReviews: any[] = [];
-  try {
-    const adminClient = supabaseAdmin();
-    const { data: reviewsData, error: reviewsError } = await adminClient
-      .from("course_peer_reviews")
-      .select("id, reviewer_id, reviewer_name, review_date, notes, created_at")
-      .eq("course_id", courseId)
-      .order("created_at", { ascending: false });
-    if (!reviewsError && reviewsData) {
-      peerReviews = reviewsData;
-    }
-  } catch (e) {
-    console.warn("Failed to load peer reviews:", e);
-  }
+  const { sites, safefliteRisks, peerReviews } = detailsData;
 
   const tabs: { key: TabKey; href: string }[] = [
     { key: "details", href: buildCourseUrl(courseId, "details") },
@@ -897,7 +936,7 @@ export default async function CourseEditorPage(props: {
             title="Digital Training Modules"
             hint="Add learning content blocks (text, files, videos, links)."
             type="digital_training"
-            modules={digitalTraining}
+            modules={activeModules}
           />
         )}
 
@@ -907,7 +946,7 @@ export default async function CourseEditorPage(props: {
             title="Digital Assessment (Quiz)"
             hint="Add quiz modules and manage questions."
             type="digital_assessment_quiz"
-            modules={quizModules}
+            modules={activeModules}
           />
         )}
 
@@ -917,7 +956,7 @@ export default async function CourseEditorPage(props: {
             title="Onsite Training Modules"
             hint="Add training events, trainer notes, etc."
             type="onsite_training"
-            modules={onsiteTraining}
+            modules={activeModules}
           />
         )}
 
@@ -927,7 +966,7 @@ export default async function CourseEditorPage(props: {
             title="Onsite Assessment Modules"
             hint="Add assessment activities and criteria."
             type="onsite_assessment"
-            modules={onsiteAssessment}
+            modules={activeModules}
           />
         )}
 
