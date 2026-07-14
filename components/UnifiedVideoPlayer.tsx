@@ -21,6 +21,8 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
   const [retryCount, setRetryCount] = useState(0);
   const [hasAuthenticatedInPopup, setHasAuthenticatedInPopup] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+  const [playbackMode, setPlaybackMode] = useState<"iframe" | "native">("iframe");
+  const [proxyFailed, setProxyFailed] = useState(false);
 
   // Early return if videoUrl is empty or invalid
   if (!videoUrl || videoUrl.trim() === "") {
@@ -142,6 +144,27 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
     }
   }, [extractUrl]);
 
+  // SharePoint share links ("Anyone with the link") and direct file links can be
+  // streamed through our server proxy and played in a native <video> tag,
+  // avoiding iframe/third-party-cookie blocking entirely.
+  const isProxyableSharePoint = useCallback((url: string): boolean => {
+    try {
+      const parsed = new URL(url);
+      if (!/(^|\.)sharepoint\.com$/i.test(parsed.hostname)) return false;
+      const path = parsed.pathname.toLowerCase();
+      // Embed/stream player pages can't be proxied as raw files
+      if (path.includes("/_layouts/15/embed.aspx")) return false;
+      if (path.includes("stream.aspx")) return false;
+      // Share links like /:v:/g/... or /:u:/..., guest access links, or direct video files
+      if (/\/:[a-z]:\//.test(path)) return true;
+      if (path.includes("guestaccess.aspx") || path.includes("download.aspx")) return true;
+      if (/\.(webm|mp4|m4v|mov|ogv|ogg)$/.test(path)) return true;
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
   // Handle SharePoint authentication by opening in popup
   const authenticateSharePointInPopup = useCallback(() => {
     const cleanUrl = extractUrl(videoUrl);
@@ -165,6 +188,15 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
       try {
         const cleanUrl = extractUrl(videoUrl);
         const videoSource = detectVideoSource(cleanUrl);
+
+        // Prefer native streaming through our server proxy for SharePoint
+        // "Anyone" share links / direct files — plays in-page with no sign-in.
+        if (videoSource === "sharepoint" && !proxyFailed && isProxyableSharePoint(cleanUrl)) {
+          setPlaybackMode("native");
+          setEmbedUrl(`/api/sharepoint-video?url=${encodeURIComponent(cleanUrl)}`);
+          return;
+        }
+        setPlaybackMode("iframe");
 
         let finalUrl = normalizeVideoUrl(cleanUrl);
 
@@ -195,7 +227,7 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
     };
 
     initializeVideo();
-  }, [videoUrl, retryCount, extractUrl, detectVideoSource, normalizeVideoUrl, hasAuthenticatedInPopup]);
+  }, [videoUrl, retryCount, extractUrl, detectVideoSource, normalizeVideoUrl, hasAuthenticatedInPopup, proxyFailed, isProxyableSharePoint]);
 
   // Handle iframe load events
   const handleIframeLoad = useCallback(() => {
@@ -216,8 +248,15 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
     setIsLoading(false);
   }, [embedUrl, detectVideoSource, hasAuthenticatedInPopup]);
 
+  // Reset proxy fallback whenever the video changes so new videos
+  // always get a fresh native streaming attempt
+  useEffect(() => {
+    setProxyFailed(false);
+  }, [videoUrl]);
+
   // Retry loading
   const handleRetry = useCallback(() => {
+    setProxyFailed(false); // give native streaming another chance
     setRetryCount((prev) => prev + 1);
     setIframeKey((prev) => prev + 1); // Force iframe reload
     setError(null);
@@ -318,7 +357,27 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
               </div>
             )}
             
-            {embedUrl && embedUrl.trim() !== "" && (
+            {embedUrl && embedUrl.trim() !== "" && playbackMode === "native" && (
+              <video
+                key={`native-${iframeKey}`}
+                src={embedUrl}
+                className="absolute inset-0 w-full h-full"
+                controls
+                controlsList="nodownload"
+                playsInline
+                preload="metadata"
+                onLoadedData={() => setIsLoading(false)}
+                onCanPlay={() => setIsLoading(false)}
+                onError={() => {
+                  // Proxy couldn't stream this link (e.g. not an "Anyone" link)
+                  // — fall back to the SharePoint iframe embed flow.
+                  setProxyFailed(true);
+                  setIsLoading(true);
+                }}
+                title={title || "Course video"}
+              />
+            )}
+            {embedUrl && embedUrl.trim() !== "" && playbackMode === "iframe" && (
               <iframe
                 key={iframeKey}
                 src={embedUrl}
