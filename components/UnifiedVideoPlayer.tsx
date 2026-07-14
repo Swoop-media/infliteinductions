@@ -189,6 +189,16 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
         const cleanUrl = extractUrl(videoUrl);
         const videoSource = detectVideoSource(cleanUrl);
 
+        // Videos uploaded to the app (served via /app/files/...) or other
+        // direct video-file URLs play in a native <video> tag
+        const isInternalFile = cleanUrl.startsWith("/app/files/");
+        const isDirectVideoFile = /\.(webm|mp4|m4v|mov|ogv|ogg)(\?.*)?$/i.test(cleanUrl);
+        if (isInternalFile || (videoSource === "other" && isDirectVideoFile)) {
+          setPlaybackMode("native");
+          setEmbedUrl(cleanUrl);
+          return;
+        }
+
         // Prefer native streaming through our server proxy for SharePoint
         // "Anyone" share links / direct files — plays in-page with no sign-in.
         if (videoSource === "sharepoint" && !proxyFailed && isProxyableSharePoint(cleanUrl)) {

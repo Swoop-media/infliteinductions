@@ -31,6 +31,26 @@ export async function GET(
   const forceDownload = url.searchParams.get('download') === 'true';
 
   try {
+    // Videos: redirect to a short-lived signed URL so the browser streams
+    // straight from Supabase storage (supports Range requests / seeking,
+    // and avoids loading huge files into server memory)
+    const ext = fileId.split('.').pop()?.toLowerCase() || '';
+    const videoExts = ['mp4', 'webm', 'mov', 'm4v', 'ogv', 'ogg', 'mkv'];
+    if (videoExts.includes(ext) && !forceDownload) {
+      const { data: signed, error: signedError } = await supabase
+        .storage
+        .from("course-files")
+        .createSignedUrl(fileId, 3600); // 1 hour
+
+      if (!signedError && signed?.signedUrl) {
+        return NextResponse.redirect(signed.signedUrl, {
+          status: 302,
+          headers: { 'Cache-Control': 'private, no-store' },
+        });
+      }
+      // fall through to direct download if signing fails
+    }
+
     // Download the file content directly
     const { data: fileData, error } = await supabase
       .storage
@@ -96,8 +116,12 @@ function getMimeType(extension: string): string {
     
     // Video
     'mp4': 'video/mp4',
+    'm4v': 'video/mp4',
     'avi': 'video/x-msvideo',
     'mov': 'video/quicktime',
+    'webm': 'video/webm',
+    'ogv': 'video/ogg',
+    'mkv': 'video/x-matroska',
     
     // Audio
     'mp3': 'audio/mpeg',

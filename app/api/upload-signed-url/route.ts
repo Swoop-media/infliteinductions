@@ -53,12 +53,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Check file size limits based on upload type
-    const maxSize = uploadType === 'image' ? 10 * 1024 * 1024 : 100 * 1024 * 1024; // 10MB for images, 100MB for files
+    const maxSize =
+      uploadType === 'image' ? 10 * 1024 * 1024 :
+      uploadType === 'video' ? 2 * 1024 * 1024 * 1024 : // 2GB for videos
+      100 * 1024 * 1024; // 100MB for files
     if (fileSize > maxSize) {
-      const limitMB = uploadType === 'image' ? 10 : 100;
+      const limitLabel = uploadType === 'image' ? '10MB' : uploadType === 'video' ? '2GB' : '100MB';
       return NextResponse.json({ 
-        error: `File size (${(fileSize / 1024 / 1024).toFixed(1)}MB) exceeds the ${limitMB}MB limit. Please use a smaller file.` 
+        error: `File size (${(fileSize / 1024 / 1024).toFixed(1)}MB) exceeds the ${limitLabel} limit. Please use a smaller file.` 
       }, { status: 413 });
+    }
+
+    // Videos must actually be video files
+    if (uploadType === 'video') {
+      const videoExts = ['mp4', 'webm', 'mov', 'm4v', 'ogv', 'ogg'];
+      const extCheck = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase() : '';
+      if (!videoExts.includes(extCheck)) {
+        return NextResponse.json({ 
+          error: 'Unsupported video format. Please upload MP4 (recommended), WebM, or MOV files.' 
+        }, { status: 400 });
+      }
     }
 
     // Block PowerPoint files
@@ -71,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     // Generate unique filename with path based on upload type
     const ext = fileName.includes(".") ? fileName.substring(fileName.lastIndexOf(".") + 1) : "bin";
-    const pathPrefix = uploadType === 'image' ? 'module-images' : 'module-files';
+    const pathPrefix = uploadType === 'image' ? 'module-images' : uploadType === 'video' ? 'module-videos' : 'module-files';
     const storagePath = `${pathPrefix}/${moduleId}/${crypto.randomUUID()}.${ext}`;
     
     // Generate signed URL for upload (valid for 1 hour)

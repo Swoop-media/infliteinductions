@@ -7,6 +7,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import RichTextBlock from "./_components/RichTextBlock";
 import UnifiedVideoPlayer from '@/components/UnifiedVideoPlayer';
+import VideoUploadField from './_components/VideoUploadField';
 import { ModuleType, BlockKind } from "@/lib/types/module";
 import DirectFileBlock from "./_components/DirectFileBlock";
 
@@ -618,6 +619,16 @@ export default async function ModuleEditorPage(props: {
                           Learner “Next” button will unlock after the compulsory time across videos is reached.
                         </p>
                       </form>
+                    )}
+
+                    {b.kind === "video_embed" && (
+                      <div className="mt-2">
+                        <VideoUploadField
+                          moduleId={mod.id}
+                          blockId={b.id}
+                          currentUrl={String(b.data?.url ?? "")}
+                        />
+                      </div>
                     )}
 
                     {b.kind === "file" && (
