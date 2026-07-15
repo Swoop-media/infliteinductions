@@ -221,6 +221,33 @@ type InProgressCourseRow = {
   completed_modules: number;
 };
 
+// Fetch rows with .in() filters in chunks — large ID lists otherwise create
+// request URLs too long for Supabase and the whole fetch fails
+async function fetchInChunks(
+  supabase: any,
+  table: string,
+  select: string,
+  column: string,
+  ids: string[],
+  modify?: (query: any) => any
+) {
+  const CHUNK_SIZE = 150;
+  const chunks: string[][] = [];
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+    chunks.push(ids.slice(i, i + CHUNK_SIZE));
+  }
+  const results = await Promise.all(
+    chunks.map(async (chunkIds) => {
+      let query = supabase.from(table).select(select).in(column, chunkIds);
+      if (modify) query = modify(query);
+      const { data, error } = await query;
+      if (error) throw new Error(`${table}: ${error.message}`);
+      return data || [];
+    })
+  );
+  return results.flat();
+}
+
 async function loadInProgressCourses(q: string | null) {
   "use server";
   noStore();
@@ -245,38 +272,20 @@ async function loadInProgressCourses(q: string | null) {
   const courseIds = [...new Set(assignments.map(a => a.course_id))];
   const assignmentIds = assignments.map(a => a.id);
 
-  // Get profiles (exclude archived users from active views)
-  const { data: profiles, error: profileError } = await supabase
-    .from("profiles")
-    .select("id, full_name, email, archived_at")
-    .in("id", userIds);
-
-  if (profileError) throw new Error(profileError.message);
-
-  // Get courses
-  const { data: courses, error: courseError } = await supabase
-    .from("courses")
-    .select("id, title, department")
-    .in("id", courseIds);
-
-  if (courseError) throw new Error(courseError.message);
-
-  // Get course modules to count total modules
-  const { data: courseModules, error: moduleError } = await supabase
-    .from("course_modules")
-    .select("id, course_id")
-    .in("course_id", courseIds);
-
-  if (moduleError) throw new Error(moduleError.message);
-
-  // Get assignment progress to count completed modules
-  const { data: progress, error: progressError } = await supabase
-    .from("assignment_progress")
-    .select("assignment_id, module_id, completed_at")
-    .in("assignment_id", assignmentIds)
-    .not("completed_at", "is", null);
-
-  if (progressError) throw new Error(progressError.message);
+  // Fetch related data in chunks (large ID lists break single requests)
+  const [profiles, courses, courseModules, progress] = await Promise.all([
+    fetchInChunks(supabase, "profiles", "id, full_name, email, archived_at", "id", userIds),
+    fetchInChunks(supabase, "courses", "id, title, department", "id", courseIds),
+    fetchInChunks(supabase, "course_modules", "id, course_id", "course_id", courseIds),
+    fetchInChunks(
+      supabase,
+      "assignment_progress",
+      "assignment_id, module_id, completed_at",
+      "assignment_id",
+      assignmentIds,
+      (query) => query.not("completed_at", "is", null)
+    ),
+  ]);
 
   // Create lookup maps (skip archived profiles so their assignments are dropped below)
   const profileMap = new Map(
