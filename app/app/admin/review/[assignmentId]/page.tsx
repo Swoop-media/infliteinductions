@@ -750,7 +750,8 @@ async function approveAssignment(formData: FormData) {
       authorisation_id,
       authorisations (
         title,
-        valid_for_days
+        valid_for_days,
+        responsible_person
       )
     `)
     .eq("id", assignmentId)
@@ -893,16 +894,42 @@ async function approveAssignment(formData: FormData) {
     console.error("Audit log failed for approval:", auditErr);
   }
 
+  // Fetch learner profile once (used for responsible person notification + Teams channels)
+  const { data: learnerProfile } = await supabaseService
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", assignment.user_id)
+    .single();
+
+  // Notify the authorisation's Responsible Person (in-app + Teams DM)
+  try {
+    const authorization = assignment.authorisations as any;
+    const responsiblePersonId = authorization?.responsible_person as string | null;
+
+    if (responsiblePersonId) {
+      const { notifyUser } = await import("@/lib/notifications/dispatcher");
+      await notifyUser(
+        responsiblePersonId,
+        "authorisation_approved_responsible",
+        {
+          authorizationTitle: authorization?.title || "Authorisation",
+          learnerName: learnerProfile?.full_name || learnerProfile?.email || "Unknown",
+          approvedBy: approverProfile?.full_name || user.email || "Unknown",
+          expiryDate: expiryDate ? expiryDate.toISOString().split("T")[0] : null,
+          restrictions: restrictionsText,
+          url: `/app/admin/review/${assignmentId}`,
+        }
+      );
+      console.log(`✅ Responsible person ${responsiblePersonId} notified of approval`);
+    }
+  } catch (respNotifyError) {
+    console.error("Failed to notify responsible person:", respNotifyError);
+  }
+
   // Post to Teams channels via webhook
   try {
     const { postToAuthChannels } = await import("@/lib/teams/channel-webhook");
     const authorization = assignment.authorisations as any;
-
-    const { data: learnerProfile } = await supabaseService
-      .from("profiles")
-      .select("full_name, email")
-      .eq("id", assignment.user_id)
-      .single();
 
     await postToAuthChannels({
       type: "approved",

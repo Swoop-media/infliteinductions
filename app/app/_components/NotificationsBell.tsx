@@ -46,6 +46,7 @@ export default function NotificationsBell() {
       case "enrolment_request":
         return <Clock className="h-4 w-4 text-yellow-600" />;
       case "authorization_approved":
+      case "authorisation_approved_responsible":
       case "enrolment_approved":
       case "quiz_passed":
         return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -194,6 +195,18 @@ function labelFor(type: string, p: any) {
       return message;
     }
     
+    case "authorisation_approved_responsible": {
+      const authTitle = getAuthTitle();
+      const learner = getLearnerInfo();
+      let message = "✅ Authorisation approved (responsible person)";
+      if (authTitle) message += `: ${authTitle}`;
+      if (learner) message += ` - Learner: ${learner}`;
+      if (p?.approvedBy) message += ` - Approved by: ${p.approvedBy}`;
+      if (p?.expiryDate) message += ` - Expires: ${p.expiryDate}`;
+      if (p?.restrictions) message += ` - Restrictions: ${p.restrictions}`;
+      return message;
+    }
+
     case "authorization_revoked": {
       const authTitle = getAuthTitle();
       const learner = getLearnerInfo();

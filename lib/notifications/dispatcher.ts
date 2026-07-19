@@ -51,6 +51,7 @@ export type NotificationType =
   | "operations_notice_assigned"
   | "operations_notice_pending_ack"
   | "form_resubmitted"
+  | "authorisation_approved_responsible"
   | string;
 
 function formatTeamsText(
@@ -251,6 +252,19 @@ function formatTeamsText(
         payload?.authorizationTitle ? `• Authorisation: ${payload.authorizationTitle}` : "",
         payload?.approvedBy ? `• Approved by: ${payload.approvedBy}` : "",
         payload?.validFor ? `• Valid for: ${payload.validFor} days` : "",
+        url ? `• View details: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "authorisation_approved_responsible":
+      return [
+        "✅ Authorisation approved (you are the responsible person)",
+        payload?.authorizationTitle ? `• Authorisation: ${payload.authorizationTitle}` : "",
+        learner ? `• Learner: ${learner}` : "",
+        payload?.approvedBy ? `• Approved by: ${payload.approvedBy}` : "",
+        payload?.expiryDate ? `• Expires: ${payload.expiryDate}` : "• Expires: No expiry",
+        payload?.restrictions ? `• Restrictions/comments: ${payload.restrictions}` : "",
         url ? `• View details: ${url}` : "",
       ]
         .filter(Boolean)

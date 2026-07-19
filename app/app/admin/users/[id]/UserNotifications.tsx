@@ -47,6 +47,7 @@ export default function UserNotifications({ userId }: { userId: string }) {
       case "enrolment_request":
         return <Clock className="h-4 w-4 text-yellow-600" />;
       case "authorization_approved":
+      case "authorisation_approved_responsible":
       case "enrolment_approved":
       case "quiz_passed":
         return <CheckCircle className="h-4 w-4 text-green-600" />;
@@ -120,6 +121,17 @@ export default function UserNotifications({ userId }: { userId: string }) {
         let message = `✅ Authorization approved`;
         if (authTitle) message += `: ${authTitle}`;
         if (learner) message += ` - For: ${learner}`;
+        return message;
+      }
+      case "authorisation_approved_responsible": {
+        const authTitle = getAuthTitle();
+        const learner = getLearnerInfo();
+        let message = `✅ Authorisation approved (responsible person)`;
+        if (authTitle) message += `: ${authTitle}`;
+        if (learner) message += ` - Learner: ${learner}`;
+        if (payload?.approvedBy) message += ` - Approved by: ${payload.approvedBy}`;
+        if (payload?.expiryDate) message += ` - Expires: ${payload.expiryDate}`;
+        if (payload?.restrictions) message += ` - Restrictions: ${payload.restrictions}`;
         return message;
       }
       case "authorization_revoked": {
