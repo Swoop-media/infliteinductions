@@ -213,7 +213,8 @@ async function loadAssignmentDetails(assignmentId: string) {
   let documentsQuery = supabase
     .from("learner_documents")
     .select("*")
-    .eq("user_id", assignment.user_id);
+    .eq("user_id", assignment.user_id)
+    .or("status.is.null,status.neq.replaced");
   
   // Filter to only documents from courses in this authorization
   if (courseIds.length > 0) {
@@ -795,7 +796,8 @@ async function approveAssignment(formData: FormData) {
     .from("learner_documents")
     .select("expires_on")
     .eq("user_id", assignment.user_id)
-    .in("course_id", courseIds);
+    .in("course_id", courseIds)
+    .or("status.is.null,status.neq.replaced");
   
   // Calculate the expiry date
   const approvalDate = new Date();

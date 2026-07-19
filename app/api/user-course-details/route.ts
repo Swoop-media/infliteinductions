@@ -308,7 +308,8 @@ export async function GET(request: NextRequest) {
       .from("learner_documents")
       .select("id, title, module_id, created_at")
       .eq("user_id", userId)
-      .eq("course_id", courseId);
+      .eq("course_id", courseId)
+      .or("status.is.null,status.neq.replaced");
 
     // Process modules with all their details
     const modulesWithDetails = modules.map(module => {

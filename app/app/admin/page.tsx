@@ -511,7 +511,8 @@ async function loadUserDocuments(q: string | null, page: number = 1) {
   // First get total count (excluding archived users)
   let countQuery = supabase
     .from("learner_documents")
-    .select("*", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true })
+    .or("status.is.null,status.neq.replaced");
   if (archivedUserIds.length > 0) {
     countQuery = countQuery.not("user_id", "in", `(${archivedUserIds.join(",")})`);
   }
@@ -534,6 +535,7 @@ async function loadUserDocuments(q: string | null, page: number = 1) {
       course_id,
       module_id
     `)
+    .or("status.is.null,status.neq.replaced")
     .order("expires_on", { ascending: true, nullsFirst: false })
     .range(offset, offset + PAGE_SIZE - 1);
   if (archivedUserIds.length > 0) {
@@ -864,7 +866,8 @@ async function loadAuthorisationOverview() {
       .select("user_id, course_id, expires_on")
       .in("user_id", userIds)
       .in("course_id", allCourseIds)
-      .not("expires_on", "is", null);
+      .not("expires_on", "is", null)
+      .or("status.is.null,status.neq.replaced");
     documents = docs || [];
   }
   const userCourseDocMap = new Map<string, any[]>();
@@ -1419,7 +1422,8 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null, page: n
       .select("id, user_id, course_id, expires_on")
       .in("user_id", userIds)
       .in("course_id", allCourseIds)
-      .not("expires_on", "is", null);
+      .not("expires_on", "is", null)
+      .or("status.is.null,status.neq.replaced");
     documents = docs || [];
   }
 

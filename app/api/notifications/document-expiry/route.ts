@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
         user_id
       `)
       .not("expires_on", "is", null)
+      .or("status.is.null,status.neq.replaced")
       .order("expires_on", { ascending: true });
     
     // Get user profiles separately to avoid relationship conflicts

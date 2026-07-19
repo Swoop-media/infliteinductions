@@ -810,7 +810,8 @@ export default async function LearnerCoursePage(props: {
       .from("learner_documents")
       .select("*")
       .eq("user_id", user.id)
-      .eq("course_id", courseId),
+      .eq("course_id", courseId)
+      .or("status.is.null,status.neq.replaced"),
     loadReviewerProfile(),
   ]);
 

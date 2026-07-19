@@ -172,6 +172,7 @@ export async function POST(request: NextRequest) {
         user_id
       `)
       .not("expires_on", "is", null)
+      .or("status.is.null,status.neq.replaced")
       .lte("expires_on", thirtyDaysStr)
       .order("expires_on", { ascending: true })
       .limit(50);

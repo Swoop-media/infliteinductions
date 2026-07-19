@@ -229,6 +229,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
       title,
       file_path,
       expires_on,
+      status,
       created_at,
       courses!learner_documents_course_id_fkey(title),
       course_modules!learner_documents_module_id_fkey(title)
@@ -573,13 +574,18 @@ export default async function EditUserPage({
   const currentCompletedCourses = processedCourses.filter((c: any) => c.status !== 'expired');
   const expiredCompletedCourses = processedCourses.filter((c: any) => c.status === 'expired');
 
-  // Split uploaded documents by expiry date
+  // Split uploaded documents: replaced (superseded by a newer upload) and
+  // date-expired documents go to the Expired Documents folder; the rest are current.
   const docsNow = new Date();
   const expiredDocuments = uploadedDocuments.filter(
-    (d: any) => d.expires_on && new Date(d.expires_on) < docsNow
+    (d: any) =>
+      d.status === "replaced" ||
+      (d.expires_on && new Date(d.expires_on) < docsNow)
   );
   const currentDocuments = uploadedDocuments.filter(
-    (d: any) => !d.expires_on || new Date(d.expires_on) >= docsNow
+    (d: any) =>
+      d.status !== "replaced" &&
+      (!d.expires_on || new Date(d.expires_on) >= docsNow)
   );
 
   return (
@@ -1052,14 +1058,26 @@ export default async function EditUserPage({
                       <p className="text-xs text-gray-600">
                         Uploaded: {new Date(doc.created_at).toLocaleDateString()}
                       </p>
-                      <p className="text-xs text-red-700">
-                        Expired: {new Date(doc.expires_on).toLocaleDateString()}
-                      </p>
+                      {doc.expires_on && new Date(doc.expires_on) < new Date() ? (
+                        <p className="text-xs text-red-700">
+                          Expired: {new Date(doc.expires_on).toLocaleDateString()}
+                        </p>
+                      ) : doc.expires_on ? (
+                        <p className="text-xs text-gray-600">
+                          Expires: {new Date(doc.expires_on).toLocaleDateString()}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex items-center gap-2 ml-3">
-                      <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-red-100 text-red-700">
-                        Expired
-                      </span>
+                      {doc.status === "replaced" ? (
+                        <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-amber-100 text-amber-700">
+                          Replaced
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-red-100 text-red-700">
+                          Expired
+                        </span>
+                      )}
                       <DocumentViewButton filePath={doc.file_path} title={doc.title} />
                     </div>
                   </div>

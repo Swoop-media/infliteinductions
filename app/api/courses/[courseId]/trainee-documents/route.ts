@@ -60,6 +60,7 @@ export async function GET(
       `)
       .eq('user_id', traineeId)
       .eq('course_id', courseId)
+      .or('status.is.null,status.neq.replaced')
       .order('created_at', { ascending: false });
 
     if (error) {

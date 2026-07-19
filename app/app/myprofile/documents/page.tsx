@@ -122,6 +122,7 @@ async function loadMyDocs() {
       created_at: row.created_at ?? null,
       course_title: row.course_title,
       module_title: row.module_title,
+      status: row.status ?? null,
     });
   }
 
@@ -145,6 +146,19 @@ export default async function MyDocumentsPage({
 
   const { items, error } = await loadMyDocs();
 
+  // Split into current documents and old (replaced or expired) documents
+  const now = new Date();
+  const currentItems = items.filter(
+    (d) =>
+      d.status !== "replaced" &&
+      (!d.expires_on || new Date(d.expires_on) >= now)
+  );
+  const oldItems = items.filter(
+    (d) =>
+      d.status === "replaced" ||
+      (d.expires_on && new Date(d.expires_on) < now)
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -156,13 +170,15 @@ export default async function MyDocumentsPage({
 
       <Flash ok={ok} error={error ?? err} />
 
-      {items.length === 0 ? (
+      {currentItems.length === 0 ? (
         <div className="rounded-md border bg-white p-4 text-sm text-gray-600">
-          You haven’t uploaded any documents yet.
+          {oldItems.length > 0
+            ? "You have no current documents. Your older documents are listed below."
+            : "You haven’t uploaded any documents yet."}
         </div>
       ) : (
         <ul className="divide-y rounded-md border bg-white">
-          {items.map((d) => (
+          {currentItems.map((d) => (
             <li key={d.id} className="flex items-center justify-between p-3">
               <div>
                 <div className="font-medium">{d.title}</div>
@@ -189,6 +205,54 @@ export default async function MyDocumentsPage({
             </li>
           ))}
         </ul>
+      )}
+
+      {oldItems.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Old documents ({oldItems.length})</h2>
+          <p className="text-xs text-gray-500">
+            Documents that have expired or were replaced by a newer upload. They are kept for your records.
+          </p>
+          <ul className="divide-y rounded-md border bg-white">
+            {oldItems.map((d) => (
+              <li key={d.id} className="flex items-center justify-between p-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium">{d.title}</span>
+                    {d.status === "replaced" ? (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                        Replaced
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                        Expired
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {d.course_title ? `${d.course_title}` : ""}
+                    {d.module_title ? ` - ${d.module_title}` : ""}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {d.expires_on ? `Expires ${new Date(d.expires_on).toLocaleDateString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit' })}` : "No expiry"}
+                    {d.created_at ? ` • Uploaded ${new Date(d.created_at).toLocaleString('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ""}
+                  </div>
+                </div>
+                {d.url ? (
+                  <a
+                    href={d.url}
+                    target="_blank"
+                    className="rounded-md border px-3 py-1 text-xs hover:bg-gray-50"
+                  >
+                    View
+                  </a>
+                ) : (
+                  <span className="text-xs text-gray-500">No file</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       <p className="text-xs text-gray-500">Links are temporary and expire after 1 hour.</p>
