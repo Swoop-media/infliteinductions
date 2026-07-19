@@ -1,6 +1,28 @@
+// Sanitize env values that were pasted with extra characters, e.g.
+// `TEAMS_WEBHOOK_CHANNEL_1="https://..."` or `"https://..."` stored as the value.
+function sanitizeWebhookUrl(raw: string | undefined, name: string): string | null {
+  if (!raw) return null;
+  let v = raw.trim();
+  // Strip a leading `NAME=` prefix if the whole assignment was pasted as the value
+  const eq = v.indexOf("=");
+  if (eq > 0 && !v.slice(0, eq).includes("://") && /^[A-Z0-9_]+$/.test(v.slice(0, eq).trim())) {
+    v = v.slice(eq + 1).trim();
+  }
+  // Strip surrounding quotes
+  v = v.replace(/^["']+/, "").replace(/["']+$/, "").trim();
+  try {
+    const parsed = new URL(v);
+    if (parsed.protocol !== "https:") throw new Error("not https");
+    return v;
+  } catch {
+    console.error(`❌ ${name} is set but is not a valid https URL after sanitizing`);
+    return null;
+  }
+}
+
 const WEBHOOK_URLS = [
-  process.env.TEAMS_WEBHOOK_CHANNEL_1,
-  process.env.TEAMS_WEBHOOK_CHANNEL_2,
+  sanitizeWebhookUrl(process.env.TEAMS_WEBHOOK_CHANNEL_1, "TEAMS_WEBHOOK_CHANNEL_1"),
+  sanitizeWebhookUrl(process.env.TEAMS_WEBHOOK_CHANNEL_2, "TEAMS_WEBHOOK_CHANNEL_2"),
 ].filter(Boolean) as string[];
 
 interface WebhookPayload {
