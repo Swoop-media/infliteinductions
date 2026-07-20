@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +10,11 @@ export const dynamic = "force-dynamic";
  * Usage in UI: <img src={`/app/files/${encodeURIComponent(file_id)}`} />
  * - Auth required (redirects to /auth/login if missing)
  * - Serves files inline for viewing in course player
+ *
+ * Access control:
+ *   Admins, Senior management, and Course Creators can access any course file.
+ *   All other users (learners, trainers, assessors) must have a course_assignments
+ *   row for the course that owns the requested file.
  */
 export async function GET(
   request: NextRequest,
@@ -25,6 +31,83 @@ export async function GET(
   const resolvedParams = await params;
   const fileId = decodeURIComponent((resolvedParams.path || []).join("/"));
   if (!fileId) return new NextResponse("Missing file path", { status: 400 });
+
+  // --- Entitlement check ---
+  const adminClient = supabaseAdmin();
+
+  // Check if the user holds a privileged role that grants access to all course files
+  const privilegedRoleNames = ["Admin", "Senior management", "Course Creators"];
+  let isPrivileged = false;
+  for (const roleName of privilegedRoleNames) {
+    const { data: roleResult } = await supabase.rpc("has_role", {
+      uid: user.id,
+      role_name: roleName,
+    });
+    if (roleResult) {
+      isPrivileged = true;
+      break;
+    }
+  }
+
+  if (!isPrivileged) {
+    // Resolve which course owns this file via module_content_blocks.
+    // File blocks store storage_path in data; video blocks store the proxy URL in data.url.
+    const videoProxyUrl = `/app/files/${fileId}`;
+
+    // Try file block first (data->>'storage_path' = fileId)
+    let courseId: string | null = null;
+
+    const { data: fileBlock } = await adminClient
+      .from("module_content_blocks")
+      .select("module_id")
+      .filter("data->>storage_path", "eq", fileId)
+      .maybeSingle();
+
+    if (fileBlock?.module_id) {
+      const { data: mod } = await adminClient
+        .from("course_modules")
+        .select("course_id")
+        .eq("id", fileBlock.module_id)
+        .maybeSingle();
+      courseId = mod?.course_id ?? null;
+    }
+
+    if (!courseId) {
+      // Try video block (data->>'url' = '/app/files/<fileId>')
+      const { data: videoBlock } = await adminClient
+        .from("module_content_blocks")
+        .select("module_id")
+        .filter("data->>url", "eq", videoProxyUrl)
+        .maybeSingle();
+
+      if (videoBlock?.module_id) {
+        const { data: mod } = await adminClient
+          .from("course_modules")
+          .select("course_id")
+          .eq("id", videoBlock.module_id)
+          .maybeSingle();
+        courseId = mod?.course_id ?? null;
+      }
+    }
+
+    if (!courseId) {
+      // File is not registered in any course block — deny access
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+
+    // Check the user has an assignment (any role) for the owning course
+    const { data: assignment } = await adminClient
+      .from("course_assignments")
+      .select("id")
+      .eq("course_id", courseId)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (!assignment) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+  }
+  // --- End entitlement check ---
 
   // Check if request wants download via query parameter
   const url = new URL(request.url);
@@ -71,7 +154,7 @@ export async function GET(
       headers: {
         'Content-Type': mimeType,
         'Content-Disposition': forceDownload ? 'attachment' : 'inline',
-        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        'Cache-Control': 'private, no-store',
       },
     });
 
