@@ -202,7 +202,7 @@ function buildIssueReportCard(payload: IssueReportWebhookPayload) {
 export async function postIssueReportToChannel(
   payload: IssueReportWebhookPayload
 ): Promise<boolean> {
-  const url = process.env.TEAMS_WEBHOOK_REPORT_ISSUE;
+  const url = sanitizeWebhookUrl(process.env.TEAMS_WEBHOOK_REPORT_ISSUE, "TEAMS_WEBHOOK_REPORT_ISSUE");
   if (!url) {
     console.warn("TEAMS_WEBHOOK_REPORT_ISSUE not configured");
     return false;
