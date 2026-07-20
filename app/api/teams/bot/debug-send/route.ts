@@ -1,9 +1,15 @@
 // @ts-nocheck
 import { NextResponse, NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { hasRole } from "@/lib/roles";
 
 export async function POST(request: NextRequest) {
   try {
+    const isAdmin = await hasRole("Admin");
+    if (!isAdmin) {
+      return NextResponse.json({ error: "Unauthorized - Admin access required" }, { status: 403 });
+    }
+
     const { email, message, userId } = await request.json();
 
     console.log("🔍 Debug send request:", { email, hasMessage: !!message, userId });
@@ -27,7 +33,7 @@ export async function POST(request: NextRequest) {
     if (!targetUserId && email) {
       console.log("📧 Looking up user by email:", email);
       const supabase = supabaseAdmin();
-      const { data: user, error: userError } = await supabase
+      const { data: userRecord, error: userError } = await supabase
         .from('profiles')
         .select('id, full_name')
         .eq('email', email)
@@ -37,13 +43,13 @@ export async function POST(request: NextRequest) {
         console.log("❌ User lookup error:", userError);
       }
 
-      if (user) {
-        targetUserId = (user as any).id;
-        console.log("✅ Found user:", { id: targetUserId, name: (user as any).full_name });
+      if (userRecord) {
+        targetUserId = (userRecord as any).id;
+        console.log("✅ Found user:", { id: targetUserId, name: (userRecord as any).full_name });
       } else {
-        console.log("❌ User not found for email:", email);
+        console.log("❌ User not found");
         return NextResponse.json(
-          { error: "User not found", email },
+          { error: "User not found" },
           { status: 404 }
         );
       }
@@ -69,7 +75,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.log("❌ Teams link lookup error:", error);
       return NextResponse.json(
-        { error: "Database error looking up Teams link", details: error.message, userId: targetUserId },
+        { error: "Database error looking up Teams link" },
         { status: 500 }
       );
     }
@@ -77,22 +83,28 @@ export async function POST(request: NextRequest) {
     if (!teamsLink) {
       console.log("⚠️ No Teams link found for user:", targetUserId);
       return NextResponse.json(
-        { error: "User not linked to Teams", userId: targetUserId },
+        { error: "User not linked to Teams" },
         { status: 404 }
       );
     }
 
-    console.log("✅ Found Teams link:", { 
-      userId: (teamsLink as any).user_id, 
-      teamsUserId: (teamsLink as any).teams_user_id,
-      hasConversationRef: !!(teamsLink as any).conversation_ref,
-      aadObjectId: (teamsLink as any).aad_object_id
-    });
+    // Parse conversation reference
+    const conversationRef = (teamsLink as any).conversation_ref;
+    const serviceUrl = conversationRef.serviceUrl;
+    const conversationId = conversationRef.conversation?.id;
 
+    if (!serviceUrl || !conversationId) {
+      console.error("❌ Invalid conversation reference");
+      return NextResponse.json({ error: "Invalid conversation reference" }, { status: 400 });
+    }
 
-    // Send message using Bot Framework API
+    // Validate serviceUrl is a known Microsoft domain to prevent SSRF
+    if (!isAllowedServiceUrl(serviceUrl)) {
+      console.error("❌ Blocked serviceUrl with untrusted domain:", serviceUrl);
+      return NextResponse.json({ error: "Invalid conversation reference" }, { status: 400 });
+    }
 
-    // Get token
+    // Get Bot Framework token
     const tenant = MicrosoftAppType === "SingleTenant" ? MicrosoftAppTenantId : "botframework.com";
     const tokenUrl = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`;
     const tokenParams = new URLSearchParams();
@@ -101,7 +113,6 @@ export async function POST(request: NextRequest) {
     tokenParams.set("grant_type", "client_credentials");
     tokenParams.set("scope", "https://api.botframework.com/.default");
 
-    console.log(`🚀 Requesting token from: ${tokenUrl}`);
     const tokenResponse = await fetch(tokenUrl, {
       method: "POST",
       headers: { "content-type": "application/x-www-form-urlencoded" },
@@ -111,22 +122,11 @@ export async function POST(request: NextRequest) {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error("❌ Token request failed:", errorText);
-      return NextResponse.json({ error: "Token acquisition failed", details: errorText }, { status: 500 });
+      return NextResponse.json({ error: "Token acquisition failed" }, { status: 500 });
     }
 
     const tokenData = await tokenResponse.json();
     const accessToken = tokenData.access_token;
-    console.log("✅ Token acquired successfully.");
-
-    // Parse conversation reference
-    const conversationRef = (teamsLink as any).conversation_ref;
-    const serviceUrl = conversationRef.serviceUrl;
-    const conversationId = conversationRef.conversation?.id;
-
-    if (!serviceUrl || !conversationId) {
-      console.error("❌ Invalid conversation reference:", conversationRef);
-      return NextResponse.json({ error: "Invalid conversation reference", userId: targetUserId }, { status: 400 });
-    }
 
     // Send proactive message
     const proactiveUrl = `${serviceUrl}/v3/conversations/${conversationId}/activities`;
@@ -142,7 +142,6 @@ export async function POST(request: NextRequest) {
       channelId: conversationRef.channelId
     };
 
-    console.log(`🚀 Sending message to Teams conversation: ${conversationId} at ${serviceUrl}`);
     const messageResponse = await fetch(proactiveUrl, {
       method: "POST",
       headers: {
@@ -155,7 +154,7 @@ export async function POST(request: NextRequest) {
     if (!messageResponse.ok) {
       const errorText = await messageResponse.text();
       console.error("❌ Message send failed:", errorText);
-      return NextResponse.json({ error: "Failed to send message", details: errorText }, { status: 500 });
+      return NextResponse.json({ error: "Failed to send message" }, { status: 500 });
     }
 
     console.log("✅ Message sent successfully to Teams.");
@@ -163,6 +162,25 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error("❌ Internal server error:", error);
-    return NextResponse.json({ error: "Internal server error", details: (error as Error).message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+/**
+ * Validates that a Teams serviceUrl is a known Microsoft domain.
+ * Prevents SSRF: attacker-stored serviceUrl values in teams_links must not cause
+ * the server to send the bot OAuth token to an attacker-controlled endpoint.
+ */
+function isAllowedServiceUrl(serviceUrl: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(serviceUrl);
+    if (protocol !== "https:") return false;
+    return (
+      hostname.endsWith(".microsoft.com") ||
+      hostname.endsWith(".botframework.com") ||
+      hostname === "smba.trafficmanager.net"
+    );
+  } catch {
+    return false;
   }
 }

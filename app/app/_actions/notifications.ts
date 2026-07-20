@@ -339,19 +339,6 @@ export async function createNotification(input: NotificationInput) {
     } else {
       try {
         await trySendTeamsDM(n.recipientUserId, teamsTextFor(n));
-
-      // Also try direct API call if the above module approach fails
-      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-      await fetch(`${baseUrl}/api/teams/bot/debug-send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: n.recipientUserId,
-          message: teamsTextFor(n)
-        })
-      }).catch(() => {
-        // Ignore API call failures too
-      });
       } catch {
         // intentionally ignored; in-app is the source of truth
       }
