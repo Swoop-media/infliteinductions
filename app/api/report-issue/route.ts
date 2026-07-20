@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createSupabaseServer } from '@/lib/supabase/server';
 import { postIssueReportToChannel } from '@/lib/teams/channel-webhook';
 
 function supabaseAdmin() {
@@ -12,6 +13,13 @@ function supabaseAdmin() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Verify the caller is authenticated
+    const supabaseSession = await createSupabaseServer();
+    const { data: { user }, error: authError } = await supabaseSession.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     console.log("📝 Processing issue report...");
 
     const { message, attachments, context, userId } = await request.json();
@@ -24,27 +32,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("👤 Getting user details for:", userId);
+    // Verify the submitted userId matches the authenticated user — prevents impersonation
+    if (userId !== user.id) {
+      console.error("❌ userId mismatch: submitted", userId, "authenticated", user.id);
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    console.log("👤 Getting user details for:", user.id);
 
     // Get user details for additional context
     const supabase = supabaseAdmin();
-    const { data: user, error: userError } = await supabase
+    const { data: profile, error: userError } = await supabase
       .from('profiles')
       .select('full_name, email')
-      .eq('id', userId)
+      .eq('id', user.id)
       .single();
 
     if (userError) {
       console.warn("⚠️ Could not fetch user details:", userError);
     }
 
-    const userName = user?.full_name || user?.email || 'Unknown User';
+    const userName = profile?.full_name || profile?.email || 'Unknown User';
 
     console.log("📤 Posting issue report to Teams channel webhook...");
 
     const sent = await postIssueReportToChannel({
       reporterName: userName,
-      reporterEmail: user?.email || '',
+      reporterEmail: profile?.email || '',
       message,
       pageUrl: context?.url,
       userAgent: context?.userAgent,
@@ -59,7 +73,7 @@ export async function POST(request: NextRequest) {
     // Always log the report to database for tracking
     try {
       await supabase.from('issue_reports').insert({
-        user_id: userId,
+        user_id: user.id,
         message: message,
         context: context,
         attachments_count: attachments?.length || 0,

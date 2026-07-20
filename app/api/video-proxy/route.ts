@@ -1,19 +1,31 @@
 // @ts-nocheck
 
 import { NextRequest, NextResponse } from 'next/server';
+import { createSupabaseServer } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { url, userAgent } = await request.json();
-    
+    // Require an authenticated session before performing any server-side work
+    const supabase = await createSupabaseServer();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { url } = await request.json();
+
     if (!url) {
       return NextResponse.json({ error: 'URL is required' }, { status: 400 });
     }
 
-    // For SharePoint embed URLs, we can't actually proxy the content due to CORS and authentication
-    // Instead, provide guidance on authentication
-    const urlObj = new URL(url);
-    
+    let urlObj: URL;
+    try {
+      urlObj = new URL(url);
+    } catch {
+      return NextResponse.json({ error: 'Invalid URL' }, { status: 400 });
+    }
+
+    // Only SharePoint domains are in scope for this proxy helper
     if (urlObj.hostname.includes('.sharepoint.com')) {
       return NextResponse.json({
         success: false,
@@ -24,43 +36,12 @@ export async function POST(request: NextRequest) {
       }, { status: 200 });
     }
 
-    // For other URLs, attempt basic fetch
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'User-Agent': userAgent || 'Mozilla/5.0 (compatible; VideoProxy/1.0)',
-        },
-        redirect: 'manual'
-      });
-
-      if (response.status === 302 || response.status === 301) {
-        const location = response.headers.get('location');
-        return NextResponse.json({
-          success: false,
-          error: 'Redirect detected',
-          redirectUrl: location
-        });
-      }
-
-      if (!response.ok) {
-        return NextResponse.json({
-          success: false,
-          error: `HTTP ${response.status}: ${response.statusText}`
-        });
-      }
-
-      return NextResponse.json({
-        success: true,
-        proxyUrl: url,
-        status: response.status
-      });
-
-    } catch (fetchError) {
-      return NextResponse.json({
-        success: false,
-        error: `Network error: ${fetchError.message}`
-      });
-    }
+    // All other destinations are not supported — reject to prevent server-side
+    // request forgery against internal or external hosts
+    return NextResponse.json({
+      success: false,
+      error: 'Unsupported URL destination'
+    }, { status: 400 });
 
   } catch (error) {
     console.error('Video proxy error:', error);
