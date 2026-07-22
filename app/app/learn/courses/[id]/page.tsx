@@ -713,7 +713,7 @@ export default async function LearnerCoursePage(props: {
   const { id: courseId } = await props.params;
   const searchParams = await props.searchParams;
   const selectedModuleId = searchParams?.module;
-  const authorizationId = searchParams?.auth;
+  let authorizationId = searchParams?.auth;
   const review = searchParams?.review === '1'; // Peer review mode - behaves like preview but with full onsite visibility and a review sign-off panel
   const preview = searchParams?.preview === '1' || review; // Extract preview flag (review mode implies preview behaviour)
   const modeParam = review ? '&review=1' : preview ? '&preview=1' : '';
@@ -735,12 +735,37 @@ export default async function LearnerCoursePage(props: {
   // Load everything that only depends on user/course ids in parallel.
   // (Auth was already checked above, so this is safe to fan out.)
   const loadAuthContext = async () => {
-    if (!authorizationId) return { auth: null as any, authCourses: null as any[] | null };
+    let effectiveAuthId: string | null = authorizationId || null;
+
+    // If no ?auth= param, work out the authorisation automatically from the
+    // learner's own authorisation assignments that include this course.
+    if (!effectiveAuthId && !preview) {
+      const { data: authsForCourse } = await supabase
+        .from("authorisation_courses")
+        .select("authorisation_id")
+        .eq("course_id", courseId);
+      const authIds = Array.from(new Set((authsForCourse ?? []).map((r: any) => r.authorisation_id)));
+      if (authIds.length > 0) {
+        const { data: myAuthAssignments } = await supabase
+          .from("authorisation_assignments")
+          .select("authorisation_id, assignment_status, created_at")
+          .eq("user_id", user.id)
+          .in("authorisation_id", authIds)
+          .order("created_at", { ascending: true });
+        const rows = myAuthAssignments ?? [];
+        const active = rows.find(
+          (a: any) => a.assignment_status !== "completed" && a.assignment_status !== "revoked"
+        );
+        effectiveAuthId = (active ?? rows[0])?.authorisation_id ?? null;
+      }
+    }
+
+    if (!effectiveAuthId) return { auth: null as any, authCourses: null as any[] | null, effectiveAuthId: null as string | null };
     const [{ data: auth }, { data: authCourses }] = await Promise.all([
       supabase
         .from("authorisations")
         .select("id, title")
-        .eq("id", authorizationId)
+        .eq("id", effectiveAuthId)
         .single(),
       supabase
         .from("authorisation_courses")
@@ -749,10 +774,10 @@ export default async function LearnerCoursePage(props: {
           order_index,
           courses!inner(id, title)
         `)
-        .eq("authorisation_id", authorizationId)
+        .eq("authorisation_id", effectiveAuthId)
         .order("order_index", { ascending: true }),
     ]);
-    return { auth, authCourses };
+    return { auth, authCourses, effectiveAuthId };
   };
 
   // Assignment row + its progress in one branch (progress needs the assignment id)
@@ -788,7 +813,7 @@ export default async function LearnerCoursePage(props: {
 
   const [
     { data: course, error: courseErr },
-    { auth: authRow, authCourses },
+    { auth: authRow, authCourses, effectiveAuthId },
     { data: modules, error: modErr },
     { userAssignment, assignmentProgress },
     { data: userDocuments },
@@ -841,6 +866,12 @@ export default async function LearnerCoursePage(props: {
     };
   }
 
+  // If the authorisation was derived automatically (no ?auth= param), use it
+  // for all in-page links and the next-course button.
+  if (!authorizationId && effectiveAuthId) {
+    authorizationId = effectiveAuthId;
+  }
+
   // Check if this course is part of an authorization
   let authorizationContext = null;
   let nextCourseInAuth = null;
@@ -848,9 +879,33 @@ export default async function LearnerCoursePage(props: {
   if (authRow && authCourses) {
     const currentIndex = authCourses.findIndex((ac: any) => ac.course_id === courseId);
 
-    if (currentIndex !== -1 && currentIndex + 1 < authCourses.length) {
-      nextCourseInAuth = authCourses[currentIndex + 1];
+    // Work out which courses in this authorisation the learner has already
+    // completed, so the button always points at the next incomplete course.
+    let completedCourseIds = new Set<string>();
+    if (!preview && authCourses.length > 0) {
+      const authCourseIds = authCourses.map((ac: any) => ac.course_id);
+      const { data: completedRows } = await supabase
+        .from("course_assignments")
+        .select("course_id, completed_at")
+        .eq("user_id", user.id)
+        .eq("role", "trainee")
+        .in("course_id", authCourseIds)
+        .not("completed_at", "is", null);
+      completedCourseIds = new Set((completedRows ?? []).map((r: any) => r.course_id));
     }
+
+    // Prefer the next incomplete course after this one; otherwise the first
+    // incomplete course earlier in the list; otherwise fall back to the next
+    // course by order.
+    const after = currentIndex >= 0 ? authCourses.slice(currentIndex + 1) : authCourses;
+    const before = currentIndex > 0 ? authCourses.slice(0, currentIndex) : [];
+    nextCourseInAuth =
+      [...after, ...before].find(
+        (ac: any) => ac.course_id !== courseId && !completedCourseIds.has(ac.course_id)
+      ) ??
+      (currentIndex !== -1 && currentIndex + 1 < authCourses.length
+        ? authCourses[currentIndex + 1]
+        : null);
 
     authorizationContext = {
       ...authRow,
@@ -879,6 +934,16 @@ export default async function LearnerCoursePage(props: {
   const totalModules = sortedModules.length;
   const completedCount = preview ? 0 : completedModules.size;
   const progressPercent = preview ? 0 : (totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0);
+
+  // "Digital component" = all digital training + quiz modules completed
+  // (onsite training/assessment may still be outstanding)
+  const digitalModules = sortedModules.filter(
+    m => m.type === "digital_training" || m.type === "digital_assessment_quiz"
+  );
+  const digitalComplete =
+    !preview &&
+    digitalModules.length > 0 &&
+    digitalModules.every(m => completedModules.has(m.id));
 
   // Determine current module
   let currentModule = null;
@@ -1488,13 +1553,15 @@ export default async function LearnerCoursePage(props: {
                                         Next Module →
                                       </Link>
                                     ) : (
-                                      <ContinueToNextCourseButton
-                                        currentCourseId={courseId}
-                                        authorizationId={authorizationId}
-                                        nextCourseInAuth={nextCourseInAuth}
-                                        isModuleOnsite={false}
-                                        isCourseComplete={true}
-                                      />
+                                      !(digitalComplete && authorizationContext && nextCourseInAuth) ? (
+                                        <ContinueToNextCourseButton
+                                          currentCourseId={courseId}
+                                          authorizationId={authorizationId}
+                                          nextCourseInAuth={nextCourseInAuth}
+                                          isModuleOnsite={false}
+                                          isCourseComplete={true}
+                                        />
+                                      ) : null
                                     )
                                   ) : (
                                     <Link
@@ -1515,13 +1582,15 @@ export default async function LearnerCoursePage(props: {
                                         Next Module →
                                       </Link>
                                     ) : (
-                                      <ContinueToNextCourseButton
-                                        currentCourseId={courseId}
-                                        authorizationId={authorizationId}
-                                        nextCourseInAuth={nextCourseInAuth}
-                                        isModuleOnsite={false}
-                                        isCourseComplete={true}
-                                      />
+                                      !(digitalComplete && authorizationContext && nextCourseInAuth) ? (
+                                        <ContinueToNextCourseButton
+                                          currentCourseId={courseId}
+                                          authorizationId={authorizationId}
+                                          nextCourseInAuth={nextCourseInAuth}
+                                          isModuleOnsite={false}
+                                          isCourseComplete={true}
+                                        />
+                                      ) : null
                                     )
                                   ) : (
                                     <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
@@ -1550,13 +1619,15 @@ export default async function LearnerCoursePage(props: {
                                         Next Module →
                                       </Link>
                                     ) : (
-                                      <ContinueToNextCourseButton
-                                        currentCourseId={courseId}
-                                        authorizationId={authorizationId}
-                                        nextCourseInAuth={nextCourseInAuth}
-                                        isModuleOnsite={false}
-                                        isCourseComplete={true}
-                                      />
+                                      !(digitalComplete && authorizationContext && nextCourseInAuth) ? (
+                                        <ContinueToNextCourseButton
+                                          currentCourseId={courseId}
+                                          authorizationId={authorizationId}
+                                          nextCourseInAuth={nextCourseInAuth}
+                                          isModuleOnsite={false}
+                                          isCourseComplete={true}
+                                        />
+                                      ) : null
                                     )
                                   ) : (
                                     <CompleteModuleButton
@@ -1578,20 +1649,24 @@ export default async function LearnerCoursePage(props: {
                         </div>
 
                         {/* Course completion and authorization progression */}
-                        {completedCount === totalModules && totalModules > 0 && authorizationContext && nextCourseInAuth && (
+                        {digitalComplete && authorizationContext && nextCourseInAuth && (
                           <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                             <div className="flex items-center justify-between">
                               <div>
-                                <h4 className="font-medium text-green-900">Course Complete!</h4>
+                                <h4 className="font-medium text-green-900">
+                                  {completedCount === totalModules ? 'Course Complete!' : 'Digital Training Complete!'}
+                                </h4>
                                 <p className="text-sm text-green-700">
-                                  Ready for the next course in your authorization
+                                  {completedCount === totalModules
+                                    ? 'Ready for the next course in your authorization'
+                                    : 'Any onsite sessions will be completed by your trainer/assessor. You can carry on with the next course now.'}
                                 </p>
                               </div>
                               <Link
                                 href={`/app/learn/courses/${nextCourseInAuth.course_id}?auth=${authorizationId}`}
-                                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium"
+                                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium whitespace-nowrap ml-4"
                               >
-                                Continue to {nextCourseInAuth.courses.title} →
+                                Next course: {nextCourseInAuth.courses.title} →
                               </Link>
                             </div>
                           </div>
