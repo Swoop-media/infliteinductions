@@ -293,19 +293,10 @@ export async function POST(request: NextRequest) {
         if (error) errors.push(`Create course assignments: ${error.message}`);
       }
 
-      // Ensure enrolments exist for everyone
-      const enrolmentRows: any[] = [];
-      for (const userId of userIds) {
-        for (const courseId of courseIds) {
-          enrolmentRows.push({ user_id: userId, course_id: courseId, status: "enrolled" });
-        }
-      }
-      for (const rowsChunk of chunk(enrolmentRows, CHUNK)) {
-        const { error } = await admin
-          .from("course_enrolments")
-          .upsert(rowsChunk, { onConflict: "user_id,course_id", ignoreDuplicates: false });
-        if (error) errors.push(`Enrolments: ${error.message}`);
-      }
+      // Note: course_enrolments is intentionally not written here. Learning flows
+      // run off course_assignments; the enrolments table uses an enum status and
+      // has an insert trigger that notifies admins, so mass-inserting would fail
+      // or spam notifications.
     }
 
     // 5) Audit trail (one entry per user, best-effort, non-blocking failures)
@@ -327,6 +318,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (errors.length > 0) {
+      console.error("[bulk-assign] Run completed with errors:", JSON.stringify(errors, null, 2));
       return NextResponse.json(
         {
           success: false,

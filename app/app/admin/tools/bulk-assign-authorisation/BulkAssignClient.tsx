@@ -29,7 +29,8 @@ export default function BulkAssignClient({ authorisations }: { authorisations: A
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        setError(json.error || json.details || "Something went wrong");
+        const details = Array.isArray(json.errors) && json.errors.length > 0 ? `\n• ${json.errors.join("\n• ")}` : "";
+        setError((json.error || json.details || "Something went wrong") + details);
       } else if (mode === "preview") {
         setPreview(json.summary);
       } else {
@@ -47,7 +48,7 @@ export default function BulkAssignClient({ authorisations }: { authorisations: A
   return (
     <div className="space-y-4">
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+        <div className="whitespace-pre-wrap rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
       )}
       {result && (
         <div className="rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-800">
