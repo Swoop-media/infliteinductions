@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
         .upsert({
           user_id: userId,
           course_id: courseId,
-          status: "enrolled"
+          status: "approved"
         }, {
           onConflict: 'user_id,course_id',
           ignoreDuplicates: false
@@ -408,7 +408,7 @@ export async function POST(request: NextRequest) {
           .upsert({
             user_id: userId,
             course_id: authCourse.course_id,
-            status: "enrolled"
+            status: "approved"
           }, {
             onConflict: 'user_id,course_id',
             ignoreDuplicates: false

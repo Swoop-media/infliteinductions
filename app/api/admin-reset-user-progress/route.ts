@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       const { error: enrollErr } = await adminClient
         .from("course_enrolments")
         .upsert(
-          courseIds.map(cid => ({ user_id: userId, course_id: cid, status: "enrolled" })),
+          courseIds.map(cid => ({ user_id: userId, course_id: cid, status: "approved" })),
           { onConflict: "user_id,course_id", ignoreDuplicates: false }
         );
       results.courseEnrolments = { reset: !enrollErr, error: enrollErr?.message };

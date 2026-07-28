@@ -123,7 +123,6 @@ export async function POST(request: Request) {
           id: userId,
           email: email,
           full_name: fullName,
-          user_type: 'internal',
           department: department,
           job_description: jobDescription,
           microsoft_id: null,
@@ -202,7 +201,7 @@ export async function POST(request: Request) {
           const enrollments = newCourseIds.map((courseId: string) => ({
             user_id: userId,
             course_id: courseId,
-            status: 'enrolled'
+            status: 'approved'
           }));
           const { error: enrollError } = await supabase
             .from('course_enrolments')

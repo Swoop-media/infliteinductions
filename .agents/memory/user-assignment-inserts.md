@@ -19,8 +19,15 @@ Correct shapes:
   The default signup role is **"General"** — there is no "User" role.
 - `course_assignments`: `{ user_id, course_id, created_by (uuid), role: 'trainee',
   assignment_status: 'assigned', assigned_at }`. `assigned_by` exists but is a UUID —
-  never pass the literal string `'Admin'`. Also upsert a `course_enrolments` row
-  (`status: 'enrolled'`) so the course shows for the learner.
+  never pass the literal string `'Admin'`. Also upsert a `course_enrolments` row.
+- `course_enrolments.status` is a Postgres enum (`enrolment_status`); valid labels include
+  `pending, approved, in_progress, completed` — there is NO `'enrolled'` label (it fails 22P02
+  silently). Admin-driven assignment must use `'approved'` (quiz pages block `pending`/`rejected`/
+  `cancelled` and auto-flip `approved` → `in_progress`); learner self-enrol uses `'pending'`.
+- `profiles` has NO `user_type` column (PGRST204 on insert) — the external/internal type lives in
+  auth `user_metadata` only. A DB trigger auto-creates a minimal profile and default role on
+  signup, so create routes must UPSERT profiles (onConflict id) and upsert user_roles with
+  ignoreDuplicates.
 - `authorisation_assignments`: `{ user_id, authorisation_id, created_by (uuid),
   role: 'trainee', assignment_status: 'assigned' }`. There is NO `assigned_at` or
   `updated_at` column on this table — use `created_at` (DB default) only.

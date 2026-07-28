@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     const enrollments = course_ids.map(course_id => ({
       user_id,
       course_id,
-      status: "enrolled"
+      status: "approved"
     }));
 
     const { error: enrollError } = await supabase

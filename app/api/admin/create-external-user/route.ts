@@ -67,20 +67,22 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
     
-    // Create profile
+    // Create profile. A DB trigger may already have created a minimal profile
+    // row for the new auth user, so upsert on id instead of inserting.
+    // NOTE: profiles has no user_type column — the type lives in auth user_metadata.
     const { error: profileError } = await supabase
       .from('profiles')
-      .insert({
+      .upsert({
         id: authUser.user.id,
         email: authUser.user.email,
         full_name: fullName,
-        user_type: userType,
         department: department,
         job_description: jobDescription,
         microsoft_id: null,
-        created_at: new Date().toISOString(),
+        created_via_admin: true,
+        awaiting_first_login: true,
         updated_at: new Date().toISOString()
-      });
+      }, { onConflict: 'id' });
     
     if (profileError) {
       console.error('Profile creation error:', profileError);
@@ -103,14 +105,16 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (roleRow) {
+      // A DB trigger may already grant a default role on signup, so ignore
+      // duplicate key conflicts instead of logging an error.
       const { error: roleError } = await supabase
         .from('user_roles')
-        .insert({
+        .upsert({
           user_id: authUser.user.id,
           role_id: roleRow.id,
           granted_by: actingUser?.id || authUser.user.id,
           granted_at: new Date().toISOString()
-        });
+        }, { onConflict: 'user_id,role_id', ignoreDuplicates: true });
 
       if (roleError) {
         console.error('Role assignment error:', roleError);
@@ -140,7 +144,7 @@ export async function POST(request: Request) {
         const enrollments = courseIds.map((courseId: string) => ({
           user_id: authUser.user.id,
           course_id: courseId,
-          status: 'enrolled'
+          status: 'approved'
         }));
         const { error: enrollError } = await supabase
           .from('course_enrolments')
