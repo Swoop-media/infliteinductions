@@ -9,7 +9,9 @@ import { createClient } from "@supabase/supabase-js";
 
 export const config = {
   api: {
-    bodyParser: false,
+    // CloudAdapter.process() requires a parsed req.body (it rejects raw
+    // streams with 400), so Next's JSON body parser must stay enabled.
+    bodyParser: true,
     externalResolver: true,
   },
 };
@@ -44,9 +46,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return;
   }
 
+  // botbuilder validates the response object with a zod schema that requires
+  // an Express/Restify-style `header()` method, which Next.js responses don't
+  // have. Without this shim adapter.process() throws ZodError("Response")
+  // before reading the activity, so the bot never sees inbound messages.
+  const resShim = res as any;
+  if (typeof resShim.header !== "function") {
+    resShim.header = (name: string, value: string) => {
+      res.setHeader(name, value);
+      return resShim;
+    };
+  }
+
   // adapter.process() validates the Bot Framework JWT before invoking the
   // callback. Forged or headerless requests are rejected automatically.
-  await adapter.process(req as any, res as any, async (context: TurnContext) => {
+  await adapter.process(req as any, resShim, async (context: TurnContext) => {
     const activity = context.activity;
 
     // Store/refresh the conversation reference for proactive messaging.
