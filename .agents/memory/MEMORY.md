@@ -10,4 +10,5 @@
 - [Parallel loaders auth-first](parallel-loaders-auth-first.md) — when parallelizing page loaders, auth/existence check must resolve first; service-role queries must never race the auth redirect.
 - [Teams channel webhooks](teams-webhooks.md) — old webhook.office.com URLs are retired (empty 403); use Power Automate Workflows webhooks; sanitize pasted secret values.
 - [Teams bot inbound shim](teams-bot-inbound-shim.md) — botbuilder CloudAdapter in Next.js needs bodyParser on + res.header shim, or all inbound bot messages 500 silently (outbound still works).
+- [Teams linking without redeploy](teams-linking-no-redeploy.md) — linking is DB-driven; if prod inbound is broken, swing the Azure Bot messaging endpoint to dev temporarily (401=healthy, 500=broken probe).
 - [SharePoint video embedding](sharepoint-video-embedding.md) — iframes always fight SharePoint; stream "Anyone" links through the server proxy into a native <video> instead.
