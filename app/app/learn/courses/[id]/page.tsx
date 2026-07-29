@@ -5,6 +5,7 @@ import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import CompleteModuleButton from './CompleteModuleButton';
+import CourseSidebarShell from './CourseSidebarShell';
 import ContinueToNextCourseButton from './ContinueToNextCourseButton';
 import UnifiedVideoPlayer from "@/components/UnifiedVideoPlayer";
 import DocumentUploadBlock from './DocumentUploadBlock';
@@ -1043,8 +1044,11 @@ export default async function LearnerCoursePage(props: {
 
   return (
     <div className="flex h-screen">
-      {/* Left Sidebar */}
-      <div className="w-56 border-r bg-gray-50 flex flex-col">
+      {/* Left Sidebar — fixed column on desktop, collapsible drawer on mobile */}
+      <CourseSidebarShell
+        summary={`${completedCount}/${totalModules} done`}
+        currentModuleTitle={currentModule?.title || (currentModule ? TYPE_LABEL[currentModule.type as ModuleType] : undefined)}
+      >
         {/* Course Header */}
         <div className="p-3 border-b bg-white">
           {authorizationContext ? (
@@ -1123,7 +1127,7 @@ export default async function LearnerCoursePage(props: {
             })}
           </div>
         </div>
-      </div>
+      </CourseSidebarShell>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">

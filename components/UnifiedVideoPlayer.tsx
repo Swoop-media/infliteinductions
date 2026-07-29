@@ -376,13 +376,21 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
                 controlsList="nodownload"
                 playsInline
                 preload="metadata"
+                onLoadedMetadata={() => setIsLoading(false)}
                 onLoadedData={() => setIsLoading(false)}
                 onCanPlay={() => setIsLoading(false)}
                 onError={() => {
-                  // Proxy couldn't stream this link (e.g. not an "Anyone" link)
-                  // — fall back to the SharePoint iframe embed flow.
-                  setProxyFailed(true);
-                  setIsLoading(true);
+                  if (embedUrl.startsWith("/api/sharepoint-video")) {
+                    // Proxy couldn't stream this link (e.g. not an "Anyone" link)
+                    // — fall back to the SharePoint iframe embed flow.
+                    setProxyFailed(true);
+                    setIsLoading(true);
+                  } else {
+                    // Uploaded/direct video failed on this device — show a clear
+                    // fallback instead of looping back into the native player.
+                    setError("This video couldn't be played on this device. Try 'Open in New Tab' to view it.");
+                    setIsLoading(false);
+                  }
                 }}
                 title={title || "Course video"}
               />

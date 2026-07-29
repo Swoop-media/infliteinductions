@@ -114,9 +114,10 @@ export async function GET(
   const forceDownload = url.searchParams.get('download') === 'true';
 
   try {
-    // Videos: redirect to a short-lived signed URL so the browser streams
-    // straight from Supabase storage (supports Range requests / seeking,
-    // and avoids loading huge files into server memory)
+    // Videos: stream through the server with HTTP Range passthrough so the
+    // <video> tag gets 206 partial responses and a correct Content-Type from
+    // our own origin. (The previous 302-redirect to a Supabase signed URL
+    // broke playback on mobile browsers, e.g. Edge on iOS.)
     const ext = fileId.split('.').pop()?.toLowerCase() || '';
     const videoExts = ['mp4', 'webm', 'mov', 'm4v', 'ogv', 'ogg', 'mkv'];
     if (videoExts.includes(ext) && !forceDownload) {
@@ -126,12 +127,30 @@ export async function GET(
         .createSignedUrl(fileId, 3600); // 1 hour
 
       if (!signedError && signed?.signedUrl) {
-        return NextResponse.redirect(signed.signedUrl, {
-          status: 302,
-          headers: { 'Cache-Control': 'private, no-store' },
-        });
+        const upstreamHeaders: Record<string, string> = {};
+        const rangeHeader = request.headers.get('range');
+        if (rangeHeader) upstreamHeaders['Range'] = rangeHeader;
+
+        const upstream = await fetch(signed.signedUrl, { headers: upstreamHeaders });
+
+        if (upstream.ok && upstream.body) {
+          const headers = new Headers();
+          headers.set('Content-Type', getMimeType(ext));
+          for (const h of ['content-length', 'content-range', 'etag', 'last-modified']) {
+            const v = upstream.headers.get(h);
+            if (v) headers.set(h, v);
+          }
+          headers.set('Accept-Ranges', 'bytes');
+          headers.set('Content-Disposition', 'inline');
+          headers.set('Cache-Control', 'private, no-store');
+          return new NextResponse(upstream.body, {
+            status: upstream.status, // 200, or 206 for range requests
+            headers,
+          });
+        }
+        console.error('Video stream upstream error:', upstream.status, fileId);
       }
-      // fall through to direct download if signing fails
+      // fall through to direct download if signing/streaming fails
     }
 
     // Download the file content directly
