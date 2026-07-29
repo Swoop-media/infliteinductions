@@ -166,11 +166,11 @@ async function BlockView({ block }: { block: any }) {
 
     // Enhanced header component for all file types
     const FileHeader = () => (
-      <div className="flex items-center justify-between bg-gray-50 px-4 py-3 rounded-t-md border border-b-0">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 bg-gray-50 px-3 sm:px-4 py-3 rounded-t-md border border-b-0">
+        <div className="flex items-center gap-2 min-w-0">
           <span className="text-lg">{getFileIcon(fileType)}</span>
-          <div>
-            <h4 className="text-sm font-medium text-gray-900">{display}</h4>
+          <div className="min-w-0">
+            <h4 className="text-sm font-medium text-gray-900 break-words">{display}</h4>
             <p className="text-xs text-gray-500 capitalize">{fileType} file</p>
           </div>
         </div>
@@ -218,7 +218,7 @@ async function BlockView({ block }: { block: any }) {
           <div className="border-t">
             <iframe
               src={`${href}#toolbar=1&navpanes=1&scrollbar=1`}
-              className="w-full h-[600px]"
+              className="w-full h-[70vh] sm:h-[600px]"
               title={display}
               loading="lazy"
             />
@@ -260,7 +260,7 @@ async function BlockView({ block }: { block: any }) {
         <div className="border-t">
           <iframe
             src={href}
-            className="w-full h-[600px]"
+            className="w-full h-[70vh] sm:h-[600px]"
             title={display}
             loading="lazy"
           />
@@ -632,7 +632,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
 
   // Render quiz questions if not completed
   return (
-    <form action={submitQuizAnswers} className="bg-white p-4 rounded-lg border">
+    <form action={submitQuizAnswers} className="bg-white p-3 sm:p-4 rounded-lg border">
       <input type="hidden" name="moduleId" value={moduleId} />
       <input type="hidden" name="assignmentId" value={assignmentId} />
       <input type="hidden" name="quizId" value={quizData.id} />
@@ -650,14 +650,14 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
 
         return (
           <div key={q.id} className="mb-6 pb-6 border-b last:border-b-0 last:pb-0">
-            <p className="text-lg font-medium text-gray-900 mb-3">
+            <p className="text-base sm:text-lg font-medium text-gray-900 mb-3">
               {index + 1}. {questionText}
             </p>
-          <div className="space-y-2">
+          <div className="space-y-1">
             {q.quiz_options.map((opt: any) => (
-              <label key={opt.id} className="flex items-center space-x-3 text-sm text-gray-700">
-                <input type="radio" name={`question-${q.id}`} value={opt.id} className="form-radio text-blue-600" />
-                <span>{opt.label}</span>
+              <label key={opt.id} className="flex items-start gap-3 text-sm text-gray-700 py-2 px-2 -mx-2 rounded-md hover:bg-gray-50 cursor-pointer">
+                <input type="radio" name={`question-${q.id}`} value={opt.id} className="form-radio text-blue-600 h-4 w-4 mt-0.5 shrink-0" />
+                <span className="break-words">{opt.label}</span>
               </label>
             ))}
           </div>
@@ -674,7 +674,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
               </p>
             </div>
             <div className="flex justify-end">
-              <button type="submit" className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+              <button type="submit" className="w-full sm:w-auto rounded-md bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
                 Submit Quiz
               </button>
             </div>
@@ -686,7 +686,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
             </p>
           </div>
         ) : (
-          <button type="submit" className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800">
+          <button type="submit" className="w-full sm:w-auto rounded-md bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800">
             Submit Quiz
           </button>
         )}
@@ -1142,17 +1142,17 @@ export default async function LearnerCoursePage(props: {
               🔍 <strong>Preview Mode</strong> - You are testing this course as a creator. No progress will be saved and all modules are unlocked.
             </div>
           )}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-semibold break-words">
                 {currentModule?.title || TYPE_LABEL[currentModule?.type as ModuleType] || "No Module Selected"}
               </h2>
               <p className="text-sm text-gray-600 mt-1">
                 {currentModule ? `Module ${currentModuleIndex + 1} of ${totalModules}` : "Select a module to begin"}
               </p>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-green-600">{progressPercent}%</div>
+            <div className="text-right shrink-0">
+              <div className="text-xl sm:text-2xl font-bold text-green-600">{progressPercent}%</div>
               <div className="text-xs text-gray-500">Complete</div>
             </div>
           </div>
@@ -1190,8 +1190,8 @@ export default async function LearnerCoursePage(props: {
             </div>
           )}
           {currentModule ? (
-            <div className="max-w-5xl mx-auto px-6 py-4">
-              <div className="bg-white rounded-xl border shadow-sm p-8 space-y-6">
+            <div className="max-w-5xl mx-auto px-3 sm:px-6 py-4">
+              <div className="bg-white rounded-xl border shadow-sm p-4 sm:p-8 space-y-6">
 
                 {/* Module Content */}
                 {isCurrentModuleUnlocked ? (
@@ -1224,7 +1224,7 @@ export default async function LearnerCoursePage(props: {
                           <p className={`text-lg font-medium mb-4 ${quizPassed ? 'text-green-700' : 'text-red-700'}`}>
                             Your Score: {quizScore}%
                           </p>
-                          <div className="space-y-3">
+                          <div className="flex flex-col items-center gap-3">
                             {quizPassed ? (
                               <p className="text-sm text-green-700">
                                 Great job! You can now proceed to the next module.
@@ -1244,7 +1244,7 @@ export default async function LearnerCoursePage(props: {
                             )}
                             <Link
                               href={`/app/learn/courses/${courseId}?module=${currentModule.id}${modeParam}${authorizationId ? `&auth=${authorizationId}` : ''}`}
-                              className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium ml-2"
+                              className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
                             >
                               Back to Module
                             </Link>
@@ -1257,7 +1257,7 @@ export default async function LearnerCoursePage(props: {
                     {currentModule.type === 'digital_assessment_quiz' && !showQuiz && (
                       <div className="bg-white p-4 rounded-lg border">
                         <h2 className="text-xl font-semibold text-gray-900 mb-4">Digital Assessment Quiz</h2>
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                           <div>
                             <h3 className="font-medium">{currentModule.title || "Digital Quiz"}</h3>
                             <p className="text-sm text-gray-600">Complete this quiz to proceed</p>
@@ -1336,8 +1336,8 @@ export default async function LearnerCoursePage(props: {
                     {/* Digital Training Module Content */}
                     {currentModule.type === 'digital_training' && !isCurrentModuleCompleted && !showQuiz && (
                       <div className="bg-white p-4 rounded-lg border">
-                        <div className="flex items-start gap-4">
-                          <div className="flex-shrink-0">
+                        <div className="flex items-start gap-3 sm:gap-4">
+                          <div className="flex-shrink-0 hidden sm:block">
                             <div className="w-16 h-16 bg-blue-100 rounded-lg flex items-center justify-center">
                               <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h1m4 0h1m-6 4h6M5 18h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -1345,8 +1345,8 @@ export default async function LearnerCoursePage(props: {
                             </div>
                           </div>
 
-                          <div className="flex-1">
-                            <h2 className="text-xl font-semibold text-gray-900 mb-2">{currentModule.title}</h2>
+                          <div className="flex-1 min-w-0">
+                            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 break-words">{currentModule.title}</h2>
                             <div className="text-sm text-gray-600 mb-4">Digital Training</div>
 
                             {currentModule.content && (
@@ -1528,7 +1528,7 @@ export default async function LearnerCoursePage(props: {
                     {/* Navigation Controls */}
                     {isCurrentModuleUnlocked && !preview && (
                       <div className="mt-8 pt-6 border-t border-gray-200">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
                           {/* Previous Button */}
                           <div>
                             {currentModuleIndex > 0 && (
@@ -1655,7 +1655,7 @@ export default async function LearnerCoursePage(props: {
                         {/* Course completion and authorization progression */}
                         {digitalComplete && authorizationContext && nextCourseInAuth && (
                           <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                            <div className="flex items-center justify-between">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                               <div>
                                 <h4 className="font-medium text-green-900">
                                   {completedCount === totalModules ? 'Course Complete!' : 'Digital Training Complete!'}
@@ -1668,7 +1668,7 @@ export default async function LearnerCoursePage(props: {
                               </div>
                               <Link
                                 href={`/app/learn/courses/${nextCourseInAuth.course_id}?auth=${authorizationId}`}
-                                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium whitespace-nowrap ml-4"
+                                className="inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-medium sm:whitespace-nowrap sm:ml-4"
                               >
                                 Next course: {nextCourseInAuth.courses.title} →
                               </Link>
