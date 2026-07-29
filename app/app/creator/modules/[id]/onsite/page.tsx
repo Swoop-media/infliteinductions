@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import SortableRequirements from "./SortableRequirements";
+import { logModuleContentAudit, diffChanges } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -177,12 +178,29 @@ async function saveTitleAction(formData: FormData) {
   const moduleId = String(formData.get("module_id") || "");
   const title = String(formData.get("title") || "");
 
+  const { data: oldMod } = await supabase
+    .from("course_modules")
+    .select("title")
+    .eq("id", moduleId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("course_modules")
     .update({ title })
     .eq("id", moduleId);
 
   if (error) throw new Error(error.message);
+
+  if (oldMod && oldMod.title !== title) {
+    const { data: { user } } = await supabase.auth.getUser();
+    await logModuleContentAudit({
+      moduleId,
+      moduleTitle: title,
+      action: "module_renamed",
+      actorId: user?.id ?? null,
+      details: { changes: { title: { from: oldMod.title, to: title } } },
+    });
+  }
 
   revalidatePath(`/app/creator/modules/${moduleId}/onsite`);
   redirect(`/app/creator/modules/${moduleId}/onsite?ok=title_saved`);
@@ -196,12 +214,35 @@ async function toggleEquipmentAssessmentAction(formData: FormData) {
   const moduleId = String(formData.get("module_id") || "");
   const includeEquipment = formData.get("include_equipment") === "on";
 
+  const { data: oldMod } = await supabase
+    .from("course_modules")
+    .select("include_equipment_assessment")
+    .eq("id", moduleId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("course_modules")
     .update({ include_equipment_assessment: includeEquipment })
     .eq("id", moduleId);
 
   if (error) throw new Error(error.message);
+
+  if (oldMod && Boolean(oldMod.include_equipment_assessment) !== includeEquipment) {
+    const { data: { user } } = await supabase.auth.getUser();
+    await logModuleContentAudit({
+      moduleId,
+      action: "module_updated",
+      actorId: user?.id ?? null,
+      details: {
+        changes: {
+          include_equipment_assessment: {
+            from: Boolean(oldMod.include_equipment_assessment),
+            to: includeEquipment,
+          },
+        },
+      },
+    });
+  }
 
   revalidatePath(`/app/creator/modules/${moduleId}/onsite`);
   redirect(`/app/creator/modules/${moduleId}/onsite?ok=equipment_assessment_updated`);
@@ -293,6 +334,16 @@ async function addRequirementAction(formData: FormData) {
 
   if (error) throw new Error(error.message);
 
+  {
+    const { data: { user } } = await supabase.auth.getUser();
+    await logModuleContentAudit({
+      moduleId,
+      action: "requirement_added",
+      actorId: user?.id ?? null,
+      details: { item: `${roleToHuman(role)} requirement: ${label}` },
+    });
+  }
+
   revalidatePath(`/app/creator/modules/${moduleId}/onsite`);
   redirect(`/app/creator/modules/${moduleId}/onsite?ok=requirement_saved`);
 }
@@ -322,18 +373,39 @@ async function updateRequirementAction(formData: FormData) {
     }
   }
 
+  const { data: oldReq } = await supabase
+    .from("onsite_requirements")
+    .select("label, field_type, options, required, help_text")
+    .eq("id", requirementId)
+    .maybeSingle();
+
+  const patch = {
+    label,
+    field_type: fieldType,
+    options,
+    required,
+    help_text: helpText || null,
+  };
+
   const { error } = await supabase
     .from("onsite_requirements")
-    .update({
-      label,
-      field_type: fieldType,
-      options,
-      required,
-      help_text: helpText || null,
-    })
+    .update(patch)
     .eq("id", requirementId);
 
   if (error) throw new Error(error.message);
+
+  {
+    const changes = diffChanges(oldReq, patch);
+    if (Object.keys(changes).length > 0) {
+      const { data: { user } } = await supabase.auth.getUser();
+      await logModuleContentAudit({
+        moduleId,
+        action: "requirement_updated",
+        actorId: user?.id ?? null,
+        details: { item: `Requirement: ${oldReq?.label || label}`, changes },
+      });
+    }
+  }
 
   revalidatePath(`/app/creator/modules/${moduleId}/onsite`);
   redirect(`/app/creator/modules/${moduleId}/onsite?ok=requirement_updated`);
@@ -347,12 +419,28 @@ async function deleteRequirementAction(formData: FormData) {
   const requirementId = String(formData.get("requirement_id") || "");
   const moduleId = String(formData.get("module_id") || "");
 
+  const { data: oldReq } = await supabase
+    .from("onsite_requirements")
+    .select("label, role")
+    .eq("id", requirementId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("onsite_requirements")
     .delete()
     .eq("id", requirementId);
 
   if (error) throw new Error(error.message);
+
+  {
+    const { data: { user } } = await supabase.auth.getUser();
+    await logModuleContentAudit({
+      moduleId,
+      action: "requirement_removed",
+      actorId: user?.id ?? null,
+      details: { item: `${roleToHuman(oldReq?.role || "")} requirement: ${oldReq?.label || "(unknown)"}` },
+    });
+  }
 
   revalidatePath(`/app/creator/modules/${moduleId}/onsite`);
   redirect(`/app/creator/modules/${moduleId}/onsite?ok=requirement_deleted`);

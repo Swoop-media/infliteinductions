@@ -6,8 +6,21 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
+import { logModuleContentAudit, diffChanges } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
+
+/** Trim long strings so audit rows stay readable. */
+function truncAudit(v: any) {
+  return typeof v === "string" && v.length > 300 ? `${v.slice(0, 300)}…` : v;
+}
+
+async function quizActorId() {
+  "use server";
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id ?? null;
+}
 
 /** ---------------- util helpers ---------------- */
 function pick<T = any>(obj: any, keys: string[], fallback: T | null = null): T | null {
@@ -274,7 +287,10 @@ async function updateSettings(formData: FormData) {
     },
   ];
 
+  const { data: oldQuiz } = await supabase.from("quizzes").select("*").eq("id", quizId).maybeSingle();
+
   let ok = false;
+  let applied: any = null;
   for (const p of payloads) {
     const clean: any = {};
     for (const [k, v] of Object.entries(p)) {
@@ -283,10 +299,23 @@ async function updateSettings(formData: FormData) {
     const r = await supabase.from("quizzes").update(clean).eq("id", quizId);
     if (!r.error) {
       ok = true;
+      applied = clean;
       break;
     }
   }
   if (!ok) throw new Error("Save failed (schema mismatch).");
+
+  if (applied) {
+    const changes = diffChanges(oldQuiz, applied);
+    if (Object.keys(changes).length > 0) {
+      await logModuleContentAudit({
+        moduleId,
+        action: "quiz_updated",
+        actorId: await quizActorId(),
+        details: { changes },
+      });
+    }
+  }
 
   revalidatePath(`/app/creator/modules/${moduleId}/quiz`);
   redirect(`/app/creator/modules/${moduleId}/quiz?notice=saved`);
@@ -438,6 +467,13 @@ async function createQuestion(formData: FormData) {
       } catch {}
     }
 
+    await logModuleContentAudit({
+      moduleId,
+      action: "question_added",
+      actorId: await quizActorId(),
+      details: { item: `Question: ${truncAudit(body)}` },
+    });
+
     revalidatePath(`/app/creator/modules/${moduleId}/quiz`);
     redirect(`/app/creator/modules/${moduleId}/quiz?notice=question_created`);
     return;
@@ -512,6 +548,13 @@ async function createQuestion(formData: FormData) {
     if (!inserted) throw new Error("Could not create option (schema mismatch).");
   }
 
+  await logModuleContentAudit({
+    moduleId,
+    action: "question_added",
+    actorId: await quizActorId(),
+    details: { item: `Question: ${truncAudit(body)}` },
+  });
+
   revalidatePath(`/app/creator/modules/${moduleId}/quiz`);
   redirect(`/app/creator/modules/${moduleId}/quiz?notice=question_created`);
 }
@@ -523,9 +566,22 @@ async function deleteQuestion(formData: FormData) {
   const questionId = String(formData.get("question_id") || "");
   if (!moduleId || !questionId) throw new Error("Missing ids");
 
+  const { data: oldQ } = await supabase
+    .from("quiz_questions")
+    .select("*")
+    .eq("id", questionId)
+    .maybeSingle();
+
   await supabase.from("quiz_options").delete().eq("question_id", questionId);
   const d = await supabase.from("quiz_questions").delete().eq("id", questionId);
   if (d.error) throw new Error(d.error.message);
+
+  await logModuleContentAudit({
+    moduleId,
+    action: "question_removed",
+    actorId: await quizActorId(),
+    details: { item: `Question: ${truncAudit(oldQ?.stem || oldQ?.prompt || oldQ?.body_md || "(unknown)")}` },
+  });
 
   revalidatePath(`/app/creator/modules/${moduleId}/quiz`);
   redirect(`/app/creator/modules/${moduleId}/quiz?notice=question_deleted`);
@@ -603,6 +659,14 @@ async function setCorrectOption(formData: FormData) {
   const { error } = await supabase.from("quiz_options").update({ [boolCol]: true } as any).eq("id", optionId);
   if (error) throw new Error(error.message);
 
+  const optLabel = oneOpt?.label_md || oneOpt?.label || oneOpt?.text || oneOpt?.title || oneOpt?.value || "(option)";
+  await logModuleContentAudit({
+    moduleId,
+    action: "option_updated",
+    actorId: await quizActorId(),
+    details: { item: `Correct answer set to: ${truncAudit(optLabel)}` },
+  });
+
   revalidatePath(`/app/creator/modules/${moduleId}/quiz`);
   redirect(`/app/creator/modules/${moduleId}/quiz?notice=saved`);
 }
@@ -641,6 +705,13 @@ async function addOption(formData: FormData) {
   }
   if (!ok) throw new Error("Could not add option (schema mismatch).");
 
+  await logModuleContentAudit({
+    moduleId,
+    action: "option_added",
+    actorId: await quizActorId(),
+    details: { item: `Answer option: ${truncAudit(labelText)}` },
+  });
+
   revalidatePath(`/app/creator/modules/${moduleId}/quiz`);
   redirect(`/app/creator/modules/${moduleId}/quiz?notice=option_added`);
 }
@@ -652,8 +723,18 @@ async function deleteOption(formData: FormData) {
   const optionId = String(formData.get("option_id") || "");
   if (!moduleId || !optionId) throw new Error("Missing fields");
 
+  const { data: oldOpt } = await supabase.from("quiz_options").select("*").eq("id", optionId).maybeSingle();
+
   const { error } = await supabase.from("quiz_options").delete().eq("id", optionId);
   if (error) throw new Error(error.message);
+
+  const oldLabel = oldOpt?.label_md || oldOpt?.label || oldOpt?.text || oldOpt?.title || oldOpt?.value || "(option)";
+  await logModuleContentAudit({
+    moduleId,
+    action: "option_removed",
+    actorId: await quizActorId(),
+    details: { item: `Answer option: ${truncAudit(oldLabel)}` },
+  });
 
   revalidatePath(`/app/creator/modules/${moduleId}/quiz`);
   redirect(`/app/creator/modules/${moduleId}/quiz?notice=saved`);
@@ -667,17 +748,35 @@ async function updateQuestionText(formData: FormData) {
   const body = String(formData.get("body_md") || "").trim();
   if (!moduleId || !questionId) throw new Error("Missing fields");
 
+  const { data: oldQ } = await supabase
+    .from("quiz_questions")
+    .select("*")
+    .eq("id", questionId)
+    .maybeSingle();
+
   // Try stem first (correct field), then fallback to other columns
   const textCols = ["stem", "body_md", "body", "question", "title", "prompt"];
   let updated = false;
+  let updatedCol: string | null = null;
   for (const col of textCols) {
     const r = await supabase.from("quiz_questions").update({ [col]: body } as any).eq("id", questionId);
     if (!r.error) {
       updated = true;
+      updatedCol = col;
       break;
     }
   }
   if (!updated) throw new Error("Save failed (schema mismatch).");
+
+  const oldText = updatedCol && oldQ ? oldQ[updatedCol] : null;
+  if (oldText !== body) {
+    await logModuleContentAudit({
+      moduleId,
+      action: "question_updated",
+      actorId: await quizActorId(),
+      details: { changes: { question: { from: truncAudit(oldText), to: truncAudit(body) } } },
+    });
+  }
 
   revalidatePath(`/app/creator/modules/${moduleId}/quiz`);
   redirect(`/app/creator/modules/${moduleId}/quiz?notice=saved`);

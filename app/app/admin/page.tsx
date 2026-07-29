@@ -2141,6 +2141,28 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   duplicated: "Duplicated",
   updated: "Updated",
   status_changed: "Status changed",
+  module_added: "Module added",
+  module_renamed: "Module renamed",
+  module_updated: "Module updated",
+  module_removed: "Module removed",
+  content_added: "Content added",
+  content_updated: "Content updated",
+  content_removed: "Content removed",
+  quiz_updated: "Quiz settings updated",
+  question_added: "Question added",
+  question_updated: "Question updated",
+  question_removed: "Question removed",
+  option_added: "Answer option added",
+  option_updated: "Answer option updated",
+  option_removed: "Answer option removed",
+  requirement_added: "Requirement added",
+  requirement_updated: "Requirement updated",
+  requirement_removed: "Requirement removed",
+  equipment_added: "Equipment added",
+  equipment_updated: "Equipment updated",
+  equipment_removed: "Equipment removed",
+  course_linked: "Course linked",
+  course_unlinked: "Course unlinked",
 };
 
 function formatAuditValue(v: any): string {
@@ -2153,11 +2175,18 @@ function formatAuditValue(v: any): string {
 function AuditChangeDetails({ details }: { details: any }) {
   const changes = details?.changes && typeof details.changes === "object" ? details.changes : null;
   const duplicatedFrom = details?.duplicated_from;
+  const contextParts: string[] = [];
+  if (details?.module) contextParts.push(`Module: ${details.module}`);
+  if (details?.item) contextParts.push(String(details.item));
 
-  if (!changes && !duplicatedFrom) return <span className="text-gray-400">—</span>;
+  if (!changes && !duplicatedFrom && contextParts.length === 0)
+    return <span className="text-gray-400">—</span>;
 
   return (
     <div className="space-y-0.5">
+      {contextParts.length > 0 ? (
+        <div className="text-sm text-gray-700 font-medium">{contextParts.join(" — ")}</div>
+      ) : null}
       {duplicatedFrom ? (
         <div className="text-sm text-gray-700">
           Copied from <span className="font-medium">{duplicatedFrom}</span>

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
+import { logModuleContentAudit } from "@/lib/audit";
 
 // Helpers
 async function getCourseAndModule(courseId: string) {
@@ -93,6 +94,18 @@ async function addQuestion(formData: FormData) {
   });
 
   if (error) throw new Error(error.message);
+
+  {
+    const { data: { user } } = await supabase.auth.getUser();
+    await logModuleContentAudit({
+      moduleId,
+      courseId,
+      action: "question_added",
+      actorId: user?.id ?? null,
+      details: { item: `Question: ${stem.length > 300 ? `${stem.slice(0, 300)}…` : stem}` },
+    });
+  }
+
   revalidatePath(`/app/creator/courses/${courseId}/quiz`);
 }
 
@@ -113,6 +126,25 @@ async function addOption(formData: FormData) {
   });
 
   if (error) throw new Error(error.message);
+
+  {
+    const { data: { user } } = await supabase.auth.getUser();
+    const { data: q } = await supabase
+      .from("quiz_questions")
+      .select("module_id")
+      .eq("id", questionId)
+      .maybeSingle();
+    if (q?.module_id) {
+      await logModuleContentAudit({
+        moduleId: q.module_id,
+        courseId,
+        action: "option_added",
+        actorId: user?.id ?? null,
+        details: { item: `Answer option: ${label}` },
+      });
+    }
+  }
+
   revalidatePath(`/app/creator/courses/${courseId}/quiz`);
 }
 

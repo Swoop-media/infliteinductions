@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { ModuleType } from "@/lib/types/module";
+import { logModuleContentAudit } from "@/lib/audit";
 
 function tabForType(t: ModuleType) {
   return t; // your tabs match the type names for onsite_*; adjust if needed for others
@@ -80,8 +81,26 @@ export async function deleteModuleAction(formData: FormData) {
   const type = String(formData.get("type") ?? "") as ModuleType;
   if (!moduleId || !courseId || !type) throw new Error("Missing fields");
 
+  const { data: delMod } = await supabase
+    .from("course_modules")
+    .select("title")
+    .eq("id", moduleId)
+    .maybeSingle();
+
   const { error } = await supabase.from("course_modules").delete().eq("id", moduleId);
   if (error) throw new Error(error.message);
+
+  {
+    const { data: { user } } = await supabase.auth.getUser();
+    await logModuleContentAudit({
+      moduleId,
+      courseId,
+      moduleTitle: delMod?.title || "(unknown module)",
+      action: "module_removed",
+      actorId: user?.id ?? null,
+      details: { item: `${delMod?.title || "Module"} (${type.replace(/_/g, " ")})` },
+    });
+  }
 
   // Renumber remaining of same type (0..N-1)
   const { data: rest } = await supabase

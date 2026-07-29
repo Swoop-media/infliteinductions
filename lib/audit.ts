@@ -13,11 +13,41 @@ export type UserAuditEntry = {
   actorName?: string | null;
 };
 
+export type ContentAuditAction =
+  | "created"
+  | "duplicated"
+  | "updated"
+  | "status_changed"
+  // deeper course-content changes
+  | "module_added"
+  | "module_renamed"
+  | "module_updated"
+  | "module_removed"
+  | "content_added"
+  | "content_updated"
+  | "content_removed"
+  | "quiz_updated"
+  | "question_added"
+  | "question_updated"
+  | "question_removed"
+  | "option_added"
+  | "option_updated"
+  | "option_removed"
+  | "requirement_added"
+  | "requirement_updated"
+  | "requirement_removed"
+  | "equipment_added"
+  | "equipment_updated"
+  | "equipment_removed"
+  // authorisation course links
+  | "course_linked"
+  | "course_unlinked";
+
 export type ContentAuditEntry = {
   entityType: "course" | "authorisation";
   entityId?: string | null;
   entityName?: string | null;
-  action: "created" | "duplicated" | "updated" | "status_changed";
+  action: ContentAuditAction;
   details?: Record<string, any>;
   actorId?: string | null;
   actorName?: string | null;
@@ -78,6 +108,67 @@ export async function logContentAudit(entry: ContentAuditEntry): Promise<void> {
     }
   } catch (e) {
     console.error("[audit] Unexpected content audit logging error:", e);
+  }
+}
+
+/**
+ * Convenience wrapper for logging changes to content *inside* a module
+ * (content blocks, quiz questions, onsite requirements, equipment, module
+ * settings). Resolves the module's parent course so the entry appears under
+ * the course in the Audit Trail, and records the module title in details.
+ * Best-effort — never throws.
+ */
+export async function logModuleContentAudit(opts: {
+  moduleId: string;
+  action: ContentAuditAction;
+  details?: Record<string, any>;
+  actorId?: string | null;
+  actorName?: string | null;
+  /** Pre-resolved course info, to skip lookups when the caller already has it. */
+  courseId?: string | null;
+  courseTitle?: string | null;
+  moduleTitle?: string | null;
+}): Promise<void> {
+  try {
+    if (!opts?.moduleId || !opts?.action) return;
+    const admin = supabaseAdmin();
+
+    let courseId = opts.courseId ?? null;
+    let moduleTitle = opts.moduleTitle ?? null;
+    if (!courseId || !moduleTitle) {
+      const { data: mod } = await admin
+        .from("course_modules")
+        .select("course_id, title, type")
+        .eq("id", opts.moduleId)
+        .maybeSingle();
+      courseId = courseId || mod?.course_id || null;
+      moduleTitle = moduleTitle || mod?.title || null;
+    }
+
+    let courseTitle = opts.courseTitle ?? null;
+    if (!courseTitle && courseId) {
+      const { data: course } = await admin
+        .from("courses")
+        .select("title")
+        .eq("id", courseId)
+        .maybeSingle();
+      courseTitle = course?.title || null;
+    }
+
+    await logContentAudit({
+      entityType: "course",
+      entityId: courseId,
+      entityName: courseTitle,
+      action: opts.action,
+      actorId: opts.actorId ?? null,
+      actorName: opts.actorName ?? null,
+      details: {
+        ...(moduleTitle ? { module: moduleTitle } : {}),
+        ...(opts.details ?? {}),
+      },
+    });
+  } catch (e) {
+    console.error("[audit] Unexpected module content audit error:", e);
   }
 }
 

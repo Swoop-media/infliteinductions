@@ -288,6 +288,22 @@ async function addCourseAction(form: FormData) {
     .insert({ authorisation_id: authId, course_id: courseId, order_index: nextOrder });
   if (error && (error as any).code !== "23505") throw new Error(error.message); // ignore duplicate
 
+  if (!error) {
+    const { data: { user } } = await supabase.auth.getUser();
+    const [{ data: auth }, { data: course }] = await Promise.all([
+      supabase.from("authorisations").select("title").eq("id", authId).maybeSingle(),
+      supabase.from("courses").select("title").eq("id", courseId).maybeSingle(),
+    ]);
+    await logContentAudit({
+      entityType: "authorisation",
+      entityId: authId,
+      entityName: auth?.title || null,
+      action: "course_linked",
+      actorId: user?.id ?? null,
+      details: { item: `Course: ${course?.title || courseId}` },
+    });
+  }
+
   revalidatePath(buildUrl(authId));
   redirect(buildUrl(authId, "courses", "course_added"));
 }
@@ -298,8 +314,32 @@ async function removeCourseAction(form: FormData) {
   const acId = String(form.get("ac_id") || "");
   if (!authId || !acId) throw new Error("Missing ids");
 
+  const { data: acRow } = await supabase
+    .from("authorisation_courses")
+    .select("course_id")
+    .eq("id", acId)
+    .maybeSingle();
+
   const { error } = await supabase.from("authorisation_courses").delete().eq("id", acId);
   if (error) throw new Error(error.message);
+
+  {
+    const { data: { user } } = await supabase.auth.getUser();
+    const [{ data: auth }, { data: course }] = await Promise.all([
+      supabase.from("authorisations").select("title").eq("id", authId).maybeSingle(),
+      acRow?.course_id
+        ? supabase.from("courses").select("title").eq("id", acRow.course_id).maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
+    await logContentAudit({
+      entityType: "authorisation",
+      entityId: authId,
+      entityName: auth?.title || null,
+      action: "course_unlinked",
+      actorId: user?.id ?? null,
+      details: { item: `Course: ${course?.title || acRow?.course_id || "(unknown)"}` },
+    });
+  }
 
   // renumber
   const { data: rest } = await supabase

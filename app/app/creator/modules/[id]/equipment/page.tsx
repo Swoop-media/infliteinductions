@@ -4,6 +4,7 @@ import Link from "next/link";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import { revalidatePath } from "next/cache";
+import { logModuleContentAudit, diffChanges } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +104,14 @@ async function createEquipmentTemplate(formData: FormData) {
 
   if (error) throw new Error(error.message);
 
+  await logModuleContentAudit({
+    moduleId,
+    courseId,
+    action: "equipment_added",
+    actorId: (await supabase.auth.getUser()).data.user?.id ?? null,
+    details: { item: `Equipment: ${equipmentName}` },
+  });
+
   revalidatePath(`/app/creator/modules/${moduleId}/equipment`);
   redirect(`/app/creator/modules/${moduleId}/equipment?notice=equipment_created`);
 }
@@ -115,12 +124,25 @@ async function deleteEquipmentTemplate(formData: FormData) {
 
   if (!moduleId || !equipmentId) throw new Error("Missing fields");
 
+  const { data: oldEq } = await supabase
+    .from("equipment_templates")
+    .select("equipment_name")
+    .eq("id", equipmentId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("equipment_templates")
     .delete()
     .eq("id", equipmentId);
 
   if (error) throw new Error(error.message);
+
+  await logModuleContentAudit({
+    moduleId,
+    action: "equipment_removed",
+    actorId: (await supabase.auth.getUser()).data.user?.id ?? null,
+    details: { item: `Equipment: ${oldEq?.equipment_name || "(unknown)"}` },
+  });
 
   revalidatePath(`/app/creator/modules/${moduleId}/equipment`);
   redirect(`/app/creator/modules/${moduleId}/equipment?notice=equipment_deleted`);
@@ -140,17 +162,37 @@ async function updateEquipmentTemplate(formData: FormData) {
     throw new Error("Missing required fields");
   }
 
+  const { data: oldEq } = await supabase
+    .from("equipment_templates")
+    .select("equipment_name, description, required, category")
+    .eq("id", equipmentId)
+    .maybeSingle();
+
+  const patch = {
+    equipment_name: equipmentName,
+    description: description,
+    required: required,
+    category: category
+  };
+
   const { error } = await supabase
     .from("equipment_templates")
-    .update({
-      equipment_name: equipmentName,
-      description: description,
-      required: required,
-      category: category
-    })
+    .update(patch)
     .eq("id", equipmentId);
 
   if (error) throw new Error(error.message);
+
+  {
+    const changes = diffChanges(oldEq, patch);
+    if (Object.keys(changes).length > 0) {
+      await logModuleContentAudit({
+        moduleId,
+        action: "equipment_updated",
+        actorId: (await supabase.auth.getUser()).data.user?.id ?? null,
+        details: { item: `Equipment: ${oldEq?.equipment_name || equipmentName}`, changes },
+      });
+    }
+  }
 
   revalidatePath(`/app/creator/modules/${moduleId}/equipment`);
   redirect(`/app/creator/modules/${moduleId}/equipment?notice=equipment_updated`);

@@ -7,7 +7,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import ResitNotificationMenu from "./_components/ResitNotificationMenu";
 import SafefliteRiskPicker from "./SafefliteRiskPicker";
 import { toAbsoluteUrl } from "@/lib/utils/url";
-import { logContentAudit, diffChanges } from "@/lib/audit";
+import { logContentAudit, logModuleContentAudit, diffChanges } from "@/lib/audit";
 import {
   listSafefliteRisks,
   upsertTrainingControl,
@@ -264,6 +264,18 @@ async function createModuleAction(formData: FormData) {
     }
   }
 
+  if (inserted) {
+    const { data: { user } } = await supabase.auth.getUser();
+    await logModuleContentAudit({
+      moduleId: inserted.id,
+      courseId,
+      moduleTitle: title,
+      action: "module_added",
+      actorId: user?.id ?? null,
+      details: { item: `${title} (${type.replace(/_/g, " ")})` },
+    });
+  }
+
   revalidatePath(buildCourseUrl(courseId));
   redirect(next);
 }
@@ -352,8 +364,26 @@ async function renameModuleAction(formData: FormData) {
 
   if (!moduleId || !courseId || !type || !title) throw new Error("Missing fields");
 
+  const { data: oldMod } = await supabase
+    .from("course_modules")
+    .select("title")
+    .eq("id", moduleId)
+    .maybeSingle();
+
   const { error } = await supabase.from("course_modules").update({ title }).eq("id", moduleId);
   if (error) throw new Error(error.message);
+
+  if (oldMod && oldMod.title !== title) {
+    const { data: { user } } = await supabase.auth.getUser();
+    await logModuleContentAudit({
+      moduleId,
+      courseId,
+      moduleTitle: title,
+      action: "module_renamed",
+      actorId: user?.id ?? null,
+      details: { changes: { title: { from: oldMod.title, to: title } } },
+    });
+  }
 
   revalidatePath(buildCourseUrl(courseId));
   redirect(next);
@@ -368,6 +398,12 @@ async function deleteModuleAction(formData: FormData) {
   const type = String(formData.get("type") ?? "") as ModuleType;
   const next = String(formData.get("next") || "") || buildCourseUrl(courseId, type, "module_deleted");
   if (!moduleId || !courseId || !type) throw new Error("Missing fields");
+
+  const { data: delMod } = await supabase
+    .from("course_modules")
+    .select("title")
+    .eq("id", moduleId)
+    .maybeSingle();
 
   // If this is a quiz module, best-effort delete any linked quiz rows first to avoid orphans
   if (type === "digital_assessment_quiz") {
@@ -397,6 +433,18 @@ async function deleteModuleAction(formData: FormData) {
       }
     }
     await Promise.all(updates);
+  }
+
+  {
+    const { data: { user } } = await supabase.auth.getUser();
+    await logModuleContentAudit({
+      moduleId,
+      courseId,
+      moduleTitle: delMod?.title || "(unknown module)",
+      action: "module_removed",
+      actorId: user?.id ?? null,
+      details: { item: `${delMod?.title || "Module"} (${type.replace(/_/g, " ")})` },
+    });
   }
 
   revalidatePath(buildCourseUrl(courseId));

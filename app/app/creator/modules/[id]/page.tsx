@@ -10,6 +10,12 @@ import UnifiedVideoPlayer from '@/components/UnifiedVideoPlayer';
 import VideoUploadField from './_components/VideoUploadField';
 import { ModuleType, BlockKind } from "@/lib/types/module";
 import DirectFileBlock from "./_components/DirectFileBlock";
+import { logModuleContentAudit, diffChanges } from "@/lib/audit";
+
+/** Trim long strings (e.g. rich text) so audit rows stay readable. */
+function truncForAudit(v: any) {
+  return typeof v === "string" && v.length > 300 ? `${v.slice(0, 300)}…` : v;
+}
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +109,30 @@ async function getEquipmentCount(courseId: string) {
   return count || 0;
 }
 
+async function currentActorId() {
+  "use server";
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  return user?.id ?? null;
+}
+
+/** Audit a change to a block's data payload with a field-level diff. */
+async function auditBlockUpdate(moduleId: string, kind: string, oldData: any, newData: any) {
+  "use server";
+  const rawChanges = diffChanges(oldData ?? {}, newData ?? {});
+  if (Object.keys(rawChanges).length === 0) return;
+  const changes: Record<string, { from: any; to: any }> = {};
+  for (const [k, ch] of Object.entries(rawChanges)) {
+    changes[k] = { from: truncForAudit(ch.from), to: truncForAudit(ch.to) };
+  }
+  await logModuleContentAudit({
+    moduleId,
+    action: "content_updated",
+    actorId: await currentActorId(),
+    details: { item: `${kind.replace(/_/g, " ")} block`, changes },
+  });
+}
+
 /** Only Course Creators / Senior management / Admin may edit module blocks. */
 async function assertCanEditBlocks() {
   "use server";
@@ -154,6 +184,13 @@ async function createBlock(formData: FormData) {
 
   if (error) throw new Error(error.message);
 
+  await logModuleContentAudit({
+    moduleId,
+    action: "content_added",
+    actorId: await currentActorId(),
+    details: { item: `${kind.replace(/_/g, " ")} block` },
+  });
+
   revalidatePath(pageUrl(moduleId));
   redirect(`${pageUrl(moduleId)}?notice=block_created`);
 }
@@ -198,6 +235,13 @@ async function deleteBlock(formData: FormData) {
       }
     }
   }
+
+  await logModuleContentAudit({
+    moduleId,
+    action: "content_removed",
+    actorId: await currentActorId(),
+    details: { item: `${String(row?.kind || "content").replace(/_/g, " ")} block` },
+  });
 
   revalidatePath(pageUrl(moduleId));
   redirect(`${pageUrl(moduleId)}?notice=block_deleted`);
@@ -262,11 +306,19 @@ async function updateRichText(formData: FormData) {
   const text = String(formData.get("text") || "");
   if (!moduleId || !blockId) throw new Error("Missing fields");
 
+  const { data: cur } = await supabase
+    .from("module_content_blocks")
+    .select("data")
+    .eq("id", blockId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("module_content_blocks")
     .update({ data: { text } })
     .eq("id", blockId);
   if (error) throw new Error(error.message);
+
+  await auditBlockUpdate(moduleId, "rich_text", cur?.data, { text });
 
   revalidatePath(pageUrl(moduleId));
   redirect(`${pageUrl(moduleId)}?notice=saved`);
@@ -282,11 +334,19 @@ async function updateLink(formData: FormData) {
   const label = String(formData.get("label") || "");
   if (!moduleId || !blockId) throw new Error("Missing fields");
 
+  const { data: cur } = await supabase
+    .from("module_content_blocks")
+    .select("data")
+    .eq("id", blockId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("module_content_blocks")
     .update({ data: { url, label } })
     .eq("id", blockId);
   if (error) throw new Error(error.message);
+
+  await auditBlockUpdate(moduleId, "link", cur?.data, { url, label });
 
   revalidatePath(pageUrl(moduleId));
   redirect(`${pageUrl(moduleId)}?notice=saved`);
@@ -308,11 +368,19 @@ async function updateVideo(formData: FormData) {
     payload.gate_seconds = gate_seconds == null ? null : Math.max(0, gate_seconds);
   }
 
+  const { data: cur } = await supabase
+    .from("module_content_blocks")
+    .select("data")
+    .eq("id", blockId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("module_content_blocks")
     .update({ data: payload })
     .eq("id", blockId);
   if (error) throw new Error(error.message);
+
+  await auditBlockUpdate(moduleId, "video", cur?.data, payload);
 
   revalidatePath(pageUrl(moduleId));
   redirect(`${pageUrl(moduleId)}?notice=saved`);
@@ -372,6 +440,16 @@ async function uploadFileBlock(formData: FormData) {
     try { await supabase.storage.from("course-files").remove([oldPath]); } catch {}
   }
 
+  await logModuleContentAudit({
+    moduleId,
+    action: "content_updated",
+    actorId: await currentActorId(),
+    details: {
+      item: "file block",
+      changes: { file: { from: cur?.data?.display || (oldPath ? "(previous file)" : null), to: display_name } },
+    },
+  });
+
   revalidatePath(pageUrl(moduleId));
   redirect(`${pageUrl(moduleId)}?notice=file_uploaded`);
 }
@@ -401,6 +479,16 @@ async function clearFileBlock(formData: FormData) {
     try { await supabase.storage.from("course-files").remove([oldPath]); } catch {}
   }
 
+  await logModuleContentAudit({
+    moduleId,
+    action: "content_updated",
+    actorId: await currentActorId(),
+    details: {
+      item: "file block",
+      changes: { file: { from: cur?.data?.display || (oldPath ? "(previous file)" : null), to: null } },
+    },
+  });
+
   revalidatePath(pageUrl(moduleId));
   redirect(`${pageUrl(moduleId)}?notice=saved`);
 }
@@ -415,11 +503,19 @@ async function updateRequestDoc(formData: FormData) {
   const require_expiry = String(formData.get("require_expiry") || "") === "on";
   if (!moduleId || !blockId) throw new Error("Missing fields");
 
+  const { data: cur } = await supabase
+    .from("module_content_blocks")
+    .select("data")
+    .eq("id", blockId)
+    .maybeSingle();
+
   const { error } = await supabase
     .from("module_content_blocks")
     .update({ data: { label, require_expiry } })
     .eq("id", blockId);
   if (error) throw new Error(error.message);
+
+  await auditBlockUpdate(moduleId, "request_document", cur?.data, { label, require_expiry });
 
   revalidatePath(pageUrl(moduleId));
   redirect(`${pageUrl(moduleId)}?notice=saved`);
