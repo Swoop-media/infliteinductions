@@ -7,6 +7,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import ResitNotificationMenu from "./_components/ResitNotificationMenu";
 import SafefliteRiskPicker from "./SafefliteRiskPicker";
 import { toAbsoluteUrl } from "@/lib/utils/url";
+import { logContentAudit, diffChanges } from "@/lib/audit";
 import {
   listSafefliteRisks,
   upsertTrainingControl,
@@ -436,8 +437,26 @@ async function updateCourseStatusAction(formData: FormData) {
   const next = String(formData.get("next") || "") || buildCourseUrl(courseId, "details", "status_updated");
   if (!courseId) throw new Error("Missing course_id");
 
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: oldCourse } = await supabase
+    .from("courses")
+    .select("title, status")
+    .eq("id", courseId)
+    .maybeSingle();
+
   const { error } = await supabase.from("courses").update({ status }).eq("id", courseId);
   if (error) throw new Error(error.message);
+
+  if (oldCourse && oldCourse.status !== status) {
+    await logContentAudit({
+      entityType: "course",
+      entityId: courseId,
+      entityName: oldCourse.title,
+      action: "status_changed",
+      actorId: user?.id ?? null,
+      details: { changes: { status: { from: oldCourse.status, to: status } } },
+    });
+  }
 
   // Sync status change (incl. archive/unarchive) to SafeFLITE
   await syncCourseToSafeflite(courseId);
@@ -517,9 +536,29 @@ async function updateCourseDetails(formData: FormData) {
   updatePayload.contractor_site_id = externalContractors ? contractorSiteId : null;
   updatePayload.visitor_flow_type = externalContractors ? visitorFlowType : null;
 
+  // Snapshot the old row for the audit diff
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: oldCourse } = await supabaseAdmin()
+    .from("courses")
+    .select("*")
+    .eq("id", courseId)
+    .maybeSingle();
+
   // Use admin client to bypass schema cache issues with newer columns
   const { error } = await supabaseAdmin().from("courses").update(updatePayload).eq("id", courseId);
   if (error) throw new Error(`Save failed: ${error.message}`);
+
+  const changes = diffChanges(oldCourse, updatePayload);
+  if (Object.keys(changes).length > 0) {
+    await logContentAudit({
+      entityType: "course",
+      entityId: courseId,
+      entityName: (updatePayload.title as string) || oldCourse?.title || null,
+      action: "updated",
+      actorId: user?.id ?? null,
+      details: { changes },
+    });
+  }
 
   // Push the updated risk selection + snapshot to SafeFLITE
   await syncCourseToSafeflite(courseId);

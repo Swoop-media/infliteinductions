@@ -6,6 +6,11 @@ import { createSupabaseRoute } from "@/lib/supabase/server";
 // Cache schema type to avoid duplicate queries
 let schemaType: 'new' | 'old' | null = null;
 
+// Publish notifications are disabled — tracked in Admin > Audit Trail instead.
+// A DB trigger may still insert them until migration 012 is applied, so we
+// also filter them out of the list served to the bell.
+const HIDDEN_TYPES = new Set(['course_published', 'authorisation_published', 'authorization_published']);
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createSupabaseRoute();
@@ -68,7 +73,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Return notifications with minimal transformation to preserve payload
-    const transformedNotifications = (notifications || []).map(notification => {
+    const transformedNotifications = (notifications || [])
+      .filter(notification => !HIDDEN_TYPES.has(notification.type))
+      .map(notification => {
       // Simply return the notification with the original payload intact
       return {
         id: notification.id,

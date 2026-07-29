@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
+import { logContentAudit } from "@/lib/audit";
 
 async function createNewAuthorisation(formData: FormData) {
   "use server";
@@ -36,6 +37,14 @@ async function createNewAuthorisation(formData: FormData) {
   if (error || !data?.id) {
     throw new Error(error?.message || "Failed to create authorisation.");
   }
+
+  await logContentAudit({
+    entityType: "authorisation",
+    entityId: data.id,
+    entityName: "New Authorisation",
+    action: "created",
+    actorId: user.id,
+  });
 
   // Refresh the list and redirect
   revalidatePath("/app/creator?tab=authorisations");

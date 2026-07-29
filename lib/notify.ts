@@ -30,10 +30,10 @@ export async function notifyUser(options: {
 }) {
   const { recipientId, recipientEmail, type, subject, text, payload = {} } = options;
 
-  // ✅ Feature flag: Disable course publishing notifications (keep code for future use)
-  const DISABLE_COURSE_PUBLISH_NOTIFICATIONS = process.env.DISABLE_COURSE_PUBLISH_NOTIFICATIONS === 'true';
-  if (type === 'course_published' && DISABLE_COURSE_PUBLISH_NOTIFICATIONS) {
-    console.log('🔕 Course publishing notifications are disabled via feature flag');
+  // Publish notifications are permanently disabled — changes are tracked in
+  // the Admin > Audit Trail tab instead.
+  if (type === 'course_published' || type === 'authorisation_published') {
+    console.log(`🔕 ${type} notifications are disabled (tracked in Audit Trail instead)`);
     return;
   }
 

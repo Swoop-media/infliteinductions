@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
+import { logContentAudit } from "@/lib/audit";
 import DeleteAuthorisationButton from "./_components/DeleteAuthorisationButton";
 import FilteredCourseList from "./_components/FilteredCourseList";
 import FilteredAuthorisationList from "./_components/FilteredAuthorisationList";
@@ -312,6 +313,15 @@ async function duplicateCourseAction(formData: FormData) {
           }
         }
       }
+
+    await logContentAudit({
+      entityType: "course",
+      entityId: newCourse.id,
+      entityName: newCourseTitle,
+      action: "duplicated",
+      actorId: user.id,
+      details: { duplicated_from: originalCourse.title, source_course_id: originalCourseId },
+    });
 
     // Revalidate and redirect to the new course editor
     revalidatePath("/app/creator");

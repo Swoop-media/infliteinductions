@@ -332,10 +332,10 @@ export async function createNotification(input: NotificationInput) {
 
   // 2) Best-effort Teams DM (non-blocking; never deletes/updates existing notifications)
   if (n.sendTeams) {
-    // ✅ Feature flag: Disable course publishing Teams notifications
-    const DISABLE_COURSE_PUBLISH_NOTIFICATIONS = process.env.DISABLE_COURSE_PUBLISH_NOTIFICATIONS === 'true';
-    if (n.type === 'course_published' && DISABLE_COURSE_PUBLISH_NOTIFICATIONS) {
-      console.log('🔕 Course publishing Teams notifications are disabled via feature flag');
+    // Publish notifications are permanently disabled — tracked in Audit Trail instead.
+    const DISABLED_TYPES = ['course_published', 'authorisation_published', 'authorization_published'];
+    if (DISABLED_TYPES.includes(n.type)) {
+      console.log(`🔕 ${n.type} Teams notifications are disabled (tracked in Audit Trail instead)`);
     } else {
       try {
         await trySendTeamsDM(n.recipientUserId, teamsTextFor(n));

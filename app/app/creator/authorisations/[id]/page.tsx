@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { logContentAudit, diffChanges } from "@/lib/audit";
 
 /** Tabs */
 type TabKey = "details" | "courses" | "assignments";
@@ -205,8 +206,27 @@ async function saveDetailsAction(form: FormData) {
     patch.retake_reminder_days = Number.isFinite(n) && n >= 0 ? n : null;
   }
 
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: oldAuth } = await supabase
+    .from("authorisations")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await supabase.from("authorisations").update(patch).eq("id", id);
   if (error) throw new Error(error.message);
+
+  const changes = diffChanges(oldAuth, patch);
+  if (Object.keys(changes).length > 0) {
+    await logContentAudit({
+      entityType: "authorisation",
+      entityId: id,
+      entityName: title || oldAuth?.title || null,
+      action: "updated",
+      actorId: user?.id ?? null,
+      details: { changes },
+    });
+  }
 
   revalidatePath(buildUrl(id));
   redirect(next);
@@ -219,8 +239,26 @@ async function saveStatusAction(form: FormData) {
   const next = String(form.get("next") || "") || buildUrl(id, "details", "status_updated");
   if (!id) throw new Error("Missing auth_id");
 
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: oldAuth } = await supabase
+    .from("authorisations")
+    .select("title, status")
+    .eq("id", id)
+    .maybeSingle();
+
   const { error } = await supabase.from("authorisations").update({ status }).eq("id", id);
   if (error) throw new Error(error.message);
+
+  if (oldAuth && oldAuth.status !== status) {
+    await logContentAudit({
+      entityType: "authorisation",
+      entityId: id,
+      entityName: oldAuth.title,
+      action: "status_changed",
+      actorId: user?.id ?? null,
+      details: { changes: { status: { from: oldAuth.status, to: status } } },
+    });
+  }
 
   revalidatePath(buildUrl(id));
   redirect(next);

@@ -15,12 +15,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Extract notification type early for disable check
     const notificationType = record?.type || type;
 
-    // Check if course_published notifications are disabled
-    if (notificationType === 'course_published' && process.env.DISABLE_COURSE_PUBLISH_NOTIFICATIONS === 'true') {
-      console.log('🔕 Course publishing notifications are disabled via DISABLE_COURSE_PUBLISH_NOTIFICATIONS flag');
+    // Publish notifications are permanently disabled — changes are tracked in
+    // the Admin > Audit Trail tab instead.
+    const DISABLED_TYPES = ['course_published', 'authorisation_published', 'authorization_published'];
+    if (DISABLED_TYPES.includes(notificationType)) {
+      console.log(`🔕 ${notificationType} notifications are disabled (tracked in Audit Trail instead)`);
       return res.status(200).json({ 
         success: true, 
-        skipped: 'course_published notifications disabled' 
+        skipped: `${notificationType} notifications disabled` 
       });
     }
 

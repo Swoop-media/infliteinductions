@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { hasRole } from "@/lib/roles";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { logContentAudit } from "@/lib/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,14 @@ async function createCourseAction(formData: FormData) {
   }
 
   const courseId = data.id as string;
+
+  await logContentAudit({
+    entityType: "course",
+    entityId: courseId,
+    entityName: title,
+    action: "created",
+    actorId: user.id,
+  });
 
   // Revalidate the creator list and go straight to the editor (Details tab)
   revalidatePath("/app/creator");

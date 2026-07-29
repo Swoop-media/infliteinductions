@@ -18,7 +18,7 @@ import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorization
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "overview" | "due_dates_courses" | "due_dates_authorisations" | "course_progress" | "users" | "pending_authorisations" | "documents" | "sites_jobs";
+type TabKey = "overview" | "due_dates_courses" | "due_dates_authorisations" | "course_progress" | "users" | "pending_authorisations" | "documents" | "sites_jobs" | "audit_trail";
 
 function tabFromSearch(sp: Record<string, string | string[] | undefined>): TabKey {
   const raw = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab || "";
@@ -29,6 +29,7 @@ function tabFromSearch(sp: Record<string, string | string[] | undefined>): TabKe
   if (raw === "pending_authorisations") return "pending_authorisations";
   if (raw === "documents") return "documents";
   if (raw === "sites_jobs") return "sites_jobs";
+  if (raw === "audit_trail") return "audit_trail";
   return "due_dates_courses";
 }
 
@@ -670,6 +671,11 @@ export default async function AdminPage({
     { key: "users", label: "Users & Roles", href: "/app/admin?tab=users" },
   ];
 
+  // Audit Trail is Admin-only
+  if (isAdmin) {
+    tabs.push({ key: "audit_trail", label: "Audit Trail", href: "/app/admin?tab=audit_trail" });
+  }
+
   // Only show the Sites & Jobs management tab to Admins
   if (isAdmin) {
     tabs.push({ key: "sites_jobs", label: "Sites & Jobs", href: "/app/admin?tab=sites_jobs" });
@@ -756,6 +762,12 @@ export default async function AdminPage({
           <UsersSection q={q} page={page} />
         ) : tab === "sites_jobs" ? (
           <SitesAndJobsSection />
+        ) : tab === "audit_trail" ? (
+          isAdmin ? (
+            <AuditTrailSection q={q} page={page} />
+          ) : (
+            <p className="text-sm text-red-600">Admin access required.</p>
+          )
         ) : (
           <PendingAuthorisationsSection q={q} />
         )}
@@ -2113,6 +2125,207 @@ async function PendingAuthorisationsSection({ q }: { q: string | null }) {
             </tbody>
           </table>
         </div>
+      )}
+    </div>
+  );
+}
+
+/* --------------------------
+   AUDIT TRAIL
+---------------------------*/
+
+const AUDIT_PAGE_SIZE = 50;
+
+const AUDIT_ACTION_LABELS: Record<string, string> = {
+  created: "Created",
+  duplicated: "Duplicated",
+  updated: "Updated",
+  status_changed: "Status changed",
+};
+
+function formatAuditValue(v: any): string {
+  if (v === null || v === undefined || v === "") return "(empty)";
+  if (Array.isArray(v)) return v.length ? v.join(", ") : "(empty)";
+  if (typeof v === "object") return JSON.stringify(v);
+  return String(v);
+}
+
+function AuditChangeDetails({ details }: { details: any }) {
+  const changes = details?.changes && typeof details.changes === "object" ? details.changes : null;
+  const duplicatedFrom = details?.duplicated_from;
+
+  if (!changes && !duplicatedFrom) return <span className="text-gray-400">—</span>;
+
+  return (
+    <div className="space-y-0.5">
+      {duplicatedFrom ? (
+        <div className="text-sm text-gray-700">
+          Copied from <span className="font-medium">{duplicatedFrom}</span>
+        </div>
+      ) : null}
+      {changes
+        ? Object.entries(changes).map(([field, ch]: [string, any]) => (
+            <div key={field} className="text-sm text-gray-700">
+              <span className="font-medium">{field.replace(/_/g, " ")}</span>:{" "}
+              <span className="text-gray-500 line-through">{formatAuditValue(ch?.from)}</span>
+              {" → "}
+              <span>{formatAuditValue(ch?.to)}</span>
+            </div>
+          ))
+        : null}
+    </div>
+  );
+}
+
+async function AuditTrailSection({ q, page = 1 }: { q: string | null; page?: number }) {
+  noStore();
+  const admin = supabaseAdmin();
+  const currentPage = Math.max(1, page || 1);
+  const from = (currentPage - 1) * AUDIT_PAGE_SIZE;
+
+  let query = admin
+    .from("content_audit_log")
+    .select("*", { count: "exact" })
+    .order("created_at", { ascending: false })
+    .range(from, from + AUDIT_PAGE_SIZE - 1);
+
+  // Sanitize user input for PostgREST filter grammar: strip reserved chars
+  // (commas, parens, quotes, dots) so the .or() expression cannot be tampered with.
+  const term = (q ?? "").trim().replace(/[,()."'\\]/g, " ").replace(/\s+/g, " ").trim();
+  if (term) {
+    const like = `%${term}%`;
+    query = query.or(
+      [
+        `entity_name.ilike.${like}`,
+        `actor_name.ilike.${like}`,
+        `action.ilike.${like}`,
+        `entity_type.ilike.${like}`,
+      ].join(",")
+    );
+  }
+
+  const { data: rows, count, error } = await query;
+
+  if (error) {
+    const missingTable = error.code === "PGRST205" || /content_audit_log/.test(error.message || "");
+    return (
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold">Audit Trail</h2>
+        <p className="text-sm text-amber-700">
+          {missingTable
+            ? "The audit trail table has not been set up yet. Run migration app/migrations/012_content_audit_log.sql in the Supabase SQL editor to enable it."
+            : `Failed to load audit trail: ${error.message}`}
+        </p>
+      </div>
+    );
+  }
+
+  const totalCount = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / AUDIT_PAGE_SIZE));
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleString("en-NZ", {
+      timeZone: "Pacific/Auckland",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+  const pageHref = (p: number) =>
+    `/app/admin?tab=audit_trail&page=${p}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg font-semibold">Audit Trail</h2>
+          <span className="text-sm text-gray-600">
+            {totalCount} change{totalCount !== 1 ? "s" : ""} to courses & authorisations
+          </span>
+        </div>
+        <form method="get" action="/app/admin" className="flex items-center gap-2">
+          <input type="hidden" name="tab" value="audit_trail" />
+          <input
+            name="q"
+            defaultValue={q ?? ""}
+            placeholder="Search course, authorisation, or user"
+            className="w-80 rounded-md border px-3 py-2 text-sm"
+          />
+          <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Search</button>
+        </form>
+      </div>
+
+      {(rows ?? []).length === 0 ? (
+        <p className="text-sm text-gray-600">
+          {q ? "No audit entries match your search." : "No changes recorded yet. Course and authorisation changes will appear here from now on."}
+        </p>
+      ) : (
+        <>
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Date & Time</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Action</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Changed By</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Details</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {(rows ?? []).map((r: any) => (
+                  <tr key={r.id} className="align-top">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{fmt(r.created_at)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
+                      <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
+                        r.entity_type === "course" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"
+                      }`}>
+                        {r.entity_type === "course" ? "Course" : "Authorisation"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      {r.entity_name || <span className="text-gray-400">Unknown</span>}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                      {AUDIT_ACTION_LABELS[r.action] || r.action}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                      {r.actor_name || <span className="text-gray-400">Unknown</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      <AuditChangeDetails details={r.details} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-1 py-2">
+              <p className="text-sm text-gray-700">
+                Showing <span className="font-medium">{from + 1}</span> to{" "}
+                <span className="font-medium">{Math.min(from + AUDIT_PAGE_SIZE, totalCount)}</span> of{" "}
+                <span className="font-medium">{totalCount}</span>
+              </p>
+              <div className="flex gap-2">
+                {currentPage > 1 && (
+                  <a href={pageHref(currentPage - 1)} className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50">
+                    Previous
+                  </a>
+                )}
+                {currentPage < totalPages && (
+                  <a href={pageHref(currentPage + 1)} className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50">
+                    Next
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

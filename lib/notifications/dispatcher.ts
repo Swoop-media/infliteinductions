@@ -477,6 +477,13 @@ export async function notifyUser(
   payload: any = {},
   opts?: NotifyOpts
 ) {
+  // Publish notifications are permanently disabled — changes are tracked in
+  // the Admin > Audit Trail tab instead. Hard block (in-app + Teams).
+  if (type === 'course_published' || type === 'authorization_published' || (type as string) === 'authorisation_published') {
+    console.log(`🔕 ${type} notifications are disabled (tracked in Audit Trail instead)`);
+    return;
+  }
+
   const sb = supabaseAdmin();
 
   // Merge idempotency key if provided
@@ -507,13 +514,6 @@ export async function notifyUser(
 
   // 2) Teams DM (best-effort)
   if (!opts?.skipTeams) {
-    // ✅ Feature flag: Disable course publishing Teams notifications
-    const DISABLE_COURSE_PUBLISH_NOTIFICATIONS = process.env.DISABLE_COURSE_PUBLISH_NOTIFICATIONS === 'true';
-    if (type === 'course_published' && DISABLE_COURSE_PUBLISH_NOTIFICATIONS) {
-      console.log('🔕 Course publishing Teams notifications are disabled via feature flag');
-      return;
-    }
-
     const text = formatTeamsText(type, payloadWithEvent, payloadWithEvent?.title);
     console.log(`🚀 Attempting to send Teams DM to user ${recipientId} for notification type: ${type}`);
 
