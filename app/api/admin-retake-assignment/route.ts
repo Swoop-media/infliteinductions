@@ -274,10 +274,20 @@ export async function POST(request: NextRequest) {
                 reason: "retake",
               });
             if (historyError) {
+              // Do NOT reset the live authorisation if we could not preserve it —
+              // that would remove the user's current in-date authorisation.
               console.error("[retake] Could not snapshot authorisation history:", historyError.message);
+              return NextResponse.json({
+                error: "Could not preserve the user's current authorisation before the retake. Please try again.",
+                details: historyError.message
+              }, { status: 500 });
             }
-          } catch (snapshotError) {
+          } catch (snapshotError: any) {
             console.error("[retake] Unexpected error snapshotting authorisation history:", snapshotError);
+            return NextResponse.json({
+              error: "Could not preserve the user's current authorisation before the retake. Please try again.",
+              details: snapshotError?.message || String(snapshotError)
+            }, { status: 500 });
           }
 
           // Update the existing authorization assignment to reset it

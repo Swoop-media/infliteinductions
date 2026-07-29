@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorizationExpiry";
 
 export async function POST(request: NextRequest) {
   try {
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
       // Check if authorization assignment already exists
       const { data: existingAuthAssignment, error: checkAuthError } = await adminClient
         .from("authorisation_assignments")
-        .select("id, assignment_status")
+        .select("id, assignment_status, completed_at, approved_at, approved_by, restrictions")
         .eq("user_id", user.id)
         .eq("authorisation_id", authorizationId)
         .eq("role", 'trainee')
@@ -157,6 +158,80 @@ export async function POST(request: NextRequest) {
       if (existingAuthAssignment) {
         // If authorization assignment exists and is completed, reset it
         if (existingAuthAssignment.assignment_status === 'completed') {
+          // Preserve the old completed (in-date) authorisation in history BEFORE
+          // resetting anything, including the expiry it had at this moment.
+          // The profile page keeps showing this snapshot as the user's current
+          // authorisation until the retake is approved.
+          try {
+            const courseIdsForAuth = authCourses.map((ac: any) => ac.course_id);
+
+            const { data: authRecord } = await adminClient
+              .from("authorisations")
+              .select("valid_for_days")
+              .eq("id", authorizationId)
+              .maybeSingle();
+
+            const { data: authDocs } = await adminClient
+              .from("learner_documents")
+              .select("expires_on")
+              .eq("user_id", user.id)
+              .in("course_id", courseIdsForAuth.length > 0 ? courseIdsForAuth : ["none"])
+              .not("expires_on", "is", null);
+
+            const { data: completedAuthCourses } = await adminClient
+              .from("course_assignments")
+              .select("course_id, completed_at, courses!course_assignments_course_id_fkey(valid_for_months)")
+              .eq("user_id", user.id)
+              .eq("role", "trainee")
+              .in("course_id", courseIdsForAuth.length > 0 ? courseIdsForAuth : ["none"])
+              .not("completed_at", "is", null);
+
+            const approvedAt = existingAuthAssignment.approved_at
+              ? new Date(existingAuthAssignment.approved_at)
+              : (existingAuthAssignment.completed_at ? new Date(existingAuthAssignment.completed_at) : new Date());
+
+            const expiryDate = calculateAuthorizationExpiry(
+              approvedAt,
+              authRecord?.valid_for_days ?? null,
+              (authDocs || []).map((d: any) => ({ expires_on: d.expires_on })),
+              (completedAuthCourses || []).map((ca: any) => ({
+                valid_for_months: ca.courses?.valid_for_months ?? null,
+                completed_at: ca.completed_at,
+              }))
+            );
+
+            const { error: historyError } = await adminClient
+              .from("authorisation_assignment_history")
+              .insert({
+                assignment_id: existingAuthAssignment.id,
+                user_id: user.id,
+                authorisation_id: authorizationId,
+                assignment_status: existingAuthAssignment.assignment_status,
+                completed_at: existingAuthAssignment.completed_at,
+                approved_at: existingAuthAssignment.approved_at,
+                approved_by: existingAuthAssignment.approved_by,
+                restrictions: existingAuthAssignment.restrictions,
+                expires_at: expiryDate ? expiryDate.toISOString() : null,
+                superseded_by: user.id,
+                reason: "retake",
+              });
+            if (historyError) {
+              // Do NOT reset the live authorisation if we could not preserve it —
+              // that would remove the user's current in-date authorisation.
+              console.error("[retake] Could not snapshot authorisation history:", historyError.message);
+              return NextResponse.json({
+                error: "Could not preserve your current authorisation before the retake. Please try again or contact an admin.",
+                details: historyError.message
+              }, { status: 500 });
+            }
+          } catch (snapshotError: any) {
+            console.error("[retake] Unexpected error snapshotting authorisation history:", snapshotError);
+            return NextResponse.json({
+              error: "Could not preserve your current authorisation before the retake. Please try again or contact an admin.",
+              details: snapshotError?.message || String(snapshotError)
+            }, { status: 500 });
+          }
+
           // Update the existing authorization assignment to reset it
           const { data: updatedAuthAssignment, error: updateAuthError } = await adminClient
             .from("authorisation_assignments")

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { unstable_noStore as noStore } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import TestMessageButton from "./TestMessageButton";
 import CollapsibleSection from "./_components/CollapsibleSection";
@@ -102,6 +103,7 @@ async function loadMyProfileAndLearning() {
       authorisation_id,
       assignment_status,
       completed_at,
+      approved_at,
       restrictions,
       authorisations!inner(
         id,
@@ -176,6 +178,51 @@ async function loadMyProfileAndLearning() {
     a.assignment_status === "completed"
   );
 
+  // While a retake is in progress, the user's previous (still in-date)
+  // authorisation is preserved in authorisation_assignment_history.
+  // Keep showing it as current until the retake is approved.
+  let retakePendingAuth: any[] = [];
+  try {
+    const inProgressAuthIds = inProgressAuth.map((a: any) => a.authorisation_id);
+    if (inProgressAuthIds.length > 0) {
+      const { data: historyRows } = await supabaseAdmin()
+        .from("authorisation_assignment_history")
+        .select("assignment_id, authorisation_id, completed_at, approved_at, restrictions, expires_at, superseded_at")
+        .eq("user_id", user.id)
+        .eq("reason", "retake")
+        .in("authorisation_id", inProgressAuthIds)
+        .order("superseded_at", { ascending: false });
+
+      // Latest snapshot per assignment (rows are reused across retakes, so
+      // matching on assignment_id ties the snapshot to the current record)
+      const latestByAssignment = new Map<string, any>();
+      for (const row of historyRows ?? []) {
+        if (!latestByAssignment.has(row.assignment_id)) latestByAssignment.set(row.assignment_id, row);
+      }
+
+      retakePendingAuth = inProgressAuth
+        .map((a: any) => {
+          const snap = latestByAssignment.get(a.id);
+          if (!snap) return null;
+          // Only show a snapshot from the CURRENT retake cycle: once the
+          // assignment is re-approved (approved_at after the snapshot), or the
+          // snapshot predates the last approval, it is stale.
+          if (a.approved_at && new Date(a.approved_at) > new Date(snap.superseded_at)) return null;
+          return {
+            ...a,
+            id: `${a.id}-prior`,
+            completed_at: snap.completed_at,
+            restrictions: snap.restrictions,
+            prior_expires_at: snap.expires_at,
+            retake_in_progress: true,
+          };
+        })
+        .filter(Boolean);
+    }
+  } catch (e) {
+    console.error("Error loading retake history snapshots:", e);
+  }
+
   // Debug: Log filtered results
   console.log('In progress courses:', inProgressCourses);
   console.log('Completed courses:', completedCourses);
@@ -244,6 +291,7 @@ async function loadMyProfileAndLearning() {
     completedCourses, 
     inProgressAuth,
     completedAuth,
+    retakePendingAuth,
     onsiteAssignments: onsiteAssignments || [],
     operationsNotices
   };
@@ -272,7 +320,7 @@ function Pill({
 
 /* ---------------- Page ---------------- */
 export default async function MyProfilePage() {
-  const { profile, inProgressCourses, completedCourses, inProgressAuth, completedAuth, onsiteAssignments, operationsNotices } = await loadMyProfileAndLearning();
+  const { profile, inProgressCourses, completedCourses, inProgressAuth, completedAuth, retakePendingAuth, onsiteAssignments, operationsNotices } = await loadMyProfileAndLearning();
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -542,15 +590,15 @@ export default async function MyProfilePage() {
           {/* Completed Authorizations */}
           <CollapsibleSection
             title="Completed Authorizations"
-            count={completedAuth.length}
+            count={completedAuth.length + retakePendingAuth.length}
             defaultCollapsed={true}
             pillTone="green"
           >
-            {completedAuth.length === 0 ? (
+            {completedAuth.length + retakePendingAuth.length === 0 ? (
               <p className="text-sm text-gray-500">No completed authorizations yet.</p>
             ) : (
               <div className="space-y-3">
-                {completedAuth.map((assignment: any) => {
+                {[...retakePendingAuth, ...completedAuth].map((assignment: any) => {
                   const auth = assignment.authorisations;
                   const totalCourses = assignment.courses?.length || 0;
 
@@ -593,11 +641,17 @@ export default async function MyProfilePage() {
                         </div>
                         <div className="flex flex-col items-end gap-2">
                           <Pill tone="green">Completed</Pill>
-                          <RetakeButton 
-                            type="authorization" 
-                            authorizationId={assignment.authorisation_id}
-                            authTitle={auth?.title}
-                          />
+                          {assignment.retake_in_progress ? (
+                            <span className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-1">
+                              Retake in progress
+                            </span>
+                          ) : (
+                            <RetakeButton 
+                              type="authorization" 
+                              authorizationId={assignment.authorisation_id}
+                              authTitle={auth?.title}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
