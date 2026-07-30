@@ -12,4 +12,5 @@
 - [Teams bot inbound shim](teams-bot-inbound-shim.md) — botbuilder CloudAdapter in Next.js needs bodyParser on + res.header shim, or all inbound bot messages 500 silently (outbound still works).
 - [Teams linking without redeploy](teams-linking-no-redeploy.md) — linking is DB-driven; if prod inbound is broken, swing the Azure Bot messaging endpoint to dev temporarily (401=healthy, 500=broken probe).
 - [Publish notification DB triggers](publish-notification-triggers.md) — course/auth "published" notifications come from live-DB triggers, not app code; prove via service-role status flip, disable via migration + app-layer block.
+- [Entitlement query pitfalls](entitlement-query-pitfalls.md) — JSON filters without a kind/indexed filter hit statement timeout, and maybeSingle() on duplicate assignment rows errors; both misread as 403.
 - [SharePoint video embedding](sharepoint-video-embedding.md) — iframes always fight SharePoint; stream "Anyone" links through the server proxy into a native <video> instead.

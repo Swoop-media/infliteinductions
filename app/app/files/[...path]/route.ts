@@ -54,56 +54,81 @@ export async function GET(
     // File blocks store storage_path in data; video blocks store the proxy URL in data.url.
     const videoProxyUrl = `/app/files/${fileId}`;
 
-    // Try file block first (data->>'storage_path' = fileId)
-    let courseId: string | null = null;
+    // Collect all modules that reference this file. IMPORTANT: always filter
+    // by `kind` — an unfiltered JSON expression scan over module_content_blocks
+    // hits the DB statement timeout, and a timed-out lookup must not be
+    // mistaken for "file not registered".
+    const moduleIds = new Set<string>();
 
-    const { data: fileBlock } = await adminClient
-      .from("module_content_blocks")
-      .select("module_id")
-      .filter("data->>storage_path", "eq", fileId)
-      .maybeSingle();
-
-    if (fileBlock?.module_id) {
-      const { data: mod } = await adminClient
-        .from("course_modules")
-        .select("course_id")
-        .eq("id", fileBlock.module_id)
-        .maybeSingle();
-      courseId = mod?.course_id ?? null;
-    }
-
-    if (!courseId) {
-      // Try video block (data->>'url' = '/app/files/<fileId>')
-      const { data: videoBlock } = await adminClient
+    // File blocks: data->>'storage_path' = fileId, or legacy data->>'file_id' = fileId
+    const [fileByPath, fileByLegacyId, videoBlocks] = await Promise.all([
+      adminClient
         .from("module_content_blocks")
         .select("module_id")
+        .eq("kind", "file")
+        .filter("data->>storage_path", "eq", fileId)
+        .limit(200),
+      adminClient
+        .from("module_content_blocks")
+        .select("module_id")
+        .eq("kind", "file")
+        .filter("data->>file_id", "eq", fileId)
+        .limit(200),
+      adminClient
+        .from("module_content_blocks")
+        .select("module_id")
+        .eq("kind", "video_embed")
         .filter("data->>url", "eq", videoProxyUrl)
-        .maybeSingle();
+        .limit(200),
+    ]);
 
-      if (videoBlock?.module_id) {
-        const { data: mod } = await adminClient
-          .from("course_modules")
-          .select("course_id")
-          .eq("id", videoBlock.module_id)
-          .maybeSingle();
-        courseId = mod?.course_id ?? null;
-      }
+    if (fileByPath.error || fileByLegacyId.error || videoBlocks.error) {
+      console.error(
+        "File entitlement lookup error:",
+        fileByPath.error?.message || fileByLegacyId.error?.message || videoBlocks.error?.message,
+        fileId
+      );
+      return new NextResponse("Internal server error", { status: 500 });
     }
 
-    if (!courseId) {
+    for (const row of [...(fileByPath.data || []), ...(fileByLegacyId.data || []), ...(videoBlocks.data || [])]) {
+      if (row.module_id) moduleIds.add(row.module_id);
+    }
+
+    let courseIds: string[] = [];
+    if (moduleIds.size > 0) {
+      const { data: mods, error: modsError } = await adminClient
+        .from("course_modules")
+        .select("course_id")
+        .in("id", Array.from(moduleIds));
+      if (modsError) {
+        console.error("File entitlement module lookup error:", modsError.message, fileId);
+        return new NextResponse("Internal server error", { status: 500 });
+      }
+      courseIds = Array.from(new Set((mods || []).map(m => m.course_id).filter(Boolean)));
+    }
+
+    if (courseIds.length === 0) {
       // File is not registered in any course block — deny access
       return new NextResponse("Forbidden", { status: 403 });
     }
 
-    // Check the user has an assignment (any role) for the owning course
-    const { data: assignment } = await adminClient
+    // Check the user has an assignment (any role) for any owning course.
+    // Note: duplicate assignment rows exist for some users, so never use
+    // maybeSingle() here — it errors on >1 row and would deny access.
+    const { data: assignments, error: assignmentError } = await adminClient
       .from("course_assignments")
       .select("id")
-      .eq("course_id", courseId)
+      .in("course_id", courseIds)
       .eq("user_id", user.id)
-      .maybeSingle();
+      .limit(1);
 
-    if (!assignment) {
+    if (assignmentError) {
+      console.error("File entitlement assignment lookup error:", assignmentError.message, fileId);
+      return new NextResponse("Internal server error", { status: 500 });
+    }
+
+    if (!assignments || assignments.length === 0) {
       return new NextResponse("Forbidden", { status: 403 });
     }
   }

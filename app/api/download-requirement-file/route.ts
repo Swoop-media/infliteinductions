@@ -69,15 +69,22 @@ export async function GET(request: NextRequest) {
       if (!isPrivileged) {
         // Check if the caller is a trainer or assessor assigned to the same course
         const trainerRoles = ['trainer', 'assessor', 'onsite_trainer', 'onsite_assessor'];
-        const { data: trainerAssignment } = await adminClient
+        // Duplicate assignment rows exist for some users; maybeSingle() would
+        // error on >1 row and wrongly deny access, so use limit(1) instead.
+        const { data: trainerAssignments, error: trainerError } = await adminClient
           .from("course_assignments")
           .select("id")
           .eq("course_id", assignment.course_id)
           .eq("user_id", user.id)
           .in("role", trainerRoles)
-          .maybeSingle();
+          .limit(1);
 
-        if (!trainerAssignment) {
+        if (trainerError) {
+          console.error('Trainer assignment lookup error:', trainerError.message);
+          return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+        }
+
+        if (!trainerAssignments || trainerAssignments.length === 0) {
           return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
       }
