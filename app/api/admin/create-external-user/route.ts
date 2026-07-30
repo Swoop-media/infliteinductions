@@ -2,7 +2,6 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseRoute } from '@/lib/supabase/server';
 import { getUncachableResendClient } from '@/lib/resend-client';
-import { syncUserToSafeflite } from '@/lib/webhooks/safeflite-sync';
 
 function generateTempPassword(): string {
   // Generate a secure temporary password
@@ -12,6 +11,53 @@ function generateTempPassword(): string {
     password += chars[Math.floor(Math.random() * chars.length)];
   }
   return password;
+}
+
+/**
+ * Fully remove a just-created (or orphaned) auth account so the email can be
+ * reused immediately.
+ *
+ * IMPORTANT: auth.admin.deleteUser() alone FAILS with "Database error deleting
+ * user" whenever a user_roles row exists (a signup DB trigger creates one, and
+ * its FK to auth.users has no ON DELETE CASCADE). So we must delete the
+ * dependent public-schema rows first, then delete the auth account.
+ */
+async function cleanupUser(supabase, userId: string): Promise<{ ok: boolean; detail?: string }> {
+  const dependents: Array<[string, string]> = [
+    ['course_assignments', 'user_id'],
+    ['course_enrolments', 'user_id'],
+    ['authorisation_assignments', 'user_id'],
+    ['user_roles', 'user_id'],
+    ['user_roles', 'granted_by'],
+    ['profiles', 'id'],
+  ];
+
+  for (const [table, column] of dependents) {
+    const { error } = await supabase.from(table).delete().eq(column, userId);
+    if (error) {
+      console.error(`Cleanup: failed to delete from ${table} (${column}=${userId}):`, error);
+    }
+  }
+
+  const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
+  if (deleteError) {
+    console.error(`Cleanup: failed to delete auth user ${userId}:`, deleteError);
+    return { ok: false, detail: deleteError.message };
+  }
+  return { ok: true };
+}
+
+/** Find an auth user by email via the admin list API (no direct lookup exists). */
+async function findAuthUserByEmail(supabase, email: string) {
+  const target = email.toLowerCase();
+  for (let page = 1; page <= 100; page++) {
+    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error || !data?.users?.length) return null;
+    const found = data.users.find((u) => u.email?.toLowerCase() === target);
+    if (found) return found;
+    if (data.users.length < 1000) return null;
+  }
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -48,9 +94,8 @@ export async function POST(request: Request) {
 
     // Generate temporary password
     const tempPassword = generateTempPassword();
-    
-    // Create user in Supabase Auth (auto-confirmed)
-    const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+
+    const createAuthUser = () => supabase.auth.admin.createUser({
       email,
       password: tempPassword,
       email_confirm: true, // Auto-confirm the email
@@ -59,134 +104,170 @@ export async function POST(request: Request) {
         user_type: userType
       }
     });
-    
+
+    // Create user in Supabase Auth (auto-confirmed)
+    let { data: authUser, error: authError } = await createAuthUser();
+
+    // If the email is "already registered", it may be an orphaned auth account
+    // left behind by a previously failed creation attempt. An account without a
+    // profiles row is such an orphan (every healthy account has one, created by
+    // the signup trigger). Clean it up automatically and retry, so the admin
+    // never has to delete it manually.
+    if (authError && (authError.message?.includes('already been registered') || authError.code === 'email_exists')) {
+      const existing = await findAuthUserByEmail(supabase, email);
+      if (existing) {
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', existing.id)
+          .maybeSingle();
+
+        if (!existingProfile) {
+          console.warn(`Found orphaned auth account for ${email} (${existing.id}) — cleaning up and retrying creation`);
+          const cleanup = await cleanupUser(supabase, existing.id);
+          if (!cleanup.ok) {
+            return NextResponse.json({
+              error: `An earlier attempt to create this user failed and left a broken account that could not be removed automatically (${cleanup.detail}). Please contact support to remove it.`
+            }, { status: 500 });
+          }
+          ({ data: authUser, error: authError } = await createAuthUser());
+        } else {
+          return NextResponse.json({
+            error: 'A user with this email address already exists. If you want to resend their credentials, use the "Resend Credentials" option on their user page instead.'
+          }, { status: 409 });
+        }
+      }
+    }
+
     if (authError) {
       console.error('Auth user creation error:', authError);
       return NextResponse.json({ 
         error: authError.message 
       }, { status: 400 });
     }
-    
-    // Create profile. A DB trigger may already have created a minimal profile
-    // row for the new auth user, so upsert on id instead of inserting.
-    // NOTE: profiles has no user_type column — the type lives in auth user_metadata.
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: authUser.user.id,
-        email: authUser.user.email,
-        full_name: fullName,
-        department: department,
-        job_description: jobDescription,
-        microsoft_id: null,
-        created_via_admin: true,
-        awaiting_first_login: true,
-        updated_at: new Date().toISOString()
-      }, { onConflict: 'id' });
-    
-    if (profileError) {
-      console.error('Profile creation error:', profileError);
-      // Try to delete the auth user if profile creation fails
-      await supabase.auth.admin.deleteUser(authUser.user.id);
+
+    const newUserId = authUser.user.id;
+
+    // Everything after this point must clean up the just-created auth account
+    // on failure, otherwise a retry hits "already been registered".
+    try {
+      // Create profile. A DB trigger may already have created a minimal profile
+      // row for the new auth user, so upsert on id instead of inserting.
+      // NOTE: profiles has no user_type column — the type lives in auth user_metadata.
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: newUserId,
+          email: authUser.user.email,
+          full_name: fullName,
+          department: department,
+          job_description: jobDescription,
+          microsoft_id: null,
+          created_via_admin: true,
+          awaiting_first_login: true,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+      
+      if (profileError) {
+        console.error('Profile creation error:', profileError);
+        throw new Error(`Failed to create user profile: ${profileError.message}`);
+      }
+      
+      // Assign role based on user type
+      const roleName = userType === 'external_contractor' 
+        ? 'Trainers and Assessors' 
+        : 'General';
+
+      const { data: roleRow } = await supabase
+        .from('roles')
+        .select('id')
+        .eq('name', roleName)
+        .maybeSingle();
+
+      if (roleRow) {
+        // A DB trigger may already grant a default role on signup, so ignore
+        // duplicate key conflicts instead of logging an error.
+        const { error: roleError } = await supabase
+          .from('user_roles')
+          .upsert({
+            user_id: newUserId,
+            role_id: roleRow.id,
+            granted_by: actingUser?.id || newUserId,
+            granted_at: new Date().toISOString()
+          }, { onConflict: 'user_id,role_id', ignoreDuplicates: true });
+
+        if (roleError) {
+          console.error('Role assignment error:', roleError);
+        }
+      } else {
+        console.error(`Role assignment error: role "${roleName}" not found`);
+      }
+      
+      // Assign courses if provided
+      if (courseIds && courseIds.length > 0) {
+        const courseAssignments = courseIds.map((courseId: string) => ({
+          user_id: newUserId,
+          course_id: courseId,
+          created_by: actingUser?.id || newUserId,
+          role: 'trainee',
+          assignment_status: 'assigned',
+          assigned_at: new Date().toISOString()
+        }));
+        
+        const { error: courseError } = await supabase
+          .from('course_assignments')
+          .insert(courseAssignments);
+        
+        if (courseError) {
+          console.error('Course assignment error:', courseError);
+        } else {
+          const enrollments = courseIds.map((courseId: string) => ({
+            user_id: newUserId,
+            course_id: courseId,
+            status: 'approved'
+          }));
+          const { error: enrollError } = await supabase
+            .from('course_enrolments')
+            .upsert(enrollments, { onConflict: 'user_id,course_id', ignoreDuplicates: false });
+          if (enrollError) {
+            console.error('Course enrollment error:', enrollError);
+          }
+        }
+      }
+      
+      // Assign authorizations if provided
+      if (authorizationIds && authorizationIds.length > 0) {
+        const authAssignments = authorizationIds.map((authId: string) => ({
+          user_id: newUserId,
+          authorisation_id: authId,
+          created_by: actingUser?.id || newUserId,
+          role: 'trainee',
+          assignment_status: 'assigned'
+        }));
+        
+        const { error: assignError } = await supabase
+          .from('authorisation_assignments')
+          .insert(authAssignments);
+        
+        if (assignError) {
+          console.error('Authorization assignment error:', assignError);
+        }
+      }
+
+      // NOTE: SafeFLITE sync is intentionally skipped for external users — the
+      // sync endpoint requires a microsoft_id (or oid/tid), which external
+      // email/password users never have, so it always failed with a 400.
+    } catch (stepError) {
+      console.error('External user creation failed after auth account was created — cleaning up:', stepError);
+      const cleanup = await cleanupUser(supabase, newUserId);
+      const retryNote = cleanup.ok
+        ? 'The partially-created account was removed — you can retry now.'
+        : `WARNING: the partially-created account could not be removed automatically (${cleanup.detail}).`;
       return NextResponse.json({ 
-        error: 'Failed to create user profile' 
+        error: `${stepError.message} ${retryNote}` 
       }, { status: 500 });
     }
     
-    // Assign role based on user type
-    const roleName = userType === 'external_contractor' 
-      ? 'Trainers and Assessors' 
-      : 'General';
-
-    const { data: roleRow } = await supabase
-      .from('roles')
-      .select('id')
-      .eq('name', roleName)
-      .maybeSingle();
-
-    if (roleRow) {
-      // A DB trigger may already grant a default role on signup, so ignore
-      // duplicate key conflicts instead of logging an error.
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .upsert({
-          user_id: authUser.user.id,
-          role_id: roleRow.id,
-          granted_by: actingUser?.id || authUser.user.id,
-          granted_at: new Date().toISOString()
-        }, { onConflict: 'user_id,role_id', ignoreDuplicates: true });
-
-      if (roleError) {
-        console.error('Role assignment error:', roleError);
-      }
-    } else {
-      console.error(`Role assignment error: role "${roleName}" not found`);
-    }
-    
-    // Assign courses if provided
-    if (courseIds && courseIds.length > 0) {
-      const courseAssignments = courseIds.map((courseId: string) => ({
-        user_id: authUser.user.id,
-        course_id: courseId,
-        created_by: actingUser?.id || authUser.user.id,
-        role: 'trainee',
-        assignment_status: 'assigned',
-        assigned_at: new Date().toISOString()
-      }));
-      
-      const { error: courseError } = await supabase
-        .from('course_assignments')
-        .insert(courseAssignments);
-      
-      if (courseError) {
-        console.error('Course assignment error:', courseError);
-      } else {
-        const enrollments = courseIds.map((courseId: string) => ({
-          user_id: authUser.user.id,
-          course_id: courseId,
-          status: 'approved'
-        }));
-        const { error: enrollError } = await supabase
-          .from('course_enrolments')
-          .upsert(enrollments, { onConflict: 'user_id,course_id', ignoreDuplicates: false });
-        if (enrollError) {
-          console.error('Course enrollment error:', enrollError);
-        }
-      }
-    }
-    
-    // Assign authorizations if provided
-    if (authorizationIds && authorizationIds.length > 0) {
-      const authAssignments = authorizationIds.map((authId: string) => ({
-        user_id: authUser.user.id,
-        authorisation_id: authId,
-        created_by: actingUser?.id || authUser.user.id,
-        role: 'trainee',
-        assignment_status: 'assigned'
-      }));
-      
-      const { error: authError } = await supabase
-        .from('authorisation_assignments')
-        .insert(authAssignments);
-      
-      if (authError) {
-        console.error('Authorization assignment error:', authError);
-      }
-    }
-    
-    // Sync user to SafeFLITE
-    const now = new Date().toISOString();
-    await syncUserToSafeflite({
-      microsoft_id: null,
-      email: authUser.user.email || email,
-      full_name: fullName,
-      job_description: jobDescription,
-      department: department,
-      created_at: now,
-      updated_at: now,
-      archived_at: null
-    });
-
     // Send email with credentials using Resend
     try {
       const { client, fromEmail } = await getUncachableResendClient();
@@ -239,21 +320,28 @@ export async function POST(request: Request) {
       console.log(`Welcome email sent to ${email}`);
     } catch (emailError) {
       console.error('Failed to send email:', emailError);
-      // Don't fail the whole process if email fails
-      // The user is already created
+      // The account is fully set up — surface the email failure instead of
+      // claiming success, and point the admin at the resend option.
+      return NextResponse.json({ 
+        message: 'User created, but the credentials email failed to send',
+        warning: 'The credentials email could not be sent. Use "Resend Credentials" on the user\'s page to try again.',
+        email: authUser.user.email,
+        tempPasswordSent: false,
+        userId: newUserId
+      });
     }
     
     return NextResponse.json({ 
       message: 'External user created successfully',
       email: authUser.user.email,
       tempPasswordSent: true,
-      userId: authUser.user.id
+      userId: newUserId
     });
     
   } catch (error) {
     console.error('Error creating external user:', error);
     return NextResponse.json({ 
-      error: 'Failed to create external user' 
+      error: error?.message ? `Failed to create external user: ${error.message}` : 'Failed to create external user'
     }, { status: 500 });
   }
 }
