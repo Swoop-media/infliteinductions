@@ -501,11 +501,16 @@ export async function notifyUser(
       read: false,
     });
     if (error) {
-      // If you added the unique(partial) index on (payload->>'event_id', recipient_id),
-      // Supabase will return 23505 when the same event was already inserted.
-      // Swallow that one; rethrow others.
+      // The unique partial index on (payload->>'event_id', recipient_id) returns
+      // 23505 when the same event was already inserted. That means this exact
+      // notification was already delivered — skip the Teams DM too, otherwise
+      // every duplicate trigger/webhook fire re-sends the DM.
       // @ts-ignore - supabase error has code
-      if (error.code !== "23505") throw error;
+      if (error.code === "23505") {
+        console.log(`🔁 Duplicate notification suppressed (event_id=${payloadWithEvent?.event_id}, user=${recipientId})`);
+        return;
+      }
+      throw error;
     }
   } catch (err) {
     console.error("[notifyUser] insert notification failed", err);

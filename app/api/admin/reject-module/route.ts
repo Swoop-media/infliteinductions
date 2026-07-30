@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
         courseTitle: course?.title || "Course",
         rejectionReason: rejectionReason,
         url: assignmentId ? `/app/admin/review/${assignmentId}` : `/app/train-assess`,
-      });
+      }, { eventKey: `channel_rejected_${assignmentId || userId}_${moduleId}_${new Date().toISOString().split("T")[0]}` });
       console.log("✅ Module rejection posted to Teams channels");
     } catch (webhookError) {
       console.error("Failed to post rejection to Teams channels:", webhookError);

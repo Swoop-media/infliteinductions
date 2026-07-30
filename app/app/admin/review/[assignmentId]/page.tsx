@@ -942,7 +942,7 @@ async function approveAssignment(formData: FormData) {
       expiryDate: expiryDate ? expiryDate.toISOString().split("T")[0] : null,
       restrictions: restrictionsText,
       url: `/app/admin/review/${assignmentId}`,
-    });
+    }, { eventKey: `channel_approved_${assignmentId}_${new Date().toISOString().split("T")[0]}` });
     console.log("✅ Authorization approval posted to Teams channels");
   } catch (webhookError) {
     console.error("Failed to post to Teams channels:", webhookError);

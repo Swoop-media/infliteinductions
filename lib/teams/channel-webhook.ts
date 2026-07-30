@@ -229,10 +229,45 @@ export async function postIssueReportToChannel(
   }
 }
 
-export async function postToAuthChannels(payload: WebhookPayload): Promise<void> {
+/**
+ * Claim an idempotency key in webhook_post_dedupe. Returns true if this is
+ * the first claim (safe to post), false if the event was already posted.
+ * Fails open (returns true) if the dedupe table is unavailable so channel
+ * posts are never silently dropped by infrastructure issues.
+ */
+async function claimEventKey(eventKey: string): Promise<boolean> {
+  try {
+    const { supabaseAdmin } = await import("@/lib/supabase/admin");
+    const { error } = await supabaseAdmin()
+      .from("webhook_post_dedupe")
+      .insert({ event_key: eventKey });
+    if (error) {
+      // 23505 = already claimed → duplicate post, skip
+      if ((error as any).code === "23505") return false;
+      console.error("webhook_post_dedupe claim failed (posting anyway):", error.message);
+    }
+    return true;
+  } catch (e) {
+    console.error("webhook_post_dedupe claim error (posting anyway):", e);
+    return true;
+  }
+}
+
+export async function postToAuthChannels(
+  payload: WebhookPayload,
+  opts?: { eventKey?: string }
+): Promise<void> {
   if (WEBHOOK_URLS.length === 0) {
     console.warn("No Teams webhook channel URLs configured");
     return;
+  }
+
+  if (opts?.eventKey) {
+    const firstClaim = await claimEventKey(opts.eventKey);
+    if (!firstClaim) {
+      console.log(`🔁 Duplicate channel post suppressed (${opts.eventKey})`);
+      return;
+    }
   }
 
   const card = buildAdaptiveCard(payload);

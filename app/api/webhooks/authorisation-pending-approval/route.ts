@@ -7,7 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 function supabaseAdmin() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE || "";
-  if (!url || key) throw new Error("Supabase admin env not set");
+  if (!url || !key) throw new Error("Supabase admin env not set");
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
@@ -95,10 +95,12 @@ export async function POST(request: NextRequest) {
             learner_email: trainee_email,
             assignmentId: assignment_id,
             url: `${process.env.NEXT_PUBLIC_SITE_URL}/app/admin/review/${assignment_id}`,
-            event_id: `auth_pending_${assignment_id}_${Date.now()}`
+            // Stable per-day key (matches the auto-fix sweep) so duplicate
+            // webhook fires and the sweep can't double-notify the same event.
+            event_id: `auth_pending_${assignment_id}_${new Date().toISOString().split("T")[0]}`
           },
           {
-            eventId: `auth_pending_${assignment_id}_${Date.now()}`
+            eventId: `auth_pending_${assignment_id}_${new Date().toISOString().split("T")[0]}`
           }
         );
         
