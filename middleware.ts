@@ -16,11 +16,29 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
 
+  // Fast path: if the request carries no Supabase auth cookies there is no
+  // session to refresh, so skip the network call entirely. This covers the
+  // deployment health check on "/" (which sends no cookies) and anonymous
+  // visitors — a slow/unreachable Supabase can no longer stall them.
+  const hasAuthCookie = req.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-") || c.name.includes("supabase"));
+  if (!hasAuthCookie) {
+    return res;
+  }
+
   try {
     const supabase = createServerClient<Database>(
       supabaseUrl,
       supabaseAnonKey,
       {
+        // Hard cap on the auth round-trip so a hung Supabase connection can't
+        // hold logged-in page requests open indefinitely (cookie-less requests,
+        // including the health check, already return before this fetch runs).
+        global: {
+          fetch: (input: any, init?: any) =>
+            fetch(input, { ...init, signal: AbortSignal.timeout(5000) }),
+        },
         cookies: {
           getAll() {
             return req.cookies.getAll();
@@ -43,8 +61,14 @@ export async function middleware(req: NextRequest) {
       return res;
     }
     
-    // Handle connection/timeout errors
-    if (error?.cause?.code === 'UND_ERR_CONNECT_TIMEOUT' || 
+    // Handle connection/timeout errors. Our 5s AbortSignal timeout surfaces
+    // from auth-js as AuthRetryableFetchError with status 0 (a network-level
+    // failure, not a genuine auth rejection).
+    if (error?.name === 'TimeoutError' ||
+        error?.name === 'AbortError' ||
+        error?.name === 'AuthRetryableFetchError' ||
+        (error?.__isAuthError === true && error?.status === 0) ||
+        error?.cause?.code === 'UND_ERR_CONNECT_TIMEOUT' ||
         error?.cause?.code === 'UND_ERR_SOCKET') {
       console.error('Auth service connection error - skipping session refresh');
       return res;
