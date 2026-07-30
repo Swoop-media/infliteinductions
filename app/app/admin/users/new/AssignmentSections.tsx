@@ -30,6 +30,7 @@ export default function AssignmentSections({
             selectedIds={selectedAuthIds}
             onSelectionChange={onAuthSelectionChange}
             renderMode="none"
+            defaultCollapsed
           />
         </div>
       )}
@@ -43,6 +44,7 @@ export default function AssignmentSections({
             selectedIds={selectedCourseIds}
             onSelectionChange={onCourseSelectionChange}
             renderMode="none"
+            defaultCollapsed
           />
         </div>
       )}

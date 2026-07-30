@@ -15,6 +15,7 @@ interface DepartmentAssignmentBaseProps {
   onSelectionChange: (selectedIds: string[]) => void;
   inputName?: string; // Optional - only used when rendering actual form inputs
   renderMode?: 'form-inputs' | 'hidden-inputs' | 'none'; // How to render the inputs
+  defaultCollapsed?: boolean; // Start with all department groups collapsed
 }
 
 export default function DepartmentAssignmentBase({
@@ -22,12 +23,16 @@ export default function DepartmentAssignmentBase({
   selectedIds = [],
   onSelectionChange,
   inputName,
-  renderMode = 'form-inputs'
+  renderMode = 'form-inputs',
+  defaultCollapsed = false
 }: DepartmentAssignmentBaseProps) {
   // Local state for expanded departments
   const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(() => {
     const expanded = new Set<string>();
-    
+
+    // Start fully collapsed when requested
+    if (defaultCollapsed) return expanded;
+
     // Expand departments with selected items
     items.forEach(item => {
       if (selectedIds.includes(item.id)) {
