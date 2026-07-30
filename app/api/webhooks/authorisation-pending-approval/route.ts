@@ -43,30 +43,46 @@ export async function POST(request: NextRequest) {
 
     const supabase = supabaseAdmin();
 
-    // Get all users with Senior Management role
-    const { data: seniorManagers, error } = await supabase
-      .from("profiles")
-      .select(`
-        id,
-        full_name,
-        email,
-        user_roles!inner(
-          roles!inner(name)
-        )
-      `)
-      .eq("user_roles.roles.name", "Senior Management");
+    // Get all users with the Authorization Approver role
+    const { data: approverRole, error: roleError } = await supabase
+      .from("roles")
+      .select("id")
+      .eq("name", "Authorization Approver")
+      .maybeSingle();
 
-    if (error) {
-      console.error("Error fetching senior managers:", error);
+    if (roleError || !approverRole) {
+      console.error("Error fetching Authorization Approver role:", roleError);
       return NextResponse.json({ error: "Database error" }, { status: 500 });
     }
 
-    if (!seniorManagers || seniorManagers.length === 0) {
-      console.log("No Senior Management users found");
-      return NextResponse.json({ message: "No senior managers to notify" });
+    const { data: approverRows, error: approverRowsError } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role_id", approverRole.id);
+
+    if (approverRowsError) {
+      console.error("Error fetching approvers:", approverRowsError);
+      return NextResponse.json({ error: "Database error" }, { status: 500 });
     }
 
-    // Send notifications to all Senior Management users
+    const approverIds = [...new Set((approverRows || []).map((r) => r.user_id))];
+
+    if (approverIds.length === 0) {
+      console.log("No Authorization Approver users found");
+      return NextResponse.json({ message: "No approvers to notify" });
+    }
+
+    const { data: seniorManagers, error } = await supabase
+      .from("profiles")
+      .select("id, full_name, email")
+      .in("id", approverIds);
+
+    if (error || !seniorManagers || seniorManagers.length === 0) {
+      console.error("Error fetching approver profiles:", error);
+      return NextResponse.json({ error: "Database error" }, { status: 500 });
+    }
+
+    // Send notifications to all Authorization Approver users
     const notificationPromises = seniorManagers.map(async (manager) => {
       try {
         await notifyUser(
@@ -86,9 +102,9 @@ export async function POST(request: NextRequest) {
           }
         );
         
-        console.log(`✅ Notified Senior Manager: ${manager.full_name} (${manager.email})`);
+        console.log(`✅ Notified Authorization Approver: ${manager.full_name} (${manager.email})`);
       } catch (error) {
-        console.error(`❌ Failed to notify Senior Manager ${manager.full_name}:`, error);
+        console.error(`❌ Failed to notify Authorization Approver ${manager.full_name}:`, error);
       }
     });
 
