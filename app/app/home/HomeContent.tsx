@@ -48,7 +48,7 @@ export default function HomeContent({ profile, notice, banner }: HomeContentProp
       {/* Getting Started Section */}
       <div className="rounded-xl border bg-blue-50 p-6 mb-6">
         <p className="text-xl font-bold text-gray-900">
-          To begin go to My Profile - then click continue on a authorisation
+          To begin go to My Profile - then click continue on an authorisation
         </p>
       </div>
 
