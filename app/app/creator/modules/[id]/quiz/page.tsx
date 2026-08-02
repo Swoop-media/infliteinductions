@@ -5,6 +5,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { logModuleContentAudit, diffChanges } from "@/lib/audit";
 
@@ -116,14 +117,21 @@ async function loadModuleAndEnsureQuiz(moduleId: string) {
     redirect(`/app/creator/modules/${moduleId}`); // wrong editor
   }
 
-  // Find or create quiz
+  // Find or create quiz.
+  // Use the service-role client here: RLS hides quizzes rows from course
+  // creators' sessions, which made the lookups below come back empty. The
+  // page then tried to insert a new quiz and hit the one-quiz-per-course
+  // unique constraint (uq_quiz_per_course) — surfaced to creators as a
+  // bogus "schema mismatch" server error. The hasRole guard above is the
+  // authorization boundary for this privileged access.
+  const admin = supabaseAdmin();
   let quiz: QuizRow | null = null;
   let hasModuleIdCol = true;
 
   // First: quiz by module_id (if column exists)
   const byModule = await trySelect(
     async () =>
-      await supabase
+      await admin
         .from("quizzes")
         .select("*")
         .eq("module_id", moduleId)
@@ -138,7 +146,7 @@ async function loadModuleAndEnsureQuiz(moduleId: string) {
     quiz = byModule.data as QuizRow;
   } else {
     // Try legacy: a course-level quiz (avoid using module_id if missing)
-    const byCourse = await supabase
+    const byCourse = await admin
       .from("quizzes")
       .select("*")
       .eq("course_id", mod.course_id)
@@ -146,11 +154,14 @@ async function loadModuleAndEnsureQuiz(moduleId: string) {
       .order("id", { ascending: false })
       .limit(1)
       .maybeSingle();
+    if (byCourse.error) {
+      throw new Error(`Quiz lookup failed: ${byCourse.error.message}`);
+    }
 
     if (byCourse.data) {
       // migrate it to module if possible
       if (hasModuleIdCol) {
-        const migrated = await supabase
+        const migrated = await admin
           .from("quizzes")
           .update({ module_id: moduleId } as any)
           .eq("id", byCourse.data.id)
@@ -171,14 +182,20 @@ async function loadModuleAndEnsureQuiz(moduleId: string) {
         { ...base },
       ];
 
+      let lastError: any = null;
       for (const payload of tries) {
-        const r = await supabase.from("quizzes").insert(payload).select("*").single();
+        const r = await admin.from("quizzes").insert(payload).select("*").single();
         if (!r.error && r.data) {
           quiz = r.data as QuizRow;
           break;
         }
+        lastError = r.error;
       }
-      if (!quiz) throw new Error("Could not create quiz (schema mismatch).");
+      if (!quiz) {
+        throw new Error(
+          `Could not create quiz: ${lastError?.message ?? "unknown error"}`
+        );
+      }
     }
   }
 
@@ -394,7 +411,7 @@ async function createQuestion(formData: FormData) {
 
   // Role guard - ensure user has permission
   const canAccess =
-    (await hasRole("Course creators")) ||
+    (await hasRole("Course Creators")) ||
     (await hasRole("Senior management")) ||
     (await hasRole("Admin"));
   if (!canAccess) throw new Error("Not authorized to create questions");
