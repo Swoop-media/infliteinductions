@@ -948,6 +948,61 @@ async function loadAuthorisationOverview() {
     };
   });
 
+  // Retake in progress: the user's prior (still in-date) authorisation lives
+  // only in authorisation_assignment_history (reason='retake'). It remains
+  // CURRENT until the retake is approved or the snapshot's expires_at passes,
+  // so the overview matrix must show it instead of "never completed".
+  try {
+    const nowIso = new Date().toISOString();
+    const { data: snaps } = await supabase
+      .from("authorisation_assignment_history")
+      .select("assignment_id, user_id, authorisation_id, approved_at, completed_at, expires_at, superseded_at")
+      .eq("reason", "retake")
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .order("superseded_at", { ascending: false })
+      .limit(1000);
+
+    // Latest snapshot per live assignment (rows are reused across retakes).
+    const latestSnap = new Map<string, any>();
+    for (const s of snaps || []) {
+      if (s.assignment_id && !latestSnap.has(s.assignment_id)) latestSnap.set(s.assignment_id, s);
+    }
+
+    const snapIds = [...latestSnap.keys()];
+    const liveRows: any[] = [];
+    for (let i = 0; i < snapIds.length; i += 150) {
+      const { data: chunk } = await supabase
+        .from("authorisation_assignments")
+        .select("id, assignment_status, approved_at")
+        .in("id", snapIds.slice(i, i + 150));
+      liveRows.push(...(chunk || []));
+    }
+    const liveById = new Map(liveRows.map((r: any) => [r.id, r]));
+
+    const now = new Date();
+    for (const [asnId, snap] of latestSnap) {
+      const live = liveById.get(asnId);
+      if (!live) continue;
+      // Only assignments still going through a retake qualify.
+      if (["completed", "revoked", "expired"].includes(live.assignment_status)) continue;
+      // Stale snapshot: retake already re-approved since it was taken.
+      if (live.approved_at && new Date(live.approved_at) > new Date(snap.superseded_at)) continue;
+      // Prior authorisation only stays current until its own expiry.
+      if (snap.expires_at && new Date(snap.expires_at) < now) continue;
+      if (!userIdSet.has(snap.user_id) || !authValidityMap.has(snap.authorisation_id)) continue;
+      // Don't overwrite a genuine live completion.
+      if (completions[snap.user_id]?.[snap.authorisation_id]) continue;
+
+      if (!completions[snap.user_id]) completions[snap.user_id] = {};
+      completions[snap.user_id][snap.authorisation_id] = {
+        approved_at: snap.approved_at || snap.completed_at,
+        expires_at: snap.expires_at || null,
+      };
+    }
+  } catch (e) {
+    console.error("Could not load retake-pending prior authorisations for overview:", e);
+  }
+
   return { users, authorisations: authList, completions };
 }
 
