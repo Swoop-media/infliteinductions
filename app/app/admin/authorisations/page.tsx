@@ -59,19 +59,20 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
     return [];
   }
 
-  if (!rows || rows.length === 0) {
-    return [];
-  }
-
-  const authIds = [...new Set(rows.map((r: any) => r.authorisation_id))];
-  const userIds = [...new Set(rows.map((r: any) => r.user_id))];
+  // NOTE: no early return on empty rows — retake-pending prior authorisations
+  // (synthesized below) must still be reported even when there are zero live
+  // completed assignments.
+  const authIds = [...new Set((rows || []).map((r: any) => r.authorisation_id))];
+  const userIds = [...new Set((rows || []).map((r: any) => r.user_id))];
 
   const adminClient = supabaseAdmin();
 
-  const { data: authCourses } = await adminClient
-    .from("authorisation_courses")
-    .select("authorisation_id, course_id")
-    .in("authorisation_id", authIds);
+  const { data: authCourses } = authIds.length > 0
+    ? await adminClient
+        .from("authorisation_courses")
+        .select("authorisation_id, course_id")
+        .in("authorisation_id", authIds)
+    : { data: [] };
 
   const authCourseMap = new Map<string, string[]>();
   (authCourses || []).forEach((ac: any) => {
@@ -101,10 +102,12 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
     userCourseDocMap.set(key, existing);
   });
 
-  const { data: courses } = await adminClient
-    .from("courses")
-    .select("id, valid_for_months")
-    .in("id", allCourseIds);
+  const { data: courses } = allCourseIds.length > 0
+    ? await adminClient
+        .from("courses")
+        .select("id, valid_for_months")
+        .in("id", allCourseIds)
+    : { data: [] };
 
   const courseValidityMap = new Map<string, number | null>();
   (courses || []).forEach((c: any) => {
@@ -216,6 +219,86 @@ async function loadCompletedAuthorisationsWithDueDates(q: string | null): Promis
       expiry_source: expirySource,
     };
   });
+
+  // Retake in progress: the user's prior (still in-date) authorisation is
+  // preserved in authorisation_assignment_history. It remains CURRENT until
+  // the retake is approved or the prior authorisation reaches its expiry
+  // date, so it must appear in this report.
+  try {
+    // Drive from the history table: retake snapshots are only written when a
+    // retake starts, so this set is small — unlike the full list of
+    // in-progress assignments. Only in-date snapshots matter.
+    const nowIso = new Date().toISOString();
+    const { data: snaps } = await adminClient
+      .from("authorisation_assignment_history")
+      .select("assignment_id, completed_at, expires_at, superseded_at, reason")
+      .eq("reason", "retake")
+      .or(`expires_at.is.null,expires_at.gt.${nowIso}`)
+      .order("superseded_at", { ascending: false })
+      .limit(1000);
+
+    // Latest snapshot per live assignment (rows are reused across retakes).
+    const latestSnap = new Map<string, any>();
+    for (const s of snaps || []) {
+      if (s.assignment_id && !latestSnap.has(s.assignment_id)) latestSnap.set(s.assignment_id, s);
+    }
+
+    const snapAssignmentIds = [...latestSnap.keys()];
+    // Chunk .in() lists to stay under URL length limits.
+    const liveRows: any[] = [];
+    for (let i = 0; i < snapAssignmentIds.length; i += 150) {
+      const { data: chunk } = await adminClient
+        .from("authorisation_assignments")
+        .select(`
+          id,
+          user_id,
+          authorisation_id,
+          approved_at,
+          assignment_status,
+          profiles!authorisation_assignments_user_id_fkey(full_name, email),
+          authorisations!inner(id, title, valid_for_days, department)
+        `)
+        .in("id", snapAssignmentIds.slice(i, i + 150));
+      liveRows.push(...(chunk || []));
+    }
+
+    const now = new Date();
+    for (const row of liveRows) {
+      // Only assignments still going through a retake qualify.
+      if (["completed", "revoked", "expired"].includes(row.assignment_status)) continue;
+      const snap = latestSnap.get(row.id);
+      if (!snap) continue;
+      // Stale snapshot: retake already re-approved since it was taken.
+      if (row.approved_at && new Date(row.approved_at) > new Date(snap.superseded_at)) continue;
+      // Prior authorisation only stays current until its own expiry.
+      if (snap.expires_at && new Date(snap.expires_at) < now) continue;
+
+      // Honor the search filter for these synthesized rows.
+      if (q && q.trim()) {
+        const needle = q.trim().toLowerCase();
+        const hay = `${row.profiles?.full_name ?? ""} ${row.profiles?.email ?? ""} ${row.authorisations?.title ?? ""}`.toLowerCase();
+        if (!hay.includes(needle)) continue;
+      }
+
+      const due = snap.expires_at ? new Date(snap.expires_at) : null;
+      completedAuthorisations.push({
+        assignment_id: `${row.id}-prior`,
+        user_id: row.user_id,
+        authorisation_id: row.authorisation_id,
+        completed_at: snap.completed_at,
+        full_name: row.profiles?.full_name ?? null,
+        email: row.profiles?.email ?? null,
+        authorisation_title: row.authorisations?.title ?? null,
+        valid_for_days: row.authorisations?.valid_for_days ?? null,
+        department: row.authorisations?.department ?? null,
+        due_date: due,
+        days_until_due: due ? getDaysUntilExpiry(due) : null,
+        expiry_source: "Prior authorisation (retake in progress)",
+      });
+    }
+  } catch (e) {
+    console.error("Could not load retake-pending prior authorisations:", e);
+  }
 
   completedAuthorisations.sort((a, b) => {
     if (!a.due_date && !b.due_date) return 0;

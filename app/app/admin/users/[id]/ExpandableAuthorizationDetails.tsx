@@ -31,6 +31,7 @@ interface CompletedAuthorization {
   days_until_expiry: number | null;
   status: 'current' | 'expiring_soon' | 'expired' | 'no_expiry';
   restrictions?: string | null;
+  retake_in_progress?: boolean;
 }
 
 interface Props {
@@ -143,6 +144,12 @@ export default function ExpandableAuthorizationDetails({ authorizations, allAuth
                     {auth.restrictions && (
                       <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 mt-1 inline-block">
                         <span className="font-medium">Restrictions:</span> {auth.restrictions}
+                      </div>
+                    )}
+                    {auth.retake_in_progress && (
+                      <div className="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-2 py-0.5 mt-1 inline-block">
+                        Retake in progress — prior authorisation remains current
+                        {auth.due_date ? ` until ${formatDateSafe(auth.due_date)}` : ''}
                       </div>
                     )}
                   </div>

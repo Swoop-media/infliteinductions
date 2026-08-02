@@ -53,6 +53,7 @@ async function loadUserCompletedItems(userId: string) {
       authorisation_id,
       assignment_status,
       completed_at,
+      approved_at,
       authorisations!inner(
         id,
         title,
@@ -182,6 +183,60 @@ async function loadUserCompletedItems(userId: string) {
       status
     };
   });
+
+  // Retake in progress: the user's prior (still in-date) authorisation lives
+  // in authorisation_assignment_history and remains CURRENT until the retake
+  // is approved or the prior authorisation hits its own expiry date.
+  try {
+    const { supabaseAdmin: getAdminClient } = await import("@/lib/supabase/admin");
+    const adminClient = getAdminClient();
+    const inProgress = (authWithCourses || []).filter(
+      (a: any) => !["completed", "revoked", "expired"].includes(a.assignment_status)
+    );
+    const inProgressIds = inProgress.map((a: any) => a.id);
+    if (inProgressIds.length > 0) {
+      const { data: snaps } = await adminClient
+        .from("authorisation_assignment_history")
+        .select("assignment_id, completed_at, expires_at, superseded_at, restrictions, reason")
+        .eq("user_id", userId)
+        .eq("reason", "retake")
+        .in("assignment_id", inProgressIds)
+        .order("superseded_at", { ascending: false });
+
+      const latestSnap = new Map<string, any>();
+      for (const s of snaps || []) {
+        if (!latestSnap.has(s.assignment_id)) latestSnap.set(s.assignment_id, s);
+      }
+
+      const now = new Date();
+      for (const a of inProgress) {
+        const snap = latestSnap.get(a.id);
+        if (!snap) continue;
+        if (a.approved_at && new Date(a.approved_at) > new Date(snap.superseded_at)) continue;
+        if (snap.expires_at && new Date(snap.expires_at) < now) continue;
+
+        const daysUntilExpiry = snap.expires_at
+          ? Math.ceil((new Date(snap.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+          : null;
+        processedAuthorizations.push({
+          assignment_id: `${a.id}-prior`,
+          authorization_title: `${a.authorisations?.title || "Unknown Authorization"} (retake in progress — prior authorisation current)`,
+          completed_at: snap.completed_at,
+          valid_for_years: null,
+          due_date: snap.expires_at || null,
+          days_until_expiry: daysUntilExpiry,
+          status:
+            daysUntilExpiry === null
+              ? "no_expiry"
+              : daysUntilExpiry <= 90
+                ? "expiring_soon"
+                : "current",
+        });
+      }
+    }
+  } catch (e) {
+    console.error("Could not load retake-pending prior authorisations for PDF:", e);
+  }
 
   // Process revoked authorizations
   const processedRevokedAuthorizations = (revokedAuthWithCourses || []).map((auth: any) => ({

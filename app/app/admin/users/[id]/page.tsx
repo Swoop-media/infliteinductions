@@ -85,7 +85,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
     const [authHistRes, courseHistRes, auditRes] = await Promise.all([
       adminClient
         .from("authorisation_assignment_history")
-        .select("id, authorisation_id, assignment_status, completed_at, approved_at, restrictions, expires_at, superseded_at, reason")
+        .select("id, assignment_id, authorisation_id, assignment_status, completed_at, approved_at, restrictions, expires_at, superseded_at, reason")
         .eq("user_id", userId)
         .order("superseded_at", { ascending: false }),
       adminClient
@@ -123,6 +123,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
 
   const authorizationHistory = authHistoryRows.map((h) => ({
     id: h.id,
+    assignment_id: h.assignment_id,
     authorization_title: histAuthTitleMap.get(h.authorisation_id) || "Unknown Authorization",
     completed_at: h.completed_at,
     approved_at: h.approved_at,
@@ -365,6 +366,56 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
     };
   });
 
+  // While a retake is in progress, the user's previous (still in-date)
+  // authorisation lives only in authorisation_assignment_history. Keep
+  // treating it as CURRENT until the retake is approved or the prior
+  // authorisation reaches its own expiry date — mirrors myprofile behavior.
+  const now = new Date();
+  const inProgressLiveAuths = (authWithCourses || []).filter(
+    (a: any) =>
+      a.assignment_status !== "completed" &&
+      a.assignment_status !== "revoked" &&
+      a.assignment_status !== "expired"
+  );
+  const latestSnapshotByAssignment = new Map<string, any>();
+  for (const h of authHistoryRows) {
+    if (h.reason !== "retake" || !h.assignment_id) continue;
+    if (!latestSnapshotByAssignment.has(h.assignment_id)) {
+      latestSnapshotByAssignment.set(h.assignment_id, h); // rows are ordered newest-first
+    }
+  }
+  const retakePendingHistoryIds = new Set<string>();
+  const retakePendingAuthorizations: any[] = [];
+  for (const a of inProgressLiveAuths) {
+    const snap = latestSnapshotByAssignment.get(a.id);
+    if (!snap) continue;
+    // Stale snapshot: assignment was re-approved after this snapshot was taken.
+    if (a.approved_at && new Date(a.approved_at) > new Date(snap.superseded_at)) continue;
+    // Prior authorisation only stays current until its own expiry date.
+    if (snap.expires_at && new Date(snap.expires_at) < now) continue;
+
+    const daysUntilExpiry = snap.expires_at
+      ? Math.ceil((new Date(snap.expires_at).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+      : null;
+    retakePendingHistoryIds.add(snap.id);
+    retakePendingAuthorizations.push({
+      assignment_id: `${a.id}-prior`,
+      authorization_title: a.authorisations?.title || "Unknown Authorization",
+      completed_at: snap.completed_at,
+      valid_for_years: null,
+      due_date: snap.expires_at || null,
+      days_until_expiry: daysUntilExpiry,
+      status:
+        daysUntilExpiry === null
+          ? ("no_expiry" as const)
+          : daysUntilExpiry <= 90
+            ? ("expiring_soon" as const)
+            : ("current" as const),
+      restrictions: snap.restrictions || null,
+      retake_in_progress: true,
+    });
+  }
+
   // Live assignments whose status is 'expired' (lapsed or revoked) — these are
   // not "completed" any more so they never reach processedAuthorizations, but
   // they should still show under Expired Authorisations.
@@ -404,6 +455,7 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
   return { 
     processedCourses, 
     processedAuthorizations,
+    retakePendingAuthorizations,
     expiredStatusAuthorizations,
     processedRevokedAuthorizations, 
     uploadedDocuments: uploadedDocuments || [],
@@ -412,7 +464,10 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
     onsiteAssignments: onsiteAssignments || [],
     availableCourses: availableCourses || [],
     availableAuthorizations: availableAuthorizations || [],
-    authorizationHistory,
+    // Snapshots currently acting as the user's live authorisation (retake in
+    // progress, prior auth still in-date) are shown under Completed
+    // Authorizations instead of Expired.
+    authorizationHistory: authorizationHistory.filter((h) => !retakePendingHistoryIds.has(h.id)),
     courseHistory,
     auditLog: auditLogRows
   };
@@ -553,6 +608,7 @@ export default async function EditUserPage({
   const { 
     processedCourses, 
     processedAuthorizations,
+    retakePendingAuthorizations,
     expiredStatusAuthorizations,
     processedRevokedAuthorizations, 
     uploadedDocuments, 
@@ -566,7 +622,10 @@ export default async function EditUserPage({
     auditLog
   } = await loadUserAssignmentsAndAvailable(resolvedParams.id);
 
-  const currentAuthorizations = processedAuthorizations.filter((a: any) => a.status !== 'expired');
+  const currentAuthorizations = [
+    ...processedAuthorizations.filter((a: any) => a.status !== 'expired'),
+    ...(retakePendingAuthorizations || []),
+  ];
   const expiredAuthorizations = [
     ...processedAuthorizations.filter((a: any) => a.status === 'expired'),
     ...(expiredStatusAuthorizations || []),
