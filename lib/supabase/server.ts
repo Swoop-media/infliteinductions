@@ -9,6 +9,16 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
+// Hard cap on Supabase HTTP round-trips (Auth/PostgREST/Storage/Functions —
+// Realtime is not used server-side). During Supabase connectivity blips (TLS
+// disconnects), requests without a timeout hang indefinitely, pile up, and
+// saturate the VM until even the health check stalls — causing outages.
+// 15s comfortably exceeds any legitimate query (server→Supabase storage
+// transfers are datacenter-fast) while failing hung sockets quickly. Callers
+// can pass their own AbortSignal, which takes precedence.
+const timeoutFetch = (input: any, init?: any) =>
+  fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(15000) });
+
 /** For Server Components */
 export async function createSupabaseServer(useAdmin: boolean = false): Promise<SupabaseClient<Database>> {
   const cookieStore = await cookies();
@@ -17,6 +27,7 @@ export async function createSupabaseServer(useAdmin: boolean = false): Promise<S
     supabaseUrl,
     useAdmin ? supabaseServiceRoleKey : supabaseAnonKey,
     {
+      global: { fetch: timeoutFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -43,6 +54,7 @@ export async function createSupabaseAction(useAdmin: boolean = false): Promise<S
     supabaseUrl,
     useAdmin ? supabaseServiceRoleKey : supabaseAnonKey,
     {
+      global: { fetch: timeoutFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -69,6 +81,7 @@ export async function createSupabaseRoute(useAdmin: boolean = false): Promise<Su
     supabaseUrl,
     useAdmin ? supabaseServiceRoleKey : supabaseAnonKey,
     {
+      global: { fetch: timeoutFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();

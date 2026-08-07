@@ -16,5 +16,13 @@ export function supabaseAdmin() {
       persistSession: false,
       autoRefreshToken: false,
     },
+    // Hard cap on Supabase HTTP round-trips: during Supabase connectivity
+    // blips, requests without a timeout hang, pile up, and saturate the VM
+    // until the health check stalls (root cause of the Aug 2026 outages).
+    // Explicit caller-provided AbortSignals take precedence.
+    global: {
+      fetch: (input: any, init?: any) =>
+        fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(15000) }),
+    },
   });
 }
