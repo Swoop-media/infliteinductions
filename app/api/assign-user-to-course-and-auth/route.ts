@@ -18,7 +18,13 @@ export async function POST(request: NextRequest) {
       auth: {
         persistSession: false,
         autoRefreshToken: false
-      }
+      },
+      // Hard cap on Supabase HTTP round-trips so connection blips can't hang
+      // requests indefinitely and saturate the VM (Aug 2026 outages).
+      global: {
+        fetch: (input: any, init?: any) =>
+          fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(15000) }),
+      },
     });
     
     // For this setup endpoint, we'll use a default assigner ID

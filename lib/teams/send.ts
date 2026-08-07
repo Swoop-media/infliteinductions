@@ -7,7 +7,15 @@ function supabaseAdmin() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE || "";
   if (!url || !key) throw new Error("Supabase admin env not set (SUPABASE_URL + SERVICE_ROLE_KEY).");
-  return createClient(url, key, { auth: { persistSession: false } });
+  return createClient(url, key, {
+    auth: { persistSession: false },
+    // Hard cap on Supabase HTTP round-trips so connection blips can't hang
+    // requests indefinitely and saturate the VM (Aug 2026 outages).
+    global: {
+      fetch: (input: any, init?: any) =>
+        fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(15000) }),
+    },
+  });
 }
 
 /** Send a DM using your stored conversation_ref keyed by app user id (recipient_id). */

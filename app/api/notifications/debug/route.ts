@@ -11,7 +11,15 @@ function supabaseAdmin() {
     throw new Error("Supabase admin environment variables not set");
   }
   
-  return createClient(url, key, { auth: { persistSession: false } });
+  return createClient(url, key, {
+    auth: { persistSession: false },
+    // Hard cap on Supabase HTTP round-trips so connection blips can't hang
+    // requests indefinitely and saturate the VM (Aug 2026 outages).
+    global: {
+      fetch: (input: any, init?: any) =>
+        fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(15000) }),
+    },
+  });
 }
 
 export async function GET(request: NextRequest) {

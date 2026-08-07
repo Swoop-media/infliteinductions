@@ -6,7 +6,15 @@ import { randomInt } from "crypto";
 function supabaseAdmin() {
   const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE || "";
-  return createClient(url, key, { auth: { persistSession: false } });
+  return createClient(url, key, {
+    auth: { persistSession: false },
+    // Hard cap on Supabase HTTP round-trips so connection blips can't hang
+    // requests indefinitely and saturate the VM (Aug 2026 outages).
+    global: {
+      fetch: (input: any, init?: any) =>
+        fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(15000) }),
+    },
+  });
 }
 
 function getSessionClient(req: NextApiRequest, res: NextApiResponse) {
