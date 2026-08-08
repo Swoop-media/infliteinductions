@@ -92,6 +92,10 @@ export default function DocumentUploadBlock({
     setError(null);
     setSuccess(null);
 
+    // Set once the file has been uploaded to storage; used to clean up the
+    // stranded file if the subsequent record save fails.
+    let uploadedFilePath: string | null = null;
+
     try {
       const supabase = supabaseBrowser;
 
@@ -118,6 +122,7 @@ export default function DocumentUploadBlock({
         console.error('Storage upload error:', uploadError);
         throw uploadError;
       }
+      uploadedFilePath = filePath;
 
       const expiresOn = requireExpiry && expiryDate 
         ? new Date(expiryDate + 'T00:00:00').toISOString()
@@ -169,6 +174,20 @@ export default function DocumentUploadBlock({
       window.location.reload();
     } catch (err: any) {
       console.error('Upload error:', err);
+      // The file made it to storage but the record save failed — remove the
+      // stranded file so it doesn't accumulate invisibly. Best-effort: the
+      // server refuses to delete any file a document record references.
+      if (uploadedFilePath) {
+        try {
+          await fetch('/api/document-cleanup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ filePath: uploadedFilePath }),
+          });
+        } catch (cleanupErr) {
+          console.error('Stranded file cleanup failed:', cleanupErr);
+        }
+      }
       // Show user-friendly error message instead of technical details
       if (err.message?.includes('upsert_learner_document')) {
         setError('There was a problem uploading your document. Please try again or contact support if the issue persists.');
