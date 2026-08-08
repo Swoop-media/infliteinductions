@@ -15,6 +15,7 @@
 - [Entitlement query pitfalls](entitlement-query-pitfalls.md) — JSON filters without a kind/indexed filter hit statement timeout, and maybeSingle() on duplicate assignment rows errors; both misread as 403.
 - [Supabase auth user deletion](supabase-user-deletion.md) — deleteUser fails silently while user_roles rows exist; delete dependent public rows first and check the error.
 - [NEON_DATABASE_URL is not the Supabase DB](neon-vs-supabase-db.md) — it's a Neon schema copy; DDL/trigger inspection there doesn't reflect the live Supabase DB.
+- [Wedged prod VM diagnosis](vm-wedged-diagnosis.md) — if Supabase is healthy from workspace but prod healthchecks + outbound fetches all time out, the VM is wedged; only a republish fixes it.
 - [Middleware auth vs health check](middleware-health-timeouts.md) — awaited Supabase call in middleware stalled `/` health probes during Supabase blips, causing VM outages; skip cookie-less requests + 5s fetch timeout.
 - [Retake grace pattern](retake-grace-pattern.md) — prior authorisation stays current during a retake; every current-auth listing must synthesize from history snapshots (5 surfaces do this).
 - [SharePoint video embedding](sharepoint-video-embedding.md) — iframes always fight SharePoint; stream "Anyone" links through the server proxy into a native <video> instead.
