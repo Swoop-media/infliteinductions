@@ -174,39 +174,61 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Insert learner documents using RPC function (same as digital module uploads)
+    // Insert learner documents with retention: mark any existing active
+    // document for the same user/module (onsite uploads have no block) as
+    // "replaced" — never update-in-place or delete — then insert the new
+    // document as the active one. Old records and storage files are kept.
     if (learnerDocumentEntries.length > 0) {
       console.log('Attempting to insert learner documents:', learnerDocumentEntries);
-      
-      // Use the RPC function for each document entry
+
+      // Get course_id from the module (shared by all entries)
+      const { data: moduleInfo } = await adminClient
+        .from("course_modules")
+        .select("course_id")
+        .eq("id", moduleId)
+        .single();
+      const courseIdForDocs = moduleInfo?.course_id || assignmentData?.course_id;
+
       for (const docEntry of learnerDocumentEntries) {
         try {
-          // Get course_id and module_id from the assignment
-          const { data: moduleInfo } = await adminClient
-            .from("course_modules")
-            .select("course_id")
-            .eq("id", moduleId)
+          // Mark existing active document(s) for this user/module as replaced
+          const { error: replaceError } = await adminClient
+            .from("learner_documents")
+            .update({ status: 'replaced', updated_at: new Date().toISOString() })
+            .eq("user_id", docEntry.user_id)
+            .eq("module_id", moduleId)
+            .is("block_id", null)
+            .or("status.is.null,status.neq.replaced");
+
+          if (replaceError) {
+            console.error("Error marking previous learner document as replaced:", replaceError);
+          }
+
+          const { data: inserted, error: insertError } = await adminClient
+            .from("learner_documents")
+            .insert({
+              user_id: docEntry.user_id,
+              course_id: courseIdForDocs,
+              module_id: moduleId,
+              block_id: null,  // No block for onsite requirements
+              title: docEntry.title,
+              file_path: docEntry.file_path,
+              file_size: docEntry.file_size,
+              file_type: docEntry.file_type,
+              expires_on: docEntry.expires_on || null,
+              assignment_id: assignmentId,
+              course_title: docEntry.course_title,
+              module_title: docEntry.module_title,
+              status: 'active',
+              created_at: new Date().toISOString()
+            })
+            .select("id")
             .single();
-          
-          const { data: documentId, error: rpcError } = await adminClient
-            .rpc('upsert_learner_document', {
-              p_user_id: docEntry.user_id,
-              p_course_id: moduleInfo?.course_id || assignmentData?.course_id,
-              p_module_id: moduleId,
-              p_block_id: null,  // No block for onsite requirements
-              p_title: docEntry.title,
-              p_file_path: docEntry.file_path,
-              p_file_size: docEntry.file_size,
-              p_file_type: docEntry.file_type,
-              p_expires_on: docEntry.expires_on || null,  // Use provided due date or null
-              p_assignment_id: assignmentId
-            });
-          
-          if (rpcError) {
-            console.error("Error saving learner document via RPC:", rpcError);
-            console.error("Error details:", JSON.stringify(rpcError, null, 2));
+
+          if (insertError) {
+            console.error("Error saving learner document:", insertError);
           } else {
-            console.log('Successfully inserted learner document via RPC, ID:', documentId);
+            console.log('Successfully inserted learner document, ID:', inserted?.id);
           }
         } catch (err) {
           console.error("Exception while saving learner document:", err);

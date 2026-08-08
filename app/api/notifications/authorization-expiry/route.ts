@@ -103,7 +103,8 @@ export async function POST(request: NextRequest) {
         .select("id, user_id, course_id, expires_on")
         .in("user_id", userIds)
         .in("course_id", allCourseIds)
-        .not("expires_on", "is", null);
+        .not("expires_on", "is", null)
+        .or("status.is.null,status.neq.replaced");
       documents = docs || [];
     }
 

@@ -66,7 +66,7 @@ async function fetchAuthorisationDueDates(supabase: any) {
 
   if (allCourseIds.length > 0 && userIds.length > 0) {
     [documents, courseAssignmentsData, courses] = await Promise.all([
-      chunkedIn(supabase, "learner_documents", "id, user_id, course_id, expires_on", "user_id", userIds, (q: any) => q.in("course_id", allCourseIds).not("expires_on", "is", null)),
+      chunkedIn(supabase, "learner_documents", "id, user_id, course_id, expires_on", "user_id", userIds, (q: any) => q.in("course_id", allCourseIds).not("expires_on", "is", null).or("status.is.null,status.neq.replaced")),
       chunkedIn(supabase, "course_assignments", "id, user_id, course_id, completed_at", "user_id", userIds, (q: any) => q.in("course_id", allCourseIds).eq("role", "trainee").not("completed_at", "is", null)),
       chunkedIn(supabase, "courses", "id, valid_for_months", "id", allCourseIds),
     ]);

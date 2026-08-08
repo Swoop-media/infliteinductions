@@ -18,4 +18,5 @@
 - [Wedged prod VM diagnosis](vm-wedged-diagnosis.md) — if Supabase is healthy from workspace but prod healthchecks + outbound fetches all time out, the VM is wedged; only a republish fixes it.
 - [Middleware auth vs health check](middleware-health-timeouts.md) — awaited Supabase call in middleware stalled `/` health probes during Supabase blips, causing VM outages; skip cookie-less requests + 5s fetch timeout.
 - [Retake grace pattern](retake-grace-pattern.md) — prior authorisation stays current during a retake; every current-auth listing must synthesize from history snapshots (5 surfaces do this).
+- [Learner document retention](learner-doc-retention.md) — never delete learner docs; replace = mark old row status='replaced' + insert new; active queries must filter out replaced.
 - [SharePoint video embedding](sharepoint-video-embedding.md) — iframes always fight SharePoint; stream "Anyone" links through the server proxy into a native <video> instead.

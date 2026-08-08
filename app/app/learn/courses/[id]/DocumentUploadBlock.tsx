@@ -44,6 +44,7 @@ export default function DocumentUploadBlock({
   const [showCameraUpload, setShowCameraUpload] = useState(false);
   const [showMultiPhotoUpload, setShowMultiPhotoUpload] = useState(false);
   const [deviceHasCamera, setDeviceHasCamera] = useState(false);
+  const [replacing, setReplacing] = useState(false);
 
   // Check for camera only on client side after mount
   useEffect(() => {
@@ -128,66 +129,47 @@ export default function DocumentUploadBlock({
         module_title: moduleTitle
       });
       
-      // Check if document already exists for this user/module/block
-      const { data: existingDoc } = await supabase
+      // Retention-first replace: mark any existing active document for this
+      // user/module/block as "replaced" (record and storage file are kept),
+      // then insert the new document as the active one.
+      const { error: replaceError } = await supabase
         .from('learner_documents')
-        .select('id')
+        .update({
+          status: 'replaced',
+          updated_at: new Date().toISOString()
+        })
         .eq('user_id', currentUserId)
         .eq('module_id', moduleId)
         .eq('block_id', blockId)
-        .maybeSingle();
-      
-      let result;
-      let dbError;
-      
-      if (existingDoc) {
-        // Update existing document
-        const { data, error } = await supabase
-          .from('learner_documents')
-          .update({
-            title: file.name,
-            file_path: filePath,
-            file_size: file.size,
-            file_type: file.type,
-            expires_on: expiresOn,
-            course_id: courseId,  // Make sure course_id is always set
-            assignment_id: assignmentId || null,  // Also ensure assignment_id is updated
-            course_title: courseTitle,
-            module_title: moduleTitle,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingDoc.id)
-          .select()
-          .single();
-        
-        result = data;
-        dbError = error;
-      } else {
-        // Insert new document
-        const { data, error } = await supabase
-          .from('learner_documents')
-          .insert({
-            user_id: currentUserId,
-            course_id: courseId,
-            module_id: moduleId,
-            block_id: blockId,
-            title: file.name,
-            file_path: filePath,
-            file_size: file.size,
-            file_type: file.type,
-            expires_on: expiresOn,
-            assignment_id: assignmentId || null,
-            course_title: courseTitle,
-            module_title: moduleTitle,
-            created_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-        
-        result = data;
-        dbError = error;
+        .or('status.is.null,status.neq.replaced');
+
+      if (replaceError) {
+        console.error('Error marking previous document as replaced:', replaceError);
+        throw replaceError;
       }
-      
+
+      // Insert new document as the active one
+      const { data: result, error: dbError } = await supabase
+        .from('learner_documents')
+        .insert({
+          user_id: currentUserId,
+          course_id: courseId,
+          module_id: moduleId,
+          block_id: blockId,
+          title: file.name,
+          file_path: filePath,
+          file_size: file.size,
+          file_type: file.type,
+          expires_on: expiresOn,
+          assignment_id: assignmentId || null,
+          course_title: courseTitle,
+          module_title: moduleTitle,
+          status: 'active',
+          created_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+
       if (dbError) {
         console.error('Database error:', dbError);
         throw dbError;
@@ -215,31 +197,6 @@ export default function DocumentUploadBlock({
     }
   };
 
-  const handleRemove = async () => {
-    if (!existingDocument) return;
-
-    setUploading(true);
-    try {
-      const supabase = supabaseBrowser;
-
-      // Remove from database
-      const { error: dbError } = await supabase
-        .from('learner_documents')
-        .delete()
-        .eq('id', existingDocument.id);
-
-      if (dbError) throw dbError;
-
-      setSuccess('Document removed successfully!');
-      // Refresh the page
-      window.location.reload();
-    } catch (err: any) {
-      setError(err.message || 'Remove failed');
-    } finally {
-      setUploading(false);
-    }
-  };
-
   return (
     <div className="border rounded-lg p-4 bg-yellow-50">
       <div className="mb-3">
@@ -259,7 +216,7 @@ export default function DocumentUploadBlock({
         </div>
       )}
 
-      {existingDocument ? (
+      {existingDocument && (
         <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded">
           <div className="flex items-center justify-between">
             <div>
@@ -273,15 +230,27 @@ export default function DocumentUploadBlock({
               </p>
             </div>
             <button
-              onClick={handleRemove}
+              onClick={() => {
+                setReplacing((v) => !v);
+                setError(null);
+                setSuccess(null);
+              }}
               disabled={uploading}
-              className="text-red-600 text-sm hover:text-red-800 disabled:opacity-50"
+              className="text-blue-600 text-sm hover:text-blue-800 disabled:opacity-50"
             >
-              Remove
+              {replacing ? 'Cancel' : 'Replace'}
             </button>
           </div>
+          {replacing && (
+            <p className="mt-2 text-xs text-gray-500">
+              Upload a new file below. Your current document will be kept in your
+              records under “Old documents”.
+            </p>
+          )}
         </div>
-      ) : (
+      )}
+
+      {(!existingDocument || replacing) && (
         <form onSubmit={handleUpload} className="space-y-4">
           {showMultiPhotoUpload ? (
             <div className="space-y-2">

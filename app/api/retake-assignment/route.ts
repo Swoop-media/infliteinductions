@@ -176,7 +176,8 @@ export async function POST(request: NextRequest) {
               .select("expires_on")
               .eq("user_id", user.id)
               .in("course_id", courseIdsForAuth.length > 0 ? courseIdsForAuth : ["none"])
-              .not("expires_on", "is", null);
+              .not("expires_on", "is", null)
+              .or("status.is.null,status.neq.replaced");
 
             const { data: completedAuthCourses } = await adminClient
               .from("course_assignments")

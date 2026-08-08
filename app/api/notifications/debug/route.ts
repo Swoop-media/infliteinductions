@@ -63,6 +63,7 @@ export async function GET(request: NextRequest) {
       .from("learner_documents")
       .select("id, title, expires_on, user_id")
       .not("expires_on", "is", null)
+      .or("status.is.null,status.neq.replaced")
       .gte("expires_on", today.toISOString())
       .lte("expires_on", thirtyDaysFromNow.toISOString())
       .limit(10);
