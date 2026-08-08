@@ -45,11 +45,22 @@ export default function DocumentUploadBlock({
   const [showMultiPhotoUpload, setShowMultiPhotoUpload] = useState(false);
   const [deviceHasCamera, setDeviceHasCamera] = useState(false);
   const [replacing, setReplacing] = useState(false);
+  const [justReplaced, setJustReplaced] = useState(false);
 
   // Check for camera only on client side after mount
   useEffect(() => {
     setDeviceHasCamera(hasCamera());
-  }, []);
+    // Show a one-time note after the page reload that follows a replace
+    try {
+      const key = `docReplaced:${blockId}`;
+      if (sessionStorage.getItem(key)) {
+        sessionStorage.removeItem(key);
+        setJustReplaced(true);
+      }
+    } catch {
+      // sessionStorage unavailable (e.g. privacy mode) — skip the note
+    }
+  }, [blockId]);
 
   const handleFileSelection = (selectedFile: File) => {
     setFile(selectedFile);
@@ -195,6 +206,16 @@ export default function DocumentUploadBlock({
       setExpiryDate('');
       setShowCameraUpload(false);
 
+      // If this upload replaced an existing document, flag it so the note
+      // survives the page reload below.
+      if (existingDocument) {
+        try {
+          sessionStorage.setItem(`docReplaced:${blockId}`, '1');
+        } catch {
+          // ignore — note simply won't show
+        }
+      }
+
       // Refresh the page to show the uploaded document
       window.location.reload();
     } catch (err: any) {
@@ -226,6 +247,19 @@ export default function DocumentUploadBlock({
       {success && (
         <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-green-700 text-sm">
           {success}
+        </div>
+      )}
+
+      {justReplaced && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded text-sm text-green-800">
+          ✅ Document replaced. Your previous document has been moved to{' '}
+          <a
+            href="/app/myprofile/documents"
+            className="font-medium underline text-green-900 hover:text-green-700"
+          >
+            Old documents
+          </a>{' '}
+          in My documents — it hasn’t been deleted.
         </div>
       )}
 
