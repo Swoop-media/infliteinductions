@@ -467,6 +467,20 @@ async function createQuestion(formData: FormData) {
     throw new Error("Could not create question: " + (qError?.message || "Unknown error"));
   }
 
+  // Adopt any legacy module-linked questions (quiz_id IS NULL) into this quiz.
+  // Once a quiz has quiz_id-linked questions, module-only rows become orphans
+  // that resurface on review pages (see migration 016) — relink instead.
+  {
+    const { error: relinkErr } = await supabase
+      .from("quiz_questions")
+      .update({ quiz_id: quizId })
+      .eq("module_id", moduleId)
+      .is("quiz_id", null);
+    if (relinkErr) {
+      console.error("Failed to relink legacy module-linked questions:", relinkErr.message);
+    }
+  }
+
   // SHORT ANSWER: store accepted answers
   if (qType === "short_answer") {
     const answers = ansCsv

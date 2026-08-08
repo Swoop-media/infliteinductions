@@ -2,6 +2,7 @@
 // app/app/creator/courses/[id]/quiz/page.tsx
 import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { logModuleContentAudit } from "@/lib/audit";
@@ -85,7 +86,60 @@ async function addQuestion(formData: FormData) {
 
   if (!courseId || !moduleId || !stem) throw new Error("Missing fields");
 
+  // Verify the caller can access this course via RLS before doing any
+  // privileged quiz lookups (mirrors the modern module quiz editor).
+  const { data: course, error: courseErr } = await supabase
+    .from("courses")
+    .select("id")
+    .eq("id", courseId)
+    .maybeSingle();
+  if (courseErr || !course) {
+    throw new Error(courseErr?.message ?? "Course not found or no access");
+  }
+
+  // Verify the module actually belongs to this course and is a quiz module
+  // (user-scoped client) before any service-role quiz operation, so a forged
+  // module_id can't attach a quiz/question to another course's module.
+  const { data: quizModule, error: modErr } = await supabase
+    .from("course_modules")
+    .select("id, course_id")
+    .eq("id", moduleId)
+    .eq("course_id", courseId)
+    .eq("type", "digital_assessment_quiz")
+    .maybeSingle();
+  if (modErr || !quizModule) {
+    throw new Error(modErr?.message ?? "Module not found in this course or not a quiz module");
+  }
+
+  // Ensure a quizzes row exists for this module so the question is always
+  // quiz_id-linked. Module-only (quiz_id IS NULL) questions become orphans
+  // that resurface on review pages (see migration 016). RLS hides quizzes
+  // rows from creators' sessions, so use the service-role client for the
+  // find-or-create — the course access check above is the auth boundary.
+  const admin = supabaseAdmin();
+  let quizId: string;
+  const { data: existingQuiz, error: quizErr } = await admin
+    .from("quizzes")
+    .select("id")
+    .eq("module_id", moduleId)
+    .maybeSingle();
+  if (quizErr) throw new Error(`Quiz lookup failed: ${quizErr.message}`);
+  if (existingQuiz) {
+    quizId = existingQuiz.id;
+  } else {
+    const { data: newQuiz, error: createErr } = await admin
+      .from("quizzes")
+      .insert({ course_id: courseId, module_id: moduleId })
+      .select("id")
+      .single();
+    if (createErr || !newQuiz) {
+      throw new Error(`Could not create quiz: ${createErr?.message ?? "unknown error"}`);
+    }
+    quizId = newQuiz.id;
+  }
+
   const { error } = await supabase.from("quiz_questions").insert({
+    quiz_id: quizId,
     module_id: moduleId,
     stem,
     type,

@@ -405,11 +405,33 @@ async function deleteModuleAction(formData: FormData) {
     .eq("id", moduleId)
     .maybeSingle();
 
-  // If this is a quiz module, best-effort delete any linked quiz rows first to avoid orphans
+  // If this is a quiz module, delete its questions/options and the linked
+  // quiz row first, so no quiz_questions rows (quiz_id-linked or legacy
+  // module-linked) are left behind as orphans (see migration 016).
   if (type === "digital_assessment_quiz") {
-    try {
-      await supabase.from("quizzes").delete().eq("module_id", moduleId);
-    } catch {}
+    const { data: moduleQuestions, error: qErr } = await supabase
+      .from("quiz_questions")
+      .select("id")
+      .eq("module_id", moduleId);
+    if (qErr) throw new Error(`Quiz question lookup failed: ${qErr.message}`);
+    const qIds = (moduleQuestions ?? []).map((q: any) => q.id);
+    if (qIds.length > 0) {
+      const { error: oErr } = await supabase
+        .from("quiz_options")
+        .delete()
+        .in("question_id", qIds);
+      if (oErr) throw new Error(`Quiz option cleanup failed: ${oErr.message}`);
+      const { error: qDelErr } = await supabase
+        .from("quiz_questions")
+        .delete()
+        .in("id", qIds);
+      if (qDelErr) throw new Error(`Quiz question cleanup failed: ${qDelErr.message}`);
+    }
+    const { error: quizDelErr } = await supabase
+      .from("quizzes")
+      .delete()
+      .eq("module_id", moduleId);
+    if (quizDelErr) throw new Error(`Quiz cleanup failed: ${quizDelErr.message}`);
   }
 
   const { error } = await supabase.from("course_modules").delete().eq("id", moduleId);
