@@ -195,24 +195,27 @@ export async function POST(request: NextRequest) {
           // Two-call replace: pass 1 catches pre-migration NULL-status rows;
           // pass 2 catches rows with a non-'replaced' value. A single .or()
           // filter in PostgREST UPDATE context can silently skip rows.
-          await adminClient
+          const { data: replacedNull } = await adminClient
             .from("learner_documents")
             .update({ status: 'replaced', updated_at: new Date().toISOString() })
             .eq("user_id", docEntry.user_id)
             .eq("module_id", moduleId)
             .is("block_id", null)
-            .is("status", null);
-          const { error: replaceError } = await adminClient
+            .is("status", null)
+            .select("id");
+          const { data: replacedActive, error: replaceError } = await adminClient
             .from("learner_documents")
             .update({ status: 'replaced', updated_at: new Date().toISOString() })
             .eq("user_id", docEntry.user_id)
             .eq("module_id", moduleId)
             .is("block_id", null)
-            .neq("status", "replaced");
+            .neq("status", "replaced")
+            .select("id");
 
           if (replaceError) {
             console.error("Error marking previous learner document as replaced:", replaceError);
           }
+          const replacedCount = (replacedNull?.length || 0) + (replacedActive?.length || 0);
 
           const { data: inserted, error: insertError } = await adminClient
             .from("learner_documents")
@@ -239,6 +242,25 @@ export async function POST(request: NextRequest) {
             console.error("Error saving learner document:", insertError);
           } else {
             console.log('Successfully inserted learner document, ID:', inserted?.id);
+
+            // If this upload replaced a previous document, run the shared
+            // replacement side-effects: reset the trainee's onsite assessment
+            // completion and revert any approved authorisation for this
+            // course back to Pending Approval for re-review.
+            if (replacedCount > 0 && courseIdForDocs) {
+              try {
+                const { handleDocumentReplacement } = await import("@/lib/documents/replacement-side-effects");
+                await handleDocumentReplacement({
+                  userId: docEntry.user_id,
+                  courseId: courseIdForDocs,
+                  documentTitle: docEntry.title,
+                  documentId: inserted?.id || null,
+                  actorId: user.id,
+                });
+              } catch (sideEffectErr) {
+                console.error("Error running document replacement side-effects:", sideEffectErr);
+              }
+            }
           }
         } catch (err) {
           console.error("Exception while saving learner document:", err);

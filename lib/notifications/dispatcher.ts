@@ -60,6 +60,7 @@ export type NotificationType =
   | "operations_notice_pending_ack"
   | "form_resubmitted"
   | "authorisation_approved_responsible"
+  | "document_replaced_review_required"
   | string;
 
 function formatTeamsText(
@@ -249,6 +250,19 @@ function formatTeamsText(
         "📋 Authorisation pending approval",
         learner ? `• Learner: ${learner}` : "",
         payload?.authorizationTitle ? `• Authorisation: ${payload.authorizationTitle}` : "",
+        url ? `• Review: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n");
+
+    case "document_replaced_review_required":
+      return [
+        "📄 Document replaced — review required",
+        learner ? `• Trainee: ${learner}` : "",
+        course ? `• Course: ${course}` : "",
+        payload?.documentName ? `• Document: ${payload.documentName}` : "",
+        payload?.authorizationTitle ? `• Authorisation: ${payload.authorizationTitle}` : "",
+        "• The previous approval was based on the old document, so this authorisation is back to Pending Approval.",
         url ? `• Review: ${url}` : "",
       ]
         .filter(Boolean)

@@ -155,22 +155,24 @@ export default function DocumentUploadBlock({
         .eq('module_id', moduleId)
         .eq('block_id', blockId);
 
-      const { error: replaceError1 } = await updateBase.is('status', null);
+      const { data: replaced1, error: replaceError1 } = await updateBase.is('status', null).select('id');
       if (replaceError1) {
         console.error('Error marking previous (null-status) document as replaced:', replaceError1);
         throw replaceError1;
       }
-      const { error: replaceError2 } = await supabase
+      const { data: replaced2, error: replaceError2 } = await supabase
         .from('learner_documents')
         .update({ status: 'replaced', updated_at: new Date().toISOString() })
         .eq('user_id', currentUserId)
         .eq('module_id', moduleId)
         .eq('block_id', blockId)
-        .neq('status', 'replaced');
+        .neq('status', 'replaced')
+        .select('id');
       if (replaceError2) {
         console.error('Error marking previous document as replaced:', replaceError2);
         throw replaceError2;
       }
+      const replacedCount = (replaced1?.length || 0) + (replaced2?.length || 0);
 
       // Insert new document as the active one
       const { data: result, error: dbError } = await supabase
@@ -200,6 +202,28 @@ export default function DocumentUploadBlock({
       }
       
       console.log('Document saved successfully:', result);
+
+      // If this upload replaced a previous document, run the server-side
+      // side-effects: reset onsite assessment completion and revert any
+      // approved authorisation back to Pending Approval for re-review.
+      if (replacedCount > 0) {
+        try {
+          const res = await fetch('/api/document-replaced', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              courseId,
+              documentId: result?.id || null,
+              documentTitle: file.name,
+            }),
+          });
+          if (!res.ok) {
+            console.error('Document replacement side-effects failed:', res.status);
+          }
+        } catch (sideEffectErr) {
+          console.error('Error running document replacement side-effects:', sideEffectErr);
+        }
+      }
 
       setSuccess('Document uploaded successfully!');
       setFile(null);
