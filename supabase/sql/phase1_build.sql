@@ -341,9 +341,24 @@ using (
 -- =========================================================
 -- 4) QUIZ TABLES + RLS
 -- =========================================================
+create table if not exists public.quizzes (
+  id uuid primary key default gen_random_uuid(),
+  course_id uuid references public.courses(id) on delete cascade,
+  module_id uuid references public.course_modules(id) on delete cascade,
+  pass_mark int not null default 80,
+  max_attempts int not null default 3,
+  shuffle boolean not null default true,
+  show_feedback boolean not null default true,
+  time_limit_seconds int,
+  created_at timestamptz not null default now()
+);
+
+-- Questions are linked by quiz_id ONLY. The legacy module_id/course_id links
+-- were removed (migration 024): module-linked questions were invisible to
+-- learners, so that model must not be reintroduced.
 create table if not exists public.quiz_questions (
   id uuid primary key default gen_random_uuid(),
-  module_id uuid not null references public.course_modules(id) on delete cascade,
+  quiz_id uuid not null references public.quizzes(id) on delete cascade,
   stem text not null,
   type text not null check (type in ('mcq','multi','true_false','short_text')),
   points int not null default 1,
@@ -366,7 +381,7 @@ create table if not exists public.quiz_answers (
   created_at timestamptz not null default now()
 );
 
-create index if not exists idx_quiz_q_module  on public.quiz_questions(module_id);
+create index if not exists idx_quiz_q_quiz    on public.quiz_questions(quiz_id);
 create index if not exists idx_quiz_opt_q     on public.quiz_options(question_id);
 create index if not exists idx_quiz_ans_q     on public.quiz_answers(question_id);
 create index if not exists idx_quiz_ans_user  on public.quiz_answers(user_id);
@@ -376,6 +391,7 @@ alter table public.quiz_options  enable row level security;
 alter table public.quiz_answers  enable row level security;
 
 -- Read: questions/options visible when parent course is visible
+-- (route through quiz_id -> quizzes -> course_modules; questions carry no module link)
 drop policy if exists "quiz_questions read" on public.quiz_questions;
 create policy "quiz_questions read"
 on public.quiz_questions
@@ -384,9 +400,10 @@ to authenticated
 using (
   exists (
     select 1
-    from public.course_modules m
+    from public.quizzes qz
+    join public.course_modules m on m.id = qz.module_id
     join public.courses c on c.id = m.course_id
-    where m.id = quiz_questions.module_id
+    where qz.id = quiz_questions.quiz_id
       and (
         c.status::text = 'published'
         or c.created_by = auth.uid()
@@ -405,7 +422,8 @@ using (
   exists (
     select 1
     from public.quiz_questions q
-    join public.course_modules m on m.id = q.module_id
+    join public.quizzes qz on qz.id = q.quiz_id
+    join public.course_modules m on m.id = qz.module_id
     join public.courses c on c.id = m.course_id
     where q.id = quiz_options.question_id
       and (
@@ -426,9 +444,10 @@ to authenticated
 with check (
   exists (
     select 1
-    from public.course_modules m
+    from public.quizzes qz
+    join public.course_modules m on m.id = qz.module_id
     join public.courses c on c.id = m.course_id
-    where m.id = quiz_questions.module_id
+    where qz.id = quiz_questions.quiz_id
       and (
         c.created_by = auth.uid()
         or public.app_has_role(auth.uid(), 'Admin')
@@ -445,9 +464,10 @@ to authenticated
 using (
   exists (
     select 1
-    from public.course_modules m
+    from public.quizzes qz
+    join public.course_modules m on m.id = qz.module_id
     join public.courses c on c.id = m.course_id
-    where m.id = quiz_questions.module_id
+    where qz.id = quiz_questions.quiz_id
       and (
         c.created_by = auth.uid()
         or public.app_has_role(auth.uid(), 'Admin')
@@ -458,9 +478,10 @@ using (
 with check (
   exists (
     select 1
-    from public.course_modules m
+    from public.quizzes qz
+    join public.course_modules m on m.id = qz.module_id
     join public.courses c on c.id = m.course_id
-    where m.id = quiz_questions.module_id
+    where qz.id = quiz_questions.quiz_id
       and (
         c.created_by = auth.uid()
         or public.app_has_role(auth.uid(), 'Admin')
@@ -477,9 +498,10 @@ to authenticated
 using (
   exists (
     select 1
-    from public.course_modules m
+    from public.quizzes qz
+    join public.course_modules m on m.id = qz.module_id
     join public.courses c on c.id = m.course_id
-    where m.id = quiz_questions.module_id
+    where qz.id = quiz_questions.quiz_id
       and (
         c.created_by = auth.uid()
         or public.app_has_role(auth.uid(), 'Admin')
@@ -497,7 +519,8 @@ with check (
   exists (
     select 1
     from public.quiz_questions q
-    join public.course_modules m on m.id = q.module_id
+    join public.quizzes qz on qz.id = q.quiz_id
+    join public.course_modules m on m.id = qz.module_id
     join public.courses c on c.id = m.course_id
     where q.id = quiz_options.question_id
       and (
@@ -517,7 +540,8 @@ using (
   exists (
     select 1
     from public.quiz_questions q
-    join public.course_modules m on m.id = q.module_id
+    join public.quizzes qz on qz.id = q.quiz_id
+    join public.course_modules m on m.id = qz.module_id
     join public.courses c on c.id = m.course_id
     where q.id = quiz_options.question_id
       and (
@@ -531,7 +555,8 @@ with check (
   exists (
     select 1
     from public.quiz_questions q
-    join public.course_modules m on m.id = q.module_id
+    join public.quizzes qz on qz.id = q.quiz_id
+    join public.course_modules m on m.id = qz.module_id
     join public.courses c on c.id = m.course_id
     where q.id = quiz_options.question_id
       and (
@@ -551,7 +576,8 @@ using (
   exists (
     select 1
     from public.quiz_questions q
-    join public.course_modules m on m.id = q.module_id
+    join public.quizzes qz on qz.id = q.quiz_id
+    join public.course_modules m on m.id = qz.module_id
     join public.courses c on c.id = m.course_id
     where q.id = quiz_options.question_id
       and (

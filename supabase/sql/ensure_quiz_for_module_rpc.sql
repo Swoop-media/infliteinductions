@@ -62,11 +62,8 @@ BEGIN
   RETURNING quizzes.id, quizzes.pass_mark, quizzes.max_attempts, quizzes.shuffle
   INTO v_quiz_record;
   
-  -- Link any existing questions for this module to the new quiz
-  UPDATE quiz_questions 
-  SET quiz_id = v_quiz_record.id 
-  WHERE module_id = p_module_id 
-  AND quiz_id IS NULL;
+  -- NOTE: questions are linked by quiz_id only (quiz_questions.module_id was
+  -- dropped in migration 024) — there are no module-linked questions to adopt.
   
   -- Return the quiz record
   RETURN QUERY SELECT v_quiz_record.id, v_quiz_record.pass_mark, v_quiz_record.max_attempts, v_quiz_record.shuffle;

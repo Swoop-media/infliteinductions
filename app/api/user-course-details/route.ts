@@ -87,13 +87,12 @@ export async function GET(request: NextRequest) {
     
     const quizIds = quizzes?.map(q => q.id) || [];
     
-    // Get quiz questions
-    const { data: quizQuestions } = moduleIds.length > 0 || quizIds.length > 0 ? await adminClient
+    // Get quiz questions — linked by quiz_id only
+    const { data: quizQuestions } = quizIds.length > 0 ? await adminClient
       .from("quiz_questions")
       .select(`
         id,
         quiz_id,
-        module_id,
         stem,
         prompt,
         explanation,
@@ -102,7 +101,7 @@ export async function GET(request: NextRequest) {
         kind,
         type
       `)
-      .or(`quiz_id.in.(${quizIds.join(',')}),module_id.in.(${moduleIds.join(',')})`)
+      .in("quiz_id", quizIds)
       .order("order_index", { ascending: true }) : { data: [] };
     
     // Get quiz options

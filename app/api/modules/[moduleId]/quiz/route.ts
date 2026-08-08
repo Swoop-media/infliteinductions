@@ -40,39 +40,18 @@ export async function GET(
       quizSettings = quiz;
     }
 
+    // Questions are linked by quiz_id only.
     let rawQuestions: any[] = [];
 
-    const { data: q1 } = await sb
-      .from("quiz_questions")
-      .select("*, options:quiz_options(*)")
-      .eq("quiz_id", quizSettings.id)
-      .order("order_index", { ascending: true });
-
-    if (q1 && q1.length > 0) {
-      rawQuestions = q1;
-    }
-
-    if (rawQuestions.length === 0) {
-      const { data: q2 } = await sb
+    if (quiz) {
+      const { data: q1 } = await sb
         .from("quiz_questions")
         .select("*, options:quiz_options(*)")
-        .eq("module_id", moduleId)
+        .eq("quiz_id", quizSettings.id)
         .order("order_index", { ascending: true });
 
-      if (q2 && q2.length > 0) {
-        rawQuestions = q2;
-      }
-    }
-
-    if (rawQuestions.length === 0 && quizSettings.course_id) {
-      const { data: q3 } = await sb
-        .from("quiz_questions")
-        .select("*, options:quiz_options(*)")
-        .eq("course_id", quizSettings.course_id)
-        .order("order_index", { ascending: true });
-
-      if (q3 && q3.length > 0) {
-        rawQuestions = q3;
+      if (q1 && q1.length > 0) {
+        rawQuestions = q1;
       }
     }
 
@@ -94,7 +73,7 @@ export async function GET(
       return {
         id: q.id,
         quiz_id: q.quiz_id,
-        module_id: q.module_id,
+        module_id: quizSettings.module_id ?? moduleId,
         type: questionType,
         question: questionText,
         explanation: q.explanation || null,

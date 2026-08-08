@@ -202,40 +202,19 @@ async function loadModuleAndEnsureQuiz(moduleId: string) {
   return { module: mod, quiz: quiz as QuizRow, hasModuleIdCol };
 }
 
-/** Load questions + options using whichever FK columns exist (quiz_id | module_id | course_id) */
+/** Load questions + options. Questions are linked by quiz_id only. */
 async function loadQuestionsWithOptions(quiz: QuizRow, mod: ModuleRow) {
   "use server";
   const supabase = await createSupabaseServer();
 
-  // 1) Try quiz_id
-  let qList: QuestionRow[] = [];
-  let r1 = await supabase
+  const r1 = await supabase
     .from("quiz_questions")
     .select("*")
     .eq("quiz_id", quiz.id)
     .order("order_index", { ascending: true })
     .order("id", { ascending: true });
 
-  if (r1.error || (r1.data ?? []).length === 0) {
-    // 2) Try module_id
-    r1 = await supabase
-      .from("quiz_questions")
-      .select("*")
-      .eq("module_id", mod.id)
-      .order("order_index", { ascending: true })
-      .order("id", { ascending: true });
-
-    if (r1.error || (r1.data ?? []).length === 0) {
-      // 3) Try course_id
-      r1 = await supabase
-        .from("quiz_questions")
-        .select("*")
-        .eq("course_id", mod.course_id)
-        .order("order_index", { ascending: true })
-        .order("id", { ascending: true });
-    }
-  }
-  qList = (r1.data ?? []) as QuestionRow[];
+  const qList = (r1.data ?? []) as QuestionRow[];
 
   if (qList.length === 0) return [] as { question: QuestionRow; options: OptionRow[] }[];
 
@@ -355,11 +334,7 @@ async function executeSupabaseQuery<T = any>(
 async function nextQuestionOrder(quiz: QuizRow, mod: ModuleRow): Promise<number> {
   "use server";
   const supabase = await createSupabaseServer();
-  const tries = [
-    { col: "quiz_id" as const, val: quiz.id },
-    { col: "module_id" as const, val: mod.id },
-    { col: "course_id" as const, val: mod.course_id },
-  ];
+  const tries = [{ col: "quiz_id" as const, val: quiz.id }];
   
   for (const t of tries) {
     try {
@@ -443,8 +418,7 @@ async function createQuestion(formData: FormData) {
   const validType = validTypes.includes(qType) ? qType : 'mcq'; // default to mcq if invalid
 
   const basePayload = {
-    quiz_id: quizId, // CRITICAL: Include quiz_id so questions are properly linked
-    module_id: moduleId,
+    quiz_id: quizId, // Questions are linked by quiz_id only (quiz_questions.module_id was dropped)
     type: validType,
     points: 1,
     order_index: nextOrder,
@@ -465,20 +439,6 @@ async function createQuestion(formData: FormData) {
 
   if (qError || !qIns) {
     throw new Error("Could not create question: " + (qError?.message || "Unknown error"));
-  }
-
-  // Adopt any legacy module-linked questions (quiz_id IS NULL) into this quiz.
-  // Once a quiz has quiz_id-linked questions, module-only rows become orphans
-  // that resurface on review pages (see migration 016) — relink instead.
-  {
-    const { error: relinkErr } = await supabase
-      .from("quiz_questions")
-      .update({ quiz_id: quizId })
-      .eq("module_id", moduleId)
-      .is("quiz_id", null);
-    if (relinkErr) {
-      console.error("Failed to relink legacy module-linked questions:", relinkErr.message);
-    }
   }
 
   // SHORT ANSWER: store accepted answers

@@ -231,44 +231,16 @@ async function duplicateCourseAction(formData: FormData) {
           .single();
 
         if (!newQuizError && newQuiz) {
-            // Copy quiz questions - use fallback logic to find questions by quiz_id, module_id, or course_id
+            // Copy quiz questions — questions are linked by quiz_id only.
             let originalQuestions: any[] = [];
-            
-            // 1) Try by quiz_id first (preferred) - only if originalQuiz exists
-            let questionsQuery;
             if (originalQuiz) {
-              questionsQuery = await supabase
+              const questionsQuery = await supabase
                 .from('quiz_questions')
                 .select('*')
                 .eq('quiz_id', originalQuiz.id)
                 .order('order_index', { ascending: true });
-            } else {
-              questionsQuery = { error: 'No original quiz', data: [] };
-            }
-            
-            if (!questionsQuery.error && questionsQuery.data?.length > 0) {
-              originalQuestions = questionsQuery.data;
-            } else {
-              // 2) Try by module_id (fallback)
-              questionsQuery = await supabase
-                .from('quiz_questions')
-                .select('*')
-                .eq('module_id', originalModule.id)
-                .order('order_index', { ascending: true });
-              
               if (!questionsQuery.error && questionsQuery.data?.length > 0) {
                 originalQuestions = questionsQuery.data;
-              } else {
-                // 3) Try by course_id (legacy fallback)
-                questionsQuery = await supabase
-                  .from('quiz_questions')
-                  .select('*')
-                  .eq('course_id', originalModule.course_id)
-                  .order('order_index', { ascending: true });
-                
-                if (!questionsQuery.error && questionsQuery.data?.length > 0) {
-                  originalQuestions = questionsQuery.data;
-                }
               }
             }
 
@@ -278,8 +250,6 @@ async function duplicateCourseAction(formData: FormData) {
                   .from('quiz_questions')
                   .insert({
                     quiz_id: newQuiz.id,
-                    module_id: newModule.id,
-                    course_id: newCourse.id,
                     type: originalQuestion.type,
                     question: originalQuestion.question,
                     explanation: originalQuestion.explanation,

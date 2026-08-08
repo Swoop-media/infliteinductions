@@ -406,13 +406,22 @@ async function deleteModuleAction(formData: FormData) {
     .maybeSingle();
 
   // If this is a quiz module, delete its questions/options and the linked
-  // quiz row first, so no quiz_questions rows (quiz_id-linked or legacy
-  // module-linked) are left behind as orphans (see migration 016).
+  // quiz row first, so no quiz_questions rows are left behind as orphans.
+  // Questions are linked by quiz_id only (quiz_questions.module_id dropped
+  // in migration 024), so resolve the module's quizzes first.
   if (type === "digital_assessment_quiz") {
-    const { data: moduleQuestions, error: qErr } = await supabase
-      .from("quiz_questions")
+    const { data: moduleQuizzes, error: mqErr } = await supabase
+      .from("quizzes")
       .select("id")
       .eq("module_id", moduleId);
+    if (mqErr) throw new Error(`Quiz lookup failed: ${mqErr.message}`);
+    const quizIds = (moduleQuizzes ?? []).map((q: any) => q.id);
+    const { data: moduleQuestions, error: qErr } = quizIds.length > 0
+      ? await supabase
+          .from("quiz_questions")
+          .select("id")
+          .in("quiz_id", quizIds)
+      : { data: [], error: null };
     if (qErr) throw new Error(`Quiz question lookup failed: ${qErr.message}`);
     const qIds = (moduleQuestions ?? []).map((q: any) => q.id);
     if (qIds.length > 0) {

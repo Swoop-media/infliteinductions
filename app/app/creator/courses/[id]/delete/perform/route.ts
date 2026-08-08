@@ -37,9 +37,9 @@ export async function POST(
   }
 
   // Explicitly clean up quiz data for this course's modules before deleting
-  // the course. Legacy quiz_questions rows linked only by module_id (quiz_id
-  // IS NULL) would otherwise be left behind as orphans (see migration 016),
-  // and we don't rely on DB cascades for quizzes/questions/options.
+  // the course — we don't rely on DB cascades for quizzes/questions/options.
+  // Questions are linked by quiz_id only (quiz_questions.module_id dropped
+  // in migration 024).
   const chunk = <T,>(arr: T[], size = 150): T[][] => {
     const out: T[][] = [];
     for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
@@ -82,24 +82,13 @@ export async function POST(
       }
     }
 
-    // Questions linked by quiz_id OR (legacy) by module_id only.
+    // Questions linked by quiz_id.
     const questionIds = new Set<string>();
     for (const ids of chunk([...quizIds])) {
       const { data: qs, error: qErr } = await supabase
         .from("quiz_questions")
         .select("id")
         .in("quiz_id", ids);
-      if (qErr) {
-        to.searchParams.set("error", `Quiz question lookup failed: ${qErr.message}`);
-        return NextResponse.redirect(to);
-      }
-      for (const q of qs ?? []) questionIds.add((q as any).id);
-    }
-    for (const ids of chunk(moduleIds)) {
-      const { data: qs, error: qErr } = await supabase
-        .from("quiz_questions")
-        .select("id")
-        .in("module_id", ids);
       if (qErr) {
         to.searchParams.set("error", `Quiz question lookup failed: ${qErr.message}`);
         return NextResponse.redirect(to);

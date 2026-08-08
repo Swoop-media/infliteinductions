@@ -280,29 +280,23 @@ async function loadAssignmentDetails(assignmentId: string) {
     
   const quizIds = quizzes?.map(q => q.id) || [];
   
-  // Fetch quiz questions - they can be linked by quiz_id or module_id
-  let quizQuestionsQuery = supabase
-    .from("quiz_questions")
-    .select(`
-      id,
-      quiz_id,
-      module_id,
-      stem,
-      prompt,
-      explanation,
-      points,
-      order_index,
-      kind,
-      type
-    `);
-  
-  // Build OR condition for quiz_id and module_id links only (no course_id in quiz_questions)
-  const conditions = [];
-  if (quizIds.length > 0) conditions.push(`quiz_id.in.(${quizIds.join(',')})`);
-  if (moduleIds.length > 0) conditions.push(`module_id.in.(${moduleIds.join(',')})`);
-  
-  const { data: quizQuestions } = conditions.length > 0
-    ? await quizQuestionsQuery.or(conditions.join(',')).order("order_index", { ascending: true })
+  // Fetch quiz questions — linked by quiz_id only
+  const { data: quizQuestions } = quizIds.length > 0
+    ? await supabase
+        .from("quiz_questions")
+        .select(`
+          id,
+          quiz_id,
+          stem,
+          prompt,
+          explanation,
+          points,
+          order_index,
+          kind,
+          type
+        `)
+        .in("quiz_id", quizIds)
+        .order("order_index", { ascending: true })
     : { data: [], error: null };
     
   // Fetch quiz options
@@ -495,18 +489,11 @@ async function loadAssignmentDetails(assignmentId: string) {
         (!q.module_id && q.course_id === ac.course_id)
       );
       
-      // Get quiz questions for this module. Prefer questions linked directly to the
-      // quiz (quiz_id) — this matches the learner-facing fallback pattern. Only fall
-      // back to module_id-linked questions when the quiz has none linked by quiz_id,
-      // otherwise stale/orphaned module-linked questions (quiz_id null) that were
-      // removed from the quiz would incorrectly reappear in the review.
-      const quizLinkedQuestions = moduleQuiz
-        ? (quizQuestions || []).filter(q => q.quiz_id === moduleQuiz.id)
-        : [];
+      // Get quiz questions for this module — questions are linked by quiz_id only.
       const moduleQuizQuestions = (
-        quizLinkedQuestions.length > 0
-          ? quizLinkedQuestions
-          : (quizQuestions || []).filter(q => q.module_id === module.id && !q.quiz_id)
+        moduleQuiz
+          ? (quizQuestions || []).filter(q => q.quiz_id === moduleQuiz.id)
+          : []
       ).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
       
       // Map questions with their options

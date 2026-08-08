@@ -140,7 +140,6 @@ async function addQuestion(formData: FormData) {
 
   const { error } = await supabase.from("quiz_questions").insert({
     quiz_id: quizId,
-    module_id: moduleId,
     stem,
     type,
     points,
@@ -183,14 +182,22 @@ async function addOption(formData: FormData) {
 
   {
     const { data: { user } } = await supabase.auth.getUser();
+    // Questions carry only quiz_id; resolve the module via the quizzes row.
     const { data: q } = await supabase
       .from("quiz_questions")
-      .select("module_id")
+      .select("quiz_id")
       .eq("id", questionId)
       .maybeSingle();
-    if (q?.module_id) {
+    const { data: quizRow } = q?.quiz_id
+      ? await supabaseAdmin()
+          .from("quizzes")
+          .select("module_id")
+          .eq("id", q.quiz_id)
+          .maybeSingle()
+      : { data: null };
+    if (quizRow?.module_id) {
       await logModuleContentAudit({
-        moduleId: q.module_id,
+        moduleId: quizRow.module_id,
         courseId,
         action: "option_added",
         actorId: user?.id ?? null,
@@ -206,10 +213,22 @@ async function loadQuestions(moduleId: string) {
   "use server";
   const supabase = await createSupabaseServer();
 
+  // Questions are linked by quiz_id only, so resolve this module's quiz
+  // first. RLS hides quizzes rows from creators' sessions, so use the
+  // service-role client for the lookup (the page's course access check is
+  // the auth boundary).
+  const { data: quiz, error: quizErr } = await supabaseAdmin()
+    .from("quizzes")
+    .select("id")
+    .eq("module_id", moduleId)
+    .maybeSingle();
+  if (quizErr) throw new Error(quizErr.message);
+  if (!quiz) return { questions: [], optionsMap: {} };
+
   const { data: questions, error: qErr } = await supabase
     .from("quiz_questions")
     .select("id, stem, type, points, order_index, created_at")
-    .eq("module_id", moduleId)
+    .eq("quiz_id", quiz.id)
     .order("order_index", { ascending: true });
 
   if (qErr) throw new Error(qErr.message);
