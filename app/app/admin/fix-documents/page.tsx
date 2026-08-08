@@ -65,13 +65,13 @@ export default async function FixDocumentsPage() {
           This tool helps fix missing fields in document records that were uploaded but lack proper course/module associations.
         </p>
         <p className="text-sm text-yellow-800 mt-2">
-          <strong>Total Documents:</strong> {documentsWithProfiles?.length || 0}
+          <strong>Active Documents:</strong> {documentsWithProfiles.filter(d => d.status !== 'replaced').length} ({documentsWithProfiles.filter(d => d.status === 'replaced').length} archived)
         </p>
         <p className="text-sm text-yellow-800">
-          <strong>Documents with missing course_title:</strong> {documentsWithProfiles?.filter(d => !d.course_title).length || 0}
+          <strong>Active documents with missing course_title:</strong> {documentsWithProfiles.filter(d => d.status !== 'replaced' && !d.course_title).length}
         </p>
         <p className="text-sm text-yellow-800">
-          <strong>Documents with missing module_title:</strong> {documentsWithProfiles?.filter(d => !d.module_title).length || 0}
+          <strong>Active documents with missing module_title:</strong> {documentsWithProfiles.filter(d => d.status !== 'replaced' && !d.module_title).length}
         </p>
       </div>
 

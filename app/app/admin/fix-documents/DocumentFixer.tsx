@@ -17,15 +17,28 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [editMode, setEditMode] = useState<{ [key: string]: boolean }>({});
   const [editedData, setEditedData] = useState<{ [key: string]: any }>({});
+  const [showArchived, setShowArchived] = useState(false);
   const router = useRouter();
 
-  // Find documents with missing fields
-  const documentsWithIssues = documents.filter(d => 
-    !d.course_title || !d.module_title || !d.course_id || !d.module_id
+  // Archived documents (status = 'replaced') are hidden by default
+  const archivedCount = documents.filter(d => d.status === 'replaced').length;
+  const visibleDocuments = showArchived
+    ? documents
+    : documents.filter(d => d.status !== 'replaced');
+
+  // Find documents with missing fields (among visible, non-archived docs)
+  const documentsWithIssues = visibleDocuments.filter(d =>
+    d.status !== 'replaced' &&
+    (!d.course_title || !d.module_title || !d.course_id || !d.module_id)
   );
 
+  // Only currently-eligible issue docs count as selected (drops stale IDs,
+  // e.g. docs archived or fixed since they were checked)
+  const issueIds = new Set(documentsWithIssues.map(d => d.id));
+  const effectiveSelected = new Set(Array.from(selectedDocs).filter(id => issueIds.has(id)));
+
   const toggleSelectAll = () => {
-    if (selectedDocs.size === documentsWithIssues.length) {
+    if (effectiveSelected.size === documentsWithIssues.length) {
       setSelectedDocs(new Set());
     } else {
       setSelectedDocs(new Set(documentsWithIssues.map(d => d.id)));
@@ -109,22 +122,23 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
   };
 
   const autoFixSelected = async () => {
-    if (selectedDocs.size === 0) {
+    if (effectiveSelected.size === 0) {
       setMessage({ type: 'error', text: 'Please select documents to fix' });
       return;
     }
 
     setProcessing(true);
-    setMessage({ type: 'info', text: `Processing ${selectedDocs.size} documents...` });
+    setMessage({ type: 'info', text: `Processing ${effectiveSelected.size} documents...` });
 
     try {
       const supabase = supabaseBrowser;
       let fixed = 0;
       let errors = 0;
 
-      for (const docId of Array.from(selectedDocs)) {
+      for (const docId of Array.from(effectiveSelected)) {
         const doc = documents.find(d => d.id === docId);
-        if (!doc) continue;
+        // Defensively skip missing or archived documents
+        if (!doc || doc.status === 'replaced') continue;
 
         // Try to auto-fix based on course_id and module_id
         let updates: any = {};
@@ -199,6 +213,12 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
         setMessage({ type: 'error', text: `Archive failed: ${error.message}` });
       } else {
         setMessage({ type: 'success', text: 'Document archived (record and file retained)' });
+        // Drop the archived doc from any pending Auto-Fix selection
+        setSelectedDocs(prev => {
+          const next = new Set(prev);
+          next.delete(doc.id);
+          return next;
+        });
         router.refresh();
       }
     } catch (error: any) {
@@ -274,28 +294,43 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
         </div>
       )}
 
-      {documentsWithIssues.length > 0 && (
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={toggleSelectAll}
-              className="px-3 py-1 rounded-md border hover:bg-gray-50 text-sm"
-            >
-              {selectedDocs.size === documentsWithIssues.length ? 'Deselect All' : 'Select All'}
-            </button>
-            <button
-              onClick={autoFixSelected}
-              disabled={processing || selectedDocs.size === 0}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
-            >
-              Auto-Fix Selected ({selectedDocs.size})
-            </button>
-          </div>
-          <div className="text-sm text-gray-600">
-            {documentsWithIssues.length} documents need attention
-          </div>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+          {documentsWithIssues.length > 0 && (
+            <>
+              <button
+                onClick={toggleSelectAll}
+                className="px-3 py-1 rounded-md border hover:bg-gray-50 text-sm"
+              >
+                {effectiveSelected.size === documentsWithIssues.length ? 'Deselect All' : 'Select All'}
+              </button>
+              <button
+                onClick={autoFixSelected}
+                disabled={processing || effectiveSelected.size === 0}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400"
+              >
+                Auto-Fix Selected ({effectiveSelected.size})
+              </button>
+            </>
+          )}
         </div>
-      )}
+        <div className="flex items-center gap-4">
+          {documentsWithIssues.length > 0 && (
+            <div className="text-sm text-gray-600">
+              {documentsWithIssues.length} documents need attention
+            </div>
+          )}
+          <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showArchived}
+              onChange={(e) => setShowArchived(e.target.checked)}
+              className="rounded"
+            />
+            Show archived ({archivedCount})
+          </label>
+        </div>
+      </div>
 
       <div className="border rounded-md overflow-hidden">
         <table className="min-w-full text-sm">
@@ -312,18 +347,19 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
             </tr>
           </thead>
           <tbody className="divide-y bg-white">
-            {documents.map((doc) => {
-              const hasIssues = !doc.course_title || !doc.module_title || !doc.course_id || !doc.module_id;
+            {visibleDocuments.map((doc) => {
+              const isArchived = doc.status === 'replaced';
+              const hasIssues = !isArchived && (!doc.course_title || !doc.module_title || !doc.course_id || !doc.module_id);
               const isEditing = editMode[doc.id];
               const data = editedData[doc.id];
               
               return (
-                <tr key={doc.id} className={hasIssues ? 'bg-yellow-50' : 'hover:bg-gray-50'}>
+                <tr key={doc.id} className={isArchived ? 'bg-gray-50 text-gray-500' : hasIssues ? 'bg-yellow-50' : 'hover:bg-gray-50'}>
                   <td className="px-3 py-2">
                     {hasIssues && (
                       <input
                         type="checkbox"
-                        checked={selectedDocs.has(doc.id)}
+                        checked={effectiveSelected.has(doc.id)}
                         onChange={() => toggleSelect(doc.id)}
                         className="rounded"
                       />
@@ -430,7 +466,9 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
                     )}
                   </td>
                   <td className="px-3 py-2">
-                    {hasIssues ? (
+                    {isArchived ? (
+                      <span className="text-xs text-gray-500">Archived</span>
+                    ) : hasIssues ? (
                       <span className="text-xs text-red-600 font-semibold">Needs Fix</span>
                     ) : (
                       <span className="text-xs text-green-600">✓ OK</span>
@@ -490,9 +528,11 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
         </table>
       </div>
 
-      {documents.length === 0 && (
+      {visibleDocuments.length === 0 && (
         <div className="border rounded-md p-4 text-gray-600">
-          No documents found in the database.
+          {documents.length === 0
+            ? 'No documents found in the database.'
+            : 'No active documents. Enable "Show archived" to see archived documents.'}
         </div>
       )}
     </div>
