@@ -132,20 +132,33 @@ export default function DocumentUploadBlock({
       // Retention-first replace: mark any existing active document for this
       // user/module/block as "replaced" (record and storage file are kept),
       // then insert the new document as the active one.
-      const { error: replaceError } = await supabase
+      //
+      // Two separate updates are used because PostgREST .or() filters in
+      // UPDATE context can silently skip rows. Pass 1 catches pre-migration
+      // rows whose status column is NULL; Pass 2 catches rows with a
+      // non-'replaced' status value.
+      const updateBase = supabase
         .from('learner_documents')
-        .update({
-          status: 'replaced',
-          updated_at: new Date().toISOString()
-        })
+        .update({ status: 'replaced', updated_at: new Date().toISOString() })
+        .eq('user_id', currentUserId)
+        .eq('module_id', moduleId)
+        .eq('block_id', blockId);
+
+      const { error: replaceError1 } = await updateBase.is('status', null);
+      if (replaceError1) {
+        console.error('Error marking previous (null-status) document as replaced:', replaceError1);
+        throw replaceError1;
+      }
+      const { error: replaceError2 } = await supabase
+        .from('learner_documents')
+        .update({ status: 'replaced', updated_at: new Date().toISOString() })
         .eq('user_id', currentUserId)
         .eq('module_id', moduleId)
         .eq('block_id', blockId)
-        .or('status.is.null,status.neq.replaced');
-
-      if (replaceError) {
-        console.error('Error marking previous document as replaced:', replaceError);
-        throw replaceError;
+        .neq('status', 'replaced');
+      if (replaceError2) {
+        console.error('Error marking previous document as replaced:', replaceError2);
+        throw replaceError2;
       }
 
       // Insert new document as the active one

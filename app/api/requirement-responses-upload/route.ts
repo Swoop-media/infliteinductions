@@ -192,13 +192,23 @@ export async function POST(request: NextRequest) {
       for (const docEntry of learnerDocumentEntries) {
         try {
           // Mark existing active document(s) for this user/module as replaced
+          // Two-call replace: pass 1 catches pre-migration NULL-status rows;
+          // pass 2 catches rows with a non-'replaced' value. A single .or()
+          // filter in PostgREST UPDATE context can silently skip rows.
+          await adminClient
+            .from("learner_documents")
+            .update({ status: 'replaced', updated_at: new Date().toISOString() })
+            .eq("user_id", docEntry.user_id)
+            .eq("module_id", moduleId)
+            .is("block_id", null)
+            .is("status", null);
           const { error: replaceError } = await adminClient
             .from("learner_documents")
             .update({ status: 'replaced', updated_at: new Date().toISOString() })
             .eq("user_id", docEntry.user_id)
             .eq("module_id", moduleId)
             .is("block_id", null)
-            .or("status.is.null,status.neq.replaced");
+            .neq("status", "replaced");
 
           if (replaceError) {
             console.error("Error marking previous learner document as replaced:", replaceError);
