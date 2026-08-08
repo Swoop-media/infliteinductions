@@ -177,27 +177,28 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
     }
   };
 
-  const deleteDocument = async (doc: any) => {
-    if (!confirm(`Delete document "${doc.title}"? This cannot be undone.`)) return;
+  // Learner documents must be retained for compliance: never hard-delete
+  // rows or storage files. Archiving marks the row status = 'replaced' so it
+  // disappears from active listings, but the record and file are kept.
+  const archiveDocument = async (doc: any) => {
+    if (doc.status === 'replaced') {
+      setMessage({ type: 'info', text: 'This document is already archived.' });
+      return;
+    }
+    if (!confirm(`Archive document "${doc.title}"? The record and file are retained for compliance, but it will no longer appear as an active document.`)) return;
 
     try {
       const supabase = supabaseBrowser;
-      
-      // Delete from database
+
       const { error } = await supabase
         .from('learner_documents')
-        .delete()
+        .update({ status: 'replaced' })
         .eq('id', doc.id);
 
       if (error) {
-        setMessage({ type: 'error', text: `Delete failed: ${error.message}` });
+        setMessage({ type: 'error', text: `Archive failed: ${error.message}` });
       } else {
-        // Try to delete from storage (ignore errors)
-        if (doc.file_path) {
-          await supabase.storage.from('course-files').remove([doc.file_path]);
-        }
-        
-        setMessage({ type: 'success', text: 'Document deleted' });
+        setMessage({ type: 'success', text: 'Document archived (record and file retained)' });
         router.refresh();
       }
     } catch (error: any) {
@@ -404,12 +405,16 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
                         >
                           Edit
                         </button>
-                        <button
-                          onClick={() => deleteDocument(doc)}
-                          className="text-red-600 hover:text-red-800 text-xs"
-                        >
-                          Delete
-                        </button>
+                        {doc.status === 'replaced' ? (
+                          <span className="text-gray-400 text-xs">Archived</span>
+                        ) : (
+                          <button
+                            onClick={() => archiveDocument(doc)}
+                            className="text-amber-600 hover:text-amber-800 text-xs"
+                          >
+                            Archive
+                          </button>
+                        )}
                       </>
                     )}
                   </td>
