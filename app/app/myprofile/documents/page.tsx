@@ -170,6 +170,11 @@ export default async function MyDocumentsPage({
 
       <Flash ok={ok} error={error ?? err} />
 
+      <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+        To upload a replacement document connected to a course, please visit that course and the
+        module that requests it, then click Replace.
+      </div>
+
       {currentItems.length === 0 ? (
         <div className="rounded-md border bg-white p-4 text-sm text-gray-600">
           {oldItems.length > 0
