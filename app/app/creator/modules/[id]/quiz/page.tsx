@@ -856,7 +856,7 @@ export default async function QuizEditorPage(props: {
         </div>
         <div className="flex items-center gap-2">
           <Link
-            href={`/app/learn/quiz/modules/${module.id}?preview=1`}
+            href={`/app/learn/courses/${module.course_id}?module=${module.id}&quiz=start&preview=1`}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded-md border px-3 py-1 text-sm hover:bg-gray-50"

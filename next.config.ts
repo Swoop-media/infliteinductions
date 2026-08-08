@@ -41,16 +41,6 @@ const nextConfig: NextConfig = {
       : ['127.0.0.1'],
   }),
 
-  async redirects() {
-    return [
-      {
-        source: '/app/learn/quiz/:id',
-        destination: '/app/learn/quiz/modules/:id',
-        permanent: false,
-      },
-    ];
-  },
-
   // Production optimization
   compress: true,
   

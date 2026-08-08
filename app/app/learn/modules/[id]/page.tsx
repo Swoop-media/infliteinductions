@@ -453,7 +453,7 @@ export default async function LearnerModulePage(props: {
         {mod.type === "digital_assessment_quiz" && !blocks.some((b: any) => b.kind === "quiz_questions") && (
           <div className="pt-2">
             <Link
-              href={`/app/learn/quiz/${course.id}?module=${mod.id}${preview ? "&preview=1" : ""}`}
+              href={`/app/learn/courses/${course.id}?module=${mod.id}&quiz=start${preview ? "&preview=1" : ""}`}
               className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50"
             >
               Start quiz
