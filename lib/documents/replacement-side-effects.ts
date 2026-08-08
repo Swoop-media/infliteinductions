@@ -230,6 +230,100 @@ export async function handleDocumentReplacement(opts: {
   }
 }
 
+/**
+ * Post-transaction follow-ups for a document replacement whose durable state
+ * changes (onsite reset + authorisation reverts) already happened inside the
+ * replace_learner_document DB transaction: write the audit trail and notify
+ * reviewers. Best-effort — the required re-review state is already committed,
+ * so failures here are collected and reported, never silently swallowed.
+ */
+export async function auditAndNotifyDocumentReplacement(opts: {
+  userId: string;
+  courseId: string;
+  courseTitle?: string | null;
+  documentTitle?: string | null;
+  documentId?: string | null;
+  actorId?: string | null;
+  revertedAuthorisations: Array<{ assignmentId: string; authorisationId: string; title: string }>;
+}): Promise<{ errors: string[] }> {
+  const {
+    userId,
+    courseId,
+    courseTitle: courseTitleIn = null,
+    documentTitle = null,
+    documentId = null,
+    actorId = null,
+    revertedAuthorisations,
+  } = opts;
+  const errors: string[] = [];
+  if (!revertedAuthorisations || revertedAuthorisations.length === 0) return { errors };
+
+  const sb = supabaseAdmin();
+  try {
+    const [{ data: course }, { data: learner }] = await Promise.all([
+      courseTitleIn
+        ? Promise.resolve({ data: { title: courseTitleIn } })
+        : sb.from("courses").select("title").eq("id", courseId).maybeSingle(),
+      sb.from("profiles").select("full_name, email").eq("id", userId).maybeSingle(),
+    ]);
+    const courseTitle = course?.title || "Unknown Course";
+    const learnerName = learner?.full_name || learner?.email || "Unknown";
+
+    for (const reverted of revertedAuthorisations) {
+      try {
+        await logUserAudit({
+          userId,
+          actorId,
+          action: "authorisation_review_retriggered",
+          details: {
+            authorisation_id: reverted.authorisationId,
+            authorisation_title: reverted.title,
+            course_id: courseId,
+            course_title: courseTitle,
+            document_title: documentTitle,
+            reason: "document_replaced",
+            from_status: "completed",
+            to_status: "pending_approval",
+          },
+        });
+      } catch (e: any) {
+        errors.push(`Audit log failed for authorisation ${reverted.authorisationId}: ${e?.message || e}`);
+      }
+    }
+
+    const reviewerIds = await getReviewerUserIds(sb);
+    for (const reverted of revertedAuthorisations) {
+      const dedupeKey = `doc_replaced_review_${reverted.assignmentId}_${documentId || new Date().toISOString().split("T")[0]}`;
+      for (const reviewerId of reviewerIds) {
+        try {
+          await notifyUser(
+            reviewerId,
+            "document_replaced_review_required",
+            {
+              title: "Document Replaced - Review Required",
+              learnerName,
+              learner_email: learner?.email || "",
+              courseTitle,
+              documentName: documentTitle || "Document",
+              authorizationTitle: reverted.title,
+              assignmentId: reverted.assignmentId,
+              url: `/app/admin/review/${reverted.assignmentId}`,
+            },
+            { eventId: dedupeKey }
+          );
+        } catch (e: any) {
+          errors.push(`Failed to notify reviewer ${reviewerId}: ${e?.message || e}`);
+          console.error(`[doc-replaced] Failed to notify reviewer ${reviewerId}:`, e);
+        }
+      }
+    }
+  } catch (e: any) {
+    errors.push(e?.message || "Unexpected error in auditAndNotifyDocumentReplacement");
+    console.error("[doc-replaced] auditAndNotify unexpected error:", e);
+  }
+  return { errors };
+}
+
 /** Non-archived users holding any of the reviewer roles. */
 async function getReviewerUserIds(sb): Promise<string[]> {
   const { data: roles } = await sb.from("roles").select("id, name").in("name", REVIEWER_ROLES);

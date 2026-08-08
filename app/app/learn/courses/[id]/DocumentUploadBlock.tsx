@@ -119,111 +119,36 @@ export default function DocumentUploadBlock({
         throw uploadError;
       }
 
-      // Save document record - bypass RPC and use direct table operations
       const expiresOn = requireExpiry && expiryDate 
         ? new Date(expiryDate + 'T00:00:00').toISOString()
         : null;
-      
-      // Get course and module titles for the record
-      const [courseData, moduleData] = await Promise.all([
-        supabase.from('courses').select('title').eq('id', courseId).single(),
-        supabase.from('course_modules').select('title').eq('id', moduleId).single()
-      ]);
-      
-      const courseTitle = courseData.data?.title || '';
-      const moduleTitle = moduleData.data?.title || '';
-      
-      console.log('Saving document:', {
-        user_id: currentUserId,
-        title: file.name,
-        course_title: courseTitle,
-        module_title: moduleTitle
-      });
-      
-      // Retention-first replace: mark any existing active document for this
-      // user/module/block as "replaced" (record and storage file are kept),
-      // then insert the new document as the active one.
-      //
-      // Two separate updates are used because PostgREST .or() filters in
-      // UPDATE context can silently skip rows. Pass 1 catches pre-migration
-      // rows whose status column is NULL; Pass 2 catches rows with a
-      // non-'replaced' status value.
-      const updateBase = supabase
-        .from('learner_documents')
-        .update({ status: 'replaced', updated_at: new Date().toISOString() })
-        .eq('user_id', currentUserId)
-        .eq('module_id', moduleId)
-        .eq('block_id', blockId);
 
-      const { data: replaced1, error: replaceError1 } = await updateBase.is('status', null).select('id');
-      if (replaceError1) {
-        console.error('Error marking previous (null-status) document as replaced:', replaceError1);
-        throw replaceError1;
-      }
-      const { data: replaced2, error: replaceError2 } = await supabase
-        .from('learner_documents')
-        .update({ status: 'replaced', updated_at: new Date().toISOString() })
-        .eq('user_id', currentUserId)
-        .eq('module_id', moduleId)
-        .eq('block_id', blockId)
-        .neq('status', 'replaced')
-        .select('id');
-      if (replaceError2) {
-        console.error('Error marking previous document as replaced:', replaceError2);
-        throw replaceError2;
-      }
-      const replacedCount = (replaced1?.length || 0) + (replaced2?.length || 0);
-
-      // Insert new document as the active one
-      const { data: result, error: dbError } = await supabase
-        .from('learner_documents')
-        .insert({
-          user_id: currentUserId,
-          course_id: courseId,
-          module_id: moduleId,
-          block_id: blockId,
+      // The server route atomically marks any previous document as replaced,
+      // inserts the new record, and runs the replacement side-effects
+      // (onsite assessment reset + authorisation re-review) in one request,
+      // so a dropped connection can't skip the required re-review.
+      const res = await fetch('/api/document-replaced', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          courseId,
+          moduleId,
+          blockId,
           title: file.name,
-          file_path: filePath,
-          file_size: file.size,
-          file_type: file.type,
-          expires_on: expiresOn,
-          assignment_id: assignmentId || null,
-          course_title: courseTitle,
-          module_title: moduleTitle,
-          status: 'active',
-          created_at: new Date().toISOString()
-        })
-        .select()
-        .single();
-
-      if (dbError) {
-        console.error('Database error:', dbError);
-        throw dbError;
+          filePath,
+          fileSize: file.size,
+          fileType: file.type,
+          expiresOn,
+          assignmentId: assignmentId || null,
+        }),
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        console.error('Document save failed:', res.status, payload);
+        throw new Error(payload?.error || 'Failed to save document. Please try again.');
       }
-      
-      console.log('Document saved successfully:', result);
-
-      // If this upload replaced a previous document, run the server-side
-      // side-effects: reset onsite assessment completion and revert any
-      // approved authorisation back to Pending Approval for re-review.
-      if (replacedCount > 0) {
-        try {
-          const res = await fetch('/api/document-replaced', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              courseId,
-              documentId: result?.id || null,
-              documentTitle: file.name,
-            }),
-          });
-          if (!res.ok) {
-            console.error('Document replacement side-effects failed:', res.status);
-          }
-        } catch (sideEffectErr) {
-          console.error('Error running document replacement side-effects:', sideEffectErr);
-        }
-      }
+      const result = await res.json();
+      console.log('Document saved successfully:', result?.documentId);
 
       setSuccess('Document uploaded successfully!');
       setFile(null);
