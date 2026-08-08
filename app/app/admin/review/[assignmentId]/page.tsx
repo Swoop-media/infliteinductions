@@ -495,10 +495,18 @@ async function loadAssignmentDetails(assignmentId: string) {
         (!q.module_id && q.course_id === ac.course_id)
       );
       
-      // Get quiz questions for this module (can be linked by quiz_id or module_id)
-      const moduleQuizQuestions = (quizQuestions || []).filter(q => 
-        (moduleQuiz && q.quiz_id === moduleQuiz.id) ||
-        q.module_id === module.id
+      // Get quiz questions for this module. Prefer questions linked directly to the
+      // quiz (quiz_id) — this matches the learner-facing fallback pattern. Only fall
+      // back to module_id-linked questions when the quiz has none linked by quiz_id,
+      // otherwise stale/orphaned module-linked questions (quiz_id null) that were
+      // removed from the quiz would incorrectly reappear in the review.
+      const quizLinkedQuestions = moduleQuiz
+        ? (quizQuestions || []).filter(q => q.quiz_id === moduleQuiz.id)
+        : [];
+      const moduleQuizQuestions = (
+        quizLinkedQuestions.length > 0
+          ? quizLinkedQuestions
+          : (quizQuestions || []).filter(q => q.module_id === module.id && !q.quiz_id)
       ).sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
       
       // Map questions with their options
