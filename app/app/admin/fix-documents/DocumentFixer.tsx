@@ -206,6 +206,62 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
     }
   };
 
+  // Restore an archived document back to active. Respects the replace-flow:
+  // if another active document already exists for the same user + block, the
+  // restore is blocked to avoid two "current" documents for one slot.
+  const restoreDocument = async (doc: any) => {
+    if (doc.status !== 'replaced') {
+      setMessage({ type: 'info', text: 'This document is not archived.' });
+      return;
+    }
+    if (!confirm(`Restore document "${doc.title}"? It will appear as an active document again.`)) return;
+
+    setProcessing(true);
+    try {
+      const supabase = supabaseBrowser;
+
+      // Block restore if another active document exists for the same user + block
+      if (doc.user_id && doc.block_id) {
+        const { data: conflicts, error: checkError } = await supabase
+          .from('learner_documents')
+          .select('id, title')
+          .eq('user_id', doc.user_id)
+          .eq('block_id', doc.block_id)
+          .or('status.is.null,status.neq.replaced')
+          .neq('id', doc.id)
+          .limit(1);
+
+        if (checkError) {
+          setMessage({ type: 'error', text: `Restore check failed: ${checkError.message}` });
+          return;
+        }
+        if (conflicts && conflicts.length > 0) {
+          setMessage({
+            type: 'error',
+            text: `Cannot restore: an active document ("${conflicts[0].title}") already exists for this user and block. Archive it first if you want to restore this one.`
+          });
+          return;
+        }
+      }
+
+      const { error } = await supabase
+        .from('learner_documents')
+        .update({ status: 'active' })
+        .eq('id', doc.id);
+
+      if (error) {
+        setMessage({ type: 'error', text: `Restore failed: ${error.message}` });
+      } else {
+        setMessage({ type: 'success', text: 'Document restored to active' });
+        router.refresh();
+      }
+    } catch (error: any) {
+      setMessage({ type: 'error', text: `Error: ${error.message}` });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {message && (
@@ -406,7 +462,16 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
                           Edit
                         </button>
                         {doc.status === 'replaced' ? (
-                          <span className="text-gray-400 text-xs">Archived</span>
+                          <>
+                            <span className="text-gray-400 text-xs">Archived</span>
+                            <button
+                              onClick={() => restoreDocument(doc)}
+                              disabled={processing}
+                              className="text-green-600 hover:text-green-800 text-xs"
+                            >
+                              Restore
+                            </button>
+                          </>
                         ) : (
                           <button
                             onClick={() => archiveDocument(doc)}
