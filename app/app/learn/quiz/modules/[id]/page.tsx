@@ -180,39 +180,14 @@ async function loadAll(moduleId: string, preview: boolean) {
     }
   }
 
-  // Questions + options (module_id -> quiz_id -> course_id)
-  let questions: QuestionRow[] = [];
-  
-  // First try by module_id (most specific)
+  // Questions + options (by quiz_id — all questions are linked to their quiz)
   const { data: qs1 } = await supabase
     .from("quiz_questions")
     .select("*")
-    .eq("module_id", moduleId)
+    .eq("quiz_id", (quiz as any).id)
     .order("order_index", { ascending: true })
     .order("id", { ascending: true });
-  questions = (qs1 ?? []) as QuestionRow[];
-
-  // Then try by quiz_id if we have a quiz
-  if (!questions.length && quiz) {
-    const { data: qs2 } = await supabase
-      .from("quiz_questions")
-      .select("*")
-      .eq("quiz_id", (quiz as any).id)
-      .order("order_index", { ascending: true })
-      .order("id", { ascending: true });
-    questions = (qs2 ?? []) as QuestionRow[];
-  }
-
-  // Finally try by course_id (legacy fallback)
-  if (!questions.length) {
-    const { data: qs3 } = await supabase
-      .from("quiz_questions")
-      .select("*")
-      .eq("course_id", (mod as ModuleRow).course_id)
-      .order("order_index", { ascending: true })
-      .order("id", { ascending: true });
-    questions = (qs3 ?? []) as QuestionRow[];
-  }
+  const questions: QuestionRow[] = (qs1 ?? []) as QuestionRow[];
 
   console.log("🔍 Quiz questions search:", {
     moduleId,
@@ -307,7 +282,7 @@ async function submitQuiz(formData: FormData) {
   }
   passMark = (qzRow as any)?.pass_mark ?? 80;
 
-  // Fetch questions (by quiz_id; fallback module_id)
+  // Fetch questions (by quiz_id)
   let qIds: string[] = [];
   try {
     const { data: qs } = await supabase
@@ -318,15 +293,6 @@ async function submitQuiz(formData: FormData) {
       .order("id", { ascending: true });
     qIds = (qs ?? []).map((q: any) => q.id as string);
   } catch {}
-  if (!qIds.length) {
-    const { data: qs2 } = await supabase
-      .from("quiz_questions")
-      .select("id")
-      .eq("module_id", moduleId)
-      .order("order_index", { ascending: true })
-      .order("id", { ascending: true });
-    qIds = (qs2 ?? []).map((q: any) => q.id as string);
-  }
 
   // Options
   let allOptions: any[] = [];

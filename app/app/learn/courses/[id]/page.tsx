@@ -315,8 +315,8 @@ async function submitQuizAnswers(formData: FormData) {
     }
   }
 
-  // Get quiz questions and options to calculate score - use same fallback pattern as quiz display
-  let { data: questions } = await supabase
+  // Get quiz questions and options to calculate score
+  const { data: questions } = await supabase
     .from("quiz_questions")
     .select(`
       id,
@@ -327,32 +327,6 @@ async function submitQuizAnswers(formData: FormData) {
       )
     `)
     .eq("quiz_id", quizId);
-
-  // If no questions found by quiz_id, try fallback by module_id
-  if (!questions || questions.length === 0) {
-    const { data: fallbackQuestions } = await supabase
-      .from("quiz_questions")
-      .select(`
-        id,
-        points,
-        quiz_options (
-          id,
-          is_correct
-        )
-      `)
-      .eq("module_id", moduleId);
-
-    if (fallbackQuestions && fallbackQuestions.length > 0) {
-      questions = fallbackQuestions;
-
-      // Link questions to quiz for future submissions
-      await supabase
-        .from("quiz_questions")
-        .update({ quiz_id: quizId })
-        .eq("module_id", moduleId)
-        .is("quiz_id", null);
-    }
-  }
 
   if (!questions || questions.length === 0) {
     redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=no_questions`);
@@ -468,26 +442,9 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
 
   // Quiz by module_id was fetched in the parallel batch above
   let quizData = quizByModule.data;
-  let quizErr = quizByModule.error;
+  const quizErr = quizByModule.error;
 
-  // If no quiz found by module_id, try by course_id (fallback for legacy quizzes)
-  if (quizErr || !quizData) {
-    console.log("No quiz found by module_id, trying course_id fallback...");
-
-    const { data: legacyQuiz, error: legacyErr } = await supabase
-      .from("quizzes")
-      .select("id, pass_mark, max_attempts, shuffle")
-      .eq("course_id", moduleData.course_id)
-      .maybeSingle();
-
-    if (!legacyErr && legacyQuiz) {
-      quizData = legacyQuiz;
-      quizErr = null;
-      console.log("Found legacy quiz by course_id");
-    }
-  }
-
-  // If still no quiz found, try to create one using RPC function
+  // If no quiz found, try to create one using RPC function
   if (!quizData) {
     console.log("No quiz found, attempting to create one...");
 
@@ -530,7 +487,7 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
   console.log("Quiz found, fetching questions for quiz ID:", quizData.id);
 
   // Fetch quiz questions
-  let { data: questions, error: questionsErr } = await supabase
+  const { data: questions, error: questionsErr } = await supabase
     .from("quiz_questions")
     .select(`
       id,
@@ -550,60 +507,19 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
   console.log("Questions fetch result:", { questions, questionsErr });
 
   if (questionsErr || !questions || questions.length === 0) {
-    console.log("No questions found by quiz_id, trying module_id fallback...");
-
-    // Try fallback by module_id and link them to the quiz
-    const { data: fallbackQuestions, error: fallbackErr } = await supabase
-      .from("quiz_questions")
-      .select(`
-        id,
-        stem,
-        type,
-        points,
-        order_index,
-        quiz_options (
-          id,
-          label,
-          is_correct
-        )
-      `)
-      .eq("module_id", moduleId)
-      .order("order_index", { ascending: true });
-
-    console.log("Fallback questions fetch result:", { fallbackQuestions, fallbackErr });
-
-    // If we found questions by module_id, link them to the quiz
-    if (!fallbackErr && fallbackQuestions && fallbackQuestions.length > 0) {
-      // Update questions to link them to the quiz
-      const { error: linkErr } = await supabase
-        .from("quiz_questions")
-        .update({ quiz_id: quizData.id })
-        .eq("module_id", moduleId)
-        .is("quiz_id", null);
-
-      if (!linkErr) {
-        console.log("Successfully linked questions to quiz");
-        questions = fallbackQuestions;
-      }
-    }
-
-    if (fallbackErr || !fallbackQuestions || fallbackQuestions.length === 0) {
-      console.error("No questions found anywhere", { questionsErr, fallbackErr, quizId: quizData.id, moduleId });
-      return (
-        <div className="bg-white p-6 rounded-lg border">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
-          <div className="text-center py-8">
-            <div className="text-yellow-400 text-4xl mb-2">📝</div>
-            <h3 className="font-medium text-yellow-600">Quiz Ready, No Questions</h3>
-            <p className="text-sm text-gray-500">The quiz exists but no questions have been added yet.</p>
-            <p className="text-sm text-gray-400 mt-2">Quiz ID: {quizData.id}</p>
-            <p className="text-sm text-gray-400">Module ID: {moduleId}</p>
-          </div>
+    console.error("No questions found for quiz", { questionsErr, quizId: quizData.id, moduleId });
+    return (
+      <div className="bg-white p-6 rounded-lg border">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
+        <div className="text-center py-8">
+          <div className="text-yellow-400 text-4xl mb-2">📝</div>
+          <h3 className="font-medium text-yellow-600">Quiz Ready, No Questions</h3>
+          <p className="text-sm text-gray-500">The quiz exists but no questions have been added yet.</p>
+          <p className="text-sm text-gray-400 mt-2">Quiz ID: {quizData.id}</p>
+          <p className="text-sm text-gray-400">Module ID: {moduleId}</p>
         </div>
-      );
-    }
-
-    questions = fallbackQuestions;
+      </div>
+    );
   }
 
   // Completion status was fetched in the parallel batch above (admin client bypasses RLS)
@@ -997,20 +913,12 @@ export default async function LearnerCoursePage(props: {
   const loadQuizPassMark = async () => {
     // Fetch quiz pass mark only if current module is a quiz and we're showing results
     if (currentModule?.type !== 'digital_assessment_quiz' || !quizResult) return 80;
-    // Try to get quiz by module_id first
     const { data: quiz } = await supabase
       .from("quizzes")
       .select("pass_mark")
       .eq("module_id", currentModule.id)
       .maybeSingle();
-    if (quiz?.pass_mark) return quiz.pass_mark;
-    // Fallback: try to get quiz by course_id
-    const { data: courseQuiz } = await supabase
-      .from("quizzes")
-      .select("pass_mark")
-      .eq("course_id", courseId)
-      .maybeSingle();
-    return courseQuiz?.pass_mark ?? 80;
+    return quiz?.pass_mark ?? 80;
   };
 
   const [{ blocks }, onsiteRequirements, quizPassMark] = await Promise.all([
