@@ -718,6 +718,14 @@ export default async function AdminPage({
               Connection Map
             </Link>
           )}
+          {isAdmin && (
+            <Link
+              href="/app/admin/tools/document-sweep"
+              className="rounded-md bg-rose-600 text-white px-3 py-1 text-sm hover:bg-rose-700"
+            >
+              Stranded Upload Cleanup
+            </Link>
+          )}
           <Link
             href="/app/admin/teams-link-test"
             className="rounded-md bg-blue-600 text-white px-3 py-1 text-sm hover:bg-blue-700"
