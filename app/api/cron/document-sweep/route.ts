@@ -17,11 +17,12 @@
 // admin page (24h+ safety window, learner_documents reference check,
 // fail-closed on any check error) via lib/document-sweep.ts.
 //
-// After a live (non-dry-run) sweep, a summary is reported to all Admin and
-// Senior Management users via notifyUser (in-app notification + best-effort
-// Teams DM) whenever anything was deleted or any errors occurred. Quiet runs
-// (nothing to delete, no errors) are logged but not notified, so admins
-// aren't spammed weekly with "0 deleted".
+// REPORT-ONLY: this scheduled endpoint NEVER deletes files. It always runs
+// the sweep as a dry run, and when stranded files are found (or errors
+// occur) it notifies all Admin and Senior Management users via notifyUser
+// (in-app notification + best-effort Teams DM) so a human can review and
+// delete them in the admin tool. Quiet runs (nothing found, no errors) are
+// logged but not notified, so admins aren't spammed weekly with "0 found".
 
 import { NextRequest, NextResponse } from "next/server";
 import { runDocumentSweep } from "@/lib/document-sweep";
@@ -36,7 +37,7 @@ export async function GET() {
     message:
       "This endpoint accepts POST requests to run the stranded-file document sweep",
     usage:
-      "POST with 'Authorization: Bearer <secret>' where <secret> is CRON_SECRET (or TRAINING_SYNC_SECRET). Optional JSON body: { dryRun?: boolean, safetyWindowHours?: number }",
+      "POST with 'Authorization: Bearer <secret>' where <secret> is CRON_SECRET (or TRAINING_SYNC_SECRET). Optional JSON body: { safetyWindowHours?: number }. This endpoint is report-only and never deletes files.",
   });
 }
 
@@ -79,46 +80,45 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const dryRun = body?.dryRun === true;
 
+    // ALWAYS a dry run — the scheduled sweep only finds and reports,
+    // it never deletes. Deletion is a manual, reviewed admin action in
+    // /app/admin/tools/document-sweep.
     const result = await runDocumentSweep({
-      dryRun,
+      dryRun: true,
       safetyWindowHours: body?.safetyWindowHours,
     });
 
+    const found = result.wouldDelete?.length ?? 0;
     console.log(
-      `[document-sweep-cron] run complete: scanned=${result.scanned}, ` +
-        `candidates=${result.candidatesOlderThanWindow}, deleted=${result.deletedCount}, ` +
-        `refCheckErrors=${result.refCheckErrors}, deleteErrors=${result.deleteErrors.length}, dryRun=${dryRun}`
+      `[document-sweep-cron] report-only run complete: scanned=${result.scanned}, ` +
+        `candidates=${result.candidatesOlderThanWindow}, found=${found}, ` +
+        `refCheckErrors=${result.refCheckErrors} (nothing deleted)`
     );
 
-    // Report the result to admins (skip dry runs and quiet no-op runs).
-    const hadErrors = result.refCheckErrors > 0 || result.deleteErrors.length > 0;
+    // Report findings to admins (skip quiet no-op runs).
+    const hadErrors = result.refCheckErrors > 0;
     let notifiedAdmins = 0;
-    if (!dryRun && (result.deletedCount > 0 || hadErrors)) {
+    if (found > 0 || hadErrors) {
       try {
         const admin = supabaseAdmin();
         const adminIds = await getAdminUserIds(admin);
 
         const summaryLines = [
-          `Scanned ${result.scanned} file${result.scanned !== 1 ? "s" : ""}, deleted ${result.deletedCount} stranded file${result.deletedCount !== 1 ? "s" : ""}.`,
+          `Scanned ${result.scanned} file${result.scanned !== 1 ? "s" : ""}, found ${found} possible stranded file${found !== 1 ? "s" : ""} awaiting review.`,
+          `No files were deleted automatically — please review them in Admin → Tools → Stranded upload cleanup and decide what to remove.`,
         ];
-        if (result.deletedCount > 0) {
+        if (found > 0) {
           summaryLines.push(
-            ...result.deleted.slice(0, 25).map((p) => `• ${p}`)
+            ...(result.wouldDelete ?? []).slice(0, 25).map((p) => `• ${p}`)
           );
-          if (result.deleted.length > 25) {
-            summaryLines.push(`…and ${result.deleted.length - 25} more`);
+          if (found > 25) {
+            summaryLines.push(`…and ${found - 25} more`);
           }
         }
         if (result.refCheckErrors > 0) {
           summaryLines.push(
-            `⚠️ ${result.refCheckErrors} reference check batch${result.refCheckErrors !== 1 ? "es" : ""} failed (those files were skipped, not deleted).`
-          );
-        }
-        if (result.deleteErrors.length > 0) {
-          summaryLines.push(
-            `⚠️ ${result.deleteErrors.length} delete batch${result.deleteErrors.length !== 1 ? "es" : ""} failed: ${result.deleteErrors.join("; ")}`
+            `⚠️ ${result.refCheckErrors} reference check batch${result.refCheckErrors !== 1 ? "es" : ""} failed (those files were skipped and not listed).`
           );
         }
 
@@ -129,9 +129,9 @@ export async function POST(req: NextRequest) {
               adminId,
               "document_sweep_report",
               {
-                title: "Automatic Document Sweep Report",
-                count: result.deletedCount,
-                errors: result.refCheckErrors + result.deleteErrors.length,
+                title: "Stranded Documents Found — Review Needed",
+                count: found,
+                errors: result.refCheckErrors,
                 summary: summaryLines,
                 url: "/app/admin/tools/document-sweep",
               },

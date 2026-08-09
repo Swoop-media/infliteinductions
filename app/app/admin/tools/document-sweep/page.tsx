@@ -20,8 +20,9 @@ export default async function DocumentSweepPage() {
           <h1 className="text-2xl font-bold">Tools · Stranded upload cleanup</h1>
           <p className="text-sm text-gray-600">
             Finds files in the learner-documents storage bucket that no learner document record points to
-            (e.g. a learner closed the tab mid-upload) and lets you delete them. A scan is always run first
-            so you can review exactly what would be removed. Files newer than the safety window are never touched.
+            (e.g. a learner closed the tab mid-upload). Nothing is ever deleted automatically — the weekly
+            scan only notifies admins, and deletion happens here after you review each finding and confirm.
+            Files newer than the safety window are never touched.
           </p>
         </div>
         <Link href="/app/admin" className="rounded-md border px-3 py-1 text-sm">

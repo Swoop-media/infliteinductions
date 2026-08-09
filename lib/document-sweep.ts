@@ -32,6 +32,17 @@ const MAX_SAFETY_WINDOW_HOURS = 24 * 365;
 const REF_CHECK_CHUNK = 150;
 const LIST_PAGE_SIZE = 1000;
 
+export type ReviewedDeletionResult = {
+  success: true;
+  safetyWindowHours: number;
+  requested: number;
+  deleted: string[];
+  deletedCount: number;
+  /** Paths that were NOT deleted, with the reason each was spared. */
+  skipped: { path: string; reason: string }[];
+  deleteErrors: string[];
+};
+
 export type DocumentSweepResult = {
   success: true;
   dryRun: boolean;
@@ -42,6 +53,8 @@ export type DocumentSweepResult = {
   deleted: string[];
   deletedCount: number;
   wouldDelete?: string[];
+  /** Per-file detail for review UIs (dry run only): when the file was uploaded. */
+  wouldDeleteDetails?: { path: string; createdAt: string | null }[];
   refCheckErrors: number;
   deleteErrors: string[];
 };
@@ -75,6 +88,129 @@ async function listFolder(admin, folder: string) {
  * (admin role check or cron secret) BEFORE calling this — it uses the
  * service-role client unconditionally.
  */
+function clampSafetyWindow(requestedRaw: unknown): number {
+  const requested = Number(requestedRaw);
+  return Number.isFinite(requested)
+    ? Math.min(Math.max(requested, MIN_SAFETY_WINDOW_HOURS), MAX_SAFETY_WINDOW_HOURS)
+    : DEFAULT_SAFETY_WINDOW_HOURS;
+}
+
+/**
+ * Delete ONLY the explicitly reviewed paths, never rediscovering new
+ * candidates. Each path is revalidated immediately before removal:
+ *   - it must still exist in storage and be older than the safety window;
+ *   - it must still have no learner_documents reference (raw or
+ *     bucket-prefixed form).
+ * Anything failing revalidation is skipped with a reason. Callers are
+ * responsible for authorization BEFORE calling this.
+ */
+export async function deleteReviewedFiles(
+  paths: string[],
+  opts?: { safetyWindowHours?: number }
+): Promise<ReviewedDeletionResult> {
+  if (!Array.isArray(paths) || paths.length === 0) {
+    throw new Error("No paths provided");
+  }
+  if (paths.length > 5000) {
+    throw new Error("Too many paths");
+  }
+  // Sanitize: expect "folder/filename" storage-relative paths only.
+  const cleaned = [...new Set(paths)].filter(
+    (p) =>
+      typeof p === "string" &&
+      p.length > 0 &&
+      !p.startsWith("/") &&
+      !p.includes("..") &&
+      p.includes("/")
+  );
+
+  const safetyWindowHours = clampSafetyWindow(opts?.safetyWindowHours);
+  const cutoff = new Date(Date.now() - safetyWindowHours * 60 * 60 * 1000);
+  if (isNaN(cutoff.getTime())) throw new Error("Invalid safety window");
+
+  const admin = supabaseAdmin();
+  const skipped: { path: string; reason: string }[] = [];
+  for (const p of paths) {
+    if (!cleaned.includes(p)) skipped.push({ path: String(p), reason: "invalid path" });
+  }
+
+  // Re-check existence + age: list each involved folder once.
+  const folders = [...new Set(cleaned.map((p) => p.slice(0, p.indexOf("/"))))];
+  const createdAtByPath = new Map<string, Date | null>();
+  for (const folder of folders) {
+    const objects = await listFolder(admin, folder);
+    for (const obj of objects) {
+      if (!obj || obj.id == null) continue;
+      const createdAt = obj.created_at ? new Date(obj.created_at) : null;
+      createdAtByPath.set(
+        `${folder}/${obj.name}`,
+        createdAt && !isNaN(createdAt.getTime()) ? createdAt : null
+      );
+    }
+  }
+
+  const ageOk: string[] = [];
+  for (const p of cleaned) {
+    if (!createdAtByPath.has(p)) {
+      skipped.push({ path: p, reason: "no longer exists in storage" });
+      continue;
+    }
+    const createdAt = createdAtByPath.get(p);
+    if (!createdAt || createdAt > cutoff) {
+      skipped.push({ path: p, reason: "newer than the safety window" });
+      continue;
+    }
+    ageOk.push(p);
+  }
+
+  // Re-check references (fail closed per chunk). Halved chunk size: each
+  // path is looked up in raw and bucket-prefixed form.
+  const deletable: string[] = [];
+  for (const batch of chunk(ageOk, Math.max(1, Math.floor(REF_CHECK_CHUNK / 2)))) {
+    const lookupPaths = batch.flatMap((p) => [p, `${BUCKET}/${p}`]);
+    const { data: refRows, error: refError } = await admin
+      .from("learner_documents")
+      .select("file_path")
+      .in("file_path", lookupPaths);
+    if (refError) {
+      console.error("[document-sweep] reviewed-delete reference check failed, skipping batch:", refError);
+      for (const p of batch) skipped.push({ path: p, reason: "reference check failed (skipped for safety)" });
+      continue;
+    }
+    const referenced = new Set(
+      (refRows ?? []).map((r) =>
+        r.file_path?.startsWith(`${BUCKET}/`) ? r.file_path.slice(BUCKET.length + 1) : r.file_path
+      )
+    );
+    for (const p of batch) {
+      if (referenced.has(p)) skipped.push({ path: p, reason: "now referenced by a document record" });
+      else deletable.push(p);
+    }
+  }
+
+  const deleted: string[] = [];
+  const deleteErrors: string[] = [];
+  for (const batch of chunk(deletable, REF_CHECK_CHUNK)) {
+    const { error: removeError } = await admin.storage.from(BUCKET).remove(batch);
+    if (removeError) {
+      console.error("[document-sweep] reviewed-delete storage remove failed:", removeError);
+      deleteErrors.push(removeError.message ?? "unknown error");
+      continue;
+    }
+    deleted.push(...batch);
+  }
+
+  return {
+    success: true,
+    safetyWindowHours,
+    requested: paths.length,
+    deleted,
+    deletedCount: deleted.length,
+    skipped,
+    deleteErrors,
+  };
+}
+
 export async function runDocumentSweep(opts?: {
   dryRun?: boolean;
   safetyWindowHours?: number;
@@ -83,10 +219,7 @@ export async function runDocumentSweep(opts?: {
   // The safety window can be widened (more conservative) but never
   // narrowed below the 24h minimum, and is capped so the cutoff Date
   // always stays valid. Anything non-numeric falls back to the default.
-  const requested = Number(opts?.safetyWindowHours);
-  const safetyWindowHours = Number.isFinite(requested)
-    ? Math.min(Math.max(requested, MIN_SAFETY_WINDOW_HOURS), MAX_SAFETY_WINDOW_HOURS)
-    : DEFAULT_SAFETY_WINDOW_HOURS;
+  const safetyWindowHours = clampSafetyWindow(opts?.safetyWindowHours);
   const cutoff = new Date(Date.now() - safetyWindowHours * 60 * 60 * 1000);
   if (isNaN(cutoff.getTime())) {
     throw new Error("Invalid safety window");
@@ -101,6 +234,7 @@ export async function runDocumentSweep(opts?: {
 
   // Collect candidate file paths: real objects older than the safety window.
   const candidates: string[] = [];
+  const createdAtByPath = new Map<string, string | null>();
   let scanned = 0;
   for (const folder of folders) {
     const objects = await listFolder(admin, folder.name);
@@ -111,7 +245,9 @@ export async function runDocumentSweep(opts?: {
       const createdAt = obj.created_at ? new Date(obj.created_at) : null;
       // Fail closed: if we can't determine age, do not treat as stale.
       if (!createdAt || isNaN(createdAt.getTime()) || createdAt > cutoff) continue;
-      candidates.push(`${folder.name}/${obj.name}`);
+      const path = `${folder.name}/${obj.name}`;
+      candidates.push(path);
+      createdAtByPath.set(path, obj.created_at ?? null);
     }
   }
 
@@ -171,6 +307,9 @@ export async function runDocumentSweep(opts?: {
     deleted: dryRun ? [] : deleted,
     deletedCount: dryRun ? 0 : deleted.length,
     wouldDelete: dryRun ? unreferenced : undefined,
+    wouldDeleteDetails: dryRun
+      ? unreferenced.map((p) => ({ path: p, createdAt: createdAtByPath.get(p) ?? null }))
+      : undefined,
     refCheckErrors,
     deleteErrors,
   };
