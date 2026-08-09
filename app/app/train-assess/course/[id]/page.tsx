@@ -422,6 +422,106 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     }
   }
 
+  // For assessment sessions, load the notes/responses recorded during onsite
+  // training so the assessor can see where the trainee struggled or needed work.
+  type TrainingNoteModule = {
+    module_id: string;
+    module_title: string;
+    entries: {
+      label: string;
+      field_type: string;
+      response_text: string;
+      trainer_name: string | null;
+      response_date: string | null;
+    }[];
+  };
+  let trainingNotes: TrainingNoteModule[] = [];
+  if (sessionType === 'assessment') {
+    const { data: trainingModules } = await supabase
+      .from("course_modules")
+      .select("id, title, order_index")
+      .eq("course_id", courseId)
+      .eq("type", "onsite_training")
+      .order("order_index");
+
+    const trainingModuleIds = (trainingModules || []).map(m => m.id);
+    if (trainingModuleIds.length > 0) {
+      // Responses may have been entered by a different trainer than the current
+      // assessor, so fetch them with the service client (scoped to this trainee's
+      // assignment + the course's training modules only).
+      const [{ data: trainingReqs }, { data: trainingResponses }] = await Promise.all([
+        supabase
+          .from("onsite_requirements")
+          .select("id, module_id, label, field_type, order_index")
+          .in("module_id", trainingModuleIds)
+          .order("order_index"),
+        supabaseService
+          .from("requirement_responses")
+          .select("requirement_id, module_id, trainer_id, response_value, updated_at, created_at")
+          .eq("assignment_id", assignmentId)
+          .in("module_id", trainingModuleIds),
+      ]);
+
+      const trainerIds = Array.from(new Set((trainingResponses || []).map(r => r.trainer_id).filter(Boolean)));
+      const trainerNames = new Map<string, string>();
+      if (trainerIds.length > 0) {
+        const { data: trainerProfiles } = await supabaseService
+          .from("profiles")
+          .select("id, full_name, email")
+          .in("id", trainerIds);
+        for (const p of trainerProfiles || []) {
+          trainerNames.set(p.id, p.full_name || p.email || "Unknown trainer");
+        }
+      }
+
+      const formatResponse = (value: any, fieldType: string): string => {
+        if (value === null || value === undefined) return "";
+        // Some save paths JSON.stringify non-string values, so booleans/numbers
+        // can arrive as the strings "true"/"false"/"3". Normalize by field type.
+        if (typeof value === "string") {
+          if (fieldType === "checkbox" || value === "true" || value === "false") {
+            if (value === "true") return "Yes";
+            if (value === "false") return "No";
+          }
+          if (fieldType === "rating") {
+            const n = Number(value);
+            if (Number.isFinite(n) && n >= 1 && n <= 5) return `Rating: ${n}/5`;
+          }
+          return value;
+        }
+        if (typeof value === "boolean") return value ? "Yes" : "No";
+        if (typeof value === "number") {
+          if (fieldType === "rating" && value >= 1 && value <= 5) return `Rating: ${value}/5`;
+          return String(value);
+        }
+        if (typeof value === "object") {
+          if ("value" in value) return String(value.value);
+          if ("text" in value) return String(value.text);
+          if ("checked" in value) return value.checked ? "Yes" : "No";
+          return JSON.stringify(value);
+        }
+        return String(value);
+      };
+
+      trainingNotes = (trainingModules || []).map(tm => {
+        const reqs = (trainingReqs || []).filter(r => r.module_id === tm.id);
+        const entries = reqs.flatMap(req => {
+          const responses = (trainingResponses || []).filter(r => r.requirement_id === req.id);
+          return responses
+            .map(resp => ({
+              label: req.label || "Requirement",
+              field_type: req.field_type || "text",
+              response_text: formatResponse(resp.response_value, req.field_type || "text"),
+              trainer_name: resp.trainer_id ? trainerNames.get(resp.trainer_id) || null : null,
+              response_date: resp.updated_at || resp.created_at || null,
+            }))
+            .filter(e => e.response_text.trim() !== "");
+        });
+        return { module_id: tm.id, module_title: tm.title || "Training module", entries };
+      }).filter(m => m.entries.length > 0);
+    }
+  }
+
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
@@ -510,6 +610,43 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
           await saveQuizReviewComment(courseId, assignment.user_id, quizId, comments);
         }}
       />
+
+      {/* Training notes recorded during onsite training (assessment sessions only) */}
+      {sessionType === 'assessment' && trainingNotes.length > 0 && (
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              Notes from Onsite Training
+            </CardTitle>
+            <CardDescription>
+              What was recorded during this trainee's onsite training — useful to see where they struggled or needed the most work.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {trainingNotes.map(tm => (
+              <div key={tm.module_id} className="rounded-lg border bg-card p-4">
+                <h4 className="font-medium mb-3">{tm.module_title}</h4>
+                <div className="space-y-3">
+                  {tm.entries.map((entry, i) => (
+                    <div key={i}>
+                      <p className="text-sm font-medium text-muted-foreground">{entry.label}</p>
+                      <p className="text-sm whitespace-pre-wrap">{entry.response_text}</p>
+                      {(entry.trainer_name || entry.response_date) && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {entry.trainer_name ? `Recorded by ${entry.trainer_name}` : ''}
+                          {entry.trainer_name && entry.response_date ? ' · ' : ''}
+                          {entry.response_date ? new Date(entry.response_date).toLocaleString() : ''}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Modules */}
       <Card>
