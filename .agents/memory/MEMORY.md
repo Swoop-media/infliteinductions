@@ -20,4 +20,5 @@
 - [Retake grace pattern](retake-grace-pattern.md) — prior authorisation stays current during a retake; every current-auth listing must synthesize from history snapshots (5 surfaces do this).
 - [Learner document retention](learner-doc-retention.md) — never delete learner docs; replace = mark old row status='replaced' + insert new; active queries must filter out replaced.
 - [quiz_questions is quiz_id-only](quiz-questions-quiz-id-only.md) — module_id/course_id dropped; column drops need a live-DB sweep of policies, triggers, and RPCs, not just app code.
+- [Cron endpoint secrets](cron-endpoint-secrets.md) — scheduled jobs are Bearer-secret API endpoints hit by external cron; CRON_SECRET is set even though it's absent from the visible secrets list.
 - [SharePoint video embedding](sharepoint-video-embedding.md) — iframes always fight SharePoint; stream "Anyone" links through the server proxy into a native <video> instead.

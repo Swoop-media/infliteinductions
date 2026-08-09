@@ -14,7 +14,8 @@ export async function GET(request: NextRequest) {
       "/api/notifications/authorization-expiry", 
       "/api/notifications/retake-reminders",
       "/api/notifications/daily-admin-report",
-      "/api/authorization-auto-fix"
+      "/api/authorization-auto-fix",
+      "/api/cron/document-sweep (Sundays only, or force with { forceDocumentSweep: true })"
     ]
   });
 }
@@ -45,6 +46,15 @@ export async function POST(request: NextRequest) {
       { name: 'dailyAdminReport', url: `${baseUrl}/api/notifications/daily-admin-report` },
       { name: 'authorizationAutoFix', url: `${baseUrl}/api/authorization-auto-fix` }
     ];
+
+    // Weekly stranded-file document sweep: run-all is called daily by the
+    // external cron, so gate the sweep to Sundays (UTC) to make it weekly.
+    // Pass { forceDocumentSweep: true } in the body to run it on any day.
+    const body = await request.json().catch(() => ({}));
+    const isSunday = new Date().getUTCDay() === 0;
+    if (isSunday || body?.forceDocumentSweep === true) {
+      jobs.push({ name: 'documentSweep', url: `${baseUrl}/api/cron/document-sweep` });
+    }
 
     const jobPromises = jobs.map(async (job) => {
       try {

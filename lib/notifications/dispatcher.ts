@@ -50,6 +50,7 @@ export type NotificationType =
   | "daily_auth_expiry_report"
   | "daily_doc_expiry_report"
   | "auth_autofix_report"
+  | "document_sweep_report"
   | "onsite_training_ready"
   | "onsite_assessment_ready"
   | "course_completed"
@@ -448,6 +449,20 @@ function formatTeamsText(
         `• Corrected: ${fixCount} authorisation${fixCount !== 1 ? 's' : ''}`,
         fixSummary ? `• Details:\n\n${fixSummary}` : "",
         url ? `• Diagnose tool: ${url}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+
+    case "document_sweep_report":
+      const sweepCount = payload?.count || 0;
+      const sweepSummary = Array.isArray(payload?.summary)
+        ? payload.summary.join("\n\n")
+        : payload?.summary || "";
+      return [
+        "🧹 Automatic Document Sweep Report",
+        `• Deleted: ${sweepCount} stranded file${sweepCount !== 1 ? 's' : ''}`,
+        sweepSummary ? `• Details:\n\n${sweepSummary}` : "",
+        url ? `• Sweep tool: ${url}` : "",
       ]
         .filter(Boolean)
         .join("\n\n");
