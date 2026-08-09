@@ -119,17 +119,28 @@ export async function runDocumentSweep(opts?: {
   // Fail closed per chunk: a failed reference check skips that chunk.
   const unreferenced: string[] = [];
   let refCheckErrors = 0;
-  for (const batch of chunk(candidates, REF_CHECK_CHUNK)) {
+  // Halve the chunk size: each batch is looked up in two forms (raw and
+  // bucket-prefixed), and the combined .in() list must stay within the
+  // ~150-value URL-length limit that Supabase queries can safely handle.
+  for (const batch of chunk(candidates, Math.max(1, Math.floor(REF_CHECK_CHUNK / 2)))) {
+    // Legacy rows stored file_path with the bucket name prefixed
+    // (e.g. "learner-documents/<uid>/<file>"), so match both forms.
+    // A prefix-only match once caused referenced files to be deleted.
+    const lookupPaths = batch.flatMap((p) => [p, `${BUCKET}/${p}`]);
     const { data: refRows, error: refError } = await admin
       .from("learner_documents")
       .select("file_path")
-      .in("file_path", batch);
+      .in("file_path", lookupPaths);
     if (refError) {
       console.error("[document-sweep] reference check failed, skipping batch:", refError);
       refCheckErrors++;
       continue;
     }
-    const referenced = new Set((refRows ?? []).map((r) => r.file_path));
+    const referenced = new Set(
+      (refRows ?? []).map((r) =>
+        r.file_path?.startsWith(`${BUCKET}/`) ? r.file_path.slice(BUCKET.length + 1) : r.file_path
+      )
+    );
     for (const path of batch) {
       if (!referenced.has(path)) unreferenced.push(path);
     }

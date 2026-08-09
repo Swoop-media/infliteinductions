@@ -18,6 +18,7 @@
 - [Wedged prod VM diagnosis](vm-wedged-diagnosis.md) — if Supabase is healthy from workspace but prod healthchecks + outbound fetches all time out, the VM is wedged; only a republish fixes it.
 - [Middleware auth vs health check](middleware-health-timeouts.md) — awaited Supabase call in middleware stalled `/` health probes during Supabase blips, causing VM outages; skip cookie-less requests + 5s fetch timeout.
 - [Retake grace pattern](retake-grace-pattern.md) — prior authorisation stays current during a retake; every current-auth listing must synthesize from history snapshots (5 surfaces do this).
+- [Storage path formats](storage-path-formats.md) — learner_documents.file_path has 3 formats across 2 buckets; storage cleanups must normalize prefixes or they delete referenced files.
 - [Learner document retention](learner-doc-retention.md) — never delete learner docs; replace = mark old row status='replaced' + insert new; active queries must filter out replaced.
 - [quiz_questions is quiz_id-only](quiz-questions-quiz-id-only.md) — module_id/course_id dropped; column drops need a live-DB sweep of policies, triggers, and RPCs, not just app code.
 - [Cron endpoint secrets](cron-endpoint-secrets.md) — scheduled jobs are Bearer-secret API endpoints hit by external cron; CRON_SECRET is set even though it's absent from the visible secrets list.
