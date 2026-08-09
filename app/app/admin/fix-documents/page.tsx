@@ -5,7 +5,12 @@ import { hasRole } from "@/lib/roles";
 import Link from "next/link";
 import DocumentFixer from "./DocumentFixer";
 
-export default async function FixDocumentsPage() {
+const PAGE_SIZE = 100;
+
+// Active documents are those not marked 'replaced' (status may be null)
+const ACTIVE_FILTER = "status.is.null,status.neq.replaced";
+
+export default async function FixDocumentsPage({ searchParams }) {
   // Check if user has Admin role
   const isAdmin = await hasRole("Admin");
   if (!isAdmin) {
@@ -13,27 +18,74 @@ export default async function FixDocumentsPage() {
   }
 
   const supabase = await createSupabaseServer();
-  
+
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
-  
+
   if (!user) {
     redirect("/auth/login");
   }
 
-  // Load all documents with missing fields
-  const { data: documents, error } = await supabase
+  const params = (await searchParams) || {};
+  const view = params.view === "archived" ? "archived" : "active";
+  const requestedPage = Math.max(1, parseInt(params.page, 10) || 1);
+
+  // Server-side counts (no rows shipped: head-only count queries)
+  const [activeCountRes, archivedCountRes, missingCourseRes, missingModuleRes] =
+    await Promise.all([
+      supabase
+        .from("learner_documents")
+        .select("id", { count: "exact", head: true })
+        .or(ACTIVE_FILTER),
+      supabase
+        .from("learner_documents")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "replaced"),
+      supabase
+        .from("learner_documents")
+        .select("id", { count: "exact", head: true })
+        .or(ACTIVE_FILTER)
+        .is("course_title", null),
+      supabase
+        .from("learner_documents")
+        .select("id", { count: "exact", head: true })
+        .or(ACTIVE_FILTER)
+        .is("module_title", null),
+    ]);
+
+  const activeCount = activeCountRes.count ?? 0;
+  const archivedCount = archivedCountRes.count ?? 0;
+  const missingCourseCount = missingCourseRes.count ?? 0;
+  const missingModuleCount = missingModuleRes.count ?? 0;
+
+  const totalInView = view === "archived" ? archivedCount : activeCount;
+  const totalPages = Math.max(1, Math.ceil(totalInView / PAGE_SIZE));
+  const page = Math.min(requestedPage, totalPages);
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  // Load only the current view's page of documents
+  let docsQuery = supabase
     .from("learner_documents")
     .select("*")
-    .order("created_at", { ascending: false });
-  
+    .order("created_at", { ascending: false })
+    .range(from, to);
+  docsQuery =
+    view === "archived"
+      ? docsQuery.eq("status", "replaced")
+      : docsQuery.or(ACTIVE_FILTER);
+
+  const { data: documents, error } = await docsQuery;
+
   // Load profiles separately to avoid foreign key issues
   const userIds = documents ? [...new Set(documents.map(d => d.user_id))] : [];
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name, email")
-    .in("id", userIds);
-  
+  const { data: profiles } = userIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", userIds)
+    : { data: [] };
+
   // Map profiles to documents
   const profileMap = new Map((profiles || []).map(p => [p.id, p]));
   const documentsWithProfiles = (documents || []).map(doc => ({
@@ -65,13 +117,13 @@ export default async function FixDocumentsPage() {
           This tool helps fix missing fields in document records that were uploaded but lack proper course/module associations.
         </p>
         <p className="text-sm text-yellow-800 mt-2">
-          <strong>Active Documents:</strong> {documentsWithProfiles.filter(d => d.status !== 'replaced').length} ({documentsWithProfiles.filter(d => d.status === 'replaced').length} archived)
+          <strong>Active Documents:</strong> {activeCount} ({archivedCount} archived)
         </p>
         <p className="text-sm text-yellow-800">
-          <strong>Active documents with missing course_title:</strong> {documentsWithProfiles.filter(d => d.status !== 'replaced' && !d.course_title).length}
+          <strong>Active documents with missing course_title:</strong> {missingCourseCount}
         </p>
         <p className="text-sm text-yellow-800">
-          <strong>Active documents with missing module_title:</strong> {documentsWithProfiles.filter(d => d.status !== 'replaced' && !d.module_title).length}
+          <strong>Active documents with missing module_title:</strong> {missingModuleCount}
         </p>
       </div>
 
@@ -81,10 +133,15 @@ export default async function FixDocumentsPage() {
         </div>
       )}
 
-      <DocumentFixer 
+      <DocumentFixer
         documents={documentsWithProfiles || []}
         courses={courses || []}
         modules={modules || []}
+        view={view}
+        page={page}
+        totalPages={totalPages}
+        totalInView={totalInView}
+        archivedCount={archivedCount}
       />
     </div>
   );

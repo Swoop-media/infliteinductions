@@ -9,22 +9,33 @@ interface DocumentFixerProps {
   documents: any[];
   courses: any[];
   modules: any[];
+  view: 'active' | 'archived';
+  page: number;
+  totalPages: number;
+  totalInView: number;
+  archivedCount: number;
 }
 
-export default function DocumentFixer({ documents, courses, modules }: DocumentFixerProps) {
+export default function DocumentFixer({ documents, courses, modules, view, page, totalPages, totalInView, archivedCount }: DocumentFixerProps) {
   const [processing, setProcessing] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error' | 'info', text: string } | null>(null);
   const [selectedDocs, setSelectedDocs] = useState<Set<string>>(new Set());
   const [editMode, setEditMode] = useState<{ [key: string]: boolean }>({});
   const [editedData, setEditedData] = useState<{ [key: string]: any }>({});
-  const [showArchived, setShowArchived] = useState(false);
   const router = useRouter();
 
-  // Archived documents (status = 'replaced') are hidden by default
-  const archivedCount = documents.filter(d => d.status === 'replaced').length;
-  const visibleDocuments = showArchived
-    ? documents
-    : documents.filter(d => d.status !== 'replaced');
+  const showArchived = view === 'archived';
+
+  const goTo = (nextView: 'active' | 'archived', nextPage: number) => {
+    const params = new URLSearchParams();
+    if (nextView === 'archived') params.set('view', 'archived');
+    if (nextPage > 1) params.set('page', String(nextPage));
+    const qs = params.toString();
+    router.push(`/app/admin/fix-documents${qs ? `?${qs}` : ''}`);
+  };
+
+  // Server already filtered by view; all fetched documents are visible
+  const visibleDocuments = documents;
 
   // Find documents with missing fields (among visible, non-archived docs)
   const documentsWithIssues = visibleDocuments.filter(d =>
@@ -324,7 +335,7 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
             <input
               type="checkbox"
               checked={showArchived}
-              onChange={(e) => setShowArchived(e.target.checked)}
+              onChange={(e) => goTo(e.target.checked ? 'archived' : 'active', 1)}
               className="rounded"
             />
             Show archived ({archivedCount})
@@ -530,9 +541,33 @@ export default function DocumentFixer({ documents, courses, modules }: DocumentF
 
       {visibleDocuments.length === 0 && (
         <div className="border rounded-md p-4 text-gray-600">
-          {documents.length === 0
-            ? 'No documents found in the database.'
+          {showArchived
+            ? 'No archived documents found.'
             : 'No active documents. Enable "Show archived" to see archived documents.'}
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between text-sm text-gray-700">
+          <div>
+            Page {page} of {totalPages} ({totalInView} {showArchived ? 'archived' : 'active'} documents)
+          </div>
+          <div className="space-x-2">
+            <button
+              onClick={() => goTo(view, page - 1)}
+              disabled={page <= 1}
+              className="px-3 py-1 rounded-md border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              ← Previous
+            </button>
+            <button
+              onClick={() => goTo(view, page + 1)}
+              disabled={page >= totalPages}
+              className="px-3 py-1 rounded-md border hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next →
+            </button>
+          </div>
         </div>
       )}
     </div>
