@@ -607,7 +607,8 @@ async function loadAssignmentDetails(assignmentId: string) {
         d => d.module_id === module.id || (d.course_id === ac.course_id && !d.module_id)
       ).map(d => ({
         document_title: d.title || "Untitled Document",
-        uploaded_at: d.created_at
+        uploaded_at: d.created_at,
+        file_path: d.file_path || null
       }));
 
       // Check if this module should include equipment assessment

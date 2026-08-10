@@ -53,9 +53,10 @@ export async function GET(request: NextRequest) {
     const isTrainee = assignment.user_id === user.id;
 
     if (!isTrainee) {
-      // Check for Admin or Senior management role
+      // Check for Admin, Senior management, or Authorization Approver role
+      // (approvers review these uploads on the authorisation review page).
       let isPrivileged = false;
-      for (const roleName of ["Admin", "Senior management"]) {
+      for (const roleName of ["Admin", "Senior management", "Authorization Approver"]) {
         const { data: roleResult } = await supabase.rpc("has_role", {
           uid: user.id,
           role_name: roleName,

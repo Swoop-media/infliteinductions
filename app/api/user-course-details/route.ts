@@ -305,7 +305,7 @@ export async function GET(request: NextRequest) {
     // Get documents
     const { data: documents } = await adminClient
       .from("learner_documents")
-      .select("id, title, module_id, created_at")
+      .select("id, title, module_id, created_at, file_path")
       .eq("user_id", userId)
       .eq("course_id", courseId)
       .or("status.is.null,status.neq.replaced");
@@ -463,7 +463,8 @@ export async function GET(request: NextRequest) {
         d => d.module_id === module.id
       ).map(d => ({
         document_title: d.title || "Untitled Document",
-        uploaded_at: d.created_at
+        uploaded_at: d.created_at,
+        file_path: d.file_path || null
       }));
 
       return {

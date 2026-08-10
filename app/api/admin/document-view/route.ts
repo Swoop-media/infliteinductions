@@ -6,9 +6,17 @@ import { hasRole } from '@/lib/roles';
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if user is admin
-    const isAdmin = await hasRole('Admin');
-    if (!isAdmin) {
+    // Allow the roles that can reach the pages using this endpoint:
+    // Admin (user management pages), Senior management, and Authorization
+    // Approver (the authorisation review page).
+    let allowed = false;
+    for (const roleName of ['Admin', 'Senior management', 'Authorization Approver']) {
+      if (await hasRole(roleName)) {
+        allowed = true;
+        break;
+      }
+    }
+    if (!allowed) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
 

@@ -3,6 +3,16 @@
 import React, { useState } from "react";
 import { ChevronDown, ChevronUp, CheckCircle, Circle, FileText, User, AlertCircle } from "lucide-react";
 import RejectModuleButton from "./RejectModuleButton";
+import { DocumentViewButton } from "../../users/[id]/DocumentViewButton";
+
+// Requirement responses that are file uploads store the storage path as the
+// response value (optionally JSON-quoted). Detect them so we can show a
+// "View uploaded file" link instead of the raw path.
+function requirementUploadPath(text: string | null): string | null {
+  if (typeof text !== "string") return null;
+  const cleaned = text.trim().replace(/^"|"$/g, "");
+  return cleaned.startsWith("requirement-uploads/") ? cleaned : null;
+}
 
 // Deterministic date formatting to prevent hydration mismatches
 function formatDateSafe(dateString: string | null | undefined): string {
@@ -104,6 +114,7 @@ interface ModuleProgress {
   documents?: Array<{
     document_title: string;
     uploaded_at: string;
+    file_path?: string | null;
   }>;
 }
 
@@ -627,9 +638,21 @@ export default function ExpandableCourseDetails({ courses, assignmentId, userId 
                                           {response.has_response ? (
                                             <>
                                               <div className="bg-white p-2 rounded border border-gray-100">
-                                                <span className="text-sm text-gray-800">
-                                                  {response.response_text || <span className="italic text-gray-400">No text response</span>}
-                                                </span>
+                                                {requirementUploadPath(response.response_text) ? (
+                                                  <a
+                                                    href={`/api/download-requirement-file?path=${encodeURIComponent(requirementUploadPath(response.response_text))}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1 text-sm text-blue-700 hover:underline"
+                                                  >
+                                                    <FileText className="w-3.5 h-3.5" />
+                                                    View uploaded file
+                                                  </a>
+                                                ) : (
+                                                  <span className="text-sm text-gray-800">
+                                                    {response.response_text || <span className="italic text-gray-400">No text response</span>}
+                                                  </span>
+                                                )}
                                               </div>
                                               
                                               {/* Trainer/Assessor Info and Date */}
@@ -676,6 +699,9 @@ export default function ExpandableCourseDetails({ courses, assignmentId, userId 
                                     <span className="text-xs text-gray-500">
                                       ({formatDateSafe(doc.uploaded_at)})
                                     </span>
+                                  )}
+                                  {doc.file_path && (
+                                    <DocumentViewButton filePath={doc.file_path} title={doc.document_title} />
                                   )}
                                 </div>
                               ))}
