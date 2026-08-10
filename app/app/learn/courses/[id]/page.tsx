@@ -1173,15 +1173,16 @@ export default async function LearnerCoursePage(props: {
                           <div className="flex items-center gap-2">
                             {isCurrentModuleCompleted && !preview ? (
                               <span className="text-sm text-green-600">✓ Complete</span>
-                            ) : review ? (
+                            ) : (
+                              // Always render a real Start Quiz button. Preview mode
+                              // hides the bottom navigation controls, so without this
+                              // there is no way to start the quiz at all in preview.
                               <Link
                                 href={`/app/learn/courses/${courseId}?module=${currentModule.id}&quiz=start${modeParam}${authorizationId ? `&auth=${authorizationId}` : ''}`}
                                 className="inline-flex items-center px-4 py-2 bg-black text-white rounded-md hover:bg-gray-800 font-medium text-sm"
                               >
                                 Start Quiz
                               </Link>
-                            ) : (
-                              <span className="text-sm text-gray-600">Use the button below to start</span>
                             )}
                           </div>
                         </div>
