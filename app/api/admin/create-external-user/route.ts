@@ -88,6 +88,43 @@ export async function POST(request: Request) {
     
     const supabase = await createSupabaseRoute(true); // Admin client
 
+    // Guard: never assign learners to unpublished (draft/archived) courses —
+    // draft-course content is hidden from learners and surfaces as broken quizzes.
+    // Covers directly selected courses AND courses linked to selected authorisations.
+    // Checked before any user/account state is created, so rejection is clean.
+    {
+      const allCourseIds = new Set((courseIds || []).map((id: string) => String(id)));
+      if (authorizationIds && authorizationIds.length > 0) {
+        const { data: authLinks, error: linkError } = await supabase
+          .from('authorisation_courses')
+          .select('course_id')
+          .in('authorisation_id', authorizationIds);
+        if (linkError) {
+          console.error('Authorisation course lookup error:', linkError);
+          return NextResponse.json({ error: 'Could not verify the courses required by the selected authorisations. Please try again.' }, { status: 500 });
+        }
+        for (const link of authLinks || []) allCourseIds.add(link.course_id);
+      }
+      const idsToCheck = Array.from(allCourseIds);
+      if (idsToCheck.length > 0) {
+        const { data: selectedCourses, error: statusError } = await supabase
+          .from('courses')
+          .select('id, title, status')
+          .in('id', idsToCheck);
+        if (statusError || !selectedCourses || selectedCourses.length !== idsToCheck.length) {
+          console.error('Course status check error:', statusError);
+          return NextResponse.json({ error: 'Could not verify the status of all selected courses. Please refresh and try again.' }, { status: statusError ? 500 : 400 });
+        }
+        const unpublished = selectedCourses.filter(c => c.status !== 'published');
+        if (unpublished.length > 0) {
+          const names = unpublished.map(c => `"${c.title}" (${c.status})`).join(', ');
+          return NextResponse.json({
+            error: `Cannot assign unpublished courses: ${names}. Publish the course(s) first, then assign them (directly or via an authorisation).`
+          }, { status: 400 });
+        }
+      }
+    }
+
     // Cookie-bound client to identify the admin performing this action
     const supabaseAuth = await createSupabaseRoute(false);
     const { data: { user: actingUser } } = await supabaseAuth.auth.getUser();

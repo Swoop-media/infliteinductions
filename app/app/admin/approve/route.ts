@@ -31,6 +31,40 @@ export async function POST(req: Request) {
     return NextResponse.redirect(to);
   }
 
+  // Guard: approving an enrolment assigns the learner to the course, and learners
+  // must never be assigned to unpublished (draft/archived) courses — the content
+  // is hidden from them and surfaces as broken quizzes.
+  {
+    const { data: enrolmentToApprove } = await supabase
+      .from("course_enrolments")
+      .select("course_id")
+      .eq("id", enrolment_id)
+      .maybeSingle();
+    if (!enrolmentToApprove) {
+      const to = await makeURL("/app/admin");
+      to.searchParams.set("error", "Enrolment not found");
+      return NextResponse.redirect(to);
+    }
+    const { data: course, error: courseErr } = await supabase
+      .from("courses")
+      .select("id, title, status")
+      .eq("id", enrolmentToApprove.course_id)
+      .maybeSingle();
+    if (courseErr || !course) {
+      const to = await makeURL("/app/admin");
+      to.searchParams.set("error", "Could not verify course status for this enrolment");
+      return NextResponse.redirect(to);
+    }
+    if (course.status !== "published") {
+      const to = await makeURL("/app/admin");
+      to.searchParams.set(
+        "error",
+        `Cannot approve: course "${course.title}" is ${course.status}. Learners cannot see unpublished course content — publish the course first.`
+      );
+      return NextResponse.redirect(to);
+    }
+  }
+
   // Update using the normal client; RLS allows this for Admin/Trainers
   const updateData: any = { 
     status: "approved",

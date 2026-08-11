@@ -37,6 +37,22 @@ export async function POST(request: NextRequest) {
 
     console.log("Assigning test user to course and authorization...");
 
+    // Guard: never assign learners to unpublished (draft/archived) courses —
+    // draft-course content is hidden from learners and surfaces as broken quizzes.
+    const { data: courseStatusRow, error: courseStatusError } = await supabaseAdmin
+      .from("courses")
+      .select("id, title, status")
+      .eq("id", courseId)
+      .maybeSingle();
+    if (courseStatusError || !courseStatusRow) {
+      return NextResponse.json({ error: "Could not verify course status" }, { status: 500 });
+    }
+    if (courseStatusRow.status !== "published") {
+      return NextResponse.json({
+        error: `Cannot assign unpublished course "${courseStatusRow.title}" (${courseStatusRow.status}). Publish the course first.`
+      }, { status: 400 });
+    }
+
     // 1. Check if course assignment exists, if not create it
     const { data: existingCourse } = await supabaseAdmin
       .from("course_assignments")

@@ -726,6 +726,14 @@ export default async function AdminPage({
               Stranded Upload Cleanup
             </Link>
           )}
+          {isAdmin && (
+            <Link
+              href="/app/admin/tools/unpublished-assignments"
+              className="rounded-md bg-amber-500 text-white px-3 py-1 text-sm hover:bg-amber-600"
+            >
+              Unpublished Course Assignments
+            </Link>
+          )}
           <Link
             href="/app/admin/teams-link-test"
             className="rounded-md bg-blue-600 text-white px-3 py-1 text-sm hover:bg-blue-700"

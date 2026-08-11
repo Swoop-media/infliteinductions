@@ -54,6 +54,28 @@ export async function POST(req: Request) {
     return NextResponse.redirect(to);
   }
 
+  // Guard: approving an enrolment assigns the learner to the course, and learners
+  // must never be assigned to unpublished (draft/archived) courses — the content
+  // is hidden from them and surfaces as broken quizzes.
+  {
+    const { data: course, error: courseErr } = await supabase
+      .from("courses")
+      .select("id, title, status")
+      .eq("id", enr.course_id)
+      .maybeSingle();
+    if (courseErr || !course) {
+      to.searchParams.set("error", "Could not verify course status for this enrolment");
+      return NextResponse.redirect(to);
+    }
+    if (course.status !== "published") {
+      to.searchParams.set(
+        "error",
+        `Cannot approve: course "${course.title}" is ${course.status}. Learners cannot see unpublished course content — publish the course first.`
+      );
+      return NextResponse.redirect(to);
+    }
+  }
+
   // Update status -> approved
   {
     const { error } = await supabase.from(table).update({ status: "approved" }).eq("id", enrolment_id);

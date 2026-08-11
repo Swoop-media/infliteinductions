@@ -107,12 +107,22 @@ export async function POST(req: Request) {
   // Get course details
   const { data: course } = await supabase
     .from("courses")
-    .select("id, title")
+    .select("id, title, status")
     .eq("id", course_id)
     .maybeSingle();
 
   if (!course) {
     to.searchParams.set("error", "Course not found");
+    return NextResponse.redirect(to);
+  }
+
+  // Guard: never assign learners to unpublished (draft/archived) courses —
+  // draft-course content is hidden from learners and surfaces as broken quizzes.
+  if (course.status !== "published") {
+    to.searchParams.set(
+      "error",
+      `Cannot assign unpublished course "${course.title}" (${course.status}). Publish the course first, then assign it.`
+    );
     return NextResponse.redirect(to);
   }
 

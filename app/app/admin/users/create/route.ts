@@ -49,6 +49,47 @@ export async function POST(req: Request) {
     return NextResponse.redirect(back);
   }
 
+  // Guard: never assign learners to unpublished (draft/archived) courses —
+  // draft-course content is hidden from learners and surfaces as broken quizzes.
+  // Covers directly selected courses AND courses linked to selected authorisations.
+  // Checked before creating the auth user so rejection leaves no partial account.
+  {
+    const allCourseIds = new Set(course_ids);
+    if (authorization_ids.length > 0) {
+      const { data: authLinks, error: linkError } = await supabaseService
+        .from("authorisation_courses")
+        .select("course_id")
+        .in("authorisation_id", authorization_ids);
+      if (linkError) {
+        console.error("Authorisation course lookup error:", linkError);
+        back.searchParams.set("error", "Could not verify the courses required by the selected authorisations. Please try again.");
+        return NextResponse.redirect(back);
+      }
+      for (const link of authLinks || []) allCourseIds.add(link.course_id);
+    }
+    const idsToCheck = Array.from(allCourseIds);
+    if (idsToCheck.length > 0) {
+      const { data: selectedCourses, error: statusError } = await supabaseService
+        .from("courses")
+        .select("id, title, status")
+        .in("id", idsToCheck);
+      if (statusError || !selectedCourses || selectedCourses.length !== idsToCheck.length) {
+        console.error("Course status check error:", statusError);
+        back.searchParams.set("error", "Could not verify the status of all selected courses. Please refresh and try again.");
+        return NextResponse.redirect(back);
+      }
+      const unpublished = selectedCourses.filter(c => c.status !== "published");
+      if (unpublished.length > 0) {
+        const names = unpublished.map(c => `"${c.title}" (${c.status})`).join(", ");
+        back.searchParams.set(
+          "error",
+          `Cannot assign unpublished courses: ${names}. Publish the course(s) first, then assign them (directly or via an authorisation).`
+        );
+        return NextResponse.redirect(back);
+      }
+    }
+  }
+
   try {
     // Create user in auth.users first using admin client
     const { data: authUser, error: authError } = await supabaseService.auth.admin.createUser({

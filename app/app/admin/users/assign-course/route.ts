@@ -37,6 +37,31 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Guard: never assign learners to unpublished (draft/archived) courses.
+    // Draft-course content is hidden from learners, so such assignments surface
+    // as broken quizzes. The UI only lists published courses, but this protects
+    // against stale pages or courses unpublished after page load.
+    const { data: selectedCourses, error: statusError } = await supabase
+      .from("courses")
+      .select("id, title, status")
+      .in("id", course_ids);
+
+    if (statusError || !selectedCourses || selectedCourses.length !== course_ids.length) {
+      console.error("Course status check error:", statusError);
+      back.searchParams.set("error", "Could not verify the status of all selected courses. Please refresh and try again.");
+      return NextResponse.redirect(back);
+    }
+
+    const unpublished = selectedCourses.filter(c => c.status !== "published");
+    if (unpublished.length > 0) {
+      const names = unpublished.map(c => `"${c.title}" (${c.status})`).join(", ");
+      back.searchParams.set(
+        "error",
+        `Cannot assign unpublished courses: ${names}. Learners cannot see draft or archived course content — publish the course first, then assign it.`
+      );
+      return NextResponse.redirect(back);
+    }
+
     // Create course assignments
     const assignments = course_ids.map(course_id => ({
       user_id,

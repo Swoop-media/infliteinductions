@@ -37,6 +37,45 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Guard: assigning an authorisation also assigns its required courses, and
+    // learners must never be assigned to unpublished (draft/archived) courses —
+    // draft-course content is hidden from learners and surfaces as broken quizzes.
+    // Checked before any writes so rejection leaves nothing partially assigned.
+    const { data: requiredCourseLinks, error: linkError } = await supabase
+      .from("authorisation_courses")
+      .select("course_id")
+      .in("authorisation_id", authorization_ids);
+
+    if (linkError) {
+      console.error("Authorisation course lookup error:", linkError);
+      back.searchParams.set("error", "Could not verify the courses required by the selected authorisations. Please try again.");
+      return NextResponse.redirect(back);
+    }
+
+    const requiredCourseIds = Array.from(new Set((requiredCourseLinks || []).map(l => l.course_id)));
+    if (requiredCourseIds.length > 0) {
+      const { data: requiredCourses, error: statusError } = await supabase
+        .from("courses")
+        .select("id, title, status")
+        .in("id", requiredCourseIds);
+
+      if (statusError || !requiredCourses || requiredCourses.length !== requiredCourseIds.length) {
+        console.error("Course status check error:", statusError);
+        back.searchParams.set("error", "Could not verify the status of all courses required by the selected authorisations. Please try again.");
+        return NextResponse.redirect(back);
+      }
+
+      const unpublished = requiredCourses.filter(c => c.status !== "published");
+      if (unpublished.length > 0) {
+        const names = unpublished.map(c => `"${c.title}" (${c.status})`).join(", ");
+        back.searchParams.set(
+          "error",
+          `Cannot assign: the selected authorisation(s) require unpublished courses: ${names}. Learners cannot see draft or archived course content — publish the course(s) first, then assign the authorisation.`
+        );
+        return NextResponse.redirect(back);
+      }
+    }
+
     // Create authorization assignments
     const assignments = authorization_ids.map(authorisation_id => ({
       user_id,

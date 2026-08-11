@@ -46,6 +46,22 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === "course") {
+      // Guard: never (re)assign learners to unpublished (draft/archived) courses —
+      // draft-course content is hidden from learners and surfaces as broken quizzes.
+      const { data: courseStatusRow, error: courseStatusError } = await adminClient
+        .from("courses")
+        .select("id, title, status")
+        .eq("id", courseId)
+        .maybeSingle();
+      if (courseStatusError || !courseStatusRow) {
+        return NextResponse.json({ error: "Could not verify course status" }, { status: 500 });
+      }
+      if (courseStatusRow.status !== "published") {
+        return NextResponse.json({
+          error: `Cannot assign a retake of "${courseStatusRow.title}" while it is ${courseStatusRow.status}. Publish the course first.`
+        }, { status: 400 });
+      }
+
       // First check if an assignment already exists
       const { data: existingAssignment, error: checkError } = await adminClient
         .from("course_assignments")
@@ -193,6 +209,26 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ 
           error: "No courses found for this authorization" 
         }, { status: 400 });
+      }
+
+      // Guard: never (re)assign learners to unpublished (draft/archived) courses.
+      // Missing course rows are treated as a failure, not implicitly allowed.
+      {
+        const linkedCourseIds = authCourses.map((ac: any) => ac.course_id);
+        const { data: linkedCourses, error: linkedStatusError } = await adminClient
+          .from("courses")
+          .select("id, title, status")
+          .in("id", linkedCourseIds);
+        if (linkedStatusError || !linkedCourses || linkedCourses.length !== linkedCourseIds.length) {
+          return NextResponse.json({ error: "Could not verify the status of all courses in this authorization" }, { status: 500 });
+        }
+        const unpublished = linkedCourses.filter((c: any) => c.status !== "published");
+        if (unpublished.length > 0) {
+          const names = unpublished.map((c: any) => `"${c.title}" (${c.status})`).join(", ");
+          return NextResponse.json({
+            error: `Cannot assign a retake: this authorization includes unpublished courses: ${names}. Publish them first.`
+          }, { status: 400 });
+        }
       }
 
       // Check if authorization assignment already exists

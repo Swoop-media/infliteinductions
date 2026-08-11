@@ -87,6 +87,37 @@ export async function POST(request: NextRequest) {
     }
     const courseIds = (authCourses || []).map((ac) => ac.course_id);
 
+    // Guard: never assign learners to unpublished (draft/archived) courses —
+    // draft-course content is hidden from learners and surfaces as broken quizzes.
+    // Checked in both preview and execute modes, before any writes.
+    if (courseIds.length > 0) {
+      const unpublished: { title: string; status: string }[] = [];
+      let verifiedCount = 0;
+      for (const idsChunk of chunk(courseIds, CHUNK)) {
+        const { data: linkedCourses, error: statusErr } = await admin
+          .from("courses")
+          .select("id, title, status")
+          .in("id", idsChunk);
+        if (statusErr) {
+          return NextResponse.json({ error: `Failed to verify course status: ${statusErr.message}` }, { status: 500 });
+        }
+        verifiedCount += (linkedCourses || []).length;
+        for (const c of linkedCourses || []) {
+          if (c.status !== "published") unpublished.push({ title: c.title, status: c.status });
+        }
+      }
+      // Missing course rows are treated as a failure, not implicitly allowed.
+      if (verifiedCount !== new Set(courseIds).size) {
+        return NextResponse.json({ error: "Could not verify the status of all courses linked to this authorisation." }, { status: 500 });
+      }
+      if (unpublished.length > 0) {
+        const names = unpublished.map((c) => `"${c.title}" (${c.status})`).join(", ");
+        return NextResponse.json({
+          error: `Cannot assign: this authorisation is linked to unpublished courses: ${names}. Learners cannot see draft or archived course content — publish the course(s) or unlink them from the authorisation first.`,
+        }, { status: 400 });
+      }
+    }
+
     const summary = {
       authorisation: { id: auth.id, title: auth.title },
       totalActiveUsers: userIds.length,

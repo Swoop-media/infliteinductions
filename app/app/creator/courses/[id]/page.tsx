@@ -687,6 +687,24 @@ async function assignUserAction(formData: FormData) {
     // Use defaults if lookup fails
   }
 
+  // Guard: never assign learners to unpublished (draft/archived) courses —
+  // draft-course content is hidden from learners and surfaces as broken quizzes.
+  if (role === "trainee") {
+    const { data: courseStatusRow, error: courseStatusErr } = await supabase
+      .from("courses")
+      .select("id, title, status")
+      .eq("id", courseId)
+      .maybeSingle();
+    if (courseStatusErr || !courseStatusRow) {
+      throw new Error("Could not verify course status");
+    }
+    if (courseStatusRow.status !== "published") {
+      throw new Error(
+        `Cannot assign learners to "${courseStatusRow.title}" while it is ${courseStatusRow.status}. Publish the course first.`
+      );
+    }
+  }
+
   // Try RPC first if present
   const rpc = await supabase.rpc("assign_course_user", {
     p_course_id: courseId,
