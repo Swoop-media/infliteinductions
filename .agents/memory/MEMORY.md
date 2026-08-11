@@ -23,3 +23,4 @@
 - [quiz_questions is quiz_id-only](quiz-questions-quiz-id-only.md) — module_id/course_id dropped; column drops need a live-DB sweep of policies, triggers, and RPCs, not just app code.
 - [Cron endpoint secrets](cron-endpoint-secrets.md) — scheduled jobs are Bearer-secret API endpoints hit by external cron; CRON_SECRET is set even though it's absent from the visible secrets list.
 - [SharePoint video embedding](sharepoint-video-embedding.md) — iframes always fight SharePoint; stream "Anyone" links through the server proxy into a native <video> instead.
+- [Uploaded video formats](video-format-compatibility.md) — ".webm" screen recordings often hide H.264/Matroska that iOS can't play; sniff bytes, don't trust extensions; player errors log as [video-playback-error].

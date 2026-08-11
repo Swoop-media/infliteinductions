@@ -192,7 +192,7 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
         // Videos uploaded to the app (served via /app/files/...) or other
         // direct video-file URLs play in a native <video> tag
         const isInternalFile = cleanUrl.startsWith("/app/files/");
-        const isDirectVideoFile = /\.(webm|mp4|m4v|mov|ogv|ogg)(\?.*)?$/i.test(cleanUrl);
+        const isDirectVideoFile = /\.(webm|mp4|m4v|mov|ogv|ogg)(\?.*)?$/i.test(cleanUrl); // mov/ogv legacy only
         if (isInternalFile || (videoSource === "other" && isDirectVideoFile)) {
           setPlaybackMode("native");
           setEmbedUrl(cleanUrl);
@@ -379,16 +379,36 @@ export default function UnifiedVideoPlayer({ videoUrl, courseId, title }: Unifie
                 onLoadedMetadata={() => setIsLoading(false)}
                 onLoadedData={() => setIsLoading(false)}
                 onCanPlay={() => setIsLoading(false)}
-                onError={() => {
+                onError={(e) => {
+                  const mediaError = (e.currentTarget as HTMLVideoElement)?.error || null;
+                  const code = mediaError?.code ?? null;
+                  const message = mediaError?.message || "";
+
+                  // Report the media error to the server so failures are diagnosable
+                  fetch("/api/video-playback-error", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ code, message, videoUrl: embedUrl }),
+                    keepalive: true,
+                  }).catch(() => {});
+
                   if (embedUrl.startsWith("/api/sharepoint-video")) {
                     // Proxy couldn't stream this link (e.g. not an "Anyone" link)
                     // — fall back to the SharePoint iframe embed flow.
                     setProxyFailed(true);
                     setIsLoading(true);
                   } else {
-                    // Uploaded/direct video failed on this device — show a clear
-                    // fallback instead of looping back into the native player.
-                    setError("This video couldn't be played on this device. Try 'Open in New Tab' to view it.");
+                    // Uploaded/direct video failed on this device — show a clear,
+                    // specific fallback instead of looping back into the native player.
+                    let friendly: string;
+                    if (code === 2) {
+                      friendly = "The video couldn't be downloaded due to a network problem. Check your connection and try again, or use 'Open in New Tab'.";
+                    } else if (code === 3 || code === 4) {
+                      friendly = "This video is in a format your browser can't play. Please report this to your course administrator — the video needs to be re-uploaded as an MP4.";
+                    } else {
+                      friendly = "This video couldn't be played on this device. Try 'Open in New Tab' to view it.";
+                    }
+                    setError(friendly);
                     setIsLoading(false);
                   }
                 }}

@@ -144,7 +144,9 @@ export async function GET(
     // our own origin. (The previous 302-redirect to a Supabase signed URL
     // broke playback on mobile browsers, e.g. Edge on iOS.)
     const ext = fileId.split('.').pop()?.toLowerCase() || '';
-    const videoExts = ['mp4', 'webm', 'mov', 'm4v', 'ogv', 'ogg', 'mkv'];
+    // mp4/m4v/webm match the upload policy; mov/ogv/ogg remain for legacy
+    // content uploaded before format enforcement. mkv was never playable.
+    const videoExts = ['mp4', 'webm', 'mov', 'm4v', 'ogv', 'ogg'];
     if (videoExts.includes(ext) && !forceDownload) {
       const { data: signed, error: signedError } = await supabase
         .storage

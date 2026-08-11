@@ -6,6 +6,66 @@ import { hasRole } from "@/lib/roles";
 
 export const runtime = 'nodejs';
 
+/**
+ * Sniff the uploaded video's actual container/codecs from its raw bytes.
+ * Extension checks alone are not enough: screen recorders produce ".webm"
+ * files containing H.264 (Matroska CodecID "V_MPEG4/ISO/AVC"), and MP4s can
+ * carry HEVC — both fail in browsers with "couldn't be played on this device".
+ * Returns an error string when the content is known-unplayable, else null.
+ * Inconclusive sniffs are allowed through (never block on uncertainty).
+ */
+async function sniffVideoProblems(supabase: any, storagePath: string): Promise<string | null> {
+  try {
+    const { data: signed } = await supabase.storage
+      .from('course-files')
+      .createSignedUrl(storagePath, 300);
+    if (!signed?.signedUrl) return null;
+
+    const fetchRange = async (range: string) => {
+      const res = await fetch(signed.signedUrl, { headers: { Range: range } });
+      if (!res.ok) return null;
+      return Buffer.from(await res.arrayBuffer());
+    };
+
+    const head = await fetchRange('bytes=0-262143'); // first 256KB
+    if (!head || head.length < 12) return null;
+
+    const isMatroska = head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3;
+    const isMp4 = head.subarray(4, 8).toString('latin1') === 'ftyp';
+
+    if (isMatroska) {
+      const text = head.toString('latin1');
+      if (text.includes('V_MPEG4/ISO/AVC') || text.includes('V_MPEGH/ISO/HEVC')) {
+        return 'This .webm file actually contains H.264/HEVC video (a common screen-recorder quirk), which browsers cannot play in a WebM container. Please re-export it as an MP4 (H.264) and upload that instead.';
+      }
+      if (/A_PCM/.test(text)) {
+        return 'This video contains uncompressed PCM audio, which browsers cannot play. Please re-export it as an MP4 (H.264 video + AAC audio) and upload that instead.';
+      }
+      return null;
+    }
+
+    if (isMp4) {
+      // Codec atoms live in the moov box, which may be at the start or end.
+      let text = head.toString('latin1');
+      if (!text.includes('avc1') && !text.includes('hvc1') && !text.includes('hev1')) {
+        const tail = await fetchRange('bytes=-262144'); // last 256KB
+        if (tail) text += tail.toString('latin1');
+      }
+      const hasHevc = text.includes('hvc1') || text.includes('hev1');
+      const hasH264 = text.includes('avc1') || text.includes('avc3');
+      if (hasHevc && !hasH264) {
+        return 'This video uses HEVC (H.265), which many browsers cannot play. Please re-export it as an MP4 with H.264 video and upload that instead. On iPhone: Settings → Camera → Formats → "Most Compatible", or export as H.264 from your editor.';
+      }
+      return null;
+    }
+
+    return null;
+  } catch (err) {
+    console.error('Video sniff error (allowing upload):', err);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServer();
@@ -91,6 +151,13 @@ export async function POST(request: NextRequest) {
     // Video uploads: point the video block at the internal file proxy URL,
     // preserving other block settings like gate_seconds
     if (uploadType === 'video' && blockId) {
+      // Reject content browsers can't play, even when the extension looks fine
+      const sniffError = await sniffVideoProblems(supabase, storagePath);
+      if (sniffError) {
+        // Clean up the unusable upload so it doesn't linger in storage
+        await supabase.storage.from('course-files').remove([storagePath]).catch(() => {});
+        return NextResponse.json({ error: sniffError }, { status: 400 });
+      }
       const { data: block, error: blockFetchError } = await supabase
         .from("module_content_blocks")
         .select("data")

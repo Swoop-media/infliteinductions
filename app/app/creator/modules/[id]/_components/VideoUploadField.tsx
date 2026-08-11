@@ -27,6 +27,12 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
       setError(null);
       setSuccess(false);
 
+      const ext = file.name.includes(".") ? file.name.substring(file.name.lastIndexOf(".") + 1).toLowerCase() : "";
+      if (!["mp4", "m4v", "webm"].includes(ext)) {
+        setError("Unsupported video format. Please upload an MP4 (H.264) file — every video editor and phone can export this. WebM is also accepted. Other formats (e.g. MOV, MKV, AVI) often fail to play on learners' devices.");
+        return;
+      }
+
       if (file.size > MAX_SIZE) {
         setError(`File is ${(file.size / 1024 / 1024 / 1024).toFixed(1)}GB — the limit is 2GB. Try compressing the video to MP4 first.`);
         return;
@@ -107,7 +113,7 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
         <div className="text-xs text-gray-600">
           <span className="font-medium">Or upload a video file</span> — plays directly in the page, no Microsoft sign-in needed.
           <br />
-          MP4 recommended (also WebM/MOV), up to 2GB.
+          MP4 (H.264) recommended — also WebM. Up to 2GB. MOV/MKV/AVI aren't accepted because they often fail on learners' devices.
           {isUploadedVideo && !uploading && !success && (
             <span className="block text-green-700 mt-1">✓ This block is using an uploaded video. Uploading a new file will replace it.</span>
           )}
@@ -123,7 +129,7 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
         <input
           ref={fileInputRef}
           type="file"
-          accept="video/mp4,video/webm,video/quicktime,video/ogg,.mp4,.webm,.mov,.m4v,.ogv,.ogg"
+          accept="video/mp4,video/webm,.mp4,.m4v,.webm"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];

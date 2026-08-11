@@ -64,13 +64,15 @@ export async function POST(request: NextRequest) {
       }, { status: 413 });
     }
 
-    // Videos must actually be video files
+    // Videos must be in a browser-safe container. Formats like .mov, .mkv and
+    // .avi often contain codecs browsers can't play (HEVC, PCM audio, etc.),
+    // which caused "This video couldn't be played on this device" for learners.
     if (uploadType === 'video') {
-      const videoExts = ['mp4', 'webm', 'mov', 'm4v', 'ogv', 'ogg'];
+      const videoExts = ['mp4', 'm4v', 'webm'];
       const extCheck = fileName.includes('.') ? fileName.substring(fileName.lastIndexOf('.') + 1).toLowerCase() : '';
       if (!videoExts.includes(extCheck)) {
         return NextResponse.json({ 
-          error: 'Unsupported video format. Please upload MP4 (recommended), WebM, or MOV files.' 
+          error: 'Unsupported video format. Please upload an MP4 (H.264) file — every video editor and phone can export this. WebM is also accepted. Other formats (e.g. MOV, MKV, AVI) often fail to play on learners\' devices.' 
         }, { status: 400 });
       }
     }
