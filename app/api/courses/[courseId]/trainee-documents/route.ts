@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { hasRole } from '@/lib/roles';
 
 export async function GET(
@@ -20,8 +21,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if user is admin, senior management, or has trainer/assessor role for this course
-    const isAdmin = await hasRole('Admin') || await hasRole('Senior management');
+    // Check if user is admin, senior management, a trainer/assessor, or has trainer/assessor assignment for this course
+    const isAdmin = await hasRole('Admin') || await hasRole('Senior management') || await hasRole('Trainers and Assessors');
     
     // Check if user is trainer/assessor for this course
     const { data: trainerAssignments } = await supabase
@@ -45,8 +46,10 @@ export async function GET(
       return NextResponse.json({ error: 'Trainee ID required' }, { status: 400 });
     }
 
-    // Fetch documents uploaded by the trainee for this course
-    const { data: documents, error } = await supabase
+    // Fetch documents uploaded by the trainee for this course.
+    // Use the service client: route-level authorization has already passed above,
+    // and caller-scoped RLS on learner_documents only covers own-document reads.
+    const { data: documents, error } = await supabaseAdmin()
       .from('learner_documents')
       .select(`
         id,

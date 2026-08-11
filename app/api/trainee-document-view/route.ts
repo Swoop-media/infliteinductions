@@ -2,6 +2,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 import { hasRole } from '@/lib/roles';
 
 export async function POST(request: NextRequest) {
@@ -24,8 +25,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Course ID and Trainee ID are required' }, { status: 400 });
     }
 
-    // Check if user is admin, senior management, or has access to this specific course
-    const isAdmin = await hasRole('Admin') || await hasRole('Senior management');
+    // Check if user is admin, senior management, a trainer/assessor, or has access to this specific course
+    const isAdmin = await hasRole('Admin') || await hasRole('Senior management') || await hasRole('Trainers and Assessors');
     
     if (!isAdmin) {
       // Check if user is trainer/assessor for this specific course
@@ -43,8 +44,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Verify the document belongs to the trainee and course
-    const { data: document } = await supabase
+    // Verify the document belongs to the trainee and course.
+    // Use the service client: route-level authorization has already passed above,
+    // and caller-scoped RLS on learner_documents only covers own-document reads.
+    const { data: document } = await supabaseAdmin()
       .from('learner_documents')
       .select('id, file_path')
       .eq('user_id', traineeId)
@@ -65,7 +68,7 @@ export async function POST(request: NextRequest) {
     console.log('Creating signed URL for trainee document:', { filePath, bucketName, courseId, traineeId });
 
     // Create a 1-hour signed URL for the document
-    const { data, error } = await supabase.storage
+    const { data, error } = await supabaseAdmin().storage
       .from(bucketName)
       .createSignedUrl(filePath, 3600); // 1 hour
 
