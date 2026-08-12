@@ -734,6 +734,14 @@ export default async function AdminPage({
               Unpublished Course Assignments
             </Link>
           )}
+          {isAdmin && (
+            <Link
+              href="/app/admin/tools/video-compression"
+              className="rounded-md bg-teal-600 text-white px-3 py-1 text-sm hover:bg-teal-700"
+            >
+              Video Optimisation Queue
+            </Link>
+          )}
           <Link
             href="/app/admin/teams-link-test"
             className="rounded-md bg-blue-600 text-white px-3 py-1 text-sm hover:bg-blue-700"
