@@ -135,3 +135,4 @@ dist
 
 # This repo is pnpm-managed; never commit an npm lockfile (causes deploy install failures)
 package-lock.json
+.video-compress/
