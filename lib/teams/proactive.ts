@@ -33,6 +33,8 @@ export async function sendProactive(conversationRef: any, text: string) {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: tokenParams.toString(),
+    // Hard timeout: hung outbound fetches pile up and wedge the VM (Aug 2026).
+    signal: AbortSignal.timeout(15000),
   });
 
   console.log("📊 Token response status:", tokenResponse.status);
@@ -68,7 +70,9 @@ export async function sendProactive(conversationRef: any, text: string) {
       "Authorization": `Bearer ${accessToken}`,
       "Content-Type": "application/json"
     },
-    body: JSON.stringify(messageActivity)
+    body: JSON.stringify(messageActivity),
+    // Hard timeout: hung outbound fetches pile up and wedge the VM (Aug 2026).
+    signal: AbortSignal.timeout(15000),
   });
 
   if (!messageResponse.ok) {

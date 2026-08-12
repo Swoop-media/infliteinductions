@@ -2,6 +2,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import {
+  videoStreamSemaphore,
+  guardedStream,
+  STREAM_LIFETIME_MS,
+} from "@/lib/http/bounded-fetch";
 
 export const dynamic = "force-dynamic";
 
@@ -154,28 +159,71 @@ export async function GET(
         .createSignedUrl(fileId, 3600); // 1 hour
 
       if (!signedError && signed?.signedUrl) {
-        const upstreamHeaders: Record<string, string> = {};
-        const rangeHeader = request.headers.get('range');
-        if (rangeHeader) upstreamHeaders['Range'] = rangeHeader;
-
-        const upstream = await fetch(signed.signedUrl, { headers: upstreamHeaders });
-
-        if (upstream.ok && upstream.body) {
-          const headers = new Headers();
-          headers.set('Content-Type', getMimeType(ext));
-          for (const h of ['content-length', 'content-range', 'etag', 'last-modified']) {
-            const v = upstream.headers.get(h);
-            if (v) headers.set(h, v);
-          }
-          headers.set('Accept-Ranges', 'bytes');
-          headers.set('Content-Disposition', 'inline');
-          headers.set('Cache-Control', 'private, no-store');
-          return new NextResponse(upstream.body, {
-            status: upstream.status, // 200, or 206 for range requests
-            headers,
+        // Bound concurrent proxied streams: unbounded streams can exhaust
+        // sockets/memory on the 1 vCPU VM (Aug 2026 wedges).
+        if (!videoStreamSemaphore.tryAcquire()) {
+          return new NextResponse("Too many concurrent video streams, try again shortly", {
+            status: 503,
+            headers: { 'Retry-After': '5' },
           });
         }
-        console.error('Video stream upstream error:', upstream.status, fileId);
+        let slotReleased = false;
+        const releaseSlot = () => {
+          if (!slotReleased) { slotReleased = true; videoStreamSemaphore.release(); }
+        };
+        try {
+          const upstreamHeaders: Record<string, string> = {};
+          const rangeHeader = request.headers.get('range');
+          if (rangeHeader) upstreamHeaders['Range'] = rangeHeader;
+
+          // Cancel the upstream fetch when the client disconnects, and cap
+          // total stream lifetime so a stalled upstream can't hold the socket.
+          const streamSignal = AbortSignal.any([
+            request.signal,
+            AbortSignal.timeout(STREAM_LIFETIME_MS),
+          ]);
+          const upstream = await fetch(signed.signedUrl, {
+            headers: upstreamHeaders,
+            signal: streamSignal,
+          });
+
+          if (upstream.ok && upstream.body) {
+            const headers = new Headers();
+            headers.set('Content-Type', getMimeType(ext));
+            for (const h of ['content-length', 'content-range', 'etag', 'last-modified']) {
+              const v = upstream.headers.get(h);
+              if (v) headers.set(h, v);
+            }
+            headers.set('Accept-Ranges', 'bytes');
+            headers.set('Content-Disposition', 'inline');
+            headers.set('Cache-Control', 'private, no-store');
+            const body = guardedStream(upstream.body, {
+              signal: streamSignal,
+              onDone: releaseSlot,
+            });
+            return new NextResponse(body, {
+              status: upstream.status, // 200, or 206 for range requests
+              headers,
+            });
+          }
+          console.error('Video stream upstream error:', upstream.status, fileId);
+          upstream.body?.cancel().catch(() => {});
+          releaseSlot();
+        } catch (streamErr) {
+          releaseSlot();
+          if (request.signal.aborted) {
+            return new NextResponse(null, { status: 499 });
+          }
+          console.error('Video stream fetch error:', streamErr, fileId);
+        }
+        // Do NOT fall through to the buffered storage download for videos:
+        // .download() materializes the whole file in memory with no range
+        // support, which is exactly the unbounded operation that wedges the
+        // VM when the upstream is already failing. Let the player retry.
+        return new NextResponse("Video temporarily unavailable, please retry", {
+          status: 502,
+          headers: { 'Retry-After': '5' },
+        });
       }
       // fall through to direct download if signing/streaming fails
     }

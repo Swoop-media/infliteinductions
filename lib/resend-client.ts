@@ -20,7 +20,9 @@ async function getCredentials() {
       headers: {
         'Accept': 'application/json',
         'X_REPLIT_TOKEN': xReplitToken
-      }
+      },
+      // Hard timeout: hung outbound fetches pile up and wedge the VM (Aug 2026).
+      signal: AbortSignal.timeout(15000)
     }
   ).then(res => res.json()).then(data => data.items?.[0]);
 

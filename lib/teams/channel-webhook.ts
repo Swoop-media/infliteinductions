@@ -215,12 +215,16 @@ export async function postIssueReportToChannel(
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(card),
+      // Hard timeout: hung outbound fetches pile up and wedge the VM (Aug 2026).
+      signal: AbortSignal.timeout(15000),
     });
     if (!res.ok) {
       const text = await res.text();
       console.error(`❌ Report Issue webhook failed (${res.status}):`, text);
       return false;
     }
+    // Consume the body so undici releases the socket.
+    await res.arrayBuffer().catch(() => {});
     console.log("✅ Report Issue webhook posted successfully");
     return true;
   } catch (err) {
@@ -278,11 +282,15 @@ export async function postToAuthChannels(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(card),
+        // Hard timeout: hung outbound fetches pile up and wedge the VM (Aug 2026).
+        signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(`Webhook failed (${res.status}): ${text}`);
       }
+      // Consume the body so undici releases the socket.
+      await res.arrayBuffer().catch(() => {});
       return res.status;
     })
   );

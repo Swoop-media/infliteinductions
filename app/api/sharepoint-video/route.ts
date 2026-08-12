@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import {
+  videoStreamSemaphore,
+  guardedStream,
+  drainBody,
+  STREAM_LIFETIME_MS,
+} from "@/lib/http/bounded-fetch";
 
 // Streams a SharePoint "Anyone with the link" video through the server so it
 // can play in a native <video> tag without third-party cookie / iframe blocking.
@@ -55,6 +61,25 @@ export async function GET(request: NextRequest) {
     upstreamHeaders["Range"] = range;
   }
 
+  // Bound concurrent proxied streams: unbounded streams can exhaust
+  // sockets/memory on the 1 vCPU VM (Aug 2026 wedges).
+  if (!videoStreamSemaphore.tryAcquire()) {
+    return new NextResponse("Too many concurrent video streams, try again shortly", {
+      status: 503,
+      headers: { "Retry-After": "5" },
+    });
+  }
+  let slotReleased = false;
+  const releaseSlot = () => {
+    if (!slotReleased) { slotReleased = true; videoStreamSemaphore.release(); }
+  };
+
+  // Cancel upstream when the client disconnects; cap total stream lifetime.
+  const streamSignal = AbortSignal.any([
+    request.signal,
+    AbortSignal.timeout(STREAM_LIFETIME_MS),
+  ]);
+
   // Follow redirects manually, validating every hop stays on SharePoint
   // (prevents SSRF via open-redirect chains).
   let upstream: Response;
@@ -66,11 +91,15 @@ export async function GET(request: NextRequest) {
       upstream = await fetch(currentUrl.toString(), {
         headers: upstreamHeaders,
         redirect: "manual",
+        signal: streamSignal,
       });
       const isRedirect = upstream.status >= 300 && upstream.status < 400;
       if (!isRedirect) break;
+      // Drain the redirect response body so undici releases the socket.
+      await drainBody(upstream);
       const location = upstream.headers.get("location");
       if (!location || ++hops > MAX_REDIRECTS) {
+        releaseSlot();
         return NextResponse.json(
           { error: "Too many redirects" },
           { status: 502 }
@@ -78,6 +107,7 @@ export async function GET(request: NextRequest) {
       }
       const next = new URL(location, currentUrl);
       if (next.protocol !== "https:" || !ALLOWED_HOST.test(next.hostname)) {
+        releaseSlot();
         return NextResponse.json(
           { error: "Redirected outside SharePoint" },
           { status: 502 }
@@ -86,6 +116,10 @@ export async function GET(request: NextRequest) {
       currentUrl = next;
     }
   } catch (err) {
+    releaseSlot();
+    if (request.signal.aborted) {
+      return new NextResponse(null, { status: 499 });
+    }
     console.error("sharepoint-video: upstream fetch failed", err);
     return NextResponse.json(
       { error: "Could not reach SharePoint" },
@@ -98,6 +132,8 @@ export async function GET(request: NextRequest) {
   // If SharePoint returned a sign-in / web page instead of the file, the link
   // is not a public "Anyone" link. Tell the client so it can fall back.
   if (!upstream.ok || contentType.includes("text/html")) {
+    upstream.body?.cancel().catch(() => {});
+    releaseSlot();
     return NextResponse.json(
       {
         error: "not_public",
@@ -121,7 +157,16 @@ export async function GET(request: NextRequest) {
   if (!headers.has("accept-ranges")) headers.set("Accept-Ranges", "bytes");
   headers.set("Cache-Control", "private, max-age=3600");
 
-  return new NextResponse(upstream.body, {
+  if (!upstream.body) {
+    releaseSlot();
+    return NextResponse.json({ error: "Empty response" }, { status: 502 });
+  }
+
+  const body = guardedStream(upstream.body, {
+    signal: streamSignal,
+    onDone: releaseSlot,
+  });
+  return new NextResponse(body, {
     status: upstream.status, // 200 or 206 for range requests
     headers,
   });

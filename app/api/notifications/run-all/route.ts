@@ -4,6 +4,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
+// Single-flight guard: prevents overlapping cron invocations from piling up
+// duplicate sweeps and external sends on the single-vCPU VM. In-memory is
+// sufficient because a Reserved VM runs exactly one Node process.
+let runAllInFlight = false;
+
 export async function GET(request: NextRequest) {
   // GET handler for easy testing via browser
   return NextResponse.json({ 
@@ -21,6 +26,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  let acquiredLock = false;
   try {
     // Verify the request is authorized
     const authHeader = request.headers.get("authorization");
@@ -29,6 +35,16 @@ export async function POST(request: NextRequest) {
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    if (runAllInFlight) {
+      console.warn("run-all skipped: previous invocation still in flight");
+      return NextResponse.json(
+        { success: false, skipped: true, reason: "previous run still in flight" },
+        { status: 409 }
+      );
+    }
+    runAllInFlight = true;
+    acquiredLock = true;
 
     // Use relative URLs for internal API calls in Replit environment
     const host = request.headers.get('host');
@@ -56,22 +72,27 @@ export async function POST(request: NextRequest) {
       jobs.push({ name: 'documentSweep', url: `${baseUrl}/api/cron/document-sweep` });
     }
 
-    const jobPromises = jobs.map(async (job) => {
+    // Run jobs SEQUENTIALLY with a per-job timeout. Parallel fan-out of 5-6
+    // table-sweeping jobs (each sending Teams DMs/emails) spikes sockets and
+    // memory on the 1 vCPU VM; sequential keeps peak load flat, and the cron
+    // interval is far longer than the total runtime.
+    const jobResults: Array<{ name: string; result: any; error: string | null }> = [];
+    for (const job of jobs) {
       try {
         const response = await fetch(job.url, {
           method: 'POST',
           headers: {
             'authorization': authHeader || '',
             'Content-Type': 'application/json'
-          }
+          },
+          // Hard cap per job so one hung job can't wedge the whole run.
+          signal: AbortSignal.timeout(120000)
         });
-        return { name: job.name, result: await response.json(), error: null };
+        jobResults.push({ name: job.name, result: await response.json(), error: null });
       } catch (error: any) {
-        return { name: job.name, result: null, error: error.message };
+        jobResults.push({ name: job.name, result: null, error: error.message });
       }
-    });
-
-    const jobResults = await Promise.all(jobPromises);
+    }
 
     for (const job of jobResults) {
       if (job.error) {
@@ -98,5 +119,7 @@ export async function POST(request: NextRequest) {
       error: "Failed to run notification jobs",
       details: error.message 
     }, { status: 500 });
+  } finally {
+    if (acquiredLock) runAllInFlight = false;
   }
 }

@@ -95,6 +95,8 @@ export async function upsertTrainingControl(
         "Content-Type": "application/json",
         Authorization: `Bearer ${secret}`,
       },
+      // Hard timeout: hung outbound fetches pile up and wedge the VM (Aug 2026).
+      signal: AbortSignal.timeout(15000),
       body: JSON.stringify({
         external_id: payload.external_id,
         course_title: payload.course_title,
@@ -109,6 +111,8 @@ export async function upsertTrainingControl(
       const errorText = await response.text();
       console.error(`SafeFLITE control sync failed (${response.status}):`, errorText);
     } else {
+      // Consume the body so undici releases the socket.
+      await response.arrayBuffer().catch(() => {});
       console.log(`SafeFLITE control sync successful for course: ${payload.external_id}`);
     }
   } catch (error) {

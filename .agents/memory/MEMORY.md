@@ -25,3 +25,4 @@
 - [SharePoint video embedding](sharepoint-video-embedding.md) — iframes always fight SharePoint; stream "Anyone" links through the server proxy into a native <video> instead.
 - [Unpublished course assignments](unpublished-course-assignments.md) — routes writing course_assignments must check courses.status server-side; unpublishing a course strands existing learner assignments.
 - [Uploaded video formats](video-format-compatibility.md) — ".webm" screen recordings often hide H.264/Matroska that iOS can't play; sniff bytes, don't trust extensions; player errors log as [video-playback-error].
+- [Outbound fetch hygiene](outbound-fetch-hygiene.md) — every outbound call needs timeout + body drain; media streams semaphored; formData size-checked at ingress; see rules before adding fetches.

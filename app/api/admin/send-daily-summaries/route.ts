@@ -267,17 +267,25 @@ export async function POST(req: NextRequest) {
 
     const message = buildSummaryMessage(expired, due7, due30, due60, totalItems);
 
-    const sendResults = await Promise.allSettled(
-      recipientUsers.map(async (recipient) => {
-        await sendTeamsDMToAppUser(recipient.id, message);
-        return {
-          userId: recipient.id,
-          userName: recipient.full_name || recipient.email,
-          status: "success",
-          itemsFound: totalItems,
-        };
-      })
-    );
+    // Send in bounded batches instead of all-at-once: unbounded parallel
+    // Teams sends spike sockets/memory on the 1 vCPU VM (Aug 2026 wedges).
+    const BATCH_SIZE = 5;
+    const sendResults: PromiseSettledResult<any>[] = [];
+    for (let i = 0; i < recipientUsers.length; i += BATCH_SIZE) {
+      const batch = recipientUsers.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.allSettled(
+        batch.map(async (recipient) => {
+          await sendTeamsDMToAppUser(recipient.id, message);
+          return {
+            userId: recipient.id,
+            userName: recipient.full_name || recipient.email,
+            status: "success",
+            itemsFound: totalItems,
+          };
+        })
+      );
+      sendResults.push(...batchResults);
+    }
 
     const results = sendResults.map((result, index) => {
       if (result.status === "fulfilled") {

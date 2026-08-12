@@ -95,12 +95,14 @@ export async function notifyUser(options: {
     })();
 
   try {
-    await fetch("https://api.resend.com/emails", {
+    const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
+      // Hard timeout: hung outbound fetches pile up and wedge the VM (Aug 2026).
+      signal: AbortSignal.timeout(15000),
       body: JSON.stringify({
         from: "INFLITE LMS <onboarding@resend.dev>", // swap to your verified sender
         to: [recipientEmail],
@@ -108,6 +110,8 @@ export async function notifyUser(options: {
         text: emailText,
       }),
     });
+    // Consume the body so undici releases the socket.
+    await res.arrayBuffer().catch(() => {});
   } catch (e) {
     console.error("notifyUser: email send failed", e);
   }

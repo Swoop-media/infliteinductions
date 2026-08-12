@@ -26,6 +26,8 @@ export async function syncUserToSafeflite(user: UserSyncPayload): Promise<void> 
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${syncSecret}`
       },
+      // Hard timeout: hung outbound fetches pile up and wedge the VM (Aug 2026).
+      signal: AbortSignal.timeout(15000),
       body: JSON.stringify({
         microsoft_id: user.microsoft_id,
         email: user.email,
@@ -42,6 +44,8 @@ export async function syncUserToSafeflite(user: UserSyncPayload): Promise<void> 
       const errorText = await response.text();
       console.error(`SafeFLITE sync failed (${response.status}):`, errorText);
     } else {
+      // Consume the body so undici releases the socket.
+      await response.arrayBuffer().catch(() => {});
       console.log(`SafeFLITE sync successful for user: ${user.email}`);
     }
   } catch (error) {

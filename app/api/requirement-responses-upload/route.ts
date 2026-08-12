@@ -19,6 +19,17 @@ export async function POST(request: NextRequest) {
     }
     console.log('Authenticated user (trainer/assessor):', user.id);
 
+    // Reject oversized requests BEFORE parsing: request.formData() buffers
+    // the whole multipart body in memory, so the size check must happen at
+    // ingress or the 4 GiB VM can be exhausted regardless of later checks.
+    const contentLength = Number(request.headers.get('content-length') || 0);
+    const MAX_REQUEST_BYTES = 210 * 1024 * 1024; // 200MB files + form overhead
+    if (contentLength > MAX_REQUEST_BYTES) {
+      return NextResponse.json({
+        error: 'Total upload size exceeds the 200MB limit for a single submission.'
+      }, { status: 413 });
+    }
+
     const formData = await request.formData();
     const moduleId = formData.get('moduleId') as string;
     const assignmentId = formData.get('assignmentId') as string;
@@ -84,12 +95,29 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // Cap per-file and aggregate upload size: buffering unbounded multipart
+    // bodies in memory can exhaust the 4 GiB VM under concurrent requests.
+    const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB per file
+    const MAX_TOTAL_BYTES = 200 * 1024 * 1024; // 200 MB per request
+    let totalUploadBytes = 0;
+
     for (const [key, value] of formData.entries()) {
       if (key.startsWith('file_')) {
         const requirementId = key.replace('file_', '');
         const file = value as File;
         
         if (file && file.size > 0) {
+          if (file.size > MAX_FILE_BYTES) {
+            return NextResponse.json({
+              error: `File "${file.name}" is ${(file.size / 1024 / 1024).toFixed(1)}MB — the limit is 50MB per file.`
+            }, { status: 413 });
+          }
+          totalUploadBytes += file.size;
+          if (totalUploadBytes > MAX_TOTAL_BYTES) {
+            return NextResponse.json({
+              error: 'Total upload size exceeds the 200MB limit for a single submission.'
+            }, { status: 413 });
+          }
           // Upload file to storage
           const fileExt = file.name.split('.').pop();
           const fileName = `${crypto.randomUUID()}.${fileExt}`;
