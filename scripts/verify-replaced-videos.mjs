@@ -14,10 +14,10 @@ const userId = process.env.TEST_USER_ID;
 const bucket = "course-files";
 
 const targets = [
-  { path: "module-videos/b152f39d-b5ee-4a68-a8de-8d60117cd241/aae7cb8b-3ff8-4e03-9caa-d2d45b4298a7.mov", expectedType: "video/quicktime" },
-  { path: "module-videos/7fc311db-1555-4eef-8eb2-6bc00b9c8a48/ef206b63-4ca4-485d-a05c-6f8c0be94cd6.mp4", expectedType: "video/mp4" },
-  // largest replaced file, the original complaint class
+  // second-pass (bitrate-targeted) replacements, all previously >300MB
   { path: "module-videos/bc022ecb-a3f6-4f6c-b184-b170556b48d3/e1e6e8e1-fcf7-4307-b2bf-3ee97e086bd1.mp4", expectedType: "video/mp4" },
+  { path: "module-videos/bc022ecb-a3f6-4f6c-b184-b170556b48d3/44dcee59-ba56-423e-84ca-34d7842eb0e3.mp4", expectedType: "video/mp4" },
+  { path: "module-videos/1b5b2840-941d-4b6c-b847-feaa25a5731b/c7a31d05-44fa-4ad0-a7f9-530a9e5f4d55.mp4", expectedType: "video/mp4" },
 ];
 
 function assert(cond, msg) { if (!cond) { console.error("ASSERT FAILED: " + msg); process.exit(1); } }

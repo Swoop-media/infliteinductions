@@ -8,3 +8,4 @@ description: Durable lessons for long re-encode/upload batches against Supabase 
 - Restarting a batch workflow can leave the old process alive → two instances clobbering shared temp files; use pid-unique temp names and check `ps` before restarting.
 - Storage `updated_at` distinguishes replaced objects from originals; a cutoff timestamp makes re-scans idempotent.
 - Never leave MP4 bytes under a `.webm` path: the file proxy picks Content-Type by extension and iOS rejects mislabeled webm; migrate the object to a `.mp4` path and update referencing blocks.
+- CRF23 1080p alone can leave long videos >300MB; for a hard size cap, second-pass those files with two-pass bitrate targeting (~280MB budget: vKbps = target*8/dur - audio - mux margin).
