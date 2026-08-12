@@ -52,13 +52,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'You do not have permission to modify this course' }, { status: 403 });
     }
 
-    // Check file size limits based on upload type
+    // Check file size limits based on upload type.
+    // Videos are hard-capped at 300MB: raw/uncompressed uploads (seen up to
+    // 1.7GB) load extremely slowly for learners and strain storage/disk IO.
+    // Note this checks the client-declared fileSize; the actual stored object
+    // size is re-verified server-side in /api/upload-complete.
     const maxSize =
       uploadType === 'image' ? 10 * 1024 * 1024 :
-      uploadType === 'video' ? 2 * 1024 * 1024 * 1024 : // 2GB for videos
+      uploadType === 'video' ? 300 * 1024 * 1024 : // 300MB hard cap for videos
       100 * 1024 * 1024; // 100MB for files
     if (fileSize > maxSize) {
-      const limitLabel = uploadType === 'image' ? '10MB' : uploadType === 'video' ? '2GB' : '100MB';
+      if (uploadType === 'video') {
+        return NextResponse.json({
+          error: `This video is ${(fileSize / 1024 / 1024).toFixed(0)}MB — the limit is 300MB. Please compress it first: export at 1080p using H.264 (a 5-minute video should be well under 200MB), then upload the compressed file.`
+        }, { status: 413 });
+      }
+      const limitLabel = uploadType === 'image' ? '10MB' : '100MB';
       return NextResponse.json({ 
         error: `File size (${(fileSize / 1024 / 1024).toFixed(1)}MB) exceeds the ${limitLabel} limit. Please use a smaller file.` 
       }, { status: 413 });

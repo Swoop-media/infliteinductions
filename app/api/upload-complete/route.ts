@@ -66,6 +66,28 @@ async function sniffVideoProblems(supabase: any, storagePath: string): Promise<s
   }
 }
 
+/**
+ * Look up the actual size of an uploaded storage object. Returns null when
+ * the size cannot be determined (never blocks on uncertainty — the
+ * signed-URL route already rejected oversized declared sizes).
+ */
+async function getStoredObjectSize(supabase: any, storagePath: string): Promise<number | null> {
+  try {
+    const lastSlash = storagePath.lastIndexOf('/');
+    const folder = storagePath.substring(0, lastSlash);
+    const name = storagePath.substring(lastSlash + 1);
+    const { data, error } = await supabase.storage
+      .from('course-files')
+      .list(folder, { search: name, limit: 1 });
+    if (error || !data?.length) return null;
+    const size = data[0]?.metadata?.size;
+    return typeof size === 'number' ? size : null;
+  } catch (err) {
+    console.error('Stored object size lookup error (allowing upload):', err);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServer();
@@ -151,6 +173,19 @@ export async function POST(request: NextRequest) {
     // Video uploads: point the video block at the internal file proxy URL,
     // preserving other block settings like gate_seconds
     if (uploadType === 'video' && blockId) {
+      // Enforce the 300MB video cap against the ACTUAL stored object size.
+      // The signed-URL route only sees the client-declared fileSize, so this
+      // is the authoritative server-side check (upload bypasses our server).
+      const MAX_VIDEO_BYTES = 300 * 1024 * 1024;
+      const actualSize = await getStoredObjectSize(supabase, storagePath);
+      if (actualSize !== null && actualSize > MAX_VIDEO_BYTES) {
+        // Remove the oversized upload so it doesn't linger in storage
+        await supabase.storage.from('course-files').remove([storagePath]).catch(() => {});
+        return NextResponse.json({
+          error: `This video is ${(actualSize / 1024 / 1024).toFixed(0)}MB — the limit is 300MB. Please compress it first: export at 1080p using H.264 (a 5-minute video should be well under 200MB), then upload the compressed file.`
+        }, { status: 413 });
+      }
+
       // Reject content browsers can't play, even when the extension looks fine
       const sniffError = await sniffVideoProblems(supabase, storagePath);
       if (sniffError) {

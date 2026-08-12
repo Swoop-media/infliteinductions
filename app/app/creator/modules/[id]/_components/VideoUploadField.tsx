@@ -10,12 +10,16 @@ interface VideoUploadFieldProps {
   currentUrl?: string;
 }
 
-const MAX_SIZE = 2 * 1024 * 1024 * 1024; // 2GB
+// Hard cap: raw/uncompressed uploads (seen up to 1.7GB) load extremely
+// slowly for learners and strain storage. Enforced server-side too.
+const MAX_SIZE = 300 * 1024 * 1024; // 300MB
+const WARN_SIZE = 100 * 1024 * 1024; // soft warning above 100MB
 
 export default function VideoUploadField({ moduleId, blockId, currentUrl }: VideoUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -25,6 +29,7 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
   const handleFile = useCallback(
     async (file: File) => {
       setError(null);
+      setWarning(null);
       setSuccess(false);
 
       const ext = file.name.includes(".") ? file.name.substring(file.name.lastIndexOf(".") + 1).toLowerCase() : "";
@@ -34,8 +39,12 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
       }
 
       if (file.size > MAX_SIZE) {
-        setError(`File is ${(file.size / 1024 / 1024 / 1024).toFixed(1)}GB — the limit is 2GB. Try compressing the video to MP4 first.`);
+        setError(`This video is ${(file.size / 1024 / 1024).toFixed(0)}MB — the limit is 300MB. Please compress it first: export at 1080p using H.264 (a 5-minute video should be well under 200MB), then upload the compressed file.`);
         return;
+      }
+
+      if (file.size > WARN_SIZE) {
+        setWarning(`Heads up: this video is ${(file.size / 1024 / 1024).toFixed(0)}MB. Large files load slowly for learners — consider exporting at 1080p / H.264 to shrink it (a 5-minute video should be well under 200MB). Uploading anyway…`);
       }
 
       setUploading(true);
@@ -113,7 +122,7 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
         <div className="text-xs text-gray-600">
           <span className="font-medium">Or upload a video file</span> — plays directly in the page, no Microsoft sign-in needed.
           <br />
-          MP4 (H.264) recommended — also WebM. Up to 2GB. MOV/MKV/AVI aren't accepted because they often fail on learners' devices.
+          MP4 (H.264) recommended — also WebM. Up to 300MB (export at 1080p / H.264 — a 5-minute video should be well under 200MB). MOV/MKV/AVI aren't accepted because they often fail on learners' devices.
           {isUploadedVideo && !uploading && !success && (
             <span className="block text-green-700 mt-1">✓ This block is using an uploaded video. Uploading a new file will replace it.</span>
           )}
@@ -154,6 +163,7 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
       {success && !uploading && (
         <p className="mt-2 text-xs text-green-700">✓ Video uploaded and saved to this block.</p>
       )}
+      {warning && <p className="mt-2 text-xs text-amber-600">{warning}</p>}
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
     </div>
   );
