@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface VideoUploadFieldProps {
@@ -21,10 +21,60 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  // "optimizing" while a queued/processing compression job exists for this
+  // block; "done" briefly after it finishes; null otherwise.
+  const [optimizing, setOptimizing] = useState<"optimizing" | "done" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const isUploadedVideo = (currentUrl || "").startsWith("/app/files/module-videos/");
+
+  // Poll the compression job status while optimizing. Also runs once on
+  // mount for uploaded videos so a page reload mid-compression still shows
+  // the indicator.
+  useEffect(() => {
+    if (!isUploadedVideo && optimizing !== "optimizing") return;
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const check = async () => {
+      try {
+        const res = await fetch(`/api/video-compression-status?blockId=${encodeURIComponent(blockId)}`);
+        if (!res.ok || cancelled) return;
+        const { status } = await res.json();
+        if (cancelled) return;
+        if (status === "queued" || status === "processing") {
+          setOptimizing("optimizing");
+          timer = setTimeout(check, 10_000);
+        } else if (status === "done") {
+          setOptimizing((prev) => {
+            // Only show "done" if we were watching an active job — a stale
+            // job from a previous session shouldn't surface a banner.
+            if (prev === "optimizing") {
+              // The URL may have changed (.webm → .mp4); refresh the editor.
+              router.refresh();
+              return "done";
+            }
+            return prev;
+          });
+        } else {
+          // skipped / failed / none — clear quietly.
+          setOptimizing((prev) => (prev === "optimizing" ? null : prev));
+        }
+      } catch {
+        // Network hiccup — retry only if we already know a job is active.
+        if (!cancelled && optimizing === "optimizing") timer = setTimeout(check, 15_000);
+      }
+    };
+
+    check();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blockId, isUploadedVideo, optimizing === "optimizing"]);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -103,9 +153,11 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
           const data = await completeRes.json().catch(() => ({}));
           throw new Error(data.error || "Upload finished but saving to the module failed");
         }
+        const completeData = await completeRes.json().catch(() => ({}));
 
         setProgress(100);
         setSuccess(true);
+        if (completeData.compressionQueued) setOptimizing("optimizing");
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Upload failed");
@@ -162,6 +214,15 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
 
       {success && !uploading && (
         <p className="mt-2 text-xs text-green-700">✓ Video uploaded and saved to this block.</p>
+      )}
+      {optimizing === "optimizing" && !uploading && (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-blue-700">
+          <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-300 border-t-blue-700" aria-hidden="true" />
+          Optimizing video… The current file plays right away; a smaller, faster-loading version will replace it automatically in a few minutes.
+        </p>
+      )}
+      {optimizing === "done" && !uploading && (
+        <p className="mt-2 text-xs text-green-700">✓ Video optimized — learners now get the smaller, faster-loading version.</p>
       )}
       {warning && <p className="mt-2 text-xs text-amber-600">{warning}</p>}
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
