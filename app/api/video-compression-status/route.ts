@@ -4,7 +4,8 @@
 // Creator-facing status probe for the background video compression queue
 // (video_compression_jobs). Used by the module editor's video block to show
 // an "Optimizing video…" indicator while a queued/processing job exists for
-// the block, and to clear it once the job is done/skipped/failed.
+// the block, to clear it once the job is done/skipped, and to surface a
+// warning when the latest job failed (original oversized file stays live).
 //
 // video_compression_jobs is service-role-only under RLS, so the query runs
 // through the service client — AFTER the same auth + creator-role check the
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     const admin = createSupabaseService();
     const { data: jobs, error } = await admin
       .from("video_compression_jobs")
-      .select("status, created_at")
+      .select("status, storage_path, created_at")
       .eq("block_id", blockId)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -50,7 +51,33 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ status: "none" });
     }
 
-    return NextResponse.json({ status: jobs?.[0]?.status ?? "none" });
+    const job = jobs?.[0];
+    if (!job) return NextResponse.json({ status: "none" });
+
+    // A terminal job only describes the file it processed. If the block's
+    // current video no longer points at that file (e.g. the creator replaced
+    // a failed oversized upload with a smaller re-export that never queued a
+    // new job), the old job's status is stale — report "none" so the editor
+    // doesn't show a failure/done banner for a different file. Active
+    // (queued/processing) jobs are reported as-is. A done .webm job repoints
+    // the block to the sibling .mp4 path, so match that too.
+    if (job.status === "failed" || job.status === "done" || job.status === "skipped") {
+      const { data: block, error: blockErr } = await admin
+        .from("module_content_blocks")
+        .select("data")
+        .eq("id", blockId)
+        .maybeSingle();
+      if (!blockErr) {
+        const currentUrl = block?.data?.url ?? "";
+        const jobUrl = `/app/files/${job.storage_path}`;
+        const jobUrlMp4 = jobUrl.replace(/\.webm$/i, ".mp4");
+        if (currentUrl !== jobUrl && currentUrl !== jobUrlMp4) {
+          return NextResponse.json({ status: "none" });
+        }
+      }
+    }
+
+    return NextResponse.json({ status: job.status });
   } catch (e) {
     console.error("[video-compress] status route error:", e);
     return NextResponse.json({ error: "Failed to check compression status" }, { status: 500 });

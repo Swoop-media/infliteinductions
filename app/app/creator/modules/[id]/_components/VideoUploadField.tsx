@@ -24,6 +24,9 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
   // "optimizing" while a queued/processing compression job exists for this
   // block; "done" briefly after it finishes; null otherwise.
   const [optimizing, setOptimizing] = useState<"optimizing" | "done" | null>(null);
+  // True when the latest compression job for this block failed — the original
+  // (large) file is still live, so surface a re-export suggestion.
+  const [optimizeFailed, setOptimizeFailed] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -46,7 +49,12 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
         if (cancelled) return;
         if (status === "queued" || status === "processing") {
           setOptimizing("optimizing");
+          setOptimizeFailed(false);
           timer = setTimeout(check, 10_000);
+        } else if (status === "failed") {
+          // The original oversized file stays live — tell the creator.
+          setOptimizeFailed(true);
+          setOptimizing((prev) => (prev === "optimizing" ? null : prev));
         } else if (status === "done") {
           setOptimizing((prev) => {
             // Only show "done" if we were watching an active job — a stale
@@ -59,7 +67,8 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
             return prev;
           });
         } else {
-          // skipped / failed / none — clear quietly.
+          // skipped / none — clear quietly.
+          setOptimizeFailed(false);
           setOptimizing((prev) => (prev === "optimizing" ? null : prev));
         }
       } catch {
@@ -157,6 +166,11 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
 
         setProgress(100);
         setSuccess(true);
+        // Any successful replacement clears a previous failure — the failed
+        // job belonged to the old file. (The status API also reports "none"
+        // for jobs whose file no longer matches the block, so this stays
+        // cleared after a page refresh too.)
+        setOptimizeFailed(false);
         if (completeData.compressionQueued) setOptimizing("optimizing");
         router.refresh();
       } catch (err) {
@@ -223,6 +237,11 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
       )}
       {optimizing === "done" && !uploading && (
         <p className="mt-2 text-xs text-green-700">✓ Video optimized — learners now get the smaller, faster-loading version.</p>
+      )}
+      {optimizeFailed && !uploading && optimizing !== "optimizing" && (
+        <p className="mt-2 text-xs text-amber-600">
+          ⚠ This video couldn't be optimized automatically, so learners are getting the original (larger) file. It still plays, but may load slowly. To fix: re-export the video at 1080p using H.264 (a 5-minute video should be well under 200MB) and upload it again here.
+        </p>
       )}
       {warning && <p className="mt-2 text-xs text-amber-600">{warning}</p>}
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
