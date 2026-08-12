@@ -3,6 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { hasRole } from "@/lib/roles";
+import {
+  COMPRESSION_THRESHOLD_BYTES,
+  enqueueVideoCompression,
+  kickVideoCompressionWorker,
+} from "@/lib/video-compression";
 
 export const runtime = 'nodejs';
 
@@ -114,6 +119,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
+    // Authorization-critical: the client supplies storagePath, so bind it to
+    // the module being modified BEFORE any size/sniff/queue/delete operation.
+    // Signed-URL uploads are always issued as
+    //   module-(images|videos|files)/<moduleId>/<uuid>.<ext>
+    // Without this check, a creator could pass another course's object path
+    // and have the privileged handlers (and the compression worker) operate
+    // on — and overwrite or delete — someone else's file.
+    const expectedPrefix =
+      uploadType === 'image' ? 'module-images' :
+      uploadType === 'video' ? 'module-videos' :
+      'module-files';
+    const pathPattern = new RegExp(
+      `^${expectedPrefix}/${moduleId}/[0-9a-fA-F-]{36}\\.[A-Za-z0-9]{1,8}$`
+    );
+    if (typeof storagePath !== 'string' || !pathPattern.test(storagePath)) {
+      return NextResponse.json(
+        { error: 'Invalid storage path for this module' },
+        { status: 400 }
+      );
+    }
+
     // Verify module exists and get course information for authorization
     const { data: moduleData, error: moduleError } = await supabase
       .from("course_modules")
@@ -215,7 +241,28 @@ export async function POST(request: NextRequest) {
       }
 
       revalidatePath(`/app/creator/modules/${moduleId}`);
-      return NextResponse.json({ success: true, url: videoUrl, path: storagePath });
+
+      // Oversized (but under-cap) videos: queue a background re-encode to
+      // 1080p H.264 CRF23 +faststart, replaced at the same storage path.
+      // Non-blocking: enqueue never throws and the worker runs after the
+      // response is sent.
+      let compressionQueued = false;
+      if (actualSize !== null && actualSize > COMPRESSION_THRESHOLD_BYTES) {
+        compressionQueued = await enqueueVideoCompression({
+          storagePath,
+          blockId,
+          moduleId,
+          originalBytes: actualSize,
+        });
+        if (compressionQueued) kickVideoCompressionWorker();
+      }
+
+      return NextResponse.json({
+        success: true,
+        url: videoUrl,
+        path: storagePath,
+        compressionQueued,
+      });
     }
 
     // For images, we need to return a signed URL for display

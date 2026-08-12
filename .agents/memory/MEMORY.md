@@ -26,4 +26,5 @@
 - [Unpublished course assignments](unpublished-course-assignments.md) — routes writing course_assignments must check courses.status server-side; unpublishing a course strands existing learner assignments.
 - [Uploaded video formats](video-format-compatibility.md) — ".webm" screen recordings often hide H.264/Matroska that iOS can't play; sniff bytes, don't trust extensions; player errors log as [video-playback-error].
 - [Large storage batch jobs](large-storage-batch-jobs.md) — long re-encode/upload batches: run as console workflow, state outside /tmp, streamed signed-URL uploads, learner-session verify recipe.
+- [Video auto-compression queue](video-auto-compression.md) — >100MB module-video uploads queue a background 1080p CRF23 re-encode; enqueue never blocks uploads; cron endpoint rescues stranded jobs.
 - [Outbound fetch hygiene](outbound-fetch-hygiene.md) — every outbound call needs timeout + body drain; media streams semaphored; formData size-checked at ingress; see rules before adding fetches.

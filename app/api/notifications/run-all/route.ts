@@ -3,6 +3,7 @@
 // Can be called by a single cron job to trigger all notification types
 
 import { NextRequest, NextResponse } from "next/server";
+import { kickVideoCompressionWorker } from "@/lib/video-compression";
 
 // Single-flight guard: prevents overlapping cron invocations from piling up
 // duplicate sweeps and external sends on the single-vCPU VM. In-memory is
@@ -93,6 +94,12 @@ export async function POST(request: NextRequest) {
         jobResults.push({ name: job.name, result: null, error: error.message });
       }
     }
+
+    // Rescue stranded video compression jobs (VM restarts leave them in
+    // 'queued'). Called in-process — no self-fetch, no credential forwarding,
+    // no SSRF surface. The worker's own single-flight guard makes this a no-op
+    // when an encode is already running.
+    kickVideoCompressionWorker();
 
     for (const job of jobResults) {
       if (job.error) {
