@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, ExternalLink, Calendar, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { openSignedDocument } from "@/lib/openSignedDocument";
 
 interface Document {
   id: string;
@@ -26,6 +27,11 @@ export default function CourseDocuments({ courseId, traineeId }: CourseDocuments
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loadingDocId, setLoadingDocId] = useState<string | null>(null);
+  const [viewIssue, setViewIssue] = useState<{
+    docId: string;
+    message: string;
+    url?: string;
+  } | null>(null);
 
   useEffect(() => {
     fetchDocuments();
@@ -54,8 +60,9 @@ export default function CourseDocuments({ courseId, traineeId }: CourseDocuments
 
   const handleViewDocument = async (doc: Document) => {
     setLoadingDocId(doc.id);
-    
-    try {
+    setViewIssue(null);
+
+    const result = await openSignedDocument(async () => {
       // Create signed URL for document viewing
       const response = await fetch("/api/trainee-document-view", {
         method: "POST",
@@ -70,19 +77,25 @@ export default function CourseDocuments({ courseId, traineeId }: CourseDocuments
       });
 
       if (!response.ok) {
-        throw new Error("Failed to get document URL");
+        let message = "Failed to get document URL. Please try again.";
+        try {
+          const body = await response.json();
+          if (body?.error) message = `Could not open document: ${body.error}`;
+        } catch {
+          // keep default message
+        }
+        throw new Error(message);
       }
 
       const { signedUrl } = await response.json();
-      
-      // Open in new tab
-      window.open(signedUrl, "_blank");
-    } catch (error) {
-      console.error("Error viewing document:", error);
-      alert("Failed to open document. Please try again.");
-    } finally {
-      setLoadingDocId(null);
+      return signedUrl;
+    });
+
+    if (!result.ok) {
+      console.error("Error viewing document:", result.message);
+      setViewIssue({ docId: doc.id, message: result.message, url: result.url });
     }
+    setLoadingDocId(null);
   };
 
   const formatFileSize = (bytes: number) => {
@@ -241,6 +254,26 @@ export default function CourseDocuments({ courseId, traineeId }: CourseDocuments
                       )}
                     </Button>
                   </div>
+
+                  {viewIssue?.docId === doc.id && (
+                    <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800 flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p>{viewIssue.message}</p>
+                        {viewIssue.url && (
+                          <a
+                            href={viewIssue.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mt-1 inline-flex items-center gap-1 font-medium text-blue-700 underline"
+                          >
+                            <ExternalLink className="h-3 w-3" />
+                            Open {doc.title}
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })}

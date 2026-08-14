@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FileText, ExternalLink, Calendar, AlertCircle } from "lucide-react";
+import { openSignedDocument } from "@/lib/openSignedDocument";
 
 interface Document {
   id: string;
@@ -20,11 +21,17 @@ interface Props {
 
 export default function DocumentSummary({ documents }: Props) {
   const [loadingDoc, setLoadingDoc] = useState<string | null>(null);
+  const [viewIssue, setViewIssue] = useState<{
+    docId: string;
+    message: string;
+    url?: string;
+  } | null>(null);
 
   const handleViewDocument = async (doc: Document) => {
     setLoadingDoc(doc.id);
-    
-    try {
+    setViewIssue(null);
+
+    const result = await openSignedDocument(async () => {
       // Request a signed URL from the backend
       const response = await fetch("/api/admin/document-view", {
         method: "POST",
@@ -37,19 +44,18 @@ export default function DocumentSummary({ documents }: Props) {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to get document URL");
+        throw new Error("Failed to get document URL. Please try again.");
       }
 
       const { signedUrl } = await response.json();
-      
-      // Open in new tab
-      window.open(signedUrl, "_blank");
-    } catch (error) {
-      console.error("Error viewing document:", error);
-      alert("Failed to open document. Please try again.");
-    } finally {
-      setLoadingDoc(null);
+      return signedUrl;
+    });
+
+    if (!result.ok) {
+      console.error("Error viewing document:", result.message);
+      setViewIssue({ docId: doc.id, message: result.message, url: result.url });
     }
+    setLoadingDoc(null);
   };
 
   const isExpired = (expiryDate: string | null | undefined) => {
@@ -119,10 +125,11 @@ export default function DocumentSummary({ documents }: Props) {
                 return (
                   <div
                     key={doc.id}
-                    className={`flex items-center justify-between p-3 bg-white rounded border ${
+                    className={`p-3 bg-white rounded border space-y-2 ${
                       expired ? "border-red-200 bg-red-50" : "border-gray-200"
                     }`}
                   >
+                    <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 flex-1">
                       <FileText className={`w-5 h-5 ${expired ? "text-red-400" : "text-gray-400"}`} />
                       <div className="flex-1">
@@ -163,6 +170,26 @@ export default function DocumentSummary({ documents }: Props) {
                         </>
                       )}
                     </button>
+                    </div>
+
+                    {viewIssue?.docId === doc.id && (
+                      <div className="rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 flex items-start gap-1">
+                        <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                        <span>
+                          {viewIssue.message}{" "}
+                          {viewIssue.url && (
+                            <a
+                              href={viewIssue.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="font-medium text-blue-700 underline"
+                            >
+                              Open {doc.title}
+                            </a>
+                          )}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })}

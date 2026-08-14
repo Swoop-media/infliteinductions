@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { FileText, ExternalLink, Calendar, AlertCircle, CheckCircle, Clock, XCircle, Upload } from "lucide-react";
+import { openSignedDocument } from "@/lib/openSignedDocument";
 
 interface Document {
   id: string;
@@ -48,10 +49,17 @@ export default function DocumentRequirements({ documents, courses, documentRequi
   const [loadingDoc, setLoadingDoc] = useState<string | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
+  const [viewIssue, setViewIssue] = useState<{
+    docId: string;
+    message: string;
+    url?: string;
+  } | null>(null);
+
   const handleViewDocument = async (doc: Document) => {
     setLoadingDoc(doc.id);
-    
-    try {
+    setViewIssue(null);
+
+    const result = await openSignedDocument(async () => {
       const response = await fetch("/api/admin/document-view", {
         method: "POST",
         headers: {
@@ -63,18 +71,39 @@ export default function DocumentRequirements({ documents, courses, documentRequi
       });
 
       if (!response.ok) {
-        throw new Error("Failed to get document URL");
+        throw new Error("Failed to get document URL. Please try again.");
       }
 
       const { signedUrl } = await response.json();
-      window.open(signedUrl, "_blank");
-    } catch (error) {
-      console.error("Error viewing document:", error);
-      alert("Failed to open document. Please try again.");
-    } finally {
-      setLoadingDoc(null);
+      return signedUrl;
+    });
+
+    if (!result.ok) {
+      console.error("Error viewing document:", result.message);
+      setViewIssue({ docId: doc.id, message: result.message, url: result.url });
     }
+    setLoadingDoc(null);
   };
+
+  const renderViewIssue = (docId: string, title: string) =>
+    viewIssue?.docId === docId ? (
+      <div className="mt-2 rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 flex items-start gap-1">
+        <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+        <span>
+          {viewIssue.message}{" "}
+          {viewIssue.url && (
+            <a
+              href={viewIssue.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-blue-700 underline"
+            >
+              Open {title}
+            </a>
+          )}
+        </span>
+      </div>
+    ) : null;
 
   const isExpired = (expiryDate: string | null | undefined) => {
     if (!expiryDate) return false;
@@ -334,6 +363,7 @@ export default function DocumentRequirements({ documents, courses, documentRequi
                             </button>
                           )}
                         </div>
+                        {doc && renderViewIssue(doc.id, doc.title)}
                       </div>
                     );
                   })}
@@ -364,7 +394,8 @@ export default function DocumentRequirements({ documents, courses, documentRequi
                 return !isMatched;
               })
               .map(doc => (
-                <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50 rounded border border-gray-200">
+                <div key={doc.id} className="p-3 bg-gray-50 rounded border border-gray-200">
+                  <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileText className="w-4 h-4 text-gray-400" />
                     <div>
@@ -388,6 +419,8 @@ export default function DocumentRequirements({ documents, courses, documentRequi
                       </>
                     )}
                   </button>
+                  </div>
+                  {renderViewIssue(doc.id, doc.title)}
                 </div>
               ))}
           </div>
