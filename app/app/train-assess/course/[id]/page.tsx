@@ -12,6 +12,7 @@ import Link from "next/link";
 import InteractiveRequirements from "./InteractiveRequirements";
 import EquipmentAssessmentView from "@/components/EquipmentAssessmentView";
 import CompleteCourseButton from "./CompleteCourseButton";
+import CompleteModuleButton from "./CompleteModuleButton";
 import CourseDocuments from "./CourseDocuments";
 import QuizReviewSection from "./QuizReviewSection";
 
@@ -727,7 +728,8 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
                           courseId={courseId}
                           moduleId={module.id}
                           traineeId={assignment.user_id}
-                          canEdit={!isCompleted}
+                          canEdit={true}
+                          moduleCompleted={isCompleted}
                           onComplete={async () => {
                             'use server';
                             // Use admin client to bypass RLS for trainers marking trainee progress
@@ -753,9 +755,17 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
 
                     {/* No Requirements Message */}
                     {moduleRequirements.length === 0 && !isCompleted && !module.include_equipment_assessment && (
-                      <div className="p-4 text-center text-muted-foreground">
+                      <div className="p-4 text-center text-muted-foreground space-y-3">
                         <p className="text-sm">No specific requirements configured for this module.</p>
-                        <p className="text-xs mt-1">Use the "Complete Training" button when finished.</p>
+                        <p className="text-xs">
+                          Click "{sessionType === 'training' ? 'Complete Training' : 'Complete Assessment'}" when finished.
+                        </p>
+                        <CompleteModuleButton
+                          moduleId={module.id}
+                          assignmentId={assignmentId}
+                          sessionType={sessionType}
+                          isCompleted={isCompleted}
+                        />
                       </div>
                     )}
                   </div>

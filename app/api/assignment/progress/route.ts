@@ -76,20 +76,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
     }
 
+    // Validate the module belongs to the assignment's course
+    const { data: moduleCheck, error: moduleErr } = await adminClient
+      .from("course_modules")
+      .select("id, type, course_id")
+      .eq("id", moduleId)
+      .eq("course_id", assignmentCheck.course_id)
+      .maybeSingle();
+
+    if (moduleErr || !moduleCheck) {
+      console.log("Assignment progress: Module not found in assignment's course");
+      return NextResponse.json({ error: "Module not found in this course" }, { status: 400 });
+    }
+
     // Check if user is authorized (trainee or trainer/assessor)
     const isTrainee = assignmentCheck.user_id === user.id;
     let isAuthorized = isTrainee;
 
     if (!isTrainee) {
-      // Single query to check trainer/assessor role
+      // Trainers/assessors may only complete onsite modules matching their role
+      const requiredRole =
+        moduleCheck.type === "onsite_training" ? "onsite_trainer" :
+        moduleCheck.type === "onsite_assessment" ? "onsite_assessor" :
+        null;
+
+      if (!requiredRole) {
+        console.log("Assignment progress: Non-trainee cannot complete module type", moduleCheck.type);
+        return NextResponse.json({ error: "Not authorized to complete this module type" }, { status: 403 });
+      }
+
       const { data: trainerRole } = await supabase
         .from("course_assignments")
         .select("role")
         .eq("user_id", user.id)
         .eq("course_id", assignmentCheck.course_id)
-        .in("role", ["onsite_trainer", "onsite_assessor"])
+        .eq("role", requiredRole)
         .limit(1)
-        .single();
+        .maybeSingle();
 
       isAuthorized = Boolean(trainerRole);
     }

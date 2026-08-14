@@ -18,6 +18,7 @@ interface EquipmentAssessmentViewProps {
   moduleId: string;
   traineeId: string;
   canEdit: boolean;
+  moduleCompleted?: boolean;
   onApprove?: () => void;
   onComplete?: () => void;
 }
@@ -27,6 +28,7 @@ export default function EquipmentAssessmentView({
   moduleId,
   traineeId, 
   canEdit,
+  moduleCompleted = false,
   onApprove,
   onComplete 
 }: EquipmentAssessmentViewProps) {
@@ -349,7 +351,7 @@ export default function EquipmentAssessmentView({
       )}
       
       {/* Complete Module Button - shows after equipment is approved */}
-      {assessmentStatus === 'approved' && onComplete && canEdit && (
+      {assessmentStatus === 'approved' && onComplete && canEdit && !moduleCompleted && (
         <div className="bg-white rounded-lg border p-6 mt-4">
           <div className="space-y-3">
             <p className="text-sm text-gray-600">
