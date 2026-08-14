@@ -441,7 +441,7 @@ export default function ExpandableCourseDetails({ courses, authorizations, userI
                                             {requirementUploadPath(response.response_text) ? (
                                               <div className="mt-1">
                                                 <a
-                                                  href={`/api/download-requirement-file?path=${encodeURIComponent(requirementUploadPath(response.response_text))}`}
+                                                  href={`/api/download-requirement-file?path=${encodeURIComponent(requirementUploadPath(response.response_text)!)}`}
                                                   target="_blank"
                                                   rel="noopener noreferrer"
                                                   className="inline-flex items-center gap-1 text-blue-700 hover:underline"

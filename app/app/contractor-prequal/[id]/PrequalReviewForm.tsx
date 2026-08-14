@@ -75,8 +75,8 @@ export default function PrequalReviewForm({ submission, currentUserId }: Prequal
         updateData.reviewed_by = null;
       }
 
-      const { error: updateError } = await supabaseBrowser
-        .from("contractor_prequal_submissions" as any)
+      const { error: updateError } = await (supabaseBrowser as any)
+        .from("contractor_prequal_submissions")
         .update(updateData)
         .eq("id", submission.id);
 

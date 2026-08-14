@@ -412,7 +412,7 @@ export default function ExpandableTrainingRecord({ profile, courses, authorizati
                                         {attempt.questions_with_answers && attempt.questions_with_answers.length > 0 && (
                                           <div className="mt-2 space-y-2 border-t pt-2">
                                             {attempt.questions_with_answers.map((question, qIdx) => {
-                                              const userAnswer = attempt.answers?.[question.id];
+                                              const userAnswer = attempt.answers?.[question.id!];
                                               const selectedOption = question.options?.find(opt => opt.id === userAnswer);
                                               const correctOption = question.options?.find(opt => opt.is_correct);
                                               const isCorrect = selectedOption?.is_correct;

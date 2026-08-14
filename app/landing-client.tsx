@@ -23,7 +23,7 @@ export default function LandingClient() {
     }
   };
 
-  const handleEmailLogin = async (e) => {
+  const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
@@ -44,7 +44,7 @@ export default function LandingClient() {
         window.location.href = "/app";
       }
     } catch (err) {
-      setError(err.message || "Invalid email or password");
+      setError((err as any).message || "Invalid email or password");
       setIsLoading(false);
     }
   };

@@ -244,7 +244,7 @@ async function claimEventKey(eventKey: string): Promise<boolean> {
     const { supabaseAdmin } = await import("@/lib/supabase/admin");
     const { error } = await supabaseAdmin()
       .from("webhook_post_dedupe")
-      .insert({ event_key: eventKey });
+      .insert({ event_key: eventKey } as any);
     if (error) {
       // 23505 = already claimed → duplicate post, skip
       if ((error as any).code === "23505") return false;

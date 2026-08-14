@@ -63,7 +63,7 @@ export default function RegisterPage() {
             microsoft_id: null, // External users don't have Microsoft ID
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
-          });
+          } as any);
 
         if (profileError) {
           console.error('Error creating profile:', profileError);
@@ -78,7 +78,7 @@ export default function RegisterPage() {
             user_id: authData.user.id,
             role_name: initialRole,
             created_at: new Date().toISOString()
-          });
+          } as any);
 
         if (roleError) {
           console.error('Error assigning role:', roleError);
