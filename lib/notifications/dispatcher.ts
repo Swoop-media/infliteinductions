@@ -62,6 +62,7 @@ export type NotificationType =
   | "form_resubmitted"
   | "authorisation_approved_responsible"
   | "document_replaced_review_required"
+  | "video_compression_failed"
   | string;
 
 function formatTeamsText(
@@ -481,6 +482,20 @@ function formatTeamsText(
       ]
         .filter(Boolean)
         .join("\n\n");
+
+    case "video_compression_failed": {
+      const fileName = payload?.storage_path
+        ? String(payload.storage_path).split("/").pop()
+        : "";
+      return [
+        "⚠️ Your video couldn't be optimized",
+        fileName ? `• File: ${fileName}` : "",
+        payload?.body ? payload.body : "",
+        payload?.reason ? `• Reason: ${payload.reason}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+    }
 
     default:
       return `🔔 ${title}`;

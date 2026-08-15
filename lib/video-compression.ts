@@ -55,6 +55,7 @@ export async function enqueueVideoCompression(opts: {
   blockId?: string | null;
   moduleId?: string | null;
   originalBytes?: number | null;
+  uploadedBy?: string | null;
 }): Promise<boolean> {
   try {
     const admin = createSupabaseService();
@@ -68,13 +69,24 @@ export async function enqueueVideoCompression(opts: {
     if (existingErr) throw existingErr;
     if (existing?.length) return false;
 
-    const { error } = await admin.from("video_compression_jobs").insert({
+    const baseRow = {
       storage_path: opts.storagePath,
       block_id: opts.blockId ?? null,
       module_id: opts.moduleId ?? null,
       original_bytes: opts.originalBytes ?? null,
       status: "queued",
-    });
+    };
+    let { error } = await admin
+      .from("video_compression_jobs")
+      .insert({ ...baseRow, uploaded_by: opts.uploadedBy ?? null });
+    if (error && (error.code === "PGRST204" || error.code === "42703")) {
+      // uploaded_by column missing (migration 030 not applied yet) — queue the
+      // job anyway; the uploader notification is skipped for such jobs.
+      console.warn(
+        "[video-compress] uploaded_by column missing (apply migration 030); queuing without it"
+      );
+      ({ error } = await admin.from("video_compression_jobs").insert(baseRow));
+    }
     if (error) throw error;
     console.log(`[video-compress] queued ${opts.storagePath} (${opts.originalBytes ? (opts.originalBytes / 1e6).toFixed(0) + " MB" : "size unknown"})`);
     return true;
@@ -146,14 +158,18 @@ export async function processVideoCompressionQueue(): Promise<{
         await processJob(admin, job);
       } catch (e: any) {
         console.error(`[video-compress] job ${job.id} (${job.storage_path}) failed:`, e?.message || e);
+        const exhausted = (job.attempts ?? 0) + 1 >= MAX_ATTEMPTS;
         await admin
           .from("video_compression_jobs")
           .update({
-            status: (job.attempts ?? 0) + 1 >= MAX_ATTEMPTS ? "failed" : "queued",
+            status: exhausted ? "failed" : "queued",
             error: String(e?.message || e).slice(0, 500),
             finished_at: new Date().toISOString(),
           })
           .eq("id", job.id);
+        if (exhausted) {
+          await notifyUploaderOfFailure(admin, job, String(e?.message || e));
+        }
       }
       processed++;
     }
@@ -169,7 +185,7 @@ async function requeueStalledJobs(admin): Promise<void> {
     const cutoff = new Date(Date.now() - STALL_REQUEUE_MS).toISOString();
     const { data: stalled } = await admin
       .from("video_compression_jobs")
-      .select("id, attempts, storage_path")
+      .select("id, attempts, storage_path, uploaded_by, module_id, block_id")
       .eq("status", "processing")
       .lt("started_at", cutoff);
     for (const job of stalled ?? []) {
@@ -184,9 +200,55 @@ async function requeueStalledJobs(admin): Promise<void> {
           error: exhausted ? "stalled in processing (VM restart?) after max attempts" : null,
         })
         .eq("id", job.id);
+      if (exhausted) {
+        await notifyUploaderOfFailure(admin, job, "the optimization job stalled repeatedly");
+      }
     }
   } catch (e: any) {
     console.error("[video-compress] stall sweep failed:", e?.message || e);
+  }
+}
+
+/**
+ * In-app notification (+ best-effort Teams DM) to the uploader when a
+ * compression job exhausts its attempts. Never throws — failure bookkeeping
+ * must not be interrupted by notification plumbing. Requires the
+ * 'video_compression_failed' notif_type enum value (migration 030); if the
+ * migration hasn't been applied the insert fails and is logged by the
+ * dispatcher without crashing the worker.
+ */
+async function notifyUploaderOfFailure(admin, job, reason: string): Promise<void> {
+  try {
+    if (!job?.uploaded_by) {
+      console.warn(
+        `[video-compress] job ${job?.id} failed but has no uploaded_by; skipping uploader notification`
+      );
+      return;
+    }
+    const { notifyUser } = await import("@/lib/notifications/dispatcher");
+    const fileName = String(job.storage_path || "").split("/").pop() || job.storage_path;
+    await notifyUser(
+      job.uploaded_by,
+      "video_compression_failed",
+      {
+        title: "⚠️ Your video couldn't be optimized",
+        body:
+          `We couldn't optimize the video you uploaded (${fileName}). ` +
+          `The original file is still in place and playable, but it wasn't compressed. ` +
+          `You may want to re-upload a smaller or re-encoded version.`,
+        storage_path: job.storage_path,
+        module_id: job.module_id ?? null,
+        block_id: job.block_id ?? null,
+        reason: String(reason).slice(0, 300),
+        event_id: `video_compression_failed:${job.id}`,
+      }
+    );
+    console.log(`[video-compress] notified uploader ${job.uploaded_by} of failed job ${job.id}`);
+  } catch (e: any) {
+    console.error(
+      `[video-compress] uploader notification failed for job ${job?.id}:`,
+      e?.message || e
+    );
   }
 }
 

@@ -253,6 +253,7 @@ export async function POST(request: NextRequest) {
           blockId,
           moduleId,
           originalBytes: actualSize,
+          uploadedBy: user.id,
         });
         if (compressionQueued) kickVideoCompressionWorker();
       }
