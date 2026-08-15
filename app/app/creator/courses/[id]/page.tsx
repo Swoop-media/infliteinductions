@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import ResitNotificationMenu from "./_components/ResitNotificationMenu";
+import MetadataSuggestions from "./_components/MetadataSuggestions";
+import { buildCourseCorpus, loadStoredSuggestion } from "@/lib/course-suggestions";
 import SafefliteRiskPicker from "./SafefliteRiskPicker";
 import { toAbsoluteUrl } from "@/lib/utils/url";
 import { logContentAudit, logModuleContentAudit, diffChanges } from "@/lib/audit";
@@ -911,7 +913,13 @@ export default async function CourseEditorPage(props: {
 
   const loadDetailsData = async () => {
     if (activeTab !== "details") {
-      return { sites: [] as { id: string; name: string }[], safefliteRisks: [] as SafefliteRisk[], peerReviews: [] as any[] };
+      return {
+        sites: [] as { id: string; name: string }[],
+        safefliteRisks: [] as SafefliteRisk[],
+        peerReviews: [] as any[],
+        storedSuggestion: null as any,
+        suggestionContentChanged: false,
+      };
     }
     const supabaseForSites = await createSupabaseServer();
 
@@ -942,12 +950,35 @@ export default async function CourseEditorPage(props: {
       }
     };
 
-    const [sitesResult, safefliteRisks, peerReviews] = await Promise.all([
+    // Last stored metadata suggestion + change detection. Never let this
+    // block or fail the render (table may not exist yet, content may be big).
+    const loadSuggestionState = async () => {
+      try {
+        const stored = await loadStoredSuggestion(courseId);
+        if (!stored) return { storedSuggestion: null, suggestionContentChanged: false };
+        const corpus = await buildCourseCorpus(courseId);
+        return {
+          storedSuggestion: {
+            title: stored.suggested_title,
+            description: stored.suggested_description,
+            tags: Array.isArray(stored.suggested_tags) ? stored.suggested_tags : [],
+            source: stored.source,
+          },
+          suggestionContentChanged: corpus.hash !== stored.content_hash,
+        };
+      } catch (e) {
+        console.warn("Failed to load metadata suggestion state:", e);
+        return { storedSuggestion: null, suggestionContentChanged: false };
+      }
+    };
+
+    const [sitesResult, safefliteRisks, peerReviews, suggestionState] = await Promise.all([
       supabaseForSites.from("sites").select("id, name").eq("active", true).order("name"),
       loadRisks(),
       loadPeerReviews(),
+      loadSuggestionState(),
     ]);
-    return { sites: sitesResult.data || [], safefliteRisks, peerReviews };
+    return { sites: sitesResult.data || [], safefliteRisks, peerReviews, ...suggestionState };
   };
 
   // Phase 1: auth + course existence check (loadCourse redirects if signed out).
@@ -960,7 +991,7 @@ export default async function CourseEditorPage(props: {
           isModuleTab ? loadModules(courseId, activeTab as ModuleType) : Promise.resolve([]),
           loadDetailsData(),
         ])
-      : [[], { sites: [], safefliteRisks: [], peerReviews: [] }];
+      : [[], { sites: [], safefliteRisks: [], peerReviews: [], storedSuggestion: null, suggestionContentChanged: false }];
 
   if (err || !course) {
     return (
@@ -972,7 +1003,7 @@ export default async function CourseEditorPage(props: {
     );
   }
 
-  const { sites, safefliteRisks, peerReviews } = detailsData;
+  const { sites, safefliteRisks, peerReviews, storedSuggestion, suggestionContentChanged } = detailsData;
 
   const tabs: { key: TabKey; href: string }[] = [
     { key: "details", href: buildCourseUrl(courseId, "details") },
@@ -1061,6 +1092,8 @@ export default async function CourseEditorPage(props: {
               courseUrlFor={(notice: string) => buildCourseUrl(courseId, "details", notice)}
               sites={sites}
               safefliteRisks={safefliteRisks}
+              storedSuggestion={storedSuggestion}
+              suggestionContentChanged={suggestionContentChanged}
             />
             <PeerReviewsSection reviews={peerReviews} />
           </>
@@ -1179,11 +1212,15 @@ function DetailsTab({
   courseUrlFor,
   sites,
   safefliteRisks,
+  storedSuggestion,
+  suggestionContentChanged,
 }: {
   course: any;
   courseUrlFor: (notice: string) => string;
   sites: { id: string; name: string }[];
   safefliteRisks: SafefliteRisk[];
+  storedSuggestion: { title: string; description: string; tags: string[]; source: "ai" | "extractive" } | null;
+  suggestionContentChanged: boolean;
 }) {
   const title = (course?.title as string) ?? "";
   const description = (course?.description as string) ?? "";
@@ -1203,6 +1240,17 @@ function DetailsTab({
 
   return (
     <div className="space-y-8">
+      {/* Suggested metadata from actual training content (nothing saved
+          until the form below is submitted) */}
+      <MetadataSuggestions
+        courseId={course.id}
+        currentTitle={title}
+        currentDescription={description}
+        currentTagsCsv={tagsCsv}
+        initialSuggestion={storedSuggestion}
+        contentChanged={suggestionContentChanged}
+      />
+
       {/* FORM 1 */}
       <form action={updateCourseDetails} className="space-y-4">
         <input type="hidden" name="course_id" value={course.id} />
