@@ -1,0 +1,21 @@
+Prompt for the training app agent:
+
+Add a "Course Metadata Suggestion Engine" to the Creator area that analyzes a course's actual training content and recommends a course title and description, so the metadata carries maximum linkable detail when the course is exported to our safety-management system (which matches courses to hazards, barriers/controls, and manual sections purely from title + description text).
+
+What it should do:
+
+For a given course, gather all its content: module names and order, every rich-text content block (strip HTML to plain text), file/video/link block names, and quiz/assessment question text if present.
+Analyze that corpus and generate:
+A recommended title (≤ ~80 chars): specific and operational, naming the activity, equipment, and phase — e.g. "Tandem Rig Daily Preflight Inspection — Reserve, AAD & Harness Checks" rather than "Daily preflight Tandem rigs".
+A recommended description (~3–6 sentences or a short paragraph + keyword line) that explicitly includes:
+the equipment and components covered (e.g. harness container, reserve pin, AAD, risers, drogue, cutaway cable, altimeters),
+the hazards/failure modes the training mitigates (wear and tear, defects, incorrect assembly, out-of-date reserve),
+the procedures and checks taught (pre-flight equipment inspection, buddy checks, sign-in/serviceability, defect reporting to DZSO/Parachute Maintenance Controller),
+any manual/regulation section numbers quoted in the content (e.g. "2.3 Pre-Flight Equipment Inspections Prior to Operations"),
+who it applies to (role/department) and recurrence (daily, before-jump, refresher).
+A suggested tags list using the same vocabulary.
+Surface this in the course Details tab as a "Suggest title & description" action showing the recommendations side-by-side with current values, with one-click "Apply" per field (editable before saving). Never overwrite automatically — creator always approves.
+Re-offer refreshed suggestions when course content has changed materially since the last suggestion (e.g. flag "content changed since description was written").
+Prefer concrete nouns from the actual content over paraphrase — downstream matching is keyword/stem-based, so exact terminology (equipment names, hazard words, manual section titles) matters more than polished prose. Avoid filler like "This course will teach you…".
+If the app has an AI provider available, use it for generation; otherwise fall back to an extractive approach (headings, bolded terms, bullet-list nouns, section numbers) — the output contract is the same either way.
+Out of scope: changing the export/sync payload shape; auto-publishing; editing module content.
