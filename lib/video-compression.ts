@@ -46,9 +46,20 @@ const MAX_JOBS_PER_RUN = 5;
 let workerBusy = false;
 
 /**
- * Queue a compression job for an oversized module video. Never throws —
- * uploads must not be blocked by compression bookkeeping. Returns true when
- * a job was queued.
+ * Queue a compression job for a module video. Never throws — uploads must not
+ * be blocked by compression bookkeeping. Returns true when a job was queued.
+ *
+ * reason:
+ *   'compression'     (default) — size-reduction encode for oversized uploads
+ *   'format_fix_h264' — H.264-in-Matroska: fast remux (-c:v copy -c:a aac) then
+ *                        store as .mp4 — safe because H.264 plays in every browser
+ *   'format_fix_hevc' — HEVC-in-Matroska: must full-re-encode video to H.264 (HEVC
+ *                        in MP4 is valid but still unplayable on most browsers)
+ *   'format_fix_pcm'  — PCM audio in Matroska: full re-encode audio to AAC
+ *
+ * All format_fix_* reasons:
+ *   - are queued regardless of file size
+ *   - skip the "output not smaller" bail-out (goal is playability, not size)
  */
 export async function enqueueVideoCompression(opts: {
   storagePath: string;
@@ -56,6 +67,7 @@ export async function enqueueVideoCompression(opts: {
   moduleId?: string | null;
   originalBytes?: number | null;
   uploadedBy?: string | null;
+  reason?: 'compression' | 'format_fix_h264' | 'format_fix_hevc' | 'format_fix_pcm';
 }): Promise<boolean> {
   try {
     const admin = createSupabaseService();
@@ -69,6 +81,7 @@ export async function enqueueVideoCompression(opts: {
     if (existingErr) throw existingErr;
     if (existing?.length) return false;
 
+    const reason = opts.reason ?? "compression";
     const baseRow = {
       storage_path: opts.storagePath,
       block_id: opts.blockId ?? null,
@@ -76,19 +89,33 @@ export async function enqueueVideoCompression(opts: {
       original_bytes: opts.originalBytes ?? null,
       status: "queued",
     };
+    // Try inserting with both new columns; gracefully degrade when migrations
+    // 030 (uploaded_by) or 031 (reason) haven't been applied yet.
     let { error } = await admin
       .from("video_compression_jobs")
-      .insert({ ...baseRow, uploaded_by: opts.uploadedBy ?? null });
+      .insert({ ...baseRow, uploaded_by: opts.uploadedBy ?? null, reason });
     if (error && (error.code === "PGRST204" || error.code === "42703")) {
-      // uploaded_by column missing (migration 030 not applied yet) — queue the
-      // job anyway; the uploader notification is skipped for such jobs.
+      // One or more columns missing — fall back progressively.
+      console.warn(
+        "[video-compress] one or more new columns missing (apply migrations 030/031); queuing with fallback"
+      );
+      // Try without 'reason' column (migration 031 not yet applied).
+      ({ error } = await admin
+        .from("video_compression_jobs")
+        .insert({ ...baseRow, uploaded_by: opts.uploadedBy ?? null }));
+    }
+    if (error && (error.code === "PGRST204" || error.code === "42703")) {
+      // Still failing — uploaded_by also missing (migration 030 not applied).
       console.warn(
         "[video-compress] uploaded_by column missing (apply migration 030); queuing without it"
       );
       ({ error } = await admin.from("video_compression_jobs").insert(baseRow));
     }
     if (error) throw error;
-    console.log(`[video-compress] queued ${opts.storagePath} (${opts.originalBytes ? (opts.originalBytes / 1e6).toFixed(0) + " MB" : "size unknown"})`);
+    console.log(
+      `[video-compress] queued ${opts.storagePath} reason=${reason}` +
+        (opts.originalBytes ? ` (${(opts.originalBytes / 1e6).toFixed(0)} MB)` : "")
+    );
     return true;
   } catch (e: any) {
     // PGRST205 = table missing (migration not applied yet) — degrade gracefully.
@@ -281,6 +308,18 @@ async function processJob(admin, job): Promise<void> {
     throw new Error(`refusing job: storage_path not a module-videos upload for its module (${path})`);
   }
   const ext = (path.split(".").pop() || "").toLowerCase();
+  // isFormatFix: true for any format_fix_* reason, OR when migration 031 hasn't
+  // been applied yet (reason is null) and the source is .webm — historically
+  // .webm files were rejected, never queued as compression, so a null-reason
+  // .webm job must have been enqueued by the format-fix path.
+  const isFormatFix =
+    (job.reason != null && String(job.reason).startsWith("format_fix")) ||
+    (job.reason == null && ext === "webm");
+  // Only H.264-in-Matroska jobs are safe to stream-copy (remux). HEVC is valid
+  // in an MP4 container but still unplayable on most browsers, so HEVC jobs
+  // must always full-re-encode to H.264. When the reason is null (migration
+  // absent) we don't know the codec — fall back to full re-encode to be safe.
+  const isRemuxable = job.reason === "format_fix_h264";
   const inFile = `/tmp/vc-in-${process.pid}-${job.id}.${ext || "bin"}`;
   const outFile = `/tmp/vc-out-${process.pid}-${job.id}.mp4`;
   cleanupFiles(inFile, outFile);
@@ -302,30 +341,115 @@ async function processJob(admin, job): Promise<void> {
     }
     await pipeline(Readable.fromWeb(res.body), createWriteStream(inFile));
     const originalSize = statSync(inFile).size;
-    console.log(`[video-compress] ${path}: encoding ${(originalSize / 1e6).toFixed(0)} MB...`);
-
-    // 2) Re-encode: 1080p max, H.264 CRF23, AAC, +faststart (proven settings
-    // from scripts/compress-large-videos.mjs). Run under `nice` so a long
-    // encode can't starve request handling on the 1 vCPU VM.
-    await execFileAsync(
-      "nice",
-      [
-        "-n", "15",
-        "ffmpeg",
-        "-y", "-i", inFile,
-        "-vf", "scale='min(1920,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "23",
-        "-c:a", "aac", "-b:a", "128k",
-        "-movflags", "+faststart",
-        outFile,
-      ],
-      { timeout: ENCODE_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 }
+    console.log(
+      `[video-compress] ${path}: ${isFormatFix ? "format-fixing" : "encoding"} ${(originalSize / 1e6).toFixed(0)} MB...`
     );
+
+    // 2) Encode. Strategy depends on job reason:
+    //
+    //   format_fix  — the source is H.264/HEVC-in-Matroska or has PCM audio.
+    //     First try a fast remux (stream-copy the video, re-encode only audio
+    //     to AAC). This is near-instant and lossless for the video stream.
+    //     If the remux fails (e.g. the codec truly needs re-encoding), fall
+    //     back to a full re-encode at the same quality settings as compression.
+    //
+    //   compression — full re-encode to 1080p H.264 CRF23 AAC +faststart
+    //     (proven settings from scripts/compress-large-videos.mjs). Run under
+    //     `nice` so a long encode can't starve request handling on the 1 vCPU VM.
+    if (isRemuxable) {
+      // H.264-in-Matroska: fast remux — stream-copy the video track (lossless,
+      // near-instant) and re-encode only the audio to AAC. H.264 plays in every
+      // browser, so the copied bitstream is safe in an MP4 container.
+      // Fall back to full re-encode if the remux fails for any reason.
+      let remuxOk = false;
+      try {
+        await execFileAsync(
+          "nice",
+          [
+            "-n", "15",
+            "ffmpeg",
+            "-y", "-i", inFile,
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "128k",
+            "-movflags", "+faststart",
+            outFile,
+          ],
+          { timeout: ENCODE_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 }
+        );
+        const remuxSize = statSync(outFile).size;
+        if (remuxSize > 0) {
+          remuxOk = true;
+          console.log(`[video-compress] ${path}: remux succeeded (${(remuxSize / 1e6).toFixed(0)} MB)`);
+        }
+      } catch (remuxErr: any) {
+        console.warn(
+          `[video-compress] ${path}: remux failed (${remuxErr?.message?.slice(0, 120)}), falling back to full re-encode`
+        );
+        cleanupFiles(outFile);
+      }
+
+      if (!remuxOk) {
+        // Remux fallback: full H.264 re-encode.
+        await execFileAsync(
+          "nice",
+          [
+            "-n", "15",
+            "ffmpeg",
+            "-y", "-i", inFile,
+            "-vf", "scale='min(1920,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            "-movflags", "+faststart",
+            outFile,
+          ],
+          { timeout: ENCODE_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 }
+        );
+        console.log(`[video-compress] ${path}: full re-encode fallback done (${(statSync(outFile).size / 1e6).toFixed(0)} MB)`);
+      }
+    } else if (isFormatFix) {
+      // HEVC-in-Matroska, PCM-audio, or unknown .webm (migration-absent):
+      // always full H.264 re-encode. HEVC is valid in an MP4 container but
+      // still unplayable on most browsers, so -c:v copy would silently preserve
+      // the problem. Re-encoding is the only safe path here.
+      await execFileAsync(
+        "nice",
+        [
+          "-n", "15",
+          "ffmpeg",
+          "-y", "-i", inFile,
+          "-vf", "scale='min(1920,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",
+          "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+          "-c:a", "aac", "-b:a", "128k",
+          "-movflags", "+faststart",
+          outFile,
+        ],
+        { timeout: ENCODE_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 }
+      );
+      console.log(`[video-compress] ${path}: format-fix re-encode done (${(statSync(outFile).size / 1e6).toFixed(0)} MB)`);
+    } else {
+      // Standard size-reduction encode.
+      await execFileAsync(
+        "nice",
+        [
+          "-n", "15",
+          "ffmpeg",
+          "-y", "-i", inFile,
+          "-vf", "scale='min(1920,iw)':'min(1080,ih)':force_original_aspect_ratio=decrease:force_divisible_by=2",
+          "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+          "-c:a", "aac", "-b:a", "128k",
+          "-movflags", "+faststart",
+          outFile,
+        ],
+        { timeout: ENCODE_TIMEOUT_MS, maxBuffer: 16 * 1024 * 1024 }
+      );
+    }
 
     const newSize = statSync(outFile).size;
     if (newSize <= 0) throw new Error("empty ffmpeg output");
 
-    if (newSize >= originalSize) {
+    // "Output not smaller" bail-out only applies to size-reduction jobs.
+    // For format_fix the goal is playability, not file size — always proceed.
+    if (!isFormatFix && newSize >= originalSize) {
       console.log(`[video-compress] ${path}: output not smaller (${(newSize / 1e6).toFixed(0)} MB), keeping original`);
       await admin
         .from("video_compression_jobs")

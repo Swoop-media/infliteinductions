@@ -16,10 +16,26 @@ export const runtime = 'nodejs';
  * Extension checks alone are not enough: screen recorders produce ".webm"
  * files containing H.264 (Matroska CodecID "V_MPEG4/ISO/AVC"), and MP4s can
  * carry HEVC — both fail in browsers with "couldn't be played on this device".
- * Returns an error string when the content is known-unplayable, else null.
+ *
+ * Returns:
+ *   null                                         — no problem detected
+ *   { error, formatFix: true, reason }           — unplayable but fixable by
+ *     the transcode pipeline; caller enqueues with the given reason:
+ *       'format_fix_h264' — H.264-in-Matroska: fast remux (-c:v copy) is safe
+ *       'format_fix_hevc' — HEVC-in-Matroska: must full-re-encode to H.264
+ *       'format_fix_pcm'  — PCM audio in Matroska: re-encode audio to AAC
+ *   { error, formatFix: false }                  — not auto-fixable; reject
+ *
  * Inconclusive sniffs are allowed through (never block on uncertainty).
  */
-async function sniffVideoProblems(supabase: any, storagePath: string): Promise<string | null> {
+async function sniffVideoProblems(
+  supabase: any,
+  storagePath: string
+): Promise<{
+  error: string;
+  formatFix: boolean;
+  reason?: 'format_fix_h264' | 'format_fix_hevc' | 'format_fix_pcm';
+} | null> {
   try {
     const { data: signed } = await supabase.storage
       .from('course-files')
@@ -40,11 +56,30 @@ async function sniffVideoProblems(supabase: any, storagePath: string): Promise<s
 
     if (isMatroska) {
       const text = head.toString('latin1');
-      if (text.includes('V_MPEG4/ISO/AVC') || text.includes('V_MPEGH/ISO/HEVC')) {
-        return 'This .webm file actually contains H.264/HEVC video (a common screen-recorder quirk), which browsers cannot play in a WebM container. Please re-export it as an MP4 (H.264) and upload that instead.';
+      // HEVC check must come first — some files declare both CodecIDs.
+      if (text.includes('V_MPEGH/ISO/HEVC')) {
+        // HEVC-in-Matroska — auto-fixable but requires full re-encode (HEVC→H.264).
+        return {
+          error: 'This .webm file actually contains HEVC (H.265) video in a Matroska container (a common screen-recorder quirk). It\'s being queued for automatic conversion — the video will be playable once the conversion finishes.',
+          formatFix: true,
+          reason: 'format_fix_hevc' as const,
+        };
+      }
+      if (text.includes('V_MPEG4/ISO/AVC')) {
+        // H.264-in-Matroska — auto-fixable via fast remux (stream-copy video, re-encode audio).
+        return {
+          error: 'This .webm file actually contains H.264 video in a Matroska container (a common screen-recorder quirk). It\'s being queued for automatic conversion — the video will be playable once the conversion finishes.',
+          formatFix: true,
+          reason: 'format_fix_h264' as const,
+        };
       }
       if (/A_PCM/.test(text)) {
-        return 'This video contains uncompressed PCM audio, which browsers cannot play. Please re-export it as an MP4 (H.264 video + AAC audio) and upload that instead.';
+        // PCM audio in Matroska — auto-fixable via re-encode to AAC.
+        return {
+          error: 'This video contains uncompressed PCM audio in a Matroska container. It\'s being queued for automatic conversion — the video will be playable once the conversion finishes.',
+          formatFix: true,
+          reason: 'format_fix_pcm' as const,
+        };
       }
       return null;
     }
@@ -59,7 +94,10 @@ async function sniffVideoProblems(supabase: any, storagePath: string): Promise<s
       const hasHevc = text.includes('hvc1') || text.includes('hev1');
       const hasH264 = text.includes('avc1') || text.includes('avc3');
       if (hasHevc && !hasH264) {
-        return 'This video uses HEVC (H.265), which many browsers cannot play. Please re-export it as an MP4 with H.264 video and upload that instead. On iPhone: Settings → Camera → Formats → "Most Compatible", or export as H.264 from your editor.';
+        return {
+          error: 'This video uses HEVC (H.265), which many browsers cannot play. Please re-export it as an MP4 with H.264 video and upload that instead. On iPhone: Settings → Camera → Formats → "Most Compatible", or export as H.264 from your editor.',
+          formatFix: false,
+        };
       }
       return null;
     }
@@ -212,13 +250,17 @@ export async function POST(request: NextRequest) {
         }, { status: 413 });
       }
 
-      // Reject content browsers can't play, even when the extension looks fine
-      const sniffError = await sniffVideoProblems(supabase, storagePath);
-      if (sniffError) {
-        // Clean up the unusable upload so it doesn't linger in storage
+      // Detect known-unplayable containers/codecs.
+      // formatFix=true  → fixable by the transcode pipeline; enqueue instead of reject.
+      // formatFix=false → not auto-fixable (e.g. HEVC-in-MP4); delete & reject.
+      const sniffResult = await sniffVideoProblems(supabase, storagePath);
+      if (sniffResult && !sniffResult.formatFix) {
+        // Non-fixable format problem — clean up and reject.
         await supabase.storage.from('course-files').remove([storagePath]).catch(() => {});
-        return NextResponse.json({ error: sniffError }, { status: 400 });
+        return NextResponse.json({ error: sniffResult.error }, { status: 400 });
       }
+      // sniffResult?.formatFix === true → fall through; job will be queued below.
+
       const { data: block, error: blockFetchError } = await supabase
         .from("module_content_blocks")
         .select("data")
@@ -242,18 +284,41 @@ export async function POST(request: NextRequest) {
 
       revalidatePath(`/app/creator/modules/${moduleId}`);
 
-      // Oversized (but under-cap) videos: queue a background re-encode to
-      // 1080p H.264 CRF23 +faststart, replaced at the same storage path.
+      // Queue a background job when needed.  Two cases:
+      //
+      // 1. format_fix: mislabelled .webm (H.264/HEVC or PCM audio in Matroska)
+      //    — queue regardless of size; worker remuxes/re-encodes to a playable
+      //    .mp4 and renames the storage path.
+      //
+      // 2. compression: oversized (>100 MB) but otherwise fine video — queue
+      //    for size reduction.  Not queued when a format_fix job was already
+      //    enqueued for the same file.
+      //
       // Non-blocking: enqueue never throws and the worker runs after the
       // response is sent.
       let compressionQueued = false;
-      if (actualSize !== null && actualSize > COMPRESSION_THRESHOLD_BYTES) {
+      if (sniffResult?.formatFix) {
+        // Format-fix job — enqueue unconditionally (size doesn't matter).
+        // Pass the specific reason so the worker knows which encode strategy
+        // to use (remux for H.264, full re-encode for HEVC/PCM).
         compressionQueued = await enqueueVideoCompression({
           storagePath,
           blockId,
           moduleId,
           originalBytes: actualSize,
           uploadedBy: user.id,
+          reason: sniffResult.reason ?? 'format_fix_h264',
+        });
+        if (compressionQueued) kickVideoCompressionWorker();
+      } else if (actualSize !== null && actualSize > COMPRESSION_THRESHOLD_BYTES) {
+        // Size-reduction job.
+        compressionQueued = await enqueueVideoCompression({
+          storagePath,
+          blockId,
+          moduleId,
+          originalBytes: actualSize,
+          uploadedBy: user.id,
+          reason: 'compression',
         });
         if (compressionQueued) kickVideoCompressionWorker();
       }
