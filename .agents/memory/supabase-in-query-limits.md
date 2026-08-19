@@ -8,3 +8,5 @@ Supabase (PostgREST) queries send `.in()` filters in the request URL. With unbou
 **Why:** The admin Course Progress tab crashed in production once in-progress assignments grew large enough; dev worked fine with less data.
 
 **How to apply:** Any query using `.in(column, ids)` on an unbounded list must chunk the IDs (~150 per request) and merge results — see `fetchInChunks` in `app/app/admin/page.tsx`. Watch for other unbounded `.in()` usages when data volumes grow.
+
+**Also:** Supabase silently caps results at 1000 rows per request with NO error. Any "does row X exist" check built from a bulk select must paginate with `.range()` until a short page, or the truncated set misreports rows as missing (a backfill sweep once vastly over-reported missing assignments this way). Note `upsert(..., { ignoreDuplicates: true })` masks this — it returns success while inserting nothing.

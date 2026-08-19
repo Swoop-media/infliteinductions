@@ -39,6 +39,21 @@ function chunk<T>(arr: T[], size = 200): T[][] {
   return out;
 }
 
+// Supabase (PostgREST) silently caps results at 1000 rows per request with no
+// error. Any potentially-large select must page with .range() (deterministic
+// ordering) until a short page, or the result set silently truncates.
+const PAGE_SIZE = 1000;
+async function fetchAllRows(makeQuery: () => any): Promise<any[]> {
+  const out: any[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await makeQuery().range(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    out.push(...(data || []));
+    if ((data || []).length < PAGE_SIZE) break;
+  }
+  return out;
+}
+
 export type AutoFixDetail = {
   assignmentId: string;
   userId: string;
@@ -266,6 +281,206 @@ export async function autoFixAuthorisationAssignments(options: {
   }
 }
 
+export type BackfillDetail = {
+  authorisationId: string;
+  authorisationTitle?: string;
+  courseId: string;
+  courseTitle?: string;
+  userId: string;
+  userName?: string;
+};
+
+export type BackfillResult = {
+  checked: number; // active trainee authorisation assignments evaluated
+  inserted: BackfillDetail[];
+  errors: string[];
+};
+
+/**
+ * Safety-net backfill: for every active (assigned/in_progress/pending_approval,
+ * non-archived) trainee authorisation assignment, ensure a trainee
+ * course_assignments row exists for every linked *published* course.
+ * Courses added to an authorisation after trainees were assigned historically
+ * got no assignment rows, leaving learners at a silent dead end.
+ * created_by is NOT NULL, so backfilled rows fall back to the trainee's own id.
+ * Unique key is (course_id,user_id,role) — upsert with ignoreDuplicates.
+ */
+export async function backfillMissingCourseAssignments(): Promise<BackfillResult> {
+  const sb = supabaseAdmin();
+  const result: BackfillResult = { checked: 0, inserted: [], errors: [] };
+
+  try {
+    // 1) Active trainee authorisation assignments (explicit active allowlist —
+    // expired/revoked must stay locked out). Paginated: there can be >1000.
+    const assignments = await fetchAllRows(() =>
+      sb
+        .from("authorisation_assignments")
+        .select("id, user_id, authorisation_id")
+        .eq("role", "trainee")
+        .in("assignment_status", ["assigned", "in_progress", "pending_approval"])
+        .order("id")
+    );
+    if (assignments.length === 0) return result;
+
+    // 2) Exclude archived users
+    const allUserIds = [...new Set(assignments.map((a) => a.user_id))];
+    const archivedIds = new Set<string>();
+    for (const ids of chunk(allUserIds, 150)) {
+      const { data: profs, error: pErr } = await sb
+        .from("profiles")
+        .select("id, archived_at")
+        .in("id", ids);
+      if (pErr) {
+        result.errors.push(`Failed to fetch profiles: ${pErr.message}`);
+        return result;
+      }
+      (profs || []).forEach((p) => {
+        if (p.archived_at) archivedIds.add(p.id);
+      });
+    }
+    const active = assignments.filter((a) => !archivedIds.has(a.user_id));
+    result.checked = active.length;
+    if (active.length === 0) return result;
+
+    // 3) Linked courses per authorisation (paginated: 150 authorisations can
+    // link >1000 courses in total)
+    const authIds = [...new Set(active.map((a) => a.authorisation_id))];
+    const authCoursesMap = new Map<string, string[]>();
+    for (const ids of chunk(authIds, 150)) {
+      const acs = await fetchAllRows(() =>
+        sb
+          .from("authorisation_courses")
+          .select("authorisation_id, course_id")
+          .in("authorisation_id", ids)
+          .order("authorisation_id")
+          .order("course_id")
+      );
+      acs.forEach((ac) => {
+        if (!authCoursesMap.has(ac.authorisation_id)) authCoursesMap.set(ac.authorisation_id, []);
+        authCoursesMap.get(ac.authorisation_id).push(ac.course_id);
+      });
+    }
+
+    // 4) Only backfill published courses (assignments to unpublished courses
+    // strand learners).
+    const allCourseIds = [...new Set([...authCoursesMap.values()].flat())];
+    const publishedIds = new Set<string>();
+    const courseTitleMap = new Map<string, string>();
+    for (const ids of chunk(allCourseIds, 150)) {
+      const { data: courses, error: cErr } = await sb
+        .from("courses")
+        .select("id, title, status")
+        .in("id", ids);
+      if (cErr) {
+        result.errors.push(`Failed to fetch courses: ${cErr.message}`);
+        return result;
+      }
+      (courses || []).forEach((c) => {
+        courseTitleMap.set(c.id, c.title);
+        if (c.status === "published") publishedIds.add(c.id);
+      });
+    }
+
+    // 5) Existing trainee course assignments for the users involved
+    const activeUserIds = [...new Set(active.map((a) => a.user_id))];
+    const haveRow = new Set<string>(); // "userId:courseId"
+    const relevantCourseIds = allCourseIds.filter((cid) => publishedIds.has(cid));
+    for (const uids of chunk(activeUserIds, 50)) {
+      for (const cids of chunk(relevantCourseIds, 100)) {
+        // Paginated: a truncated "existing" set here would misreport rows as
+        // missing (ignoreDuplicates would mask it, but the report would lie).
+        const existing = await fetchAllRows(() =>
+          sb
+            .from("course_assignments")
+            .select("id, user_id, course_id")
+            .eq("role", "trainee")
+            .in("user_id", uids)
+            .in("course_id", cids)
+            .order("id")
+        );
+        existing.forEach((r) => haveRow.add(`${r.user_id}:${r.course_id}`));
+      }
+    }
+
+    // 6) Compute and insert missing rows
+    const now = new Date().toISOString();
+    const missing: { userId: string; courseId: string; authorisationId: string }[] = [];
+    const seen = new Set<string>();
+    for (const a of active) {
+      const courseIds = authCoursesMap.get(a.authorisation_id) || [];
+      for (const cid of courseIds) {
+        if (!publishedIds.has(cid)) continue;
+        const key = `${a.user_id}:${cid}`;
+        if (haveRow.has(key) || seen.has(key)) continue;
+        seen.add(key);
+        missing.push({ userId: a.user_id, courseId: cid, authorisationId: a.authorisation_id });
+      }
+    }
+    if (missing.length === 0) return result;
+
+    for (const batch of chunk(missing, 200)) {
+      const rows = batch.map((m) => ({
+        user_id: m.userId,
+        course_id: m.courseId,
+        role: "trainee",
+        assignment_status: "assigned",
+        // created_by is NOT NULL; no acting user in a sweep, so use the
+        // trainee's own id (same fallback as the creator-page backfill).
+        created_by: m.userId,
+        assigned_by: null,
+        assigned_at: now,
+        created_at: now,
+      }));
+      const { error: insErr } = await sb
+        .from("course_assignments")
+        .upsert(rows, { onConflict: "course_id,user_id,role", ignoreDuplicates: true });
+      if (insErr) {
+        result.errors.push(`Backfill insert failed: ${insErr.message}`);
+        continue;
+      }
+      batch.forEach((m) =>
+        result.inserted.push({
+          authorisationId: m.authorisationId,
+          courseId: m.courseId,
+          courseTitle: courseTitleMap.get(m.courseId),
+          userId: m.userId,
+        })
+      );
+    }
+
+    // 7) Enrich with user names and authorisation titles
+    if (result.inserted.length > 0) {
+      const insUserIds = [...new Set(result.inserted.map((i) => i.userId))];
+      const insAuthIds = [...new Set(result.inserted.map((i) => i.authorisationId))];
+      const profileMap = new Map();
+      for (const ids of chunk(insUserIds, 150)) {
+        const { data: profs } = await sb.from("profiles").select("id, full_name, email").in("id", ids);
+        (profs || []).forEach((p) => profileMap.set(p.id, p));
+      }
+      const authMap = new Map();
+      for (const ids of chunk(insAuthIds, 150)) {
+        const { data: auths } = await sb.from("authorisations").select("id, title").in("id", ids);
+        (auths || []).forEach((a) => authMap.set(a.id, a));
+      }
+      result.inserted = result.inserted.map((i) => ({
+        ...i,
+        userName:
+          profileMap.get(i.userId)?.full_name || profileMap.get(i.userId)?.email || "Unknown",
+        authorisationTitle: authMap.get(i.authorisationId)?.title || "Unknown",
+      }));
+    }
+
+    console.log(
+      `[auto-fix] backfill checked=${result.checked} inserted=${result.inserted.length} errors=${result.errors.length}`
+    );
+    return result;
+  } catch (e: any) {
+    console.error("[auto-fix] Backfill unexpected error:", e);
+    result.errors.push(e?.message || "Unexpected error");
+    return result;
+  }
+}
+
 /** Look up non-archived user ids holding any of the given role names. */
 async function getRoleUserIds(sb, roleNames: string[]): Promise<string[]> {
   const { data: roles } = await sb.from("roles").select("id, name").in("name", roleNames);
@@ -293,9 +508,18 @@ async function getRoleUserIds(sb, roleNames: string[]): Promise<string[]> {
  */
 export async function runAuthorizationAutoFixSweep(options: {
   notifyAdmins?: boolean;
-} = {}): Promise<AutoFixResult> {
+} = {}): Promise<AutoFixResult & { backfill?: BackfillResult }> {
   const { notifyAdmins = true } = options;
-  const result = await autoFixAuthorisationAssignments({ trigger: "sweep" });
+
+  // First, backfill any missing trainee course_assignments rows for courses
+  // linked to authorisations (courses added after trainees were assigned
+  // historically got no rows — a silent learner dead end). Runs first so the
+  // status fix below evaluates against the complete set of assignments.
+  const backfill = await backfillMissingCourseAssignments();
+
+  const result: AutoFixResult & { backfill?: BackfillResult } =
+    await autoFixAuthorisationAssignments({ trigger: "sweep" });
+  result.backfill = backfill;
 
   if (notifyAdmins && result.fixed.length > 0) {
     try {

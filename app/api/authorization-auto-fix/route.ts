@@ -51,16 +51,21 @@ export async function POST(request: NextRequest) {
     const result = await runAuthorizationAutoFixSweep();
 
     return NextResponse.json({
-      success: result.errors.length === 0,
+      success: result.errors.length === 0 && (result.backfill?.errors.length ?? 0) === 0,
       message: `Auto-fix sweep complete: ${result.fixed.length} of ${result.checked} authorisation assignments corrected`,
       summary: {
         checked: result.checked,
         fixed: result.fixed.length,
         toPendingApproval: result.fixed.filter((f) => f.toStatus === "pending_approval").length,
         toInProgress: result.fixed.filter((f) => f.toStatus === "in_progress").length,
+        backfilledCourseAssignments: result.backfill?.inserted.length ?? 0,
       },
       fixes: result.fixed,
-      errors: result.errors.length > 0 ? result.errors : undefined,
+      backfill: result.backfill,
+      errors:
+        result.errors.length > 0 || (result.backfill?.errors.length ?? 0) > 0
+          ? [...result.errors, ...(result.backfill?.errors ?? [])]
+          : undefined,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
