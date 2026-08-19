@@ -8,6 +8,9 @@ interface VideoUploadFieldProps {
   moduleId: string;
   blockId: string;
   currentUrl?: string;
+  // True when the block's URL is being held back while a format-fix
+  // conversion runs (data.pending_format_fix set by /api/upload-complete).
+  pendingFormatFix?: boolean;
 }
 
 // Hard cap: raw/uncompressed uploads (seen up to 1.7GB) load extremely
@@ -15,7 +18,7 @@ interface VideoUploadFieldProps {
 const MAX_SIZE = 300 * 1024 * 1024; // 300MB
 const WARN_SIZE = 100 * 1024 * 1024; // soft warning above 100MB
 
-export default function VideoUploadField({ moduleId, blockId, currentUrl }: VideoUploadFieldProps) {
+export default function VideoUploadField({ moduleId, blockId, currentUrl, pendingFormatFix }: VideoUploadFieldProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +39,7 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
   // mount for uploaded videos so a page reload mid-compression still shows
   // the indicator.
   useEffect(() => {
-    if (!isUploadedVideo && optimizing !== "optimizing") return;
+    if (!isUploadedVideo && !pendingFormatFix && optimizing !== "optimizing") return;
 
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -83,7 +86,7 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
       if (timer) clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [blockId, isUploadedVideo, optimizing === "optimizing"]);
+  }, [blockId, isUploadedVideo, pendingFormatFix, optimizing === "optimizing"]);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -232,7 +235,9 @@ export default function VideoUploadField({ moduleId, blockId, currentUrl }: Vide
       {optimizing === "optimizing" && !uploading && (
         <p className="mt-2 flex items-center gap-1.5 text-xs text-blue-700">
           <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-blue-300 border-t-blue-700" aria-hidden="true" />
-          Optimizing video… The current file plays right away; a smaller, faster-loading version will replace it automatically in a few minutes.
+          {pendingFormatFix
+            ? "Converting video to a playable format… Learners see a \"video processing\" placeholder until it's ready (usually a few minutes)."
+            : "Optimizing video… The current file plays right away; a smaller, faster-loading version will replace it automatically in a few minutes."}
         </p>
       )}
       {optimizing === "done" && !uploading && (

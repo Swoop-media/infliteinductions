@@ -47,7 +47,16 @@ let workerBusy = false;
 
 /**
  * Queue a compression job for a module video. Never throws — uploads must not
- * be blocked by compression bookkeeping. Returns true when a job was queued.
+ * be blocked by compression bookkeeping.
+ *
+ * Returns:
+ *   'queued'         — a new job row was inserted
+ *   'already_active' — a queued/processing job already exists for this path
+ *                      (e.g. a retried upload-complete request); callers must
+ *                      treat this as "a job is covering this file", NOT as a
+ *                      failure — rolling back held block state here would
+ *                      expose an unplayable format-fix source to learners
+ *   'failed'         — the job could not be inserted (table missing, etc.)
  *
  * reason:
  *   'compression'     (default) — size-reduction encode for oversized uploads
@@ -68,7 +77,7 @@ export async function enqueueVideoCompression(opts: {
   originalBytes?: number | null;
   uploadedBy?: string | null;
   reason?: 'compression' | 'format_fix_h264' | 'format_fix_hevc' | 'format_fix_pcm';
-}): Promise<boolean> {
+}): Promise<'queued' | 'already_active' | 'failed'> {
   try {
     const admin = createSupabaseService();
     // Skip when an active job already exists for this path.
@@ -79,7 +88,7 @@ export async function enqueueVideoCompression(opts: {
       .in("status", ["queued", "processing"])
       .limit(1);
     if (existingErr) throw existingErr;
-    if (existing?.length) return false;
+    if (existing?.length) return 'already_active';
 
     const reason = opts.reason ?? "compression";
     const baseRow = {
@@ -116,14 +125,14 @@ export async function enqueueVideoCompression(opts: {
       `[video-compress] queued ${opts.storagePath} reason=${reason}` +
         (opts.originalBytes ? ` (${(opts.originalBytes / 1e6).toFixed(0)} MB)` : "")
     );
-    return true;
+    return 'queued';
   } catch (e: any) {
     // PGRST205 = table missing (migration not applied yet) — degrade gracefully.
     console.error(
       `[video-compress] enqueue failed for ${opts.storagePath} (upload unaffected):`,
       e?.message || e
     );
-    return false;
+    return 'failed';
   }
 }
 
@@ -195,6 +204,7 @@ export async function processVideoCompressionQueue(): Promise<{
           })
           .eq("id", job.id);
         if (exhausted) {
+          await clearPendingFormatFix(admin, job);
           await notifyUploaderOfFailure(admin, job, String(e?.message || e));
         }
       }
@@ -228,6 +238,7 @@ async function requeueStalledJobs(admin): Promise<void> {
         })
         .eq("id", job.id);
       if (exhausted) {
+        await clearPendingFormatFix(admin, job);
         await notifyUploaderOfFailure(admin, job, "the optimization job stalled repeatedly");
       }
     }
@@ -276,6 +287,31 @@ async function notifyUploaderOfFailure(admin, job, reason: string): Promise<void
       `[video-compress] uploader notification failed for job ${job?.id}:`,
       e?.message || e
     );
+  }
+}
+
+/**
+ * When a format-fix job permanently fails, the block still carries the
+ * pending_format_fix marker (its URL was held back so learners never saw the
+ * unplayable source). Clear the marker so learner pages stop showing a
+ * "video processing" placeholder — the block then reads as having no video,
+ * and the uploader is separately notified to re-upload. Never throws.
+ */
+async function clearPendingFormatFix(admin, job): Promise<void> {
+  try {
+    if (!job?.block_id) return;
+    const { data: block } = await admin
+      .from("module_content_blocks")
+      .select("data")
+      .eq("id", job.block_id)
+      .maybeSingle();
+    if (block?.data?.pending_format_fix !== job.storage_path) return;
+    const newData = { ...(block.data || {}) };
+    delete newData.pending_format_fix;
+    await admin.from("module_content_blocks").update({ data: newData }).eq("id", job.block_id);
+    console.log(`[video-compress] cleared pending_format_fix marker for failed job ${job.id}`);
+  } catch (e: any) {
+    console.error(`[video-compress] clearing pending marker failed for job ${job?.id}:`, e?.message || e);
   }
 }
 
@@ -473,7 +509,7 @@ async function processJob(admin, job): Promise<void> {
 
     await uploadStream(admin, targetPath, outFile, newSize);
 
-    if (needsPathChange) {
+    if (needsPathChange || isFormatFix) {
       if (job.block_id) {
         const { data: block, error: blockErr } = await admin
           .from("module_content_blocks")
@@ -481,21 +517,29 @@ async function processJob(admin, job): Promise<void> {
           .eq("id", job.block_id)
           .maybeSingle();
         if (blockErr) throw new Error("block fetch after upload: " + blockErr.message);
-        // Only repoint if the block still references the original upload.
+        // Only repoint if the block still references the original upload —
+        // either via its URL (legacy / size-reduction path) or via the
+        // pending_format_fix marker (format-fix uploads keep the URL empty
+        // so learners never see the unplayable source file).
         const currentUrl = block?.data?.url;
-        if (currentUrl === `/app/files/${path}`) {
+        const pendingMatches = block?.data?.pending_format_fix === path;
+        if (currentUrl === `/app/files/${path}` || pendingMatches) {
+          const newData = { ...(block?.data || {}), url: `/app/files/${targetPath}` };
+          delete newData.pending_format_fix;
           const { error: updErr } = await admin
             .from("module_content_blocks")
-            .update({ data: { ...(block?.data || {}), url: `/app/files/${targetPath}` } })
+            .update({ data: newData })
             .eq("id", job.block_id);
           if (updErr) throw new Error("block repoint failed: " + updErr.message);
-          await admin.storage.from(BUCKET).remove([path]).catch?.(() => {});
-        } else {
+          if (needsPathChange) {
+            await admin.storage.from(BUCKET).remove([path]).catch?.(() => {});
+          }
+        } else if (needsPathChange) {
           console.warn(
             `[video-compress] ${path}: block no longer references this file; leaving original in place`
           );
         }
-      } else {
+      } else if (needsPathChange) {
         console.warn(
           `[video-compress] ${path}: webm without block reference; new .mp4 uploaded but original left in place`
         );

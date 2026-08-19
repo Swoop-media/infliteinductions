@@ -144,6 +144,8 @@ export default function ContractorModuleRenderer({
                   courseId={module.course_id}
                   title={data.title || "Course Video"}
                 />
+              ) : data.pending_format_fix ? (
+                <p className="text-gray-600">⏳ This video is being processed and will be available shortly. Please check back in a few minutes.</p>
               ) : (
                 <p className="text-gray-600">Video URL not available</p>
               )}

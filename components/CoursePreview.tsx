@@ -185,6 +185,9 @@ function VideoEmbed({ data, courseId }: { data: any; courseId?: string }) {
   const title: string = data?.title || "Embedded video";
   
   if (!src) {
+    if (data?.pending_format_fix) {
+      return <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-700">⏳ This video is being processed and will be available shortly.</div>;
+    }
     return <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">Video block missing an embed URL.</div>;
   }
 

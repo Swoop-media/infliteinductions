@@ -71,7 +71,12 @@ export async function GET(request: NextRequest) {
         const currentUrl = block?.data?.url ?? "";
         const jobUrl = `/app/files/${job.storage_path}`;
         const jobUrlMp4 = jobUrl.replace(/\.webm$/i, ".mp4");
-        if (currentUrl !== jobUrl && currentUrl !== jobUrlMp4) {
+        // Format-fix uploads hold the block URL back until conversion
+        // finishes, so a failed format-fix job leaves the URL empty (marker
+        // cleared by the worker). An empty URL means no newer file replaced
+        // this one — the job's status is still about the block's video.
+        const pendingMatches = block?.data?.pending_format_fix === job.storage_path;
+        if (currentUrl !== jobUrl && currentUrl !== jobUrlMp4 && !pendingMatches && currentUrl !== "") {
           return NextResponse.json({ status: "none" });
         }
       }

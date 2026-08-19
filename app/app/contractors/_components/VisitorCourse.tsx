@@ -105,6 +105,10 @@ function BlockRenderer({ block }: { block: ContentBlock }) {
         videoUrl={raw}
         title={data?.title || "Course Video"}
       />
+    ) : data?.pending_format_fix ? (
+      <p className="text-sm text-gray-600">
+        ⏳ This video is being processed and will be available shortly.
+      </p>
     ) : null;
   }
 

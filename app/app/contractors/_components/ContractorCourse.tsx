@@ -112,7 +112,16 @@ function BlockRenderer({ block }: { block: ContentBlock }) {
 
   if (kind === "video_embed") {
     const url = String(data?.url ?? "");
-    if (!url) return null;
+    if (!url) {
+      if (data?.pending_format_fix) {
+        return (
+          <p className="text-sm text-gray-600">
+            ⏳ This video is being processed and will be available shortly.
+          </p>
+        );
+      }
+      return null;
+    }
     return (
       <UnifiedVideoPlayer
         videoUrl={url}

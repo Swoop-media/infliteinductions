@@ -120,6 +120,8 @@ async function BlockView({ block }: { block: any }) {
     const raw = String(data.url ?? "");
     return raw ? (
       <UnifiedVideoPlayer videoUrl={raw} title={data.title || "Course Video"} />
+    ) : data.pending_format_fix ? (
+      <p className="text-sm text-gray-600">⏳ This video is being processed and will be available shortly. Please check back in a few minutes.</p>
     ) : (
       <p className="text-sm text-gray-500">No video URL provided.</p>
     );
@@ -1208,8 +1210,8 @@ export default async function LearnerCoursePage(props: {
                         <div key={block.id} className="space-y-4">
                           {block.kind === 'video_embed' && (
                             <div key={block.id} className="mb-6">
-                              {(block.data.url ?? '').includes('.sharepoint.com') ? (
-                                <UnifiedVideoPlayer videoUrl={block.data.url ?? ''} courseId={courseId} title={block.data.title || "Training Video"} />
+                              {!(block.data.url ?? '') && block.data.pending_format_fix ? (
+                                <p className="text-sm text-gray-600">⏳ This video is being processed and will be available shortly. Please check back in a few minutes.</p>
                               ) : (
                                 <UnifiedVideoPlayer videoUrl={block.data.url ?? ''} courseId={courseId} title={block.data.title || "Training Video"} />
                               )}

@@ -723,6 +723,7 @@ export default async function ModuleEditorPage(props: {
                           moduleId={mod.id}
                           blockId={b.id}
                           currentUrl={String(b.data?.url ?? "")}
+                          pendingFormatFix={Boolean(b.data?.pending_format_fix)}
                         />
                       </div>
                     )}

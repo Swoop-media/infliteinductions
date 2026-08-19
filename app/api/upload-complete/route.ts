@@ -271,37 +271,61 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: blockFetchError.message }, { status: 500 });
       }
 
-      const videoUrl = `/app/files/${storagePath}`;
-      const newData = { ...(block?.data || {}), url: videoUrl, display: displayName || 'Uploaded video' };
-      const { error: updateError } = await supabase
-        .from("module_content_blocks")
-        .update({ data: newData })
-        .eq("id", blockId);
-
-      if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 500 });
-      }
-
-      revalidatePath(`/app/creator/modules/${moduleId}`);
-
       // Queue a background job when needed.  Two cases:
       //
       // 1. format_fix: mislabelled .webm (H.264/HEVC or PCM audio in Matroska)
       //    — queue regardless of size; worker remuxes/re-encodes to a playable
-      //    .mp4 and renames the storage path.
+      //    .mp4 and renames the storage path. The source file is UNPLAYABLE in
+      //    browsers, so we must NOT point the block at it: the block URL is
+      //    kept empty (with a pending_format_fix marker) until the worker
+      //    finishes and populates it with the playable .mp4. Learner-facing
+      //    renderers show a "video processing" placeholder off the marker.
       //
       // 2. compression: oversized (>100 MB) but otherwise fine video — queue
-      //    for size reduction.  Not queued when a format_fix job was already
-      //    enqueued for the same file.
+      //    for size reduction. The original is playable, so the block points
+      //    at it immediately.
       //
       // Non-blocking: enqueue never throws and the worker runs after the
       // response is sent.
+      //
+      // ORDERING (race-critical): for format-fix uploads the block row is
+      // written with the held state (url: null + pending_format_fix marker)
+      // BEFORE the job row is inserted. The job only becomes claimable —
+      // by the local kick, the cron endpoint, or any other worker entry
+      // point — once the marker is already committed, so the worker can
+      // never complete a job while the block shows neither URL nor marker.
+      // If the enqueue then fails (e.g. queue table not migrated), we roll
+      // the block back to pointing at the original file so it isn't lost
+      // and no orphaned "processing" placeholder remains.
+      const videoUrl = `/app/files/${storagePath}`;
+      const baseData = { ...(block?.data || {}), display: displayName || 'Uploaded video' };
+      const pointedData = (() => {
+        const d = { ...baseData, url: videoUrl };
+        delete d.pending_format_fix;
+        return d;
+      })();
+      const heldData = { ...baseData, url: null, pending_format_fix: storagePath };
+
       let compressionQueued = false;
+      let holdUrl = false;
+
+      const writeBlock = async (data: any) =>
+        (await supabase.from("module_content_blocks").update({ data }).eq("id", blockId)).error;
+
       if (sniffResult?.formatFix) {
-        // Format-fix job — enqueue unconditionally (size doesn't matter).
-        // Pass the specific reason so the worker knows which encode strategy
-        // to use (remux for H.264, full re-encode for HEVC/PCM).
-        compressionQueued = await enqueueVideoCompression({
+        // 1) Commit the held state first.
+        const heldErr = await writeBlock(heldData);
+        if (heldErr) {
+          return NextResponse.json({ error: heldErr.message }, { status: 500 });
+        }
+        holdUrl = true;
+        // 2) Now make the job claimable. 'already_active' (e.g. a retried
+        // upload-complete request after a lost response — same storagePath,
+        // job from the first request still queued/processing) means the file
+        // IS covered by an active job: keep the hold and re-kick the worker.
+        // Only a genuine 'failed' (no job exists or can be created) rolls
+        // the block back.
+        const enqueueResult = await enqueueVideoCompression({
           storagePath,
           blockId,
           moduleId,
@@ -309,10 +333,35 @@ export async function POST(request: NextRequest) {
           uploadedBy: user.id,
           reason: sniffResult.reason ?? 'format_fix_h264',
         });
-        if (compressionQueued) kickVideoCompressionWorker();
-      } else if (actualSize !== null && actualSize > COMPRESSION_THRESHOLD_BYTES) {
+        compressionQueued = enqueueResult === 'queued' || enqueueResult === 'already_active';
+        if (compressionQueued) {
+          kickVideoCompressionWorker();
+        } else {
+          // Enqueue failed — no worker will ever populate the URL. Roll the
+          // block back to the original file (old behaviour) so the upload
+          // isn't lost behind a permanent "processing" placeholder.
+          const rollbackErr = await writeBlock(pointedData);
+          if (rollbackErr) {
+            console.error(
+              `[upload-complete] format-fix enqueue failed AND rollback failed for ${storagePath}:`,
+              rollbackErr.message
+            );
+            return NextResponse.json({ error: rollbackErr.message }, { status: 500 });
+          }
+          holdUrl = false;
+        }
+      } else {
+        const updateError = await writeBlock(pointedData);
+        if (updateError) {
+          return NextResponse.json({ error: updateError.message }, { status: 500 });
+        }
+      }
+
+      revalidatePath(`/app/creator/modules/${moduleId}`);
+
+      if (!sniffResult?.formatFix && actualSize !== null && actualSize > COMPRESSION_THRESHOLD_BYTES) {
         // Size-reduction job.
-        compressionQueued = await enqueueVideoCompression({
+        const sizeEnqueueResult = await enqueueVideoCompression({
           storagePath,
           blockId,
           moduleId,
@@ -320,14 +369,16 @@ export async function POST(request: NextRequest) {
           uploadedBy: user.id,
           reason: 'compression',
         });
+        compressionQueued = sizeEnqueueResult === 'queued' || sizeEnqueueResult === 'already_active';
         if (compressionQueued) kickVideoCompressionWorker();
       }
 
       return NextResponse.json({
         success: true,
-        url: videoUrl,
+        url: holdUrl ? null : videoUrl,
         path: storagePath,
         compressionQueued,
+        processing: holdUrl,
       });
     }
 
