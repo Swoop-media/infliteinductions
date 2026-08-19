@@ -5,7 +5,11 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
-export default async function LearnHome() {
+export default async function LearnHome(props: {
+  searchParams?: Promise<{ error?: string }>;
+}) {
+  const searchParams = await props.searchParams;
+  const errorParam = searchParams?.error;
   const supabase = await createSupabaseServer();
 
   const {
@@ -62,6 +66,13 @@ export default async function LearnHome() {
 
   return (
     <div className="space-y-6">
+      {errorParam === "not_assigned" && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          ⚠️ You’re not assigned to that course, so it can’t be opened. If it’s
+          part of your training, please contact your trainer or an administrator
+          so they can assign it to you.
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">My Learning & Profile</h1>
         <Link href="/app" className="rounded-md border px-3 py-1 text-sm">

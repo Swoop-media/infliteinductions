@@ -4,6 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 import { logContentAudit, diffChanges } from "@/lib/audit";
 
 /** Tabs */
@@ -292,8 +293,63 @@ async function addCourseAction(form: FormData) {
     const { data: { user } } = await supabase.auth.getUser();
     const [{ data: auth }, { data: course }] = await Promise.all([
       supabase.from("authorisations").select("title").eq("id", authId).maybeSingle(),
-      supabase.from("courses").select("title").eq("id", courseId).maybeSingle(),
+      supabase.from("courses").select("title, status").eq("id", courseId).maybeSingle(),
     ]);
+
+    // Backfill trainee course assignments for learners already working through
+    // this authorisation. Without this, existing trainees have no assignment
+    // row for the newly linked course and hit a dead end when they open it.
+    // Only backfill published courses (assignments to unpublished courses
+    // strand learners); the learner course page self-heals any remaining gaps.
+    if (course?.status === "published") {
+      try {
+        const admin = supabaseAdmin();
+        const { data: activeTrainees } = await admin
+          .from("authorisation_assignments")
+          .select("user_id")
+          .eq("authorisation_id", authId)
+          .eq("role", "trainee")
+          .in("assignment_status", ["assigned", "in_progress", "pending_approval"]);
+        const traineeIds = Array.from(new Set((activeTrainees ?? []).map((t: any) => t.user_id)));
+        if (traineeIds.length > 0) {
+          const { data: existing } = await admin
+            .from("course_assignments")
+            .select("user_id")
+            .eq("course_id", courseId)
+            .eq("role", "trainee")
+            .in("user_id", traineeIds);
+          const haveRow = new Set((existing ?? []).map((r: any) => r.user_id));
+          const now = new Date().toISOString();
+          const rows = traineeIds
+            .filter((uid) => !haveRow.has(uid))
+            .map((uid) => ({
+              user_id: uid,
+              course_id: courseId,
+              role: "trainee",
+              assignment_status: "assigned",
+              // created_by is NOT NULL; fall back to the trainee's own id if
+              // the acting user is somehow unavailable.
+              created_by: user?.id ?? uid,
+              assigned_by: user?.id ?? null,
+              assigned_at: now,
+              created_at: now,
+            }));
+          if (rows.length > 0) {
+            const { error: backfillErr } = await admin
+              .from("course_assignments")
+              .upsert(rows, { onConflict: "course_id,user_id,role", ignoreDuplicates: true });
+            if (backfillErr) {
+              console.error("Backfill of trainee course assignments failed:", backfillErr.message);
+            } else {
+              console.log(`Backfilled ${rows.length} trainee assignment(s) for course ${courseId} in authorisation ${authId}`);
+            }
+          }
+        }
+      } catch (e) {
+        console.error("Backfill of trainee course assignments errored:", e);
+      }
+    }
+
     await logContentAudit({
       entityType: "authorisation",
       entityId: authId,

@@ -771,11 +771,73 @@ export default async function LearnerCoursePage(props: {
   // In preview mode, skip assignment check for course creators
   let assignment = null;
   if (!preview) {
-    if (!userAssignment) {
+    let effectiveAssignment = userAssignment;
+
+    // Self-heal: a learner can legitimately lack a trainee assignment for one
+    // course of an authorisation they're actively working through (e.g. the
+    // course was added to the authorisation after they were assigned). Rather
+    // than silently bouncing them to /app/learn, create the missing assignment
+    // when they hold an active (not completed/revoked) trainee authorisation
+    // assignment that includes this published course.
+    if (!effectiveAssignment && course.status === "published") {
+      const admin = supabaseAdmin();
+      const { data: authsForCourse } = await admin
+        .from("authorisation_courses")
+        .select("authorisation_id")
+        .eq("course_id", courseId);
+      const linkedAuthIds = Array.from(
+        new Set((authsForCourse ?? []).map((r: any) => r.authorisation_id))
+      );
+      if (linkedAuthIds.length > 0) {
+        const { data: myActiveAuth } = await admin
+          .from("authorisation_assignments")
+          .select("id, authorisation_id, assignment_status")
+          .eq("user_id", user.id)
+          .eq("role", "trainee")
+          .in("authorisation_id", linkedAuthIds)
+          .in("assignment_status", ["assigned", "in_progress", "pending_approval"])
+          .limit(1);
+        if ((myActiveAuth ?? []).length > 0) {
+          const { data: created, error: createErr } = await admin
+            .from("course_assignments")
+            .upsert(
+              {
+                user_id: user.id,
+                course_id: courseId,
+                role: "trainee",
+                assignment_status: "assigned",
+                created_by: user.id,
+                assigned_at: new Date().toISOString(),
+                created_at: new Date().toISOString(),
+              },
+              { onConflict: "course_id,user_id,role" }
+            )
+            .select()
+            .single();
+          if (createErr) {
+            console.error("Self-heal: failed to create missing trainee assignment", {
+              courseId,
+              userId: user.id,
+              error: createErr.message,
+            });
+          } else {
+            console.log("Self-heal: created missing trainee assignment", {
+              courseId,
+              userId: user.id,
+              assignmentId: created?.id,
+              authorisationId: myActiveAuth![0].authorisation_id,
+            });
+            effectiveAssignment = created;
+          }
+        }
+      }
+    }
+
+    if (!effectiveAssignment) {
       console.error("No trainee assignment for course", courseId);
       redirect("/app/learn?error=not_assigned");
     }
-    assignment = userAssignment;
+    assignment = effectiveAssignment;
   } else {
     // For preview mode, create a fake assignment object
     assignment = {
