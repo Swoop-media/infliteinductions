@@ -28,5 +28,5 @@
 - [Large storage batch jobs](large-storage-batch-jobs.md) — long re-encode/upload batches: run as console workflow, state outside /tmp, streamed signed-URL uploads, learner-session verify recipe.
 - [Video auto-compression queue](video-auto-compression.md) — >100MB module-video uploads queue a background 1080p CRF23 re-encode; enqueue never blocks uploads; cron endpoint rescues stranded jobs.
 - [Outbound fetch hygiene](outbound-fetch-hygiene.md) — every outbound call needs timeout + body drain; media streams semaphored; formData size-checked at ingress; see rules before adding fetches.
-- [Auth course linking backfill](auth-course-linking-backfill.md) — linking a course to an authorisation must backfill trainee assignments; missing rows were a silent learner dead end.
+- [Course/authorisation assignment direction](auth-course-linking-backfill.md) — authorisations backfill courses; direct course completion never infers an authorisation because links can be ambiguous.
 - [Format-fix URL holdback](format-fix-url-holdback.md) — unplayable format-fix uploads hold the block URL (pending_format_fix marker) until converted; all ~7 video renderers must show the placeholder.
