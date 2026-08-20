@@ -15,82 +15,84 @@ import CompleteCourseButton from "./CompleteCourseButton";
 import CompleteModuleButton from "./CompleteModuleButton";
 import CourseDocuments from "./CourseDocuments";
 import QuizReviewSection from "./QuizReviewSection";
+import { getPinnedCourseContext, findPinnedModule } from "@/lib/course-version";
 
-async function loadQuizReviewData(courseId: string, learnerId: string, reviewerId: string) {
+async function loadQuizReviewData(pinnedContext: any, learnerId: string, reviewerId: string) {
   const supabaseService = supabaseAdmin();
 
-  // Only quizzes explicitly marked reviewable by the creator.
-  // Tolerant: if the reviewable_onsite column doesn't exist yet, show nothing.
-  let quizzes: any[] = [];
-  try {
-    const { data, error } = await supabaseService
-      .from("quizzes")
-      .select("id, module_id, reviewable_onsite")
-      .eq("course_id", courseId)
-      .eq("reviewable_onsite", true);
-    if (error) return [];
-    quizzes = data || [];
-  } catch {
-    return [];
+  // Quiz definitions (which quizzes are reviewable, questions, options, and the
+  // module titles used as labels) come from the trainee's pinned snapshot.
+  // Live quiz_attempts and quiz_onsite_reviews remain the evidence.
+  const moduleTitles: Record<string, string> = {};
+  const quizzes: any[] = [];
+  for (const module of pinnedContext.modules || []) {
+    if (module?.title) moduleTitles[module.id] = module.title;
+    const moduleQuizzes = Array.isArray(module?.quizzes) ? module.quizzes : [];
+    for (const quiz of moduleQuizzes) {
+      // Only quizzes explicitly marked reviewable by the creator at capture time.
+      if (!quiz?.reviewable_onsite) continue;
+      quizzes.push({ ...quiz, module_id: quiz.module_id || module.id });
+    }
   }
   if (quizzes.length === 0) return [];
 
-  // Module titles for quiz labels
-  const quizModuleIds = quizzes.map((q) => q.module_id).filter(Boolean);
-  let moduleTitles: Record<string, string> = {};
-  if (quizModuleIds.length > 0) {
-    const { data: mods } = await supabaseService
-      .from("course_modules")
-      .select("id, title")
-      .in("id", quizModuleIds);
-    for (const m of mods || []) moduleTitles[m.id] = m.title;
-  }
+  // Scope every quiz_attempts query to the trainee's pinned assignment/version/
+  // attempt so evidence from a different attempt (e.g. a v1 retake) can never
+  // surface against this pinned v2 review.
+  const pinnedAssignmentId = pinnedContext.assignment?.id;
+  const pinnedVersionId = pinnedContext.assignment?.course_version_id;
+  const pinnedAttemptNumber = pinnedContext.assignment?.attempt_number ?? null;
 
   const results: any[] = [];
   for (const quiz of quizzes) {
-    // Latest attempt by this learner
-    const { data: attempts } = await supabaseService
+    // Latest attempt by this learner for THIS pinned attempt (live evidence).
+    let attemptsQuery = supabaseService
       .from("quiz_attempts")
       .select("id, score_pct, passed, answers, submitted_at, created_at")
       .eq("quiz_id", quiz.id)
       .eq("user_id", learnerId)
+      .eq("assignment_id", pinnedAssignmentId)
+      .eq("course_version_id", pinnedVersionId);
+    if (pinnedAttemptNumber != null) {
+      attemptsQuery = attemptsQuery.eq("attempt_number", pinnedAttemptNumber);
+    }
+    const { data: attempts } = await attemptsQuery
       .order("created_at", { ascending: false })
       .limit(1);
     const attempt = attempts?.[0] || null;
+    const attemptId = attempt?.id || null;
 
-    // Questions + options
-    const { data: questions } = await supabaseService
-      .from("quiz_questions")
-      .select("id, prompt, stem, order_index")
-      .eq("quiz_id", quiz.id)
-      .order("order_index", { ascending: true })
-      .order("id", { ascending: true });
+    // Questions + options come from the pinned snapshot (definition).
+    const snapshotQuestions = Array.isArray(quiz.questions) ? quiz.questions : [];
+    const questions = [...snapshotQuestions].sort((a, b) => {
+      const ai = a?.order_index ?? 0;
+      const bi = b?.order_index ?? 0;
+      if (ai !== bi) return ai - bi;
+      return String(a?.id || "").localeCompare(String(b?.id || ""));
+    });
 
-    const questionIds = (questions || []).map((q) => q.id);
-    let optionsByQuestion: Record<string, any[]> = {};
-    if (questionIds.length > 0) {
-      const { data: options } = await supabaseService
-        .from("quiz_options")
-        .select("id, question_id, label, is_correct, order_index")
-        .in("question_id", questionIds)
-        .order("order_index", { ascending: true });
-      for (const o of options || []) {
-        if (!optionsByQuestion[o.question_id]) optionsByQuestion[o.question_id] = [];
-        optionsByQuestion[o.question_id].push(o);
-      }
+    const optionsByQuestion: Record<string, any[]> = {};
+    for (const q of questions) {
+      const opts = Array.isArray(q?.options) ? [...q.options] : [];
+      opts.sort((a, b) => (a?.order_index ?? 0) - (b?.order_index ?? 0));
+      optionsByQuestion[q.id] = opts;
     }
 
     const answersMap: Record<string, string> = (attempt?.answers && typeof attempt.answers === "object") ? attempt.answers : {};
 
-    // Existing review comments (tolerant if table doesn't exist yet)
+    // Existing review comments (tolerant if table doesn't exist yet).
+    // Tie comments to the selected attempt_id so a v1 comment can never appear
+    // on a v2 review. When there is no attempt yet, show no comments.
     let reviews: any[] = [];
     let myComment = "";
     try {
+      if (!attemptId) throw new Error("no-attempt");
       const { data: reviewRows, error: revErr } = await supabaseService
         .from("quiz_onsite_reviews")
         .select("reviewer_id, comments, updated_at")
         .eq("quiz_id", quiz.id)
         .eq("learner_id", learnerId)
+        .eq("attempt_id", attemptId)
         .order("updated_at", { ascending: false });
       if (!revErr && reviewRows) {
         const reviewerIds = reviewRows.map((r) => r.reviewer_id);
@@ -156,6 +158,42 @@ async function saveRequirementResponses(moduleId: string, assignmentId: string, 
 
   // Use admin client to bypass RLS when trainers save responses for trainees
   const supabaseService = supabaseAdmin();
+
+  // Resolve the target trainee assignment's pinned snapshot. This both authorises
+  // the write (role check by course below) and validates the posted module and
+  // requirement IDs against the immutable version. Fail closed on any mismatch.
+  const pinnedContext = await getPinnedCourseContext(supabaseService, {
+    assignmentId,
+  });
+
+  // Server-side role check: the caller must be an onsite trainer or assessor for
+  // this trainee assignment's course.
+  const { data: callerRoles } = await supabaseService
+    .from("course_assignments")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("course_id", pinnedContext.assignment.course_id)
+    .in("role", ["onsite_trainer", "onsite_assessor"]);
+  if (!callerRoles || callerRoles.length === 0) {
+    throw new Error("Not authorised");
+  }
+
+  // Validate the posted module exists in the pinned snapshot.
+  const pinnedModule = findPinnedModule(pinnedContext, moduleId);
+  const validRequirementIds = new Set(
+    (Array.isArray(pinnedModule.onsite_requirements) ? pinnedModule.onsite_requirements : []).map(
+      (r: any) => r?.id
+    )
+  );
+
+  // Validate every posted requirement ID against the pinned module definition.
+  for (const requirementId of Object.keys(responses)) {
+    if (!validRequirementIds.has(requirementId)) {
+      throw new Error(
+        "Posted requirement is not part of this assignment's pinned course version"
+      );
+    }
+  }
 
   // Save or update requirement responses
   const responseEntries = Object.entries(responses).map(([requirementId, value]) => ({
@@ -223,31 +261,55 @@ async function saveQuizReviewComment(courseId: string, learnerId: string, quizId
     throw new Error("Learner not available for review");
   }
 
-  // Verify the quiz belongs to this course and is marked reviewable.
-  // Tolerant: if migration 009 hasn't been applied yet, the column/table
-  // won't exist — fail with a clear message instead of a raw DB error.
-  const { data: quiz, error: quizError } = await supabaseService
-    .from("quizzes")
-    .select("id, course_id, reviewable_onsite")
-    .eq("id", quizId)
-    .eq("course_id", courseId)
-    .maybeSingle();
-  if (quizError) {
-    throw new Error("Quiz review is not available yet");
+  // The reviewable-quiz definition comes from the trainee's pinned snapshot for
+  // this course, not the live quizzes table. Fail closed if the target trainee
+  // assignment has no valid pinned version.
+  const pinnedContext = await getPinnedCourseContext(supabaseService, {
+    userId: learnerId,
+    courseId,
+  });
+
+  // Verify the quiz belongs to this trainee's pinned version and was captured as
+  // reviewable at the time the version was published.
+  let pinnedQuiz: any = null;
+  for (const module of pinnedContext.modules || []) {
+    const moduleQuizzes = Array.isArray(module?.quizzes) ? module.quizzes : [];
+    const match = moduleQuizzes.find((q: any) => q?.id === quizId);
+    if (match) {
+      pinnedQuiz = match;
+      break;
+    }
   }
-  if (!quiz || !quiz.reviewable_onsite) {
+  if (!pinnedQuiz) {
+    throw new Error("Quiz is not part of this assignment's pinned course version");
+  }
+  if (!pinnedQuiz.reviewable_onsite) {
     throw new Error("Quiz is not reviewable");
   }
 
-  // Latest attempt (optional link)
-  const { data: attempts } = await supabaseService
+  // Latest attempt for THIS pinned assignment/version/attempt. The comment is
+  // tied to this attempt_id so it stays scoped to the current course version.
+  const pinnedAssignmentId = pinnedContext.assignment?.id;
+  const pinnedVersionId = pinnedContext.assignment?.course_version_id;
+  const pinnedAttemptNumber = pinnedContext.assignment?.attempt_number ?? null;
+
+  let attemptQuery = supabaseService
     .from("quiz_attempts")
     .select("id")
     .eq("quiz_id", quizId)
     .eq("user_id", learnerId)
+    .eq("assignment_id", pinnedAssignmentId)
+    .eq("course_version_id", pinnedVersionId);
+  if (pinnedAttemptNumber != null) {
+    attemptQuery = attemptQuery.eq("attempt_number", pinnedAttemptNumber);
+  }
+  const { data: attempts } = await attemptQuery
     .order("created_at", { ascending: false })
     .limit(1);
 
+  // The unique key is (quiz_id, learner_id, reviewer_id), so a reviewer's row is
+  // reused across attempts. Overwrite attempt_id so the comment is always
+  // re-tied to the current attempt rather than an older version's.
   const { error } = await supabaseService
     .from("quiz_onsite_reviews")
     .upsert({
@@ -313,17 +375,6 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     redirect("/app/train-assess");
   }
 
-  // NOW: Get course info
-  const { data: course, error: courseError } = await supabase
-    .from("courses")
-    .select("title, description")
-    .eq("id", courseId)
-    .single();
-
-  if (!course) {
-    redirect("/app/train-assess");
-  }
-
   // THEN: Get trainee assignment using SERVICE ROLE to bypass RLS
   // Since we already verified the trainer has access to this course
   const supabaseService = supabaseAdmin();
@@ -338,7 +389,31 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   if (!assignment) {
     redirect("/app/train-assess");
   }
-  
+
+  // Load the trainee assignment's pinned course version. All content definitions
+  // (course title/description, module lists, onsite requirements, quiz review
+  // definitions) are read from this immutable snapshot. Fail closed: if the
+  // pinned version is unavailable, do not fall back to live definitions.
+  let pinnedContext: any;
+  try {
+    pinnedContext = await getPinnedCourseContext(supabaseService, {
+      assignmentId: assignment.id,
+    });
+  } catch (error) {
+    console.error(
+      `Pinned course version unavailable for assignment ${assignment.id}`,
+      error
+    );
+    redirect("/app/train-assess");
+  }
+
+  // Course info from the pinned snapshot definition.
+  const pinnedCourse = pinnedContext.course || {};
+  const course = {
+    title: pinnedContext.version?.title || pinnedCourse.title || "Course",
+    description: pinnedContext.version?.description ?? pinnedCourse.description ?? null,
+  };
+
   // Get trainee profile using service role
   const { data: profile } = await supabaseService
     .from("profiles")
@@ -347,38 +422,21 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
     .single();
 
 
-  // Get course modules
+  // Module list for this session comes from the pinned snapshot (not live).
   const moduleType = sessionType === 'training' ? 'onsite_training' : 'onsite_assessment';
-  const { data: modules } = await supabase
-    .from("course_modules")
-    .select("*, include_equipment_assessment")
-    .eq("course_id", courseId)
-    .eq("type", moduleType)
-    .order("order_index");
+  const modules = (pinnedContext.modules || [])
+    .filter((m: any) => m.type === moduleType)
+    .sort((a: any, b: any) => (a?.order_index ?? 0) - (b?.order_index ?? 0));
 
-  // Get onsite requirements for each module
-  const moduleIds = modules?.map(m => m.id) || [];
-  
+  // Onsite requirements come from each pinned module definition.
   let requirementsByModule: Record<string, any[]> = {};
-  if (moduleIds.length > 0) {
-    // Fetch ALL requirements for the modules regardless of role value
-    // This matches how the learner module fetches them
-    // Security is handled by the role check above, not by filtering requirements
-    const { data: requirements } = await supabase
-      .from("onsite_requirements")
-      .select("*")
-      .in("module_id", moduleIds)
-      .order("order_index");
-    
-    // Group requirements by module
-    requirementsByModule = (requirements || []).reduce((acc, req) => {
-      if (!acc[req.module_id]) acc[req.module_id] = [];
-      acc[req.module_id].push(req);
-      return acc;
-    }, {} as Record<string, any[]>);
+  for (const module of modules) {
+    const reqs = Array.isArray(module.onsite_requirements) ? [...module.onsite_requirements] : [];
+    reqs.sort((a: any, b: any) => (a?.order_index ?? 0) - (b?.order_index ?? 0));
+    requirementsByModule[module.id] = reqs;
   }
 
-  // Get trainee's progress
+  // Get trainee's progress (live evidence)
   const { data: progress } = await supabase
     .from("assignment_progress")
     .select("module_id, completed_at")
@@ -386,11 +444,11 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
 
   const completedModuleIds = new Set(progress?.map(p => p.module_id) || []);
 
-  // Quiz review data (only quizzes marked reviewable by the creator).
+  // Quiz review data (only quizzes marked reviewable in the pinned snapshot).
   // Archived learners are excluded, matching the rest of the app.
   const quizReviewData = profile?.archived_at
     ? []
-    : await loadQuizReviewData(courseId, assignment.user_id, user.id);
+    : await loadQuizReviewData(pinnedContext, assignment.user_id, user.id);
 
   const traineeName = profile?.full_name || profile?.email || "Unknown";
   const traineeEmail = profile?.email || "";
@@ -400,7 +458,18 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   const completedModules = modules?.filter(m => completedModuleIds.has(m.id)).length || 0;
   const progressPercentage = totalModules > 0 ? (completedModules / totalModules) * 100 : 0;
 
-  // Check if any pass_fail requirements have "fail" responses
+  // Requirement field types come from the pinned snapshot definition (used to
+  // decide which failed responses gate course completion).
+  const pinnedRequirementFieldType = new Map<string, string>();
+  for (const module of pinnedContext.modules || []) {
+    const reqs = Array.isArray(module.onsite_requirements) ? module.onsite_requirements : [];
+    for (const req of reqs) {
+      if (req?.id) pinnedRequirementFieldType.set(req.id, req.field_type);
+    }
+  }
+
+  // Check if any pass_fail requirements have "fail" responses (live evidence
+  // gated by the pinned requirement definition).
   let hasFailedRequirements = false;
   if (sessionType === 'assessment' && user) {
     const { data: failResponses } = await supabase
@@ -409,17 +478,12 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
       .eq("assignment_id", assignmentId)
       .eq("trainer_id", user.id)
       .eq("response_value", "fail");
-    
+
     if (failResponses && failResponses.length > 0) {
-      // Check if these are actually pass_fail type requirements
-      const failedReqIds = failResponses.map(r => r.requirement_id);
-      const { data: requirements } = await supabase
-        .from("onsite_requirements")
-        .select("id, field_type")
-        .in("id", failedReqIds)
-        .eq("field_type", "pass_fail");
-      
-      hasFailedRequirements = requirements && requirements.length > 0;
+      // Only count fails against requirements the pinned snapshot defines as pass_fail.
+      hasFailedRequirements = failResponses.some(
+        r => pinnedRequirementFieldType.get(r.requirement_id) === "pass_fail"
+      );
     }
   }
 
@@ -438,30 +502,36 @@ export default async function CoursePlayerPage({ params, searchParams }: CourseP
   };
   let trainingNotes: TrainingNoteModule[] = [];
   if (sessionType === 'assessment') {
-    const { data: trainingModules } = await supabase
-      .from("course_modules")
-      .select("id, title, order_index")
-      .eq("course_id", courseId)
-      .eq("type", "onsite_training")
-      .order("order_index");
+    // Training-module titles and their requirement definitions come from the
+    // pinned snapshot; only the responses below remain live evidence.
+    const trainingModules = (pinnedContext.modules || [])
+      .filter((m: any) => m.type === "onsite_training")
+      .sort((a: any, b: any) => (a?.order_index ?? 0) - (b?.order_index ?? 0))
+      .map((m: any) => ({ id: m.id, title: m.title, order_index: m.order_index }));
 
-    const trainingModuleIds = (trainingModules || []).map(m => m.id);
+    const trainingReqs = (pinnedContext.modules || [])
+      .filter((m: any) => m.type === "onsite_training")
+      .flatMap((m: any) =>
+        (Array.isArray(m.onsite_requirements) ? m.onsite_requirements : []).map((r: any) => ({
+          id: r.id,
+          module_id: m.id,
+          label: r.label,
+          field_type: r.field_type,
+          order_index: r.order_index,
+        }))
+      )
+      .sort((a: any, b: any) => (a?.order_index ?? 0) - (b?.order_index ?? 0));
+
+    const trainingModuleIds = trainingModules.map(m => m.id);
     if (trainingModuleIds.length > 0) {
       // Responses may have been entered by a different trainer than the current
       // assessor, so fetch them with the service client (scoped to this trainee's
       // assignment + the course's training modules only).
-      const [{ data: trainingReqs }, { data: trainingResponses }] = await Promise.all([
-        supabase
-          .from("onsite_requirements")
-          .select("id, module_id, label, field_type, order_index")
-          .in("module_id", trainingModuleIds)
-          .order("order_index"),
-        supabaseService
-          .from("requirement_responses")
-          .select("requirement_id, module_id, trainer_id, response_value, updated_at, created_at")
-          .eq("assignment_id", assignmentId)
-          .in("module_id", trainingModuleIds),
-      ]);
+      const { data: trainingResponses } = await supabaseService
+        .from("requirement_responses")
+        .select("requirement_id, module_id, trainer_id, response_value, updated_at, created_at")
+        .eq("assignment_id", assignmentId)
+        .in("module_id", trainingModuleIds);
 
       const trainerIds = Array.from(new Set((trainingResponses || []).map(r => r.trainer_id).filter(Boolean)));
       const trainerNames = new Map<string, string>();

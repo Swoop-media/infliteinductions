@@ -1,15 +1,64 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
+import { getPinnedCourseContext } from '@/lib/course-version';
+import { getCurrentCourseVersion } from '@/lib/training-history';
+
+/**
+ * Resolves a course's title and first-module type from an immutable snapshot.
+ * If the user already has a trainee assignment for the course, its pinned
+ * version snapshot is used. Otherwise the current published course version
+ * snapshot is resolved. Never reads mutable module tables.
+ *
+ * Returns null when no snapshot can be resolved (fail closed — do not suggest).
+ */
+async function resolvePinnedCourseInfo(
+  adminClient: any,
+  userId: string,
+  courseId: string
+): Promise<{ title: string; firstModuleType: string | null } | null> {
+  try {
+    const context = await getPinnedCourseContext(adminClient, {
+      userId,
+      courseId,
+    });
+    const modules = Array.isArray(context.modules) ? context.modules : [];
+    const firstModule = modules[0] as any;
+    return {
+      title: context.course?.title || 'Next Course',
+      firstModuleType: firstModule?.type ?? null,
+    };
+  } catch {
+    // No pinned trainee assignment yet — resolve the current published version.
+  }
+
+  try {
+    const version = await getCurrentCourseVersion(adminClient, courseId);
+    const snapshot = version?.snapshot;
+    if (!snapshot || !snapshot.course || !Array.isArray(snapshot.modules)) {
+      return null;
+    }
+    const firstModule = snapshot.modules[0] as any;
+    return {
+      title: snapshot.course?.title || version?.title || 'Next Course',
+      firstModuleType: firstModule?.type ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: Request) {
   try {
     const supabase = await createSupabaseServer();
-    
+
     // Get current user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       return NextResponse.json({ type: 'none' }, { status: 401 });
     }
+
+    const adminClient = supabaseAdmin();
 
     const { currentCourseId, currentAuthorizationId } = await request.json() as {
       currentCourseId: string;
@@ -44,11 +93,16 @@ export async function POST(request: Request) {
         // If we found the current course and there's a next one, return it
         if (currentCourseIndex !== -1 && currentCourseIndex + 1 < authCourses.length) {
           const nextCourse = authCourses[currentCourseIndex + 1] as any;
-          console.log('Next course found:', nextCourse.courses?.title);
+          const pinnedInfo = await resolvePinnedCourseInfo(
+            adminClient,
+            user.id,
+            nextCourse.course_id
+          );
+          console.log('Next course found:', pinnedInfo?.title);
           return NextResponse.json({
             type: 'course',
             id: nextCourse.course_id,
-            title: nextCourse.courses?.title || 'Next Course'
+            title: pinnedInfo?.title || 'Next Course'
           });
         }
 
@@ -71,10 +125,15 @@ export async function POST(request: Request) {
 
           // If no assignment or assignment is not completed, suggest this course
           if (!courseAssignment || !courseAssignment?.completed_at) {
+            const pinnedInfo = await resolvePinnedCourseInfo(
+              adminClient,
+              user.id,
+              authCourse.course_id
+            );
             return NextResponse.json({
               type: 'course',
               id: authCourse.course_id,
-              title: authCourse.courses?.title || 'Next Course'
+              title: pinnedInfo?.title || 'Next Course'
             });
           }
         }
@@ -131,23 +190,24 @@ export async function POST(request: Request) {
 
         // If no assignment or assignment is not completed, check if it's accessible
         if (!courseAssignment || !courseAssignment?.completed_at) {
-          // Get the first module to check if it's accessible
-          const { data: modules } = await supabase
-            .from('course_modules')
-            .select('id, type')
-            .eq('course_id', (authCourse as any).course_id)
-            .order('order_index', { ascending: true })
-            .limit(1);
+          // Resolve the first module/type decision from the pinned snapshot
+          // (existing assignment) or current published version, never mutable
+          // module tables.
+          const pinnedInfo = await resolvePinnedCourseInfo(
+            adminClient,
+            user.id,
+            (authCourse as any).course_id
+          );
 
           // Only suggest courses that have digital modules the user can work on
-          const firstModule = modules?.[0] as any;
-          if (firstModule && 
-              firstModule?.type !== 'onsite_training' && 
-              firstModule?.type !== 'onsite_assessment') {
+          const firstModuleType = pinnedInfo?.firstModuleType;
+          if (firstModuleType &&
+              firstModuleType !== 'onsite_training' &&
+              firstModuleType !== 'onsite_assessment') {
             return NextResponse.json({
               type: 'course',
               id: (authCourse as any).course_id,
-              title: (authCourse as any).courses?.title || 'Next Course',
+              title: pinnedInfo?.title || 'Next Course',
               authorizationId: (assignment as any).authorisation_id,
               authorizationTitle: (assignment as any).authorisations?.title
             });
@@ -190,23 +250,24 @@ export async function POST(request: Request) {
       // Skip if already completed
       if ((courseAssign as any).completed_at) continue;
 
-      // Get the first module to check if it's accessible
-      const { data: modules } = await supabase
-        .from('course_modules')
-        .select('id, type')
-        .eq('course_id', (courseAssign as any).course_id)
-        .order('order_index', { ascending: true })
-        .limit(1);
+      // Resolve the first module/type decision from the pinned snapshot
+      // (existing assignment) or current published version, never mutable
+      // module tables.
+      const pinnedInfo = await resolvePinnedCourseInfo(
+        adminClient,
+        user.id,
+        (courseAssign as any).course_id
+      );
 
       // Only suggest courses that have digital modules the user can work on
-      const firstModule = modules?.[0] as any;
-      if (firstModule && 
-          firstModule?.type !== 'onsite_training' && 
-          firstModule?.type !== 'onsite_assessment') {
+      const firstModuleType = pinnedInfo?.firstModuleType;
+      if (firstModuleType &&
+          firstModuleType !== 'onsite_training' &&
+          firstModuleType !== 'onsite_assessment') {
         return NextResponse.json({
           type: 'course',
           id: (courseAssign as any).course_id,
-          title: (courseAssign as any).courses?.title || 'Next Course'
+          title: pinnedInfo?.title || 'Next Course'
         });
       }
     }

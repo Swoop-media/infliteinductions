@@ -93,7 +93,7 @@ function noticeMessage(code?: string) {
   switch (code) {
     case "saved": return "Saved.";
     case "status_updated": return "Course status updated.";
-    case "version_published": return "New course version published. Existing learners have been assigned the new version; their prior completions remain in training history.";
+    case "version_published": return "New course version published. Existing learners and their current records were not changed; the latest version will be used when a new retake begins.";
     case "module_created": return "Module created.";
     case "module_deleted": return "Module deleted.";
     case "module_renamed": return "Module renamed.";
@@ -556,7 +556,7 @@ async function publishNewVersionAction(formData: FormData) {
   const confirmed = formData.get("confirm_release") === "yes";
   const changeNotes = String(formData.get("change_notes") || "").trim() || null;
   if (!courseId) throw new Error("Missing course_id");
-  if (!confirmed) throw new Error("Confirm that this release requires every assigned learner to start the new version.");
+  if (!confirmed) throw new Error("Confirm that this release saves a new version without changing existing learners.");
 
   const canPublish =
     (await hasRole("Course Creators")) ||
@@ -587,7 +587,7 @@ async function publishNewVersionAction(formData: FormData) {
     actorId: user.id,
     details: {
       version_number: result.versionNumber,
-      learner_assignments_reset: result.resetCount,
+      existing_learners_changed: false,
       change_notes: changeNotes,
     },
   });
@@ -1514,31 +1514,31 @@ function DetailsTab({
         </div>
       </div>
 
-      <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4 space-y-4">
+      <div className="rounded-lg border-2 border-blue-300 bg-blue-50 p-4 space-y-4">
         <div>
-          <div className="font-semibold text-amber-950">Publish new required version</div>
-          <p className="mt-1 text-sm text-amber-900">
-            Use this only when the edited course must be completed again. It freezes the current
-            course, quiz questions, onsite requirements, learner results and evidence as a new
-            version. Every assigned learner is moved to the new version; previous completions stay
-            permanently in their training history.
+          <div className="font-semibold text-blue-950">Publish new course version</div>
+          <p className="mt-1 text-sm text-blue-900">
+            This freezes the current course, quiz questions and onsite requirements as a new
+            version. Existing learners, completions, progress and authorisations are not changed.
+            If a learner retakes this course later, their new attempt will use the latest version
+            while all earlier completions remain permanently in their training history.
           </p>
         </div>
         <form action={publishNewVersionAction} className="space-y-3">
           <input type="hidden" name="course_id" value={course.id} />
           <div>
-            <label htmlFor="change_notes" className="block text-sm font-medium text-amber-950">
+            <label htmlFor="change_notes" className="block text-sm font-medium text-blue-950">
               What changed? <span className="font-normal">(optional)</span>
             </label>
             <textarea
               id="change_notes"
               name="change_notes"
               rows={2}
-              className="mt-1 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-md border border-blue-300 bg-white px-3 py-2 text-sm"
               placeholder="e.g. Updated emergency procedure and replaced the final assessment"
             />
           </div>
-          <label className="flex items-start gap-2 text-sm text-amber-950">
+          <label className="flex items-start gap-2 text-sm text-blue-950">
             <input
               type="checkbox"
               name="confirm_release"
@@ -1547,19 +1547,19 @@ function DetailsTab({
               className="mt-1"
             />
             <span>
-              I understand this creates version {(course.current_version_number || 1) + 1} and
-              requires all assigned learners to complete it.
+              I understand this saves version {(course.current_version_number || 1) + 1} without
+              changing existing learners. It will be used for future retakes and new assignments.
             </span>
           </label>
           <button
             type="submit"
             disabled={course.status !== "published"}
-            className="rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md bg-blue-700 px-4 py-2 text-sm font-medium text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             Publish version {(course.current_version_number || 1) + 1}
           </button>
           {course.status !== "published" && (
-            <p className="text-xs text-amber-800">Publish the course status first.</p>
+            <p className="text-xs text-blue-800">Publish the course status first.</p>
           )}
         </form>
       </div>

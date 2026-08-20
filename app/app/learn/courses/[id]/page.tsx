@@ -13,6 +13,35 @@ import EquipmentFormBlock from '@/components/EquipmentFormBlock';
 import PeerReviewPanel from './PeerReviewPanel';
 import { ModuleType, BlockKind } from "@/lib/types/module";
 import DOMPurify from "isomorphic-dompurify";
+import {
+  getPinnedCourseContext,
+  findPinnedModule,
+  findPinnedQuiz,
+} from "@/lib/course-version";
+import { getCurrentCourseVersion } from "@/lib/training-history";
+
+// Normalise a quiz question from the immutable snapshot into the shape the
+// presentational quiz renderer expects. The snapshot stores answer options
+// under `options` (with is_correct), while the live schema exposed them as
+// `quiz_options`; we keep the renderer contract stable by re-exposing them as
+// `quiz_options` regardless of source.
+function normalizePinnedQuestions(quiz: any): any[] {
+  const questions = Array.isArray(quiz?.questions) ? quiz.questions : [];
+  return questions
+    .map((q: any) => ({
+      id: q?.id,
+      stem: q?.stem,
+      type: q?.type,
+      points: q?.points,
+      order_index: q?.order_index,
+      quiz_options: (Array.isArray(q?.options) ? q.options : []).map((o: any) => ({
+        id: o?.id,
+        label: o?.label,
+        is_correct: !!o?.is_correct,
+      })),
+    }))
+    .sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
+}
 
 /**
  * Renders a course as a learner (assignments-only approach).
@@ -310,45 +339,6 @@ async function submitQuizAnswers(formData: FormData) {
   }
 
   const validationAdmin = supabaseAdmin();
-  const [moduleResult, quizResult, assignmentResult] = await Promise.all([
-    validationAdmin
-      .from("course_modules")
-      .select("id, course_id, type")
-      .eq("id", moduleId)
-      .maybeSingle(),
-    validationAdmin
-      .from("quizzes")
-      .select("id, module_id, course_id, pass_mark")
-      .eq("id", quizId)
-      .maybeSingle(),
-    !preview && user
-      ? validationAdmin
-          .from("course_assignments")
-          .select("id, user_id, course_id, role, course_version_id, attempt_number")
-          .eq("id", assignmentId)
-          .eq("user_id", user.id)
-          .eq("role", "trainee")
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-  ]);
-
-  const validatedModule = moduleResult.data;
-  const validatedQuiz = quizResult.data;
-  assignmentVersion = assignmentResult.data;
-  const invalidQuizChain =
-    moduleResult.error ||
-    quizResult.error ||
-    !validatedModule ||
-    !validatedQuiz ||
-    validatedModule.course_id !== courseId ||
-    validatedModule.type !== "digital_assessment_quiz" ||
-    validatedQuiz.module_id !== moduleId ||
-    (validatedQuiz.course_id && validatedQuiz.course_id !== courseId) ||
-    (!preview && (!assignmentVersion || assignmentVersion.course_id !== courseId));
-  if (invalidQuizChain) {
-    redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=invalid_quiz_assignment`);
-    return;
-  }
 
   // Collect answers from form data
   const answers: Record<string, string> = {};
@@ -359,36 +349,138 @@ async function submitQuizAnswers(formData: FormData) {
     }
   }
 
-  // Get quiz questions and options to calculate score
-  const { data: questions } = await supabase
-    .from("quiz_questions")
-    .select(`
-      id,
-      stem,
-      type,
-      order_index,
-      points,
-      quiz_options (
-        id,
-        label,
-        is_correct
-      )
-    `)
-    .eq("quiz_id", quizId);
+  // Pinned questions used for scoring. For an authenticated trainee this comes
+  // exclusively from the assignment's immutable course version snapshot. In
+  // preview/review mode (no assignment) we score against the live definition.
+  let pinnedQuestions: any[] = [];
+  let passMarkPercent = 80;
 
-  if (!questions || questions.length === 0) {
+  if (!preview && user) {
+    // Fail closed: the assignment MUST be pinned to an immutable version, and
+    // the quiz/module must exist inside that pinned snapshot. Never mix live
+    // definitions into a trainee's scored attempt.
+    let pinnedContext: any;
+    try {
+      pinnedContext = await getPinnedCourseContext(validationAdmin, {
+        assignmentId,
+        userId: user.id,
+        courseId,
+      });
+    } catch (error) {
+      console.error("Pinned quiz submission blocked:", error);
+      redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=invalid_quiz_assignment`);
+      return;
+    }
+
+    assignmentVersion = pinnedContext.assignment;
+
+    let pinnedModule: any;
+    let pinnedQuiz: any;
+    try {
+      pinnedModule = findPinnedModule(pinnedContext, moduleId);
+      if (pinnedModule?.type !== "digital_assessment_quiz") {
+        throw new Error("module is not a digital assessment quiz");
+      }
+      pinnedQuiz = findPinnedQuiz(pinnedModule, quizId);
+    } catch (error) {
+      console.error("Pinned quiz lookup failed:", error);
+      redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=invalid_quiz_assignment`);
+      return;
+    }
+
+    // Guard the quiz id: the submitted quiz must be the pinned quiz.
+    if (String(pinnedQuiz?.id) !== String(quizId)) {
+      redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=invalid_quiz_assignment`);
+      return;
+    }
+
+    pinnedQuestions = normalizePinnedQuestions(pinnedQuiz);
+    passMarkPercent = pinnedQuiz?.pass_mark ?? 80;
+  } else {
+    // Preview/review: validate the live quiz chain and score against live defs.
+    const [moduleResult, quizResult] = await Promise.all([
+      validationAdmin
+        .from("course_modules")
+        .select("id, course_id, type")
+        .eq("id", moduleId)
+        .maybeSingle(),
+      validationAdmin
+        .from("quizzes")
+        .select("id, module_id, course_id, pass_mark")
+        .eq("id", quizId)
+        .maybeSingle(),
+    ]);
+    const validatedModule = moduleResult.data;
+    const validatedQuiz = quizResult.data;
+    const invalidQuizChain =
+      moduleResult.error ||
+      quizResult.error ||
+      !validatedModule ||
+      !validatedQuiz ||
+      validatedModule.course_id !== courseId ||
+      validatedModule.type !== "digital_assessment_quiz" ||
+      validatedQuiz.module_id !== moduleId ||
+      (validatedQuiz.course_id && validatedQuiz.course_id !== courseId);
+    if (invalidQuizChain) {
+      redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=invalid_quiz_assignment`);
+      return;
+    }
+    const { data: liveQuestions } = await supabase
+      .from("quiz_questions")
+      .select(`
+        id,
+        stem,
+        type,
+        order_index,
+        points,
+        quiz_options (
+          id,
+          label,
+          is_correct
+        )
+      `)
+      .eq("quiz_id", quizId);
+    pinnedQuestions = liveQuestions || [];
+    passMarkPercent = validatedQuiz.pass_mark || 80;
+  }
+
+  // Require a non-empty pinned/live question set.
+  if (!pinnedQuestions || pinnedQuestions.length === 0) {
     redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=no_questions`);
     return;
   }
 
-  // Calculate score
+  // Validate submitted question/option ids against the pinned set. Every
+  // submitted answer must reference a pinned question and one of its options;
+  // reject anything that does not, closing the door on tampered payloads.
+  const questionById = new Map<string, any>(
+    pinnedQuestions.map((q: any) => [String(q.id), q])
+  );
+  for (const [submittedQuestionId, submittedOptionId] of Object.entries(answers)) {
+    const question = questionById.get(String(submittedQuestionId));
+    if (!question) {
+      redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=invalid_quiz_assignment`);
+      return;
+    }
+    const optionExists = (question.quiz_options || []).some(
+      (opt: any) => String(opt.id) === String(submittedOptionId)
+    );
+    if (!optionExists) {
+      redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=invalid_quiz_assignment`);
+      return;
+    }
+  }
+
+  // Calculate score against the pinned question set.
   let totalPoints = 0;
   let earnedPoints = 0;
 
-  questions.forEach((question: any) => {
+  pinnedQuestions.forEach((question: any) => {
     totalPoints += question.points || 1;
     const selectedOptionId = answers[question.id];
-    const selectedOption = question.quiz_options.find((opt: any) => opt.id === selectedOptionId);
+    const selectedOption = (question.quiz_options || []).find(
+      (opt: any) => String(opt.id) === String(selectedOptionId)
+    );
     if (selectedOption?.is_correct) {
       earnedPoints += question.points || 1;
     }
@@ -396,7 +488,6 @@ async function submitQuizAnswers(formData: FormData) {
 
   const scorePercent = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
 
-  const passMarkPercent = validatedQuiz.pass_mark || 80;
   const passed = scorePercent >= passMarkPercent;
 
   // Save quiz attempt (skip in preview mode)
@@ -410,7 +501,7 @@ async function submitQuizAnswers(formData: FormData) {
       assignment_id: assignmentId,
       course_version_id: assignmentVersion.course_version_id,
       attempt_number: assignmentVersion.attempt_number || 1,
-      question_snapshot: questions,
+      question_snapshot: pinnedQuestions,
     });
 
     if (attemptError) {
@@ -419,7 +510,8 @@ async function submitQuizAnswers(formData: FormData) {
       return;
     }
 
-    // Mark module as complete if passed - use admin client to bypass RLS
+    // Mark module as complete if passed - use admin client to bypass RLS.
+    // Passing is judged solely against the pinned pass mark.
     if (passed) {
       const progressAdminClient = supabaseAdmin();
       await progressAdminClient.from("assignment_progress").upsert([
@@ -438,29 +530,73 @@ async function submitQuizAnswers(formData: FormData) {
   redirect(redirectUrl);
 }
 
-// Component to render quiz questions
-async function QuizRenderer({ moduleId, assignmentId, preview, review, authorizationId }: { moduleId: string; assignmentId: string; preview?: boolean; review?: boolean; authorizationId?: string }) {
+// Component to render quiz questions.
+// For an authenticated trainee the caller passes the immutable pinned quiz and
+// its questions (pinnedQuiz/pinnedQuestions/courseIdOverride); the renderer then
+// never touches live quiz definitions. Preview/review mode continues to read the
+// live definition directly.
+async function QuizRenderer({ moduleId, assignmentId, preview, review, authorizationId, pinnedQuiz, pinnedQuestions, courseIdOverride, requirePinned }: { moduleId: string; assignmentId: string; preview?: boolean; review?: boolean; authorizationId?: string; pinnedQuiz?: any; pinnedQuestions?: any[]; courseIdOverride?: string; requirePinned?: boolean }) {
   "use server";
   const supabase = await createSupabaseServer();
 
-  // Fetch everything keyed on moduleId in parallel (RLS-scoped queries + auth)
-  const [
-    { data: moduleData },
-    quizByModule,
-    { data: { user } },
-  ] = await Promise.all([
-    supabase
-      .from("course_modules")
-      .select("course_id, type")
-      .eq("id", moduleId)
-      .single(),
-    supabase
-      .from("quizzes")
-      .select("id, pass_mark, max_attempts, shuffle")
-      .eq("module_id", moduleId)
-      .maybeSingle(),
-    supabase.auth.getUser(),
-  ]);
+  // Fail closed: when the caller requires the pinned snapshot but no pinned quiz
+  // is present, never fall back to a live quiz definition.
+  if (requirePinned && !pinnedQuiz) {
+    return (
+      <div className="bg-white p-6 rounded-lg border">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz</h2>
+        <div className="text-center py-8">
+          <div className="text-gray-400 text-4xl mb-2">❓</div>
+          <h3 className="font-medium text-gray-600">No Quiz Available</h3>
+          <p className="text-sm text-gray-500">This quiz is not part of your assigned course version.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const usePinned = !!pinnedQuiz;
+
+  let moduleData: any;
+  let quizData: any;
+  let quizErr: any = null;
+  let questions: any[] | null = null;
+  let questionsErr: any = null;
+  let user: any = null;
+
+  if (usePinned) {
+    // Immutable path: everything comes from the pinned snapshot the caller
+    // resolved from the assignment's course version. Only auth + progress are
+    // read live (progress is learner evidence, not a course definition).
+    const { data: authData } = await supabase.auth.getUser();
+    user = authData.user;
+    moduleData = { course_id: courseIdOverride, type: "digital_assessment_quiz" };
+    quizData = pinnedQuiz;
+    questions = pinnedQuestions || [];
+  } else {
+    // Preview/review path: read the live quiz definition.
+    // Fetch everything keyed on moduleId in parallel (RLS-scoped queries + auth)
+    const [
+      moduleResult,
+      quizByModule,
+      authResult,
+    ] = await Promise.all([
+      supabase
+        .from("course_modules")
+        .select("course_id, type")
+        .eq("id", moduleId)
+        .single(),
+      supabase
+        .from("quizzes")
+        .select("id, pass_mark, max_attempts, shuffle")
+        .eq("module_id", moduleId)
+        .maybeSingle(),
+      supabase.auth.getUser(),
+    ]);
+    moduleData = moduleResult.data;
+    quizData = quizByModule.data;
+    quizErr = quizByModule.error;
+    user = authResult.data.user;
+  }
 
   // Service-role completion check only after the user is confirmed (skip fake preview assignment)
   let progress = null;
@@ -487,12 +623,9 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
     );
   }
 
-  // Quiz by module_id was fetched in the parallel batch above
-  let quizData = quizByModule.data;
-  const quizErr = quizByModule.error;
-
-  // If no quiz found, try to create one using RPC function
-  if (!quizData) {
+  // If no quiz found (live path only), try to create one using RPC function.
+  // The pinned path must never mint a live quiz definition.
+  if (!usePinned && !quizData) {
     console.log("No quiz found, attempting to create one...");
 
     try {
@@ -531,27 +664,29 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
     );
   }
 
-  console.log("Quiz found, fetching questions for quiz ID:", quizData.id);
-
-  // Fetch quiz questions
-  const { data: questions, error: questionsErr } = await supabase
-    .from("quiz_questions")
-    .select(`
-      id,
-      stem,
-      type,
-      points,
-      order_index,
-      quiz_options (
+  // Fetch quiz questions (live path only; pinned path already has them).
+  if (!usePinned) {
+    console.log("Quiz found, fetching questions for quiz ID:", quizData.id);
+    const questionsResult = await supabase
+      .from("quiz_questions")
+      .select(`
         id,
-        label,
-        is_correct
-      )
-    `)
-    .eq("quiz_id", quizData.id)
-    .order("order_index", { ascending: true });
-
-  console.log("Questions fetch result:", { questions, questionsErr });
+        stem,
+        type,
+        points,
+        order_index,
+        quiz_options (
+          id,
+          label,
+          is_correct
+        )
+      `)
+      .eq("quiz_id", quizData.id)
+      .order("order_index", { ascending: true });
+    questions = questionsResult.data;
+    questionsErr = questionsResult.error;
+    console.log("Questions fetch result:", { questions, questionsErr });
+  }
 
   if (questionsErr || !questions || questions.length === 0) {
     console.error("No questions found for quiz", { questionsErr, quizId: quizData.id, moduleId });
@@ -795,9 +930,9 @@ export default async function LearnerCoursePage(props: {
   };
 
   const [
-    { data: course, error: courseErr },
+    { data: liveCourse, error: courseErr },
     { auth: authRow, authCourses, effectiveAuthId },
-    { data: modules, error: modErr },
+    { data: liveModules, error: modErr },
     { userAssignment, assignmentProgress },
     { data: userDocuments },
     reviewerProfile,
@@ -823,7 +958,7 @@ export default async function LearnerCoursePage(props: {
     loadReviewerProfile(),
   ]);
 
-  if (courseErr || !course) {
+  if (courseErr || !liveCourse) {
     console.error("Course load error", courseErr);
     notFound();
   }
@@ -831,6 +966,11 @@ export default async function LearnerCoursePage(props: {
     console.error("Modules load error", modErr);
     notFound();
   }
+
+  // Mutable delivery bindings. Defaults are the live records; for an
+  // authenticated trainee these are replaced with the pinned snapshot below.
+  let course: any = liveCourse;
+  let modules: any[] = liveModules ?? [];
 
   // In preview mode, skip assignment check for course creators
   let assignment = null;
@@ -862,6 +1002,24 @@ export default async function LearnerCoursePage(props: {
           .in("assignment_status", ["assigned", "in_progress", "pending_approval"])
           .limit(1);
         if ((myActiveAuth ?? []).length > 0) {
+          // A self-healed assignment must be explicitly pinned to the current
+          // immutable course version before it can render, so the learner is
+          // locked to a definite snapshot rather than the live definition.
+          let selfHealVersionId: string | null = null;
+          try {
+            const currentVersion = await getCurrentCourseVersion(admin, courseId);
+            selfHealVersionId = currentVersion?.id ?? null;
+          } catch (error) {
+            console.error("Self-heal: could not resolve current course version", {
+              courseId,
+              userId: user.id,
+              error: (error as any)?.message,
+            });
+          }
+          if (!selfHealVersionId) {
+            console.error("Self-heal blocked: no immutable version to pin", courseId);
+            redirect("/app/learn?error=not_assigned");
+          }
           const { data: created, error: createErr } = await admin
             .from("course_assignments")
             .upsert(
@@ -873,6 +1031,7 @@ export default async function LearnerCoursePage(props: {
                 created_by: user.id,
                 assigned_at: new Date().toISOString(),
                 created_at: new Date().toISOString(),
+                course_version_id: selfHealVersionId,
               },
               { onConflict: "course_id,user_id,role" }
             )
@@ -902,6 +1061,42 @@ export default async function LearnerCoursePage(props: {
       redirect("/app/learn?error=not_assigned");
     }
     assignment = effectiveAssignment;
+
+    // If for any reason the assignment is not yet pinned to an immutable
+    // version (e.g. a pre-existing row created before pinning), pin it now to
+    // the current course version so delivery is always from a snapshot.
+    if (!assignment.course_version_id) {
+      const admin = supabaseAdmin();
+      let versionId: string | null = null;
+      try {
+        const currentVersion = await getCurrentCourseVersion(admin, courseId);
+        versionId = currentVersion?.id ?? null;
+      } catch (error) {
+        console.error("Could not resolve current course version to pin assignment", {
+          courseId,
+          userId: user.id,
+          error: (error as any)?.message,
+        });
+      }
+      if (!versionId) {
+        console.error("Assignment cannot be pinned to an immutable version", courseId);
+        redirect("/app/learn?error=not_assigned");
+      }
+      const { data: pinned, error: pinErr } = await admin
+        .from("course_assignments")
+        .update({ course_version_id: versionId })
+        .eq("id", assignment.id)
+        .select()
+        .single();
+      if (pinErr || !pinned) {
+        console.error("Failed to pin assignment to immutable version", {
+          assignmentId: assignment.id,
+          error: pinErr?.message,
+        });
+        redirect("/app/learn?error=not_assigned");
+      }
+      assignment = pinned;
+    }
   } else {
     // For preview mode, create a fake assignment object
     assignment = {
@@ -916,6 +1111,65 @@ export default async function LearnerCoursePage(props: {
   if (!authorizationId && effectiveAuthId) {
     authorizationId = effectiveAuthId;
   }
+
+  // ------------------------------------------------------------------
+  // Immutable delivery: for an authenticated trainee, the entire course
+  // definition (title, description, modules, content blocks, onsite
+  // requirements, quizzes, questions, options and pass marks) is served
+  // exclusively from the assignment's pinned course_versions.snapshot. We
+  // fail closed: any problem resolving the pinned snapshot aborts the render
+  // rather than silently falling back to the live definition.
+  // Preview/review mode keeps using the live definitions loaded above.
+  // ------------------------------------------------------------------
+  let deliveryCourse: any = course;
+  let deliveryModules: any[] = modules ?? [];
+  let pinnedContext: any = null;
+
+  if (!preview) {
+    try {
+      pinnedContext = await getPinnedCourseContext(supabaseAdmin(), {
+        assignmentId: assignment.id,
+        userId: user.id,
+        courseId,
+      });
+    } catch (error) {
+      console.error("Pinned course delivery unavailable", {
+        courseId,
+        userId: user.id,
+        assignmentId: assignment.id,
+        error: (error as any)?.message,
+      });
+      notFound();
+    }
+
+    const snapCourse = pinnedContext.course || {};
+    // Preserve the live status (used for gating), but title/description come
+    // from the immutable snapshot.
+    deliveryCourse = {
+      id: courseId,
+      title: snapCourse.title ?? snapCourse.name ?? course.title,
+      description: snapCourse.description ?? course.description,
+      status: course.status,
+    };
+
+    deliveryModules = (pinnedContext.modules || []).map((m: any) => ({
+      id: m.id,
+      course_id: m.course_id ?? courseId,
+      title: m.title,
+      type: m.type,
+      order_index: m.order_index,
+      stage: m.stage,
+      content: m.content,
+      // Retain the nested snapshot collections for downstream rendering.
+      content_blocks: Array.isArray(m.content_blocks) ? m.content_blocks : [],
+      onsite_requirements: Array.isArray(m.onsite_requirements) ? m.onsite_requirements : [],
+      quizzes: Array.isArray(m.quizzes) ? m.quizzes : [],
+    }));
+  }
+
+  // Downstream code below reads from `course` and `modules`.
+  course = deliveryCourse;
+  modules = deliveryModules;
 
   // Check if this course is part of an authorization
   let authorizationContext = null;
@@ -1010,10 +1264,21 @@ export default async function LearnerCoursePage(props: {
     currentModule = sortedModules[sortedModules.length - 1];
   }
 
-  // Load everything that depends on the current module in parallel
+  // Load everything that depends on the current module in parallel.
+  // For an authenticated trainee, content blocks, onsite requirements and quiz
+  // pass marks are read exclusively from the pinned snapshot carried on the
+  // module; live queries are only used in preview/review mode.
   const loadBlocks = async () => {
     if (!currentModule || currentModule.type === 'digital_assessment_quiz') {
       return { blocks: [] as any[] };
+    }
+    if (!preview) {
+      const snapshotBlocks = Array.isArray(currentModule.content_blocks)
+        ? [...currentModule.content_blocks].sort(
+            (a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0)
+          )
+        : [];
+      return { blocks: snapshotBlocks };
     }
     const { data: blocksData, error: blocksError } = await supabase
       .from("module_content_blocks")
@@ -1030,6 +1295,14 @@ export default async function LearnerCoursePage(props: {
     if (currentModule?.type !== 'onsite_training' && currentModule?.type !== 'onsite_assessment') {
       return null;
     }
+    if (!preview) {
+      const snapshotRequirements = Array.isArray(currentModule.onsite_requirements)
+        ? [...currentModule.onsite_requirements].sort(
+            (a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0)
+          )
+        : [];
+      return snapshotRequirements;
+    }
     const { data: requirements } = await supabase
       .from("onsite_requirements")
       .select("*")
@@ -1041,6 +1314,12 @@ export default async function LearnerCoursePage(props: {
   const loadQuizPassMark = async () => {
     // Fetch quiz pass mark only if current module is a quiz and we're showing results
     if (currentModule?.type !== 'digital_assessment_quiz' || !quizResult) return 80;
+    if (!preview) {
+      const pinnedQuiz = Array.isArray(currentModule.quizzes)
+        ? currentModule.quizzes[0]
+        : null;
+      return pinnedQuiz?.pass_mark ?? 80;
+    }
     const { data: quiz } = await supabase
       .from("quizzes")
       .select("pass_mark")
@@ -1234,13 +1513,29 @@ export default async function LearnerCoursePage(props: {
                   <div className="space-y-6">
                     {/* Render Quiz if current module is quiz type and quiz parameter is present */}
                     {currentModule.type === 'digital_assessment_quiz' && showQuiz && (
-                      <QuizRenderer
-                        moduleId={currentModule.id}
-                        assignmentId={assignment.id}
-                        preview={preview}
-                        review={review}
-                        authorizationId={authorizationId}
-                      />
+                      (() => {
+                        // For a trainee, resolve the pinned quiz + questions from
+                        // the snapshot so the renderer never reads live defs.
+                        const pinnedQuiz = !preview && Array.isArray(currentModule.quizzes)
+                          ? currentModule.quizzes[0]
+                          : null;
+                        const pinnedQuestions = pinnedQuiz
+                          ? normalizePinnedQuestions(pinnedQuiz)
+                          : undefined;
+                        return (
+                          <QuizRenderer
+                            moduleId={currentModule.id}
+                            assignmentId={assignment.id}
+                            preview={preview}
+                            review={review}
+                            authorizationId={authorizationId}
+                            pinnedQuiz={pinnedQuiz || undefined}
+                            pinnedQuestions={pinnedQuestions}
+                            courseIdOverride={courseId}
+                            requirePinned={!preview}
+                          />
+                        );
+                      })()
                     )}
 
                     {/* Show Quiz Results */}

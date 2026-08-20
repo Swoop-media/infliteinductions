@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getPinnedCourseContext, findPinnedModule } from "@/lib/course-version";
 import UnifiedVideoPlayer from '@/components/UnifiedVideoPlayer';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -234,6 +236,48 @@ async function loadBlocks(moduleId: string) {
   return resp.data ?? [];
 }
 
+/**
+ * Builds content blocks from a pinned snapshot module. Mirrors loadBlocks()'s
+ * shape and its quiz fallback (synthesising a `quiz_questions` block from the
+ * module's quiz when it has no content blocks), but reads exclusively from the
+ * immutable snapshot — never from mutable content/quiz tables.
+ */
+function blocksFromSnapshotModule(snapshotModule: any) {
+  const contentBlocks = Array.isArray(snapshotModule?.content_blocks)
+    ? [...snapshotModule.content_blocks]
+    : [];
+  contentBlocks.sort((a: any, b: any) => {
+    const orderDiff = (a?.order_index ?? 0) - (b?.order_index ?? 0);
+    if (orderDiff !== 0) return orderDiff;
+    return String(a?.created_at ?? "").localeCompare(String(b?.created_at ?? ""));
+  });
+
+  if (contentBlocks.length === 0 && snapshotModule?.type === "digital_assessment_quiz") {
+    const quiz = Array.isArray(snapshotModule?.quizzes) ? snapshotModule.quizzes[0] : null;
+    if (quiz && quiz.questions) {
+      return [
+        {
+          id: `quiz-${quiz.id}`,
+          module_id: snapshotModule.id,
+          kind: "quiz_questions",
+          data: {
+            title: quiz.title,
+            questions: quiz.questions,
+            pass_mark: quiz.pass_mark,
+            max_attempts: quiz.max_attempts,
+            shuffle: quiz.shuffle,
+            show_feedback: quiz.show_feedback,
+          },
+          order_index: 0,
+          created_at: quiz.created_at,
+        },
+      ];
+    }
+  }
+
+  return contentBlocks;
+}
+
 interface LearnerModuleSearchParams extends Record<string, string | string[] | undefined> {
   preview?: string | string[] | undefined;
 }
@@ -250,66 +294,114 @@ export default async function LearnerModulePage(props: {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user && !preview) redirect("/auth/signin");
 
-  const { data: mod, error: mErr } = await supabase
-    .from("course_modules")
-    .select("id, course_id, type, title, created_at")
-    .eq("id", id)
-    .maybeSingle();
+  let mod: any = null;
+  let course: any = null;
+  let blocks: any[] = [];
 
-  if (mErr || !mod) {
-    return (
-      <div className="space-y-2 p-6">
-        <h1 className="text-xl font-semibold">Module</h1>
-        <p className="text-red-600">Module not found.</p>
-        <Link href="/app/creator" className="underline">Back</Link>
-      </div>
-    );
-  }
+  if (preview) {
+    // Preview mode (creators reviewing unpublished content) intentionally
+    // reads the mutable live definition. Learner rendering below never does.
+    const { data: previewMod, error: mErr } = await supabase
+      .from("course_modules")
+      .select("id, course_id, type, title, created_at")
+      .eq("id", id)
+      .maybeSingle();
 
-  const { data: course } = await supabase
-    .from("courses")
-    .select("id, title, status, created_by")
-    .eq("id", mod.course_id)
-    .maybeSingle();
-
-  if (!course) {
-    return (
-      <div className="space-y-2 p-6">
-        <h1 className="text-xl font-semibold">Module</h1>
-        <p className="text-red-600">Parent course not found.</p>
-        <Link href="/app/creator" className="underline">Back</Link>
-      </div>
-    );
-  }
-
-  // If not preview and course is not yet published, only creators/assignees may view
-  if (!preview && course.status !== "published") {
-    const isCreator = user?.id && course.created_by === user.id;
-    let isAssigned = false;
-    if (user?.id) {
-      const { data: assignment } = await supabase
-        .from("course_assignments")
-        .select("id")
-        .eq("course_id", course.id)
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-      isAssigned = !!assignment;
-    }
-    if (!isCreator && !isAssigned) {
+    if (mErr || !previewMod) {
       return (
-        <div className="space-y-3 p-6">
-          <h1 className="text-xl font-semibold">{mod.title ?? "Module"}</h1>
-          <p className="text-gray-600">This module is not available to learners yet.</p>
-          <Link href={`/app/learn/courses/${course.id}?preview=1`} className="underline text-sm">
-            Open course preview
-          </Link>
+        <div className="space-y-2 p-6">
+          <h1 className="text-xl font-semibold">Module</h1>
+          <p className="text-red-600">Module not found.</p>
+          <Link href="/app/creator" className="underline">Back</Link>
         </div>
       );
     }
-  }
+    mod = previewMod;
 
-  const blocks = await loadBlocks(mod.id);
+    const { data: previewCourse } = await supabase
+      .from("courses")
+      .select("id, title, status, created_by")
+      .eq("id", mod.course_id)
+      .maybeSingle();
+
+    if (!previewCourse) {
+      return (
+        <div className="space-y-2 p-6">
+          <h1 className="text-xl font-semibold">Module</h1>
+          <p className="text-red-600">Parent course not found.</p>
+          <Link href="/app/creator" className="underline">Back</Link>
+        </div>
+      );
+    }
+    course = previewCourse;
+    blocks = await loadBlocks(mod.id);
+  } else {
+    // Learner path: resolve the authenticated user's trainee assignment(s) and
+    // load module/course/blocks/quiz from the pinned snapshot that contains
+    // this module. If the module cannot be tied to a pinned assignment, fail
+    // closed by redirecting — never render mutable live content.
+    //
+    // We do NOT depend on a live course_modules row here: the module may have
+    // existed only in an older snapshot and since been deleted from the live
+    // course. Enumerate the trainee's assignments, resolve each pinned
+    // snapshot, and locate the module within one of them.
+    const adminClient = supabaseAdmin();
+
+    const { data: assignments, error: assignmentsError } = await adminClient
+      .from("course_assignments")
+      .select("id, course_id")
+      .eq("user_id", user!.id)
+      .eq("role", "trainee");
+
+    if (assignmentsError) {
+      console.error("Trainee assignments load error", assignmentsError);
+      redirect("/app/learn");
+    }
+
+    let context: any = null;
+    let snapshotModule: any = null;
+
+    for (const candidate of assignments || []) {
+      try {
+        const resolved = await getPinnedCourseContext(adminClient, {
+          assignmentId: candidate.id,
+        });
+        const found = (resolved.modules || []).find(
+          (item: any) => item?.id === id
+        );
+        if (found) {
+          context = resolved;
+          snapshotModule = found;
+          break;
+        }
+      } catch (err) {
+        // A malformed/unlinked assignment snapshot is skipped; keep scanning.
+        console.error("Pinned module context load error", err);
+      }
+    }
+
+    if (!context || !snapshotModule) {
+      // No pinned trainee assignment includes this module — fail closed.
+      redirect("/app/learn");
+    }
+
+    const courseId = context.course?.id ?? context.assignment?.course_id;
+
+    mod = {
+      id: snapshotModule.id,
+      course_id: courseId,
+      type: snapshotModule.type,
+      title: snapshotModule.title,
+      created_at: snapshotModule.created_at,
+    };
+    course = {
+      id: courseId,
+      title: context.course?.title,
+      status: context.course?.status,
+      created_by: context.course?.created_by,
+    };
+    blocks = blocksFromSnapshotModule(snapshotModule);
+  }
 
   return (
     <div className="space-y-6 p-6">

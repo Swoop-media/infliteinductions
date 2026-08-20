@@ -3,6 +3,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { redirect } from "next/navigation";
 import TrainAssessClient, { PendingItem } from "./TrainAssessClient";
+import { getPinnedCourseContext } from "@/lib/course-version";
 
 export default async function TrainAssessPage() {
   const supabase = await createSupabaseServer();
@@ -50,7 +51,8 @@ export default async function TrainAssessPage() {
         user_id,
         course_id,
         created_at,
-        assignment_status
+        assignment_status,
+        course_version_id
       `)
       .eq("role", "trainee")
       .in("course_id", allCourseIds);
@@ -65,21 +67,8 @@ export default async function TrainAssessPage() {
       );
     }
 
-    // 2. Get ALL modules for ALL relevant courses in ONE query
-    const { data: allCourseModules } = await supabaseService
-      .from("course_modules")
-      .select("id, course_id, type, title, order_index")
-      .in("course_id", allCourseIds)
-      .order("course_id", { ascending: true })
-      .order("order_index", { ascending: true });
-
-    // Group modules by course for easy lookup
-    const modulesByCourse = new Map<string, any[]>();
-    allCourseModules?.forEach(module => {
-      const courseModules = modulesByCourse.get(module.course_id) || [];
-      courseModules.push(module);
-      modulesByCourse.set(module.course_id, courseModules);
-    });
+    // 2. Module definitions come from each trainee assignment's pinned course
+    // version snapshot (not live course_modules). Resolved per-assignment below.
 
     // 3. Get ALL progress for ALL assignments - BATCH to avoid timeout
     const assignmentIds = traineeAssignments.map(a => a.id);
@@ -119,22 +108,32 @@ export default async function TrainAssessPage() {
       profilesMap.set(profile.id, profile);
     });
 
-    // 5. Get ALL courses info in ONE query - include department
-    const { data: allCourses } = await supabaseService
-      .from("courses")
-      .select("id, title, department")
-      .in("id", allCourseIds);
+    // 5. Course title/department definitions come from each trainee assignment's
+    // pinned course version snapshot (resolved per-assignment below). Pinned
+    // contexts are cached by version id to avoid refetching the same snapshot.
+    const pinnedContextCache = new Map<string, any>();
 
-    // Create lookup map for courses and collect departments
-    const coursesMap = new Map<string, any>();
-    allCourses?.forEach(course => {
-      coursesMap.set(course.id, course);
-      if (course.department && course.department.trim() !== '') {
-        uniqueDepartments.add(course.department);
+    async function resolvePinnedContext(assignment: any) {
+      const cacheKey = assignment.course_version_id || `assignment:${assignment.id}`;
+      if (pinnedContextCache.has(cacheKey)) return pinnedContextCache.get(cacheKey);
+      let context: any = null;
+      try {
+        context = await getPinnedCourseContext(supabaseService, { assignmentId: assignment.id });
+      } catch (error) {
+        // Fail closed: an assignment without a valid pinned snapshot is skipped
+        // rather than falling back to the live course definition.
+        console.error(
+          `Skipping trainee assignment ${assignment.id}: pinned course version unavailable`,
+          error
+        );
+        context = null;
       }
-    });
+      pinnedContextCache.set(cacheKey, context);
+      return context;
+    }
 
-    // Now process each assignment using the pre-fetched data (no additional queries!)
+    // Now process each assignment using the pinned snapshot for content definitions
+    // and live progress rows as evidence.
     
     for (const assignment of traineeAssignments) {
       const courseId = assignment.course_id;
@@ -153,9 +152,15 @@ export default async function TrainAssessPage() {
       if (assignment.assignment_status === 'completed') {
         continue;
       }
-      
-      // Use pre-fetched data instead of making queries
-      const courseModules = modulesByCourse.get(courseId) || [];
+
+      // Module/title definitions come from this assignment's pinned snapshot.
+      // Fail closed: skip the assignment if the pinned version is unavailable.
+      const pinnedContext = await resolvePinnedContext(assignment);
+      if (!pinnedContext) {
+        continue;
+      }
+
+      const courseModules = pinnedContext.modules || [];
       if (courseModules.length === 0) {
         continue;
       }
@@ -182,17 +187,22 @@ export default async function TrainAssessPage() {
         ? allDigitalComplete 
         : onsiteTrainingComplete;
 
-      // Use pre-fetched profile and course data from maps
-      const courseInfo = coursesMap.get(courseId);
-      
+      // Course title/department come from the pinned snapshot definition.
+      const pinnedCourse = pinnedContext.course || {};
+
       const traineeName = traineeProfile?.full_name || traineeProfile?.email || "Unknown";
       const traineeEmail = traineeProfile?.email || "";
-      const courseTitle = courseInfo?.title || "Unknown Course";
-      const courseDepartment = courseInfo?.department || "";
+      const courseTitle = pinnedContext.version?.title || pinnedCourse.title || "Unknown Course";
+      const courseDepartment = pinnedCourse.department || "";
       const traineeDepartment = traineeProfile?.department || "";
       
       // Use trainee's department if available, otherwise use course department
       const itemDepartment = traineeDepartment || courseDepartment || "";
+
+      // Collect departments for the filter UI from pinned + trainee data.
+      if (courseDepartment && courseDepartment.trim() !== "") {
+        uniqueDepartments.add(courseDepartment);
+      }
 
       // Add to pending training if digital complete but onsite training not done
       if (allDigitalComplete && onsiteTrainingModules.length > 0 && !onsiteTrainingComplete && trainerCourseIds.has(courseId)) {

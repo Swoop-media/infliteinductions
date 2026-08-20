@@ -4,6 +4,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { recordAuthorisationCompletion, recordCourseCompletion } from "@/lib/training-history";
+import { getPinnedCourseContext, findPinnedModule } from "@/lib/course-version";
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,78 +45,115 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the course assignment
-    const { data: courseAssignment, error: assignmentError } = await adminClient
-      .from("course_assignments")
-      .select("id, assignment_status, completed_at, attempt_number")
-      .eq("user_id", userId)
-      .eq("course_id", courseId)
-      .eq("role", "trainee")
-      .single();
-
-    if (assignmentError || !courseAssignment) {
-      console.error("Error fetching course assignment:", assignmentError);
+    // Load the pinned assignment context (the immutable version the trainee was
+    // actually given). This also fetches the trainee course assignment.
+    let pinnedContext: any;
+    try {
+      pinnedContext = await getPinnedCourseContext(adminClient, {
+        userId,
+        courseId,
+      });
+    } catch (contextError: any) {
+      console.error("Error loading pinned course context:", contextError);
       return NextResponse.json(
-        { error: "Course assignment not found" },
+        { error: contextError?.message || "Course assignment not found" },
         { status: 404 }
       );
     }
 
-    if (courseAssignment.assignment_status === "completed" && courseAssignment.completed_at) {
-      try {
-        await recordCourseCompletion({
-          assignmentId: courseAssignment.id,
-          completedAt: courseAssignment.completed_at,
-          actorId: adminUser.id,
-          reason: "module_rejected",
-          adminClient,
-        });
-      } catch (historyError: any) {
-        return NextResponse.json(
-          { error: historyError?.message || "Could not preserve completed training before reopening the module" },
-          { status: 500 }
-        );
-      }
-    }
+    const courseAssignment = pinnedContext.assignment;
 
-    // Delete the module progress to mark it as incomplete
-    const { error: deleteProgressError } = await adminClient
-      .from("assignment_progress")
-      .delete()
-      .eq("assignment_id", courseAssignment.id)
-      .eq("module_id", moduleId);
-
-    if (deleteProgressError) {
-      console.error("Error deleting module progress:", deleteProgressError);
+    // Validate the requested moduleId against the pinned snapshot. Fail closed
+    // if the module is not part of the version the trainee was given.
+    let pinnedModule: any;
+    try {
+      pinnedModule = findPinnedModule(pinnedContext, moduleId);
+    } catch (moduleError: any) {
+      console.error("Error validating rejected module:", moduleError);
       return NextResponse.json(
-        { error: "Failed to reset module progress" },
-        { status: 500 }
+        { error: moduleError?.message || "The requested module is not part of this assignment" },
+        { status: 400 }
       );
     }
 
-    // Quiz attempts are immutable evidence. Removing module progress is enough
-    // to allow a new quiz attempt.
+    // Always trust the pinned module's type; ignore any caller-supplied type.
+    const resolvedModuleType = pinnedModule?.type ?? null;
+    const isOnsiteModule =
+      resolvedModuleType === "onsite_training" ||
+      resolvedModuleType === "onsite_assessment";
 
-    // If it's an onsite module, delete requirement responses
-    if (moduleType === "onsite_training" || moduleType === "onsite_assessment") {
-      const { error: deleteResponsesError } = await adminClient
+    const wasCompleted = courseAssignment.assignment_status === "completed";
+
+    if (wasCompleted) {
+      // Preserve the completed attempt's history before starting a fresh one.
+      if (courseAssignment.completed_at) {
+        try {
+          await recordCourseCompletion({
+            assignmentId: courseAssignment.id,
+            completedAt: courseAssignment.completed_at,
+            actorId: adminUser.id,
+            reason: "module_rejected",
+            adminClient,
+          });
+        } catch (historyError: any) {
+          return NextResponse.json(
+            { error: historyError?.message || "Could not preserve completed training before reopening the module" },
+            { status: 500 }
+          );
+        }
+      }
+
+      // Select the newest published immutable version to pin the fresh attempt.
+      const { data: latestVersion, error: latestVersionError } = await adminClient
+        .from("course_versions")
+        .select("id, course_id, version_number, status")
+        .eq("course_id", courseId)
+        .eq("status", "published")
+        .order("version_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestVersionError || !latestVersion?.id) {
+        console.error("Error loading the latest published course version:", latestVersionError);
+        return NextResponse.json(
+          { error: "No valid published course version is available to reopen this course" },
+          { status: 500 }
+        );
+      }
+
+      // Fresh attempt: clear ALL old live progress and requirement responses so
+      // no prior-version progress is carried into the new version. Quiz attempts
+      // stay immutable and are preserved by the history captured above.
+      const { error: clearProgressError } = await adminClient
+        .from("assignment_progress")
+        .delete()
+        .eq("assignment_id", courseAssignment.id);
+      if (clearProgressError) {
+        console.error("Error clearing assignment progress:", clearProgressError);
+        return NextResponse.json(
+          { error: "Failed to reset the previous course progress" },
+          { status: 500 }
+        );
+      }
+
+      const { error: clearResponsesError } = await adminClient
         .from("requirement_responses")
         .delete()
-        .eq("assignment_id", courseAssignment.id)
-        .eq("module_id", moduleId);
-
-      if (deleteResponsesError) {
-        console.error("Error deleting requirement responses:", deleteResponsesError);
+        .eq("assignment_id", courseAssignment.id);
+      if (clearResponsesError) {
+        console.error("Error clearing requirement responses:", clearResponsesError);
+        return NextResponse.json(
+          { error: "Failed to reset the previous requirement responses" },
+          { status: 500 }
+        );
       }
-    }
 
-    // Update course assignment status if it was completed
-    if (courseAssignment.assignment_status === "completed") {
       const { error: updateStatusError } = await adminClient
         .from("course_assignments")
         .update({
           assignment_status: "in_progress",
           completed_at: null,
+          course_version_id: latestVersion.id,
           attempt_number: (courseAssignment.attempt_number || 1) + 1,
           updated_at: new Date().toISOString(),
         })
@@ -123,6 +161,42 @@ export async function POST(request: NextRequest) {
 
       if (updateStatusError) {
         console.error("Error updating course status:", updateStatusError);
+        return NextResponse.json(
+          { error: "Failed to reopen the completed course on the latest version" },
+          { status: 500 }
+        );
+      }
+    } else {
+      // Assignment already in progress: keep the same pinned version/attempt and
+      // clear only the validated module's progress and responses.
+      const { error: deleteProgressError } = await adminClient
+        .from("assignment_progress")
+        .delete()
+        .eq("assignment_id", courseAssignment.id)
+        .eq("module_id", moduleId);
+
+      if (deleteProgressError) {
+        console.error("Error deleting module progress:", deleteProgressError);
+        return NextResponse.json(
+          { error: "Failed to reset module progress" },
+          { status: 500 }
+        );
+      }
+
+      // Quiz attempts are immutable evidence. Removing module progress is enough
+      // to allow a new quiz attempt.
+
+      // If it's an onsite module, delete only that module's requirement responses.
+      if (isOnsiteModule) {
+        const { error: deleteResponsesError } = await adminClient
+          .from("requirement_responses")
+          .delete()
+          .eq("assignment_id", courseAssignment.id)
+          .eq("module_id", moduleId);
+
+        if (deleteResponsesError) {
+          console.error("Error deleting requirement responses:", deleteResponsesError);
+        }
       }
     }
 
@@ -161,6 +235,10 @@ export async function POST(request: NextRequest) {
 
         if (updateAuthError) {
           console.error("Error updating authorization status:", updateAuthError);
+          return NextResponse.json(
+            { error: "Failed to reopen the completed authorisation" },
+            { status: 500 }
+          );
         }
       }
     }
@@ -175,7 +253,7 @@ export async function POST(request: NextRequest) {
         payload: {
           moduleId,
           moduleTitle,
-          moduleType,
+          moduleType: resolvedModuleType,
           courseId,
           rejectionReason,
           rejectedBy: adminUser.email,
@@ -219,7 +297,7 @@ export async function POST(request: NextRequest) {
         courseTitle: course?.title || "Course",
         rejectionReason: rejectionReason,
         rejectedBy: adminProfile?.full_name || adminUser.email,
-        moduleType: moduleType,
+        moduleType: resolvedModuleType,
         url: `/app/train-assess`,
       });
 
@@ -259,7 +337,7 @@ export async function POST(request: NextRequest) {
                 courseTitle: course?.title || "Course",
                 rejectionReason: rejectionReason,
                 rejectedBy: adminProfile?.full_name || adminUser.email,
-                moduleType: moduleType,
+                moduleType: resolvedModuleType,
                 learnerName: traineeProfile?.full_name || traineeProfile?.email || "Trainee",
                 url: `/app/train-assess`,
                 isAssessorNotification: true, // Flag to potentially customize message

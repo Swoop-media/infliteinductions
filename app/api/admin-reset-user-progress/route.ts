@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
-import { recordAuthorisationCompletion, recordCourseCompletion } from "@/lib/training-history";
+import { getCurrentCourseVersion, recordAuthorisationCompletion, recordCourseCompletion } from "@/lib/training-history";
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,15 +28,24 @@ export async function POST(request: NextRequest) {
 
     const results: Record<string, any> = {};
 
-    const { data: courseAssignments } = await adminClient
+    const { data: courseAssignments, error: courseAssignmentsError } = await adminClient
       .from("course_assignments")
       .select("id, course_id, assignment_status, completed_at, attempt_number")
       .eq("user_id", userId)
       .eq("role", "trainee");
+    if (courseAssignmentsError) throw courseAssignmentsError;
 
     if (courseAssignments && courseAssignments.length > 0) {
       const assignmentIds = courseAssignments.map(a => a.id);
       const courseIds = courseAssignments.map(a => a.course_id);
+      const latestCourseVersions = new Map(
+        await Promise.all(
+          [...new Set(courseIds)].map(async (courseId) => {
+            const version = await getCurrentCourseVersion(adminClient, courseId);
+            return [courseId, version.id] as const;
+          })
+        )
+      );
 
       // This destructive maintenance action must fail before deleting anything
       // if even one completed course cannot be preserved.
@@ -57,12 +66,14 @@ export async function POST(request: NextRequest) {
         .delete()
         .in("assignment_id", assignmentIds);
       results.assignmentProgress = { deleted: !progressErr, error: progressErr?.message };
+      if (progressErr) throw progressErr;
 
       const { error: reqErr } = await adminClient
         .from("requirement_responses")
         .delete()
         .in("assignment_id", assignmentIds);
       results.requirementResponses = { deleted: !reqErr, error: reqErr?.message };
+      if (reqErr) throw reqErr;
 
       // Quiz attempts are evidence and are never deleted. Each reset gets a new
       // attempt number so subsequent attempts cannot be confused with old ones.
@@ -73,6 +84,7 @@ export async function POST(request: NextRequest) {
           .update({
             assignment_status: "assigned",
             completed_at: null,
+            course_version_id: latestCourseVersions.get(assignment.course_id),
             attempt_number: (assignment.attempt_number || 1) + 1,
           })
           .eq("id", assignment.id);
@@ -83,6 +95,9 @@ export async function POST(request: NextRequest) {
         count: assignmentIds.length,
         error: resetErrors.join("; ") || undefined,
       };
+      if (resetErrors.length > 0) {
+        throw new Error(`Failed to start every new course attempt: ${resetErrors.join("; ")}`);
+      }
       results.quizAttempts = { deleted: false, preservedAsEvidence: true };
 
       const { error: enrollErr } = await adminClient
@@ -92,6 +107,7 @@ export async function POST(request: NextRequest) {
           { onConflict: "user_id,course_id", ignoreDuplicates: false }
         );
       results.courseEnrolments = { reset: !enrollErr, error: enrollErr?.message };
+      if (enrollErr) throw enrollErr;
     }
 
     const { data: authAssignments, error: authLoadError } = await adminClient
@@ -129,6 +145,9 @@ export async function POST(request: NextRequest) {
       reset: authResetErrors.length === 0,
       error: authResetErrors.join("; ") || undefined,
     };
+    if (authResetErrors.length > 0) {
+      throw new Error(`Failed to reset every authorisation: ${authResetErrors.join("; ")}`);
+    }
 
     console.log(`Admin ${adminUser.id} wiped all training progress for user ${userId}`, results);
 

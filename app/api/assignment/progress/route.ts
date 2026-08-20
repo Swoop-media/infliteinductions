@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { recordCourseCompletion } from "@/lib/training-history";
+import { getPinnedCourseContext, findPinnedModule } from "@/lib/course-version";
 
 // Helper function to check and update authorization status
 // Delegates to the shared auto-fix module which evaluates ALL of the user's
@@ -59,34 +60,38 @@ export async function POST(req: NextRequest) {
 
     // Use admin client to bypass RLS
     const adminClient = supabaseAdmin();
-    
-    // Single optimized query to get assignment and check authorization
-    const { data: assignmentCheck, error: assignmentErr } = await adminClient
-      .from("course_assignments")
-      .select("id, course_id, user_id, role")
-      .eq("id", assignmentId)
-      .single();
+
+    // Fail closed: every trainee assignment must resolve to an immutable pinned
+    // version. Validate module identity and completion against the pinned
+    // snapshot.modules, never against mutable live course_modules.
+    let pinnedContext: any;
+    try {
+      pinnedContext = await getPinnedCourseContext(adminClient, { assignmentId });
+    } catch (pinnedError: any) {
+      console.log("Assignment progress: Pinned version unavailable", pinnedError?.message);
+      return NextResponse.json(
+        { error: pinnedError?.message || "Pinned course version is unavailable" },
+        { status: 404 }
+      );
+    }
+
+    const assignmentCheck = {
+      id: pinnedContext.assignment.id,
+      course_id: pinnedContext.assignment.course_id,
+      user_id: pinnedContext.assignment.user_id,
+      role: pinnedContext.assignment.role,
+    };
 
     console.log("Assignment verification:", {
       assignment: assignmentCheck,
-      error: assignmentErr?.message
     });
 
-    if (assignmentErr || !assignmentCheck) {
-      console.log("Assignment progress: Assignment not found");
-      return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
-    }
-
-    // Validate the module belongs to the assignment's course
-    const { data: moduleCheck, error: moduleErr } = await adminClient
-      .from("course_modules")
-      .select("id, type, course_id")
-      .eq("id", moduleId)
-      .eq("course_id", assignmentCheck.course_id)
-      .maybeSingle();
-
-    if (moduleErr || !moduleCheck) {
-      console.log("Assignment progress: Module not found in assignment's course");
+    // Validate the module against the pinned snapshot, not live content.
+    let moduleCheck: any;
+    try {
+      moduleCheck = findPinnedModule(pinnedContext, moduleId);
+    } catch (moduleError: any) {
+      console.log("Assignment progress: Module not part of pinned assignment", moduleError?.message);
       return NextResponse.json({ error: "Module not found in this course" }, { status: 400 });
     }
 
@@ -147,13 +152,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: upsertErr.message }, { status: 400 });
       }
 
-      // Check if all modules in the course are completed
-      const { data: allModules } = await adminClient
-        .from("course_modules")
-        .select("id")
-        .eq("course_id", assignmentCheck.course_id);
-      
-      const moduleIds = allModules?.map(m => m.id) || [];
+      // Check if all pinned modules for this assignment are completed. Use the
+      // immutable snapshot.modules so mutating live content cannot change what
+      // "complete" means for an in-flight assignment.
+      const moduleIds = (pinnedContext.modules || [])
+        .map((m: any) => m?.id)
+        .filter(Boolean);
       
       // Get all completed modules for this assignment
       const { data: completedProgress } = await adminClient
@@ -202,6 +206,10 @@ export async function POST(req: NextRequest) {
         
         if (courseUpdateError) {
           console.error("Failed to update course assignment status:", courseUpdateError);
+          return NextResponse.json(
+            { error: "Failed to mark the course assignment as completed" },
+            { status: 500 }
+          );
         } else {
           console.log("Course assignment marked as completed:", assignmentId);
           

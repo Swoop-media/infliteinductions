@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getPinnedCourseContext } from "@/lib/course-version";
 
 type RouteParams = { id: string };
 
@@ -79,22 +80,36 @@ export default async function LearnAuthorisationPage(props: {
     (courseAssignments ?? []).map(ca => [ca.course_id, ca])
   );
 
-  // For each course, get module counts and progress
+  // For each course, get module counts and progress from the trainee's pinned
+  // course version snapshot. Counts/progress must reflect the immutable
+  // definition the learner was actually given, never mutable module tables.
   const coursesWithProgress = await Promise.all(
     (authCourses ?? []).map(async (authCourse) => {
       const courseId = authCourse.course_id;
       const courseAssignment = assignmentMap.get(courseId);
 
-      // Get all modules for this course
-      const { data: allModules } = await supabase
-        .from("course_modules")
-        .select("id, type")
-        .eq("course_id", courseId);
+      // Resolve pinned snapshot modules for this assignment when one exists.
+      let allModules: Array<{ id: string; type: string }> = [];
+      if (courseAssignment) {
+        try {
+          const authAdminClient = supabaseAdmin();
+          const context = await getPinnedCourseContext(authAdminClient, {
+            assignmentId: courseAssignment.id,
+          });
+          allModules = (context.modules ?? []).map((m: any) => ({
+            id: m.id,
+            type: m.type,
+          }));
+        } catch (err) {
+          console.error("Pinned snapshot load error", err);
+          allModules = [];
+        }
+      }
 
-      const digitalModules = (allModules ?? []).filter(m => 
+      const digitalModules = allModules.filter(m =>
         m.type === "digital_training" || m.type === "digital_assessment_quiz"
       );
-      const onsiteModules = (allModules ?? []).filter(m => 
+      const onsiteModules = allModules.filter(m =>
         m.type === "onsite_training" || m.type === "onsite_assessment"
       );
 
@@ -117,7 +132,7 @@ export default async function LearnAuthorisationPage(props: {
       return {
         ...authCourse,
         assignment: courseAssignment,
-        totalModules: allModules?.length ?? 0,
+        totalModules: allModules.length,
         completedModules: completedModules.length,
         digitalModules: digitalModules.length,
         onsiteModules: onsiteModules.length,

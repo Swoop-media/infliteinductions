@@ -52,12 +52,14 @@ interface QuizSettings {
 
 interface ContractorModuleRendererProps {
   module: Module;
+  registrationId: string;
   onComplete: () => void;
   isCompleted: boolean;
 }
 
 export default function ContractorModuleRenderer({
   module,
+  registrationId,
   onComplete,
   isCompleted,
 }: ContractorModuleRendererProps) {
@@ -75,19 +77,20 @@ export default function ContractorModuleRenderer({
 
   useEffect(() => {
     loadModuleContent();
-  }, [module.id]);
+  }, [module.id, registrationId]);
 
   const loadModuleContent = async () => {
     setLoading(true);
     try {
+      const query = `?registrationId=${encodeURIComponent(registrationId)}`;
       if (module.type === "digital_training") {
-        const response = await fetch(`/api/modules/${module.id}/content`);
+        const response = await fetch(`/api/modules/${module.id}/content${query}`);
         if (response.ok) {
           const data = await response.json();
           setContentBlocks(data.blocks || []);
         }
       } else if (module.type === "digital_assessment_quiz") {
-        const response = await fetch(`/api/modules/${module.id}/quiz`);
+        const response = await fetch(`/api/modules/${module.id}/quiz${query}`);
         if (response.ok) {
           const data = await response.json();
           setQuizData(data);

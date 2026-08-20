@@ -1,5 +1,6 @@
 // @ts-nocheck
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { pinnedSnapshotSource } from "@/lib/course-version";
 
 export const IMMUTABLE_HISTORY_MIGRATION = "032_immutable_training_history.sql";
 
@@ -179,25 +180,20 @@ export async function recordCourseCompletion(args: {
   if (assignmentError) throw migrationError(assignmentError);
   if (!assignment) throw new Error("Trainee course assignment not found.");
 
-  let versionId = assignment.course_version_id;
-  let version: any = null;
-  if (versionId) {
-    const { data, error } = await adminClient
-      .from("course_versions")
-      .select("id, version_number, title, snapshot, published_at")
-      .eq("id", versionId)
-      .maybeSingle();
-    if (error) throw migrationError(error);
-    version = data;
+  const versionId = assignment.course_version_id;
+  if (!versionId) {
+    throw new Error(
+      `Immutable training history is not ready. Re-apply app/migrations/${IMMUTABLE_HISTORY_MIGRATION} before completing this course.`
+    );
   }
-  if (!version) {
-    version = await getCurrentCourseVersion(adminClient, assignment.course_id);
-    versionId = version.id;
-    const { error: linkError } = await adminClient
-      .from("course_assignments")
-      .update({ course_version_id: versionId })
-      .eq("id", assignment.id);
-    if (linkError) throw migrationError(linkError);
+  const { data: version, error: versionError } = await adminClient
+    .from("course_versions")
+    .select("id, course_id, version_number, title, snapshot, change_notes, published_at")
+    .eq("id", versionId)
+    .maybeSingle();
+  if (versionError) throw migrationError(versionError);
+  if (!version || version.course_id !== assignment.course_id || !version.snapshot) {
+    throw new Error("The assignment's immutable course version could not be loaded.");
   }
 
   const attemptNumber = assignment.attempt_number || 1;
@@ -211,24 +207,10 @@ export async function recordCourseCompletion(args: {
   if (existingError) throw migrationError(existingError);
   if (existing) return { id: existing.id, alreadyRecorded: true };
 
-  // Completion-time writes freeze the live content (including small edits that
-  // intentionally did not trigger a retake). A retrospective safety snapshot
-  // during reset/release must use the pinned release definition so later edits
-  // can never be mislabeled as the older version.
-  const isCompletionTimeCapture =
-    !args.reason || args.reason === "completion" || args.reason === "status_repair";
-  let courseSnapshot = version.snapshot;
-  let snapshotSource = "release_fallback";
-  if (isCompletionTimeCapture) {
-    const { data, error } = await adminClient.rpc(
-      "capture_course_version_snapshot",
-      { p_course_id: assignment.course_id }
-    );
-    if (error) throw migrationError(error);
-    if (!data) throw new Error("Could not capture the course content at completion.");
-    courseSnapshot = data;
-    snapshotSource = "exact";
-  }
+  // The assignment's pinned release is the course definition the learner was
+  // actually given. Never recapture mutable live content at completion.
+  const courseSnapshot = version.snapshot;
+  const snapshotSource = pinnedSnapshotSource(version);
 
   const quizIds = quizIdsFromSnapshot(courseSnapshot);
   const [
@@ -337,9 +319,10 @@ export async function recordCourseCompletion(args: {
 }
 
 /**
- * Creates the next immutable course definition and moves every trainee
- * assignment to that version. It is retry-safe: a half-finished publishing row
- * is resumed rather than creating another version.
+ * Creates the next immutable course definition without changing any learner
+ * assignment. A learner is moved to the latest version only when an explicit
+ * retake/reset starts a fresh attempt. It is retry-safe: a half-finished
+ * publishing row is resumed rather than creating another version.
  */
 export async function publishNewCourseVersion(args: {
   courseId: string;
@@ -355,7 +338,7 @@ export async function publishNewCourseVersion(args: {
   if (courseError) throw migrationError(courseError);
   if (!course) throw new Error("Course not found.");
   if (course.status !== "published") {
-    throw new Error("Only a published course can release a new required version.");
+    throw new Error("Only a published course can release a new version.");
   }
 
   const currentVersionNumber = course.current_version_number || 1;
@@ -395,96 +378,11 @@ export async function publishNewCourseVersion(args: {
     nextVersion = created.data;
   }
 
-  const { data: assignments, error: assignmentsError } = await adminClient
-    .from("course_assignments")
-    .select(
-      "id, user_id, assignment_status, completed_at, course_version_id, attempt_number"
-    )
-    .eq("course_id", course.id)
-    .eq("role", "trainee");
-  if (assignmentsError) throw migrationError(assignmentsError);
-
-  let resetCount = 0;
-  const affectedUserIds = new Set<string>();
-  for (const assignment of assignments || []) {
-    affectedUserIds.add(assignment.user_id);
-    if (assignment.course_version_id === nextVersion.id) continue;
-
-    if (assignment.assignment_status === "completed" && assignment.completed_at) {
-      await recordCourseCompletion({
-        assignmentId: assignment.id,
-        completedAt: assignment.completed_at,
-        actorId: args.actorId,
-        reason: "version_release",
-        adminClient,
-      });
-    }
-
-    // Clearing is allowed only after the completed record above is durable.
-    const [progressDelete, responseDelete] = await Promise.all([
-      adminClient.from("assignment_progress").delete().eq("assignment_id", assignment.id),
-      adminClient
-        .from("requirement_responses")
-        .delete()
-        .eq("assignment_id", assignment.id),
-    ]);
-    if (progressDelete.error) throw new Error(progressDelete.error.message);
-    if (responseDelete.error) throw new Error(responseDelete.error.message);
-
-    const { error: resetError } = await adminClient
-      .from("course_assignments")
-      .update({
-        assignment_status: "assigned",
-        completed_at: null,
-        course_version_id: nextVersion.id,
-        attempt_number: (assignment.attempt_number || 1) + 1,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", assignment.id);
-    if (resetError) throw migrationError(resetError);
-    resetCount += 1;
-  }
-
-  // A completed authorisation that depends on this course must also become a
-  // retake. Preserve the prior approval first so it remains current during the
-  // retake under the app's existing grace rule.
-  let authorisationResetCount = 0;
-  const { data: authLinks, error: authLinksError } = await adminClient
-    .from("authorisation_courses")
-    .select("authorisation_id")
-    .eq("course_id", course.id);
-  if (authLinksError) throw new Error(authLinksError.message);
-  const authorisationIds = [...new Set((authLinks || []).map((link: any) => link.authorisation_id))];
-  if (authorisationIds.length > 0 && affectedUserIds.size > 0) {
-    const { data: authAssignments, error: authAssignmentsError } = await adminClient
-      .from("authorisation_assignments")
-      .select("id, assignment_status, completed_at, attempt_number")
-      .in("user_id", [...affectedUserIds])
-      .in("authorisation_id", authorisationIds)
-      .eq("role", "trainee")
-      .eq("assignment_status", "completed");
-    if (authAssignmentsError) throw migrationError(authAssignmentsError);
-
-    for (const authAssignment of authAssignments || []) {
-      await recordAuthorisationCompletion({
-        assignmentId: authAssignment.id,
-        completedAt: authAssignment.completed_at,
-        actorId: args.actorId,
-        reason: "retake",
-        adminClient,
-      });
-      const { error: authResetError } = await adminClient
-        .from("authorisation_assignments")
-        .update({
-          assignment_status: "assigned",
-          completed_at: null,
-          attempt_number: (authAssignment.attempt_number || 1) + 1,
-        })
-        .eq("id", authAssignment.id);
-      if (authResetError) throw migrationError(authResetError);
-      authorisationResetCount += 1;
-    }
-  }
+  const { error: publishError } = await adminClient
+    .from("course_versions")
+    .update({ status: "published" })
+    .eq("id", nextVersion.id);
+  if (publishError) throw migrationError(publishError);
 
   const { error: courseUpdateError } = await adminClient
     .from("courses")
@@ -492,22 +390,15 @@ export async function publishNewCourseVersion(args: {
     .eq("id", course.id);
   if (courseUpdateError) throw migrationError(courseUpdateError);
 
-  const { error: publishError } = await adminClient
-    .from("course_versions")
-    .update({ status: "published" })
-    .eq("id", nextVersion.id);
-  if (publishError) throw migrationError(publishError);
-
-  await adminClient
+  const { error: supersedeError } = await adminClient
     .from("course_versions")
     .update({ status: "superseded" })
     .eq("course_id", course.id)
     .lt("version_number", nextVersionNumber);
+  if (supersedeError) throw migrationError(supersedeError);
 
   return {
     versionNumber: nextVersionNumber,
-    resetCount,
-    authorisationResetCount,
     versionId: nextVersion.id,
   };
 }

@@ -5,7 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { logUserAudit } from "@/lib/audit";
 import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorizationExpiry";
-import { recordAuthorisationCompletion, recordCourseCompletion } from "@/lib/training-history";
+import { getCurrentCourseVersion, recordAuthorisationCompletion, recordCourseCompletion } from "@/lib/training-history";
 import { notifyUser } from "@/lib/notifications/dispatcher";
 
 const CHUNK = 150;
@@ -135,6 +135,14 @@ export async function POST(request: NextRequest) {
     // ---------------- EXECUTE ----------------
     const nowIso = new Date().toISOString();
     const errors: string[] = [];
+    const latestCourseVersions = new Map(
+      await Promise.all(
+        courseIds.map(async (courseId) => {
+          const version = await getCurrentCourseVersion(admin, courseId);
+          return [courseId, version.id] as const;
+        })
+      )
+    );
 
     // 1) Course completion records must exist before authorisation history is
     // captured, because the approval evidence references those immutable rows.
@@ -285,6 +293,7 @@ export async function POST(request: NextRequest) {
           .update({
             assignment_status: "assigned",
             completed_at: null,
+            course_version_id: latestCourseVersions.get(row.course_id),
             attempt_number: (row.attempt_number || 1) + 1,
             updated_at: nowIso,
             created_by: adminUser.id,
@@ -304,6 +313,7 @@ export async function POST(request: NextRequest) {
               course_id: courseId,
               role: "trainee",
               assignment_status: "assigned",
+              course_version_id: latestCourseVersions.get(courseId),
               created_by: adminUser.id,
               assigned_at: nowIso,
             });

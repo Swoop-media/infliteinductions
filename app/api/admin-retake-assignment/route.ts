@@ -5,7 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { logUserAudit } from "@/lib/audit";
 import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorizationExpiry";
-import { recordAuthorisationCompletion, recordCourseCompletion } from "@/lib/training-history";
+import { getCurrentCourseVersion, recordAuthorisationCompletion, recordCourseCompletion } from "@/lib/training-history";
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
           error: `Cannot assign a retake of "${courseStatusRow.title}" while it is ${courseStatusRow.status}. Publish the course first.`
         }, { status: 400 });
       }
+      const latestVersion = await getCurrentCourseVersion(adminClient, courseId);
 
       // First check if an assignment already exists
       const { data: existingAssignment, error: checkError } = await adminClient
@@ -91,6 +92,13 @@ export async function POST(request: NextRequest) {
 
           if (deleteProgressError) {
             console.error("Error deleting progress records:", deleteProgressError);
+            return NextResponse.json(
+              {
+                error: "Failed to clear the previous course attempt",
+                details: deleteProgressError.message,
+              },
+              { status: 500 }
+            );
           }
 
           // Update the existing assignment to reset it
@@ -99,6 +107,7 @@ export async function POST(request: NextRequest) {
             .update({
               assignment_status: 'assigned',
               completed_at: null,
+              course_version_id: latestVersion.id,
               attempt_number: (existingAssignment.attempt_number || 1) + 1,
               updated_at: new Date().toISOString(),
               created_by: adminUser.id // Track which admin created the retake
@@ -132,6 +141,7 @@ export async function POST(request: NextRequest) {
             course_id: courseId,
             role: 'trainee',
             assignment_status: 'assigned',
+            course_version_id: latestVersion.id,
             created_by: adminUser.id, // Track which admin created this
             assigned_at: new Date().toISOString(),
             created_at: new Date().toISOString()
@@ -227,6 +237,14 @@ export async function POST(request: NextRequest) {
           }, { status: 400 });
         }
       }
+      const latestCourseVersions = new Map(
+        await Promise.all(
+          authCourses.map(async (authCourse: any) => {
+            const version = await getCurrentCourseVersion(adminClient, authCourse.course_id);
+            return [authCourse.course_id, version.id] as const;
+          })
+        )
+      );
 
       // Check if authorization assignment already exists
       const { data: existingAuthAssignment, error: checkAuthError } = await adminClient
@@ -339,7 +357,13 @@ export async function POST(request: NextRequest) {
 
         if (checkCourseError && checkCourseError.code !== 'PGRST116') {
           console.error("Error checking course assignment:", checkCourseError);
-          continue;
+          return NextResponse.json(
+            {
+              error: "Failed to check a linked course assignment",
+              details: checkCourseError.message,
+            },
+            { status: 500 }
+          );
         }
 
         if (existingCourseAssignment) {
@@ -362,17 +386,28 @@ export async function POST(request: NextRequest) {
           }
 
           // Delete any existing progress records
-          await Promise.all([
+          const [progressDelete, responsesDelete] = await Promise.all([
             adminClient.from("assignment_progress").delete().eq("assignment_id", existingCourseAssignment.id),
             adminClient.from("requirement_responses").delete().eq("assignment_id", existingCourseAssignment.id),
           ]);
+          const cleanupError = progressDelete.error || responsesDelete.error;
+          if (cleanupError) {
+            return NextResponse.json(
+              {
+                error: "Failed to clear a linked course attempt",
+                details: cleanupError.message,
+              },
+              { status: 500 }
+            );
+          }
 
           // Update existing assignment
-          const { data: updated } = await adminClient
+          const { data: updated, error: updateCourseError } = await adminClient
             .from("course_assignments")
             .update({
               assignment_status: 'assigned',
               completed_at: null,
+              course_version_id: latestCourseVersions.get(authCourse.course_id),
               attempt_number: (existingCourseAssignment.attempt_number || 1) + 1,
               updated_at: new Date().toISOString(),
               created_by: adminUser.id // Track which admin created the retake
@@ -380,25 +415,44 @@ export async function POST(request: NextRequest) {
             .eq("id", existingCourseAssignment.id)
             .select()
             .single();
+          if (updateCourseError) {
+            return NextResponse.json(
+              {
+                error: "Failed to start a linked course retake",
+                details: updateCourseError.message,
+              },
+              { status: 500 }
+            );
+          }
 
           if (updated) {
             resetCourseAssignments.push(updated);
           }
         } else {
           // Create new course assignment
-          const { data: newCourse } = await adminClient
+          const { data: newCourse, error: createCourseError } = await adminClient
             .from("course_assignments")
             .insert({
               user_id: userId,
               course_id: authCourse.course_id,
               role: 'trainee',
               assignment_status: 'assigned',
+              course_version_id: latestCourseVersions.get(authCourse.course_id),
               created_by: adminUser.id, // Track which admin created this
               assigned_at: new Date().toISOString(),
               created_at: new Date().toISOString()
             })
             .select()
             .single();
+          if (createCourseError) {
+            return NextResponse.json(
+              {
+                error: "Failed to create a linked course assignment",
+                details: createCourseError.message,
+              },
+              { status: 500 }
+            );
+          }
 
           if (newCourse) {
             resetCourseAssignments.push(newCourse);

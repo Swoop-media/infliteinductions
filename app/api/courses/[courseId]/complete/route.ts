@@ -4,6 +4,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { Database } from "@/lib/supabase/types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { recordCourseCompletion } from "@/lib/training-history";
+import { getPinnedCourseContext } from "@/lib/course-version";
 
 export async function POST(
   request: NextRequest,
@@ -51,40 +52,60 @@ export async function POST(
       return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
     }
 
-    // Mark all modules as completed first
-    const { data: modules, error: modulesError } = await supabase
-      .from("course_modules")
-      .select("id")
-      .eq("course_id", courseId);
-
-    if (modulesError) {
-      console.error("Error fetching modules:", modulesError);
-      return NextResponse.json({ error: "Failed to fetch course modules" }, { status: 500 });
+    // Resolve the assignment's immutable pinned version and mark ONLY the
+    // pinned module IDs as completed. Fail closed if the version is missing so
+    // completion can never be recorded against mutable live content.
+    const adminClient = supabaseAdmin();
+    let pinnedContext: any;
+    try {
+      pinnedContext = await getPinnedCourseContext(adminClient, { assignmentId });
+    } catch (pinnedError: any) {
+      console.error("Pinned course version unavailable:", pinnedError);
+      return NextResponse.json(
+        { error: pinnedError?.message || "Pinned course version is unavailable" },
+        { status: 404 }
+      );
     }
 
-    if (modules && modules.length > 0) {
-      // Mark all modules as completed in assignment_progress
-      const progressEntries = modules.map((module: any) => ({
+    const pinnedModuleIds = (pinnedContext.modules || [])
+      .map((m: any) => m?.id)
+      .filter(Boolean);
+
+    if (pinnedModuleIds.length > 0) {
+      // Mark only the pinned modules as completed in assignment_progress
+      const progressEntries = pinnedModuleIds.map((moduleId: string) => ({
         assignment_id: assignmentId,
-        module_id: module.id,
+        module_id: moduleId,
         completed_at: new Date().toISOString()
       }));
 
-      await supabase
+      const { error: progressError } = await supabase
         .from("assignment_progress")
         .upsert(progressEntries as any, {
           onConflict: "assignment_id,module_id"
         });
+
+      if (progressError) {
+        // Fail closed before recording immutable history/completion so we never
+        // mark a course complete on top of a failed module-progress write.
+        console.error("Error updating assignment progress:", progressError);
+        return NextResponse.json(
+          { error: "Failed to update course progress" },
+          { status: 500 }
+        );
+      }
     }
 
     const completedAt = new Date().toISOString();
     try {
+      // Records pinned history (snapshot + evidence) for the assignment's
+      // pinned version/attempt before the live assignment is marked completed.
       await recordCourseCompletion({
         assignmentId,
         completedAt,
         actorId: user.id,
         reason: "completion",
-        adminClient: supabaseAdmin(),
+        adminClient,
       });
     } catch (historyError: any) {
       console.error("Failed to preserve immutable course completion:", historyError);

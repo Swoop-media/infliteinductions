@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { recordAuthorisationCompletion, recordCourseCompletion } from "@/lib/training-history";
+import { getCurrentCourseVersion, recordAuthorisationCompletion, recordCourseCompletion } from "@/lib/training-history";
 
 export async function POST(request: NextRequest) {
   try {
@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("Resetting course progress for assignment:", targetAssignmentId);
+    const latestVersion = await getCurrentCourseVersion(adminClient, assignment.course_id);
 
     if (assignment.assignment_status === "completed" && assignment.completed_at) {
       try {
@@ -110,24 +111,13 @@ export async function POST(request: NextRequest) {
 
     if (progressError) {
       console.error("Error deleting assignment progress:", progressError);
+      return NextResponse.json(
+        { error: "Failed to clear the previous course progress" },
+        { status: 500 }
+      );
     }
 
-    // 2. Reset course assignment status
-    const { error: courseAssignError } = await adminClient
-      .from("course_assignments")
-      .update({
-        assignment_status: 'assigned',
-        completed_at: null,
-        attempt_number: (assignment.attempt_number || 1) + 1,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", targetAssignmentId);
-
-    if (courseAssignError) {
-      console.error("Error resetting course assignment:", courseAssignError);
-    }
-
-    // 3. Delete requirement responses for this assignment
+    // 2. Delete requirement responses before establishing the new attempt.
     const { error: reqError } = await adminClient
       .from("requirement_responses")
       .delete()
@@ -135,16 +125,41 @@ export async function POST(request: NextRequest) {
 
     if (reqError) {
       console.error("Error deleting requirement responses:", reqError);
+      return NextResponse.json(
+        { error: "Failed to clear the previous requirement responses" },
+        { status: 500 }
+      );
+    }
+
+    // 3. Establish the fresh attempt on the latest released version.
+    const { error: courseAssignError } = await adminClient
+      .from("course_assignments")
+      .update({
+        assignment_status: 'assigned',
+        completed_at: null,
+        course_version_id: latestVersion.id,
+        attempt_number: (assignment.attempt_number || 1) + 1,
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", targetAssignmentId);
+
+    if (courseAssignError) {
+      console.error("Error resetting course assignment:", courseAssignError);
+      return NextResponse.json(
+        { error: "Failed to start the new course attempt" },
+        { status: 500 }
+      );
     }
 
     // Quiz attempts are immutable evidence. New attempts are tied to the
     // incremented assignment attempt number instead of deleting old rows.
 
     // 5. Reset authorization assignment status if needed
-    const { data: authAssignments } = await adminClient
+    const { data: authAssignments, error: authAssignmentsError } = await adminClient
       .from("authorisation_assignments")
       .select("id, authorisation_id, assignment_status, completed_at, attempt_number")
       .eq("user_id", assignment.user_id);
+    if (authAssignmentsError) throw authAssignmentsError;
 
     if (authAssignments && authAssignments.length > 0) {
       for (const authAssign of authAssignments) {
@@ -166,7 +181,7 @@ export async function POST(request: NextRequest) {
             });
           }
           // Reset this authorization assignment
-          await adminClient
+          const { error: authResetError } = await adminClient
             .from("authorisation_assignments")
             .update({
               assignment_status: 'assigned',
@@ -174,6 +189,7 @@ export async function POST(request: NextRequest) {
               attempt_number: (authAssign.attempt_number || 1) + 1,
             })
             .eq("id", authAssign.id);
+          if (authResetError) throw authResetError;
         }
       }
     }

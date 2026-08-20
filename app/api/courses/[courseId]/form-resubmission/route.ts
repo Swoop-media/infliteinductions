@@ -45,7 +45,39 @@ export async function POST(
       .eq("id", courseId)
       .single();
 
-    const courseTitle = course?.title || "Unknown Course";
+    // Select the newest published immutable version and derive the course
+    // definition from its snapshot. Never read the live course_modules table.
+    const { data: latestVersion, error: latestVersionError } = await adminClient
+      .from("course_versions")
+      .select("id, course_id, version_number, title, snapshot, status, published_at")
+      .eq("course_id", courseId)
+      .eq("status", "published")
+      .order("version_number", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latestVersionError) {
+      console.error("Failed to load the latest published course version:", latestVersionError);
+      return NextResponse.json(
+        { error: "Failed to load the latest published course version" },
+        { status: 500 }
+      );
+    }
+
+    const latestSnapshot = latestVersion?.snapshot;
+    if (
+      !latestVersion?.id ||
+      !latestSnapshot ||
+      !latestSnapshot.course ||
+      !Array.isArray(latestSnapshot.modules)
+    ) {
+      return NextResponse.json(
+        { error: "No valid published course version is available for reassessment" },
+        { status: 500 }
+      );
+    }
+
+    const courseTitle = latestSnapshot.course?.title || course?.title || "Unknown Course";
 
     try {
       await recordCourseCompletion({
@@ -62,31 +94,49 @@ export async function POST(
       );
     }
 
-    const { data: modules } = await adminClient
-      .from("course_modules")
-      .select("id, type")
-      .eq("course_id", courseId);
-
-    const assessmentModules = modules?.filter(m => m.type === "onsite_assessment") || [];
-
-    if (assessmentModules.length > 0) {
-      const assessmentModuleIds = assessmentModules.map(m => m.id);
-
-      await adminClient
-        .from("assignment_progress")
-        .delete()
-        .eq("assignment_id", assignment.id)
-        .in("module_id", assessmentModuleIds);
+    // Start a fresh attempt: clear ALL live progress and requirement responses
+    // for the old live assignment. Quiz attempts remain immutable evidence and
+    // are preserved by the completion history captured above.
+    const { error: progressResetError } = await adminClient
+      .from("assignment_progress")
+      .delete()
+      .eq("assignment_id", assignment.id);
+    if (progressResetError) {
+      console.error("Failed to clear assignment progress:", progressResetError);
+      return NextResponse.json(
+        { error: "Failed to clear the previous assignment progress" },
+        { status: 500 }
+      );
     }
 
-    await adminClient
+    const { error: responsesResetError } = await adminClient
+      .from("requirement_responses")
+      .delete()
+      .eq("assignment_id", assignment.id);
+    if (responsesResetError) {
+      console.error("Failed to clear requirement responses:", responsesResetError);
+      return NextResponse.json(
+        { error: "Failed to clear the previous requirement responses" },
+        { status: 500 }
+      );
+    }
+
+    const { error: resetAssignmentError } = await adminClient
       .from("course_assignments")
       .update({
         assignment_status: "assigned",
         completed_at: null,
+        course_version_id: latestVersion.id,
         attempt_number: (assignment.attempt_number || 1) + 1,
       })
       .eq("id", assignment.id);
+    if (resetAssignmentError) {
+      console.error("Failed to start form reassessment attempt:", resetAssignmentError);
+      return NextResponse.json(
+        { error: "Failed to start a new assessment attempt" },
+        { status: 500 }
+      );
+    }
 
     console.log(`Reset assignment status and assessment progress for assignment ${assignment.id}, course ${courseId}`);
 

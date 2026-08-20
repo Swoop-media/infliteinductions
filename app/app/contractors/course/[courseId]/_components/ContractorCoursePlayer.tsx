@@ -211,6 +211,7 @@ export default function ContractorCoursePlayer({
           
           <ContractorModuleRenderer
             module={currentModule}
+            registrationId={registration.id}
             onComplete={handleModuleComplete}
             isCompleted={completedModules.has(currentModule.id)}
           />

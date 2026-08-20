@@ -2,13 +2,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { getPinnedCourseContext } from "@/lib/course-version";
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('userId');
     const courseId = searchParams.get('courseId');
-    
+    const requestedAssignmentId = searchParams.get('assignmentId') || undefined;
+
     if (!userId || !courseId) {
       return NextResponse.json({ error: 'Missing parameters' }, { status: 400 });
     }
@@ -21,9 +23,19 @@ export async function GET(request: NextRequest) {
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
-    // Since this API is called from admin pages which already have their own access control,
-    // we just verify the user is authenticated. The page-level security handles role-based access.
+
+    // Server-side authorization for this service-role data access (do NOT rely
+    // on page-level gating). Only the subject user may read their own details,
+    // OR a caller with the Admin role (matching both current admin consumers).
+    if (user.id !== userId) {
+      const { data: hasAdminRole } = await supabase.rpc("has_role", {
+        uid: user.id,
+        role_name: "Admin",
+      });
+      if (!hasAdminRole) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
 
     // Use admin client for fetching data
     const adminClient = supabaseAdmin();
@@ -31,46 +43,149 @@ export async function GET(request: NextRequest) {
     // Get course assignment - don't fail if not found (might be viewing completed course without active assignment)
     const { data: assignment } = await adminClient
       .from("course_assignments")
-      .select("id, assignment_status, completed_at")
+      .select("id, assignment_status, completed_at, course_version_id, attempt_number")
       .eq("user_id", userId)
       .eq("course_id", courseId)
       .eq("role", "trainee")
       .maybeSingle();
 
-    // Get all modules for the course (including equipment assessment flag)
-    const { data: modules, error: modulesError } = await adminClient
-      .from("course_modules")
-      .select("id, title, type, order_index, include_equipment_assessment")
-      .eq("course_id", courseId)
-      .order("order_index", { ascending: true });
+    // Resolve the selected trainee assignment's immutable pinned version and
+    // render module/quiz definitions from its snapshot rather than mutable live
+    // content. Fail closed if the pinned version cannot be loaded.
+    let pinnedContext: any;
+    try {
+      pinnedContext = await getPinnedCourseContext(adminClient, {
+        assignmentId: requestedAssignmentId,
+        userId,
+        courseId,
+      });
+    } catch (pinnedError: any) {
+      console.error("Pinned course version unavailable:", pinnedError);
+      return NextResponse.json(
+        { error: pinnedError?.message || "Pinned course version is unavailable" },
+        { status: 404 }
+      );
+    }
+
+    // The pinned context resolves the definitive assignment for this snapshot.
+    const pinnedAssignment = pinnedContext.assignment;
+    const selectedAssignmentId = pinnedAssignment.id;
+    const selectedVersionId = pinnedAssignment.course_version_id;
+    const selectedAttemptNumber = pinnedAssignment.attempt_number ?? null;
+
+    // Build the module list from the immutable snapshot.modules, preserving the
+    // pinned ordering and definitions.
+    const modules = (pinnedContext.modules || [])
+      .slice()
+      .sort(
+        (a: any, b: any) =>
+          (a?.order_index ?? 0) - (b?.order_index ?? 0)
+      )
+      .map((m: any) => ({
+        id: m.id,
+        title: m.title,
+        type: m.type,
+        order_index: m.order_index,
+        include_equipment_assessment: m.include_equipment_assessment,
+      }));
 
     if (!modules || modules.length === 0) {
       // Return an empty but valid response structure
       return NextResponse.json({
         course_id: courseId,
-        assignment_status: assignment?.assignment_status || 'completed',
-        completed_at: assignment?.completed_at || null,
+        assignment_status:
+          pinnedAssignment.assignment_status ||
+          assignment?.assignment_status ||
+          'completed',
+        completed_at:
+          pinnedAssignment.completed_at || assignment?.completed_at || null,
         modules: []
       });
     }
 
-    // Get module progress
-    const { data: moduleProgress } = assignment?.id ? await adminClient
+    // Get module progress (scoped to the selected pinned assignment)
+    const { data: moduleProgress } = selectedAssignmentId ? await adminClient
       .from("assignment_progress")
       .select("module_id, completed_at")
-      .eq("assignment_id", assignment.id) : { data: [] };
+      .eq("assignment_id", selectedAssignmentId) : { data: [] };
 
     const progressMap = new Map((moduleProgress || []).map(p => [p.module_id, p.completed_at]));
 
     // Get module IDs for later queries
     const moduleIds = modules.map(m => m.id);
 
-    // Get quiz attempts
-    const { data: quizAttempts } = await adminClient
+    // Derive quiz definitions (quizzes, questions, options) from the pinned
+    // snapshot.modules instead of mutable live tables.
+    const quizzes: any[] = [];
+    const quizQuestions: any[] = [];
+    const quizOptions: any[] = [];
+    const allRequirements: any[] = [];
+
+    for (const snapModule of pinnedContext.modules || []) {
+      // Onsite requirements from the pinned snapshot
+      for (const req of (snapModule.onsite_requirements || [])) {
+        allRequirements.push({
+          id: req.id,
+          module_id: snapModule.id,
+          label: req.label,
+          field_type: req.field_type,
+          required: req.required,
+          role: req.role,
+          order_index: req.order_index,
+        });
+      }
+
+      // Quizzes / questions / options from the pinned snapshot
+      for (const quiz of (snapModule.quizzes || [])) {
+        quizzes.push({
+          id: quiz.id,
+          module_id: quiz.module_id ?? snapModule.id,
+          course_id: quiz.course_id ?? courseId,
+          pass_mark: quiz.pass_mark ?? 70,
+        });
+
+        for (const q of (quiz.questions || [])) {
+          quizQuestions.push({
+            id: q.id,
+            quiz_id: q.quiz_id ?? quiz.id,
+            module_id: snapModule.id,
+            stem: q.stem,
+            prompt: q.prompt,
+            explanation: q.explanation,
+            points: q.points,
+            order_index: q.order_index,
+            kind: q.kind,
+            type: q.type,
+          });
+
+          for (const opt of (q.options || [])) {
+            quizOptions.push({
+              id: opt.id,
+              question_id: opt.question_id ?? q.id,
+              label: opt.label ?? opt.text ?? "",
+              is_correct: opt.is_correct ?? opt.correct ?? false,
+              order_index: opt.order_index ?? opt.position ?? 0,
+            });
+          }
+        }
+      }
+    }
+
+    allRequirements.sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+
+    const quizIds = quizzes.map(q => q.id);
+
+    // Get quiz attempts, filtered to the selected assignment where possible.
+    // The immutable link is (quiz_id in pinned quizzes) + assignment_id; where
+    // legacy attempts lack an assignment_id we still surface them by user/quiz.
+    let quizAttemptQuery = adminClient
       .from("quiz_attempts")
       .select(`
         id,
         quiz_id,
+        assignment_id,
+        course_version_id,
+        attempt_number,
         score_pct,
         passed,
         answers,
@@ -78,63 +193,32 @@ export async function GET(request: NextRequest) {
         quizzes!inner(module_id, pass_mark)
       `)
       .eq("user_id", userId);
-    
-    // Get quiz questions and options for this course's modules
-    const { data: quizzes } = await adminClient
-      .from("quizzes")
-      .select("id, module_id, course_id, pass_mark")
-      .or(`module_id.in.(${moduleIds.join(',')}),course_id.eq.${courseId}`);
-    
-    const quizIds = quizzes?.map(q => q.id) || [];
-    
-    // Get quiz questions — linked by quiz_id only
-    const { data: quizQuestions } = quizIds.length > 0 ? await adminClient
-      .from("quiz_questions")
-      .select(`
-        id,
-        quiz_id,
-        stem,
-        prompt,
-        explanation,
-        points,
-        order_index,
-        kind,
-        type
-      `)
-      .in("quiz_id", quizIds)
-      .order("order_index", { ascending: true }) : { data: [] };
-    
-    // Get quiz options
-    const questionIds = quizQuestions?.map(q => q.id) || [];
-    const { data: quizOptions } = questionIds.length > 0 ? await adminClient
-      .from("quiz_options")
-      .select(`
-        id,
-        question_id,
-        label,
-        is_correct,
-        order_index
-      `)
-      .in("question_id", questionIds)
-      .order("order_index", { ascending: true }) : { data: [] };
 
-    // Get ALL requirements for all modules (not just ones with responses)
-    const { data: allRequirements } = await adminClient
-      .from("onsite_requirements")
-      .select(`
-        id,
-        module_id,
-        label,
-        field_type,
-        required,
-        role,
-        order_index
-      `)
-      .in("module_id", moduleIds)
-      .order("order_index", { ascending: true });
+    if (quizIds.length > 0) {
+      quizAttemptQuery = quizAttemptQuery.in("quiz_id", quizIds);
+    }
+    // Scope attempts to this assignment/version/attempt where the immutable
+    // columns are populated; legacy rows (null links) are still surfaced.
+    if (selectedAssignmentId) {
+      quizAttemptQuery = quizAttemptQuery.or(
+        `assignment_id.eq.${selectedAssignmentId},assignment_id.is.null`
+      );
+    }
+    if (selectedVersionId) {
+      quizAttemptQuery = quizAttemptQuery.or(
+        `course_version_id.eq.${selectedVersionId},course_version_id.is.null`
+      );
+    }
+    if (selectedAttemptNumber != null) {
+      quizAttemptQuery = quizAttemptQuery.or(
+        `attempt_number.eq.${selectedAttemptNumber},attempt_number.is.null`
+      );
+    }
 
-    // Get all requirement responses (including digital forms, onsite training, etc.)
-    const { data: requirementResponses } = assignment?.id ? await adminClient
+    const { data: quizAttempts } = await quizAttemptQuery;
+
+    // Get all requirement responses (scoped to the selected pinned assignment)
+    const { data: requirementResponses } = selectedAssignmentId ? await adminClient
       .from("requirement_responses")
       .select(`
         id,
@@ -144,7 +228,7 @@ export async function GET(request: NextRequest) {
         trainer_id,
         created_at
       `)
-      .eq("assignment_id", assignment.id) : { data: [] };
+      .eq("assignment_id", selectedAssignmentId) : { data: [] };
 
     // Create a map of responses by requirement_id
     const responseMap = new Map();
@@ -155,32 +239,34 @@ export async function GET(request: NextRequest) {
     // Get modules with equipment assessment enabled
     const modulesWithEquipment = modules.filter(m => m.include_equipment_assessment);
     
-    // Get equipment templates for the course (not module-specific)
-    const { data: equipmentTemplates } = await adminClient
-      .from("equipment_templates")
-      .select(`
-        id,
-        equipment_name,
-        description,
-        required,
-        category,
-        order_index
-      `)
-      .eq("course_id", courseId)
-      .order("order_index", { ascending: true });
-    
-    // Get equipment form blocks for digital training modules  
-    const { data: equipmentBlocks } = await adminClient
-      .from("module_content_blocks")
-      .select(`
-        id,
-        module_id,
-        kind,
-        data,
-        order_index
-      `)
-      .eq("kind", "equipment_form")
-      .in("module_id", moduleIds);
+    // Equipment templates from the pinned snapshot (course-level definition).
+    const equipmentTemplates = (pinnedContext.equipmentTemplates || [])
+      .slice()
+      .sort((a: any, b: any) => (a?.order_index || 0) - (b?.order_index || 0))
+      .map((et: any) => ({
+        id: et.id,
+        equipment_name: et.equipment_name,
+        description: et.description,
+        required: et.required,
+        category: et.category,
+        order_index: et.order_index,
+      }));
+
+    // Equipment form blocks from the pinned snapshot module content_blocks.
+    const equipmentBlocks: any[] = [];
+    for (const snapModule of pinnedContext.modules || []) {
+      for (const block of (snapModule.content_blocks || [])) {
+        if (block?.kind === "equipment_form") {
+          equipmentBlocks.push({
+            id: block.id,
+            module_id: snapModule.id,
+            kind: block.kind,
+            data: block.data,
+            order_index: block.order_index,
+          });
+        }
+      }
+    }
 
     // Get equipment form responses (trainee responses)
     const { data: equipmentResponses } = await adminClient
@@ -484,8 +570,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       course_id: courseId,
-      assignment_status: assignment?.assignment_status,
-      completed_at: assignment?.completed_at,
+      assignment_status:
+        pinnedAssignment.assignment_status ?? assignment?.assignment_status,
+      completed_at: pinnedAssignment.completed_at ?? assignment?.completed_at,
       modules: modulesWithDetails
     });
 

@@ -1,10 +1,10 @@
 ---
-name: Explicit course releases
-description: The agreed distinction between ordinary course edits and deliberate required-version releases.
+name: Non-disruptive course releases
+description: Course releases preserve a new definition without changing existing learner assignments or authorisations.
 ---
 
-Course content history is immutable per learner completion, but ordinary creator edits must not automatically force every learner to retake a course. A creator deliberately chooses “Publish new required version” when the changed content must become a new requirement.
+Publishing a course version is non-disruptive. It saves a new immutable course definition for future use, but does not reset, reassign, notify, or otherwise change existing learners, progress, completions, evidence, or authorisations.
 
-**Why:** Typo fixes and minor corrections should not disrupt completed training. A deliberate release is the auditable signal that assigned learners must complete the new version.
+**Why:** Content improvements should not invalidate completed training or interrupt learners already assigned to a course. A release defines what future attempts use; it is not a mass-retake event.
 
-**How to apply:** Freeze the content and evidence actually available at each completion. Preserve all prior attempts. Only an explicit required-version release advances assignments and linked authorisations to a new attempt; keep the prior approved authorisation current during its retake grace period.
+**How to apply:** Leave each existing assignment pinned to its current version. Learner rendering, quiz scoring, onsite requirements, progress, and completion must all resolve that immutable snapshot rather than live course tables. Move a learner to the latest release only when an explicit fresh attempt begins. Preserve every earlier completion beside later retakes, and keep the prior approved authorisation current during retake grace.

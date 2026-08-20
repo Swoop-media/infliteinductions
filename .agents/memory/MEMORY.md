@@ -30,4 +30,4 @@
 - [Outbound fetch hygiene](outbound-fetch-hygiene.md) — every outbound call needs timeout + body drain; media streams semaphored; formData size-checked at ingress; see rules before adding fetches.
 - [Course/authorisation assignment direction](auth-course-linking-backfill.md) — authorisations backfill courses; direct course completion never infers an authorisation because links can be ambiguous.
 - [Format-fix URL holdback](format-fix-url-holdback.md) — unplayable format-fix uploads hold the block URL (pending_format_fix marker) until converted; all ~7 video renderers must show the placeholder.
-- [Explicit course releases](explicit-course-releases.md) — ordinary edits do not force retakes; only “Publish new required version” advances learners and linked authorisations.
+- [Non-disruptive course releases](explicit-course-releases.md) — releases save immutable definitions only; learners move to the latest version only when an explicit fresh attempt begins.
