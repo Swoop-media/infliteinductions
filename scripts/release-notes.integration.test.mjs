@@ -19,6 +19,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { Pool } from "pg";
 
 const migrationPath = new URL("../app/migrations/033_release_notes.sql", import.meta.url);
+const liveVerificationPath = new URL("./verify-release-notes-policies.sql", import.meta.url);
 const testDatabase = "release_notes_integration";
 let clusterDirectory;
 let socketDirectory;
@@ -346,6 +347,43 @@ test("migration enables release-note RLS, policies, and lifecycle triggers", asy
     note_triggers: 3,
     item_triggers: 2,
   });
+});
+
+test("manual live-policy verifier passes for the managed policy set", async () => {
+  await createActors();
+  const verification = await readFile(liveVerificationPath, "utf8");
+  await pool.query(verification);
+});
+
+test("manual live-policy verifier clearly identifies a legacy permissive policy", async () => {
+  await createActors();
+  const verification = await readFile(liveVerificationPath, "utf8");
+  const client = await pool.connect();
+  try {
+    await client.query(`
+      create policy "rn_select_all_auth"
+      on public.release_notes
+      for select
+      to authenticated
+      using (true)
+    `);
+
+    await assert.rejects(
+      () => client.query(verification),
+      (error) => {
+        assert.match(error.message, /unexpected, missing, or legacy policy found/i);
+        assert.match(error.detail ?? "", /rn_select_all_auth/i);
+        return true;
+      }
+    );
+    await client.query("rollback");
+  } finally {
+    await client.query("rollback").catch(() => undefined);
+    await client.query(
+      `drop policy if exists "rn_select_all_auth" on public.release_notes`
+    );
+    client.release();
+  }
 });
 
 test("ordinary authenticated users see only published history and cannot write it", async () => {
