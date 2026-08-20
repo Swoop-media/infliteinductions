@@ -400,7 +400,10 @@ create policy "Admins can delete release notes"
 on public.release_notes
 for delete
 to authenticated
-using (public.app_has_role(auth.uid(), 'Admin'));
+using (
+  public.app_has_role(auth.uid(), 'Admin')
+  and status = 'draft'
+);
 
 drop policy if exists "Release note items in published history are readable" on public.release_note_items;
 create policy "Release note items in published history are readable"
