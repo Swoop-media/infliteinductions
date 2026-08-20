@@ -367,6 +367,15 @@ for each row execute function public.enforce_release_note_item_draft();
 alter table public.release_notes enable row level security;
 alter table public.release_note_items enable row level security;
 
+-- Earlier release-note prototypes used rn_* policy names. Remove those
+-- permissive legacy policies before installing the managed policy set below;
+-- otherwise rn_select_all_auth continues exposing drafts alongside this
+-- migration's published-history policy.
+drop policy if exists "rn_select_all_auth" on public.release_notes;
+drop policy if exists "rn_admin_insert" on public.release_notes;
+drop policy if exists "rn_admin_update" on public.release_notes;
+drop policy if exists "rn_admin_delete" on public.release_notes;
+
 drop policy if exists "Release notes published history is readable" on public.release_notes;
 create policy "Release notes published history is readable"
 on public.release_notes

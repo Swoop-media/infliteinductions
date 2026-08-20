@@ -198,6 +198,13 @@ async function bootstrapReleaseNoteSchema() {
 
   // Apply it twice so its guarded reconciliation statements stay executable.
   await pool.query(migration);
+  await pool.query(`
+    create policy "rn_select_all_auth"
+    on public.release_notes
+    for select
+    to authenticated
+    using (true);
+  `);
   await pool.query(migration);
   await pool.query(`
     grant select, insert, update, delete on public.release_notes, public.release_note_items to authenticated;
