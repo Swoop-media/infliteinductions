@@ -142,9 +142,11 @@ interface Props {
   courses: CompletedCourse[];
   authorizations: CompletedAuthorization[];
   revokedAuthorizations?: RevokedAuthorization[];
+  trainingHistory?: any[];
+  authorisationHistory?: any[];
 }
 
-export default function ExpandableTrainingRecord({ profile, courses, authorizations, revokedAuthorizations }: Props) {
+export default function ExpandableTrainingRecord({ profile, courses, authorizations, revokedAuthorizations, trainingHistory = [], authorisationHistory = [] }: Props) {
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
   const [courseDetails, setCourseDetails] = useState<Map<string, any>>(new Map());
   const [loadingDetails, setLoadingDetails] = useState<Set<string>>(new Set());
@@ -538,6 +540,146 @@ export default function ExpandableTrainingRecord({ profile, courses, authorizati
                         <div className="text-sm text-gray-500 italic">No module details available</div>
                       )}
                     </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div className="mb-8 page-break">
+        <h2 className="text-xl font-bold text-gray-900 mb-4 border-b border-gray-300 pb-2">
+          Permanent Authorisation History ({authorisationHistory.length})
+        </h2>
+        {authorisationHistory.length === 0 ? (
+          <p className="text-gray-500 italic">No immutable authorisation history records found.</p>
+        ) : (
+          <div className="space-y-4">
+            {authorisationHistory.map((record: any) => {
+              const requiredCourses = Array.isArray(record.snapshot?.required_courses)
+                ? record.snapshot.required_courses
+                : [];
+              const completions = Array.isArray(record.evidence?.course_completion_records)
+                ? record.evidence.course_completion_records
+                : [];
+              return (
+                <div key={record.id} className="rounded-lg border border-indigo-300 p-4 break-inside-avoid">
+                  <div className="flex justify-between gap-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">{record.authorisation_title || "Authorisation"}</h3>
+                      <p className="text-sm"><strong>Approved:</strong> {formatDateSafe(record.approved_at)}</p>
+                      {record.expires_at && (
+                        <p className="text-sm"><strong>Expires:</strong> {formatDateSafe(record.expires_at)}</p>
+                      )}
+                    </div>
+                    <p className="text-sm"><strong>Attempt:</strong> {record.attempt_number || "Legacy"}</p>
+                  </div>
+                  {record.restrictions && (
+                    <p className="mt-2 text-sm"><strong>Restrictions:</strong> {record.restrictions}</p>
+                  )}
+                  <p className="mt-2 text-xs">
+                    {requiredCourses.length} required courses · {completions.length} linked course completion records
+                  </p>
+                  {requiredCourses.length > 0 && (
+                    <ul className="mt-2 list-disc pl-5 text-xs text-gray-700">
+                      {requiredCourses.map((course: any) => (
+                        <li key={course.course_id}>
+                          {course.course_title || "Course"} — version {course.course_version_number || "baseline"}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {record.snapshot_source !== "exact" && (
+                    <p className="mt-3 text-xs text-amber-800">
+                      Baseline reconstruction: older overwritten requirements cannot be recovered.
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Immutable attempts are rendered from snapshots, never current live rows. */}
+      <div className="mb-8 page-break">
+        <h2 className="text-xl font-bold text-gray-900 mb-4 border-b border-gray-300 pb-2">
+          Permanent Training History ({trainingHistory.length})
+        </h2>
+        {trainingHistory.length === 0 ? (
+          <p className="text-gray-500 italic">No immutable training history records found.</p>
+        ) : (
+          <div className="space-y-4">
+            {trainingHistory.map((record: any) => {
+              const modules = Array.isArray(record.snapshot?.modules) ? record.snapshot.modules : [];
+              const attempts = Array.isArray(record.evidence?.quiz_attempts)
+                ? record.evidence.quiz_attempts
+                : [];
+              const responses = Array.isArray(record.evidence?.requirement_responses)
+                ? record.evidence.requirement_responses
+                : [];
+              const documents = Array.isArray(record.evidence?.learner_documents)
+                ? record.evidence.learner_documents
+                : [];
+              return (
+                <div key={record.id} className="rounded-lg border border-blue-300 p-4 break-inside-avoid">
+                  <div className="flex justify-between gap-4">
+                    <div>
+                      <h3 className="font-semibold text-lg">{record.course_title || "Course"}</h3>
+                      <p className="text-sm">
+                        <strong>Completed:</strong> {formatDateSafe(record.completed_at)}
+                      </p>
+                    </div>
+                    <div className="text-right text-sm">
+                      <p><strong>Version:</strong> {record.course_version_number || "Baseline"}</p>
+                      <p><strong>Attempt:</strong> {record.attempt_number || "Legacy"}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-4 gap-2 text-xs">
+                    <div>{modules.length} modules</div>
+                    <div>{attempts.length} quiz attempts</div>
+                    <div>{responses.length} onsite responses</div>
+                    <div>{documents.length} documents</div>
+                  </div>
+
+                  {modules.length > 0 && (
+                    <div className="mt-3">
+                      <h4 className="text-sm font-medium">Frozen course content</h4>
+                      <ul className="mt-1 list-disc pl-5 text-xs text-gray-700">
+                        {modules.map((module: any) => (
+                          <li key={module.id}>
+                            {module.title || "Untitled module"} — {formatModuleType(module.type || "module")}
+                            {Array.isArray(module.quizzes) && module.quizzes.length
+                              ? ` (${module.quizzes.reduce((n: number, quiz: any) => n + (quiz.questions?.length || 0), 0)} questions)`
+                              : ""}
+                            {Array.isArray(module.onsite_requirements) && module.onsite_requirements.length
+                              ? ` (${module.onsite_requirements.length} onsite requirements)`
+                              : ""}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {attempts.length > 0 && (
+                    <div className="mt-3">
+                      <h4 className="text-sm font-medium">Quiz results</h4>
+                      <ul className="mt-1 space-y-1 text-xs text-gray-700">
+                        {attempts.map((attempt: any, index: number) => (
+                          <li key={attempt.id || index}>
+                            Attempt {index + 1}: {attempt.score_pct ?? 0}% — {attempt.passed ? "Passed" : "Not passed"}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {record.snapshot_source !== "exact" && (
+                    <p className="mt-3 text-xs text-amber-800">
+                      Baseline reconstruction: older content that had already been changed before immutable history was enabled cannot be recovered.
+                    </p>
                   )}
                 </div>
               );

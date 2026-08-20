@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { recordCourseCompletion } from "@/lib/training-history";
 
 // Helper function to check and update authorization status
 // Delegates to the shared auto-fix module which evaluates ALL of the user's
@@ -172,11 +173,30 @@ export async function POST(req: NextRequest) {
       
       // If all modules are completed, mark the course assignment as completed
       if (allModulesCompleted) {
+        const completedAt = new Date().toISOString();
+        try {
+          // Fail closed: do not mark the reusable live assignment completed
+          // unless its immutable version/evidence record is durable first.
+          await recordCourseCompletion({
+            assignmentId,
+            completedAt,
+            actorId: user.id,
+            reason: "completion",
+            adminClient,
+          });
+        } catch (historyError: any) {
+          console.error("Failed to preserve immutable course completion:", historyError);
+          return NextResponse.json(
+            { error: historyError?.message || "Could not preserve training history" },
+            { status: 500 }
+          );
+        }
+
         const { error: courseUpdateError } = await adminClient
           .from("course_assignments")
           .update({
             assignment_status: "completed",
-            completed_at: new Date().toISOString()
+            completed_at: completedAt
           })
           .eq("id", assignmentId);
         

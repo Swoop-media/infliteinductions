@@ -85,12 +85,12 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
     const [authHistRes, courseHistRes, auditRes] = await Promise.all([
       adminClient
         .from("authorisation_assignment_history")
-        .select("id, assignment_id, authorisation_id, assignment_status, completed_at, approved_at, restrictions, expires_at, superseded_at, reason")
+        .select("id, assignment_id, authorisation_id, assignment_status, completed_at, approved_at, restrictions, expires_at, superseded_at, reason, authorisation_title, snapshot, evidence, attempt_number, snapshot_source")
         .eq("user_id", userId)
         .order("superseded_at", { ascending: false }),
       adminClient
         .from("course_assignment_history")
-        .select("id, course_id, assignment_status, completed_at, superseded_at, reason")
+        .select("id, assignment_id, course_id, assignment_status, completed_at, superseded_at, reason, course_version_number, attempt_number, course_title, snapshot, evidence, snapshot_source")
         .eq("user_id", userId)
         .order("superseded_at", { ascending: false }),
       adminClient
@@ -124,20 +124,30 @@ async function loadUserAssignmentsAndAvailable(userId: string) {
   const authorizationHistory = authHistoryRows.map((h) => ({
     id: h.id,
     assignment_id: h.assignment_id,
-    authorization_title: histAuthTitleMap.get(h.authorisation_id) || "Unknown Authorization",
+    authorization_title: h.authorisation_title || histAuthTitleMap.get(h.authorisation_id) || "Unknown Authorization",
     completed_at: h.completed_at,
     approved_at: h.approved_at,
     expires_at: h.expires_at,
     restrictions: h.restrictions || null,
     superseded_at: h.superseded_at,
     reason: h.reason,
+    snapshot: h.snapshot,
+    evidence: h.evidence,
+    attempt_number: h.attempt_number,
+    snapshot_source: h.snapshot_source,
   }));
   const courseHistory = courseHistoryRows.map((h) => ({
     id: h.id,
-    course_title: histCourseTitleMap.get(h.course_id) || "Unknown Course",
+    assignment_id: h.assignment_id,
+    course_title: h.course_title || histCourseTitleMap.get(h.course_id) || "Unknown Course",
     completed_at: h.completed_at,
     superseded_at: h.superseded_at,
     reason: h.reason,
+    course_version_number: h.course_version_number,
+    attempt_number: h.attempt_number,
+    snapshot: h.snapshot,
+    evidence: h.evidence,
+    snapshot_source: h.snapshot_source,
   }));
 
   // Get all course assignments (both completed and in-progress)
@@ -958,13 +968,13 @@ export default async function EditUserPage({
             )}
           </div>
 
-          {/* Expired Authorisations (incl. superseded/retaken history) */}
+          {/* Expired Authorisations */}
           <CollapsibleSection
             title="Expired Authorisations"
-            count={expiredAuthorizations.length + authorizationHistory.length}
+            count={expiredAuthorizations.length}
             defaultOpen={false}
           >
-            {expiredAuthorizations.length === 0 && authorizationHistory.length === 0 ? (
+            {expiredAuthorizations.length === 0 ? (
               <p className="text-sm text-gray-500">No expired authorisations found.</p>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -989,28 +999,71 @@ export default async function EditUserPage({
                     </span>
                   </div>
                 ))}
-                {authorizationHistory.map((h: any) => (
-                  <div key={h.id} className="flex items-center justify-between p-3 border border-gray-300 rounded-md bg-gray-50">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-sm text-gray-900">{h.authorization_title}</h3>
-                      <p className="text-xs text-gray-600">
-                        Completed: {h.completed_at ? new Date(h.completed_at).toLocaleDateString() : 'N/A'}
-                        {h.approved_at ? ` · Approved: ${new Date(h.approved_at).toLocaleDateString()}` : ''}
-                      </p>
-                      {h.expires_at && (
-                        <p className="text-xs text-gray-600">
-                          Expiry at time of retake: {new Date(h.expires_at).toLocaleDateString()}
-                        </p>
-                      )}
+              </div>
+            )}
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Authorisation History"
+            count={authorizationHistory.length}
+            defaultOpen={false}
+          >
+            {authorizationHistory.length === 0 ? (
+              <p className="text-sm text-gray-500">No immutable authorisation history has been recorded yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {authorizationHistory.map((h: any) => {
+                  const courseRecords = Array.isArray(h.evidence?.course_completion_records)
+                    ? h.evidence.course_completion_records
+                    : [];
+                  const requiredCourses = Array.isArray(h.snapshot?.required_courses)
+                    ? h.snapshot.required_courses
+                    : [];
+                  return (
+                    <div key={h.id} className="rounded-md border border-indigo-200 bg-indigo-50/40 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{h.authorization_title}</h3>
+                          <p className="text-sm text-gray-600">
+                            Approved {h.approved_at ? new Date(h.approved_at).toLocaleString() : "date unavailable"}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Attempt {h.attempt_number || "legacy"}
+                            {h.expires_at ? ` · Expires ${new Date(h.expires_at).toLocaleDateString()}` : " · No expiry"}
+                          </p>
+                        </div>
+                        <span className="rounded-full bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">
+                          Permanent approval record
+                        </span>
+                      </div>
                       {h.restrictions && (
-                        <p className="text-xs text-gray-600 italic">Restrictions: {h.restrictions}</p>
+                        <p className="mt-2 text-sm text-gray-700"><strong>Restrictions:</strong> {h.restrictions}</p>
                       )}
+                      <details className="mt-3 rounded border bg-white p-3">
+                        <summary className="cursor-pointer text-sm font-medium text-indigo-800">
+                          View recorded requirements and completions
+                        </summary>
+                        <div className="mt-2 text-sm text-gray-600">
+                          <p>{requiredCourses.length} required courses · {courseRecords.length} recorded course completions</p>
+                          {requiredCourses.length > 0 && (
+                            <ul className="mt-2 list-disc pl-5">
+                              {requiredCourses.map((course: any) => (
+                                <li key={course.course_id}>
+                                  {course.course_title || "Course"} — version {course.course_version_number || "baseline"}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {h.snapshot_source !== "exact" && (
+                            <p className="mt-2 text-xs text-amber-700">
+                              Reconstructed baseline: older overwritten content cannot be recovered.
+                            </p>
+                          )}
+                        </div>
+                      </details>
                     </div>
-                    <span className="ml-3 inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700">
-                      Superseded — retaken {h.superseded_at ? new Date(h.superseded_at).toLocaleDateString() : ''}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CollapsibleSection>
@@ -1049,13 +1102,13 @@ export default async function EditUserPage({
             </div>
           )}
 
-          {/* Expired Courses (incl. superseded/retaken history) */}
+          {/* Expired Courses */}
           <CollapsibleSection
             title="Expired Courses"
-            count={expiredCompletedCourses.length + courseHistory.length}
+            count={expiredCompletedCourses.length}
             defaultOpen={false}
           >
-            {expiredCompletedCourses.length === 0 && courseHistory.length === 0 ? (
+            {expiredCompletedCourses.length === 0 ? (
               <p className="text-sm text-gray-500">No expired courses found.</p>
             ) : (
               <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -1077,19 +1130,104 @@ export default async function EditUserPage({
                     </span>
                   </div>
                 ))}
-                {courseHistory.map((h: any) => (
-                  <div key={h.id} className="flex items-center justify-between p-3 border border-gray-300 rounded-md bg-gray-50">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-sm text-gray-900">{h.course_title}</h3>
-                      <p className="text-xs text-gray-600">
-                        Completed: {h.completed_at ? new Date(h.completed_at).toLocaleDateString() : 'N/A'}
-                      </p>
+              </div>
+            )}
+          </CollapsibleSection>
+
+          {/* Every immutable completion, including current and superseded attempts */}
+          <CollapsibleSection
+            title="Training History"
+            count={courseHistory.length}
+            defaultOpen={false}
+          >
+            {courseHistory.length === 0 ? (
+              <p className="text-sm text-gray-500">No immutable course history has been recorded yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {courseHistory.map((h: any) => {
+                  const modules = Array.isArray(h.snapshot?.modules) ? h.snapshot.modules : [];
+                  const quizAttempts = Array.isArray(h.evidence?.quiz_attempts)
+                    ? h.evidence.quiz_attempts
+                    : [];
+                  const requirementResponses = Array.isArray(h.evidence?.requirement_responses)
+                    ? h.evidence.requirement_responses
+                    : [];
+                  const documents = Array.isArray(h.evidence?.learner_documents)
+                    ? h.evidence.learner_documents
+                    : [];
+                  return (
+                    <div key={h.id} className="rounded-md border border-blue-200 bg-blue-50/40 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{h.course_title}</h3>
+                          <p className="text-sm text-gray-600">
+                            Completed {h.completed_at ? new Date(h.completed_at).toLocaleString() : "date unavailable"}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Version {h.course_version_number || "baseline"} · Attempt {h.attempt_number || "legacy"}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+                            Permanent record
+                          </span>
+                          {h.snapshot_source !== "exact" && (
+                            <span className="rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+                              Reconstructed baseline
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <details className="mt-3 rounded border bg-white p-3">
+                        <summary className="cursor-pointer text-sm font-medium text-blue-800">
+                          View recorded content and evidence
+                        </summary>
+                        <div className="mt-3 space-y-4 text-sm">
+                          <div className="grid gap-2 sm:grid-cols-4">
+                            <div><span className="font-medium">{modules.length}</span> modules</div>
+                            <div><span className="font-medium">{quizAttempts.length}</span> quiz attempts</div>
+                            <div><span className="font-medium">{requirementResponses.length}</span> onsite responses</div>
+                            <div><span className="font-medium">{documents.length}</span> evidence documents</div>
+                          </div>
+                          {modules.length > 0 && (
+                            <div>
+                              <div className="font-medium text-gray-800">Frozen course content</div>
+                              <ul className="mt-1 list-disc space-y-1 pl-5 text-gray-600">
+                                {modules.map((m: any) => (
+                                  <li key={m.id}>
+                                    {m.title || "Untitled module"} ({String(m.type || "module").replaceAll("_", " ")})
+                                    {Array.isArray(m.quizzes) && m.quizzes.length > 0
+                                      ? ` — ${m.quizzes.reduce((n: number, q: any) => n + (q.questions?.length || 0), 0)} questions`
+                                      : ""}
+                                    {Array.isArray(m.onsite_requirements) && m.onsite_requirements.length > 0
+                                      ? ` — ${m.onsite_requirements.length} onsite requirements`
+                                      : ""}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {quizAttempts.length > 0 && (
+                            <div>
+                              <div className="font-medium text-gray-800">Quiz results</div>
+                              <ul className="mt-1 space-y-1 text-gray-600">
+                                {quizAttempts.map((attempt: any, index: number) => (
+                                  <li key={attempt.id || index}>
+                                    Attempt {index + 1}: {attempt.score_pct ?? 0}% — {attempt.passed ? "Passed" : "Not passed"}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          <p className="text-xs text-gray-500">
+                            Snapshot source: {h.snapshot_source || "legacy"} · Recorded because: {h.reason || "completion"}
+                          </p>
+                        </div>
+                      </details>
                     </div>
-                    <span className="ml-3 inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700">
-                      Superseded — retaken {h.superseded_at ? new Date(h.superseded_at).toLocaleDateString() : ''}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </CollapsibleSection>

@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { Database } from "@/lib/supabase/types";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { recordCourseCompletion } from "@/lib/training-history";
 
 export async function POST(
   request: NextRequest,
@@ -75,12 +77,29 @@ export async function POST(
         });
     }
 
-    // Update the course assignment status to completed
+    const completedAt = new Date().toISOString();
+    try {
+      await recordCourseCompletion({
+        assignmentId,
+        completedAt,
+        actorId: user.id,
+        reason: "completion",
+        adminClient: supabaseAdmin(),
+      });
+    } catch (historyError: any) {
+      console.error("Failed to preserve immutable course completion:", historyError);
+      return NextResponse.json(
+        { error: historyError?.message || "Could not preserve training history" },
+        { status: 500 }
+      );
+    }
+
+    // Update only after immutable history is durable.
     const { error: updateError } = await supabase
       .from("course_assignments")
       .update({ 
         assignment_status: 'completed',
-        completed_at: new Date().toISOString()
+        completed_at: completedAt
       } as any)
       .eq("id", assignmentId);
 

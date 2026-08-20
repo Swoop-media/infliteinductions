@@ -76,8 +76,22 @@ export async function POST(req: Request) {
       }
     }
 
-    // Create authorization assignments
-    const assignments = authorization_ids.map(authorisation_id => ({
+    // Create only missing authorization assignments. Reassigning an existing
+    // authorization must never reset a completed/approved historical record;
+    // the explicit retake action is the only reset path.
+    const { data: existingAuthorisations, error: existingAuthError } = await supabase
+      .from("authorisation_assignments")
+      .select("authorisation_id")
+      .eq("user_id", user_id)
+      .in("authorisation_id", authorization_ids);
+    if (existingAuthError) {
+      back.searchParams.set("error", `Failed to check existing authorizations: ${existingAuthError.message}`);
+      return NextResponse.redirect(back);
+    }
+    const existingAuthIds = new Set((existingAuthorisations || []).map(a => a.authorisation_id));
+    const assignments = authorization_ids
+      .filter(authorisation_id => !existingAuthIds.has(authorisation_id))
+      .map(authorisation_id => ({
       user_id,
       authorisation_id,
       created_by: user.id,
@@ -85,12 +99,9 @@ export async function POST(req: Request) {
       // Note: No assigned_at column in authorisation_assignments table, using created_at instead
     }));
 
-    const { error: assignError } = await supabase
-      .from("authorisation_assignments")
-      .upsert(assignments, {
-        onConflict: 'user_id,authorisation_id',
-        ignoreDuplicates: false
-      });
+    const { error: assignError } = assignments.length > 0
+      ? await supabase.from("authorisation_assignments").insert(assignments)
+      : { error: null };
 
     if (assignError) {
       console.error("Authorization assignment error:", assignError);
@@ -107,7 +118,20 @@ export async function POST(req: Request) {
         .eq("authorisation_id", authorisation_id);
 
       if (authCourses && authCourses.length > 0) {
-        const courseAssignments = authCourses.map(ac => ({
+        const authCourseIds = authCourses.map(ac => ac.course_id);
+        const { data: existingCourses, error: existingCoursesError } = await supabase
+          .from("course_assignments")
+          .select("course_id")
+          .eq("user_id", user_id)
+          .eq("role", "trainee")
+          .in("course_id", authCourseIds);
+        if (existingCoursesError) {
+          throw new Error(`Could not check existing course assignments: ${existingCoursesError.message}`);
+        }
+        const existingCourseIds = new Set((existingCourses || []).map(c => c.course_id));
+        const courseAssignments = authCourses
+          .filter(ac => !existingCourseIds.has(ac.course_id))
+          .map(ac => ({
           user_id,
           course_id: ac.course_id,
           created_by: user.id,
@@ -116,13 +140,14 @@ export async function POST(req: Request) {
           assigned_at: new Date().toISOString()
         }));
 
-        // Upsert course assignments
-        await supabase
-          .from("course_assignments")
-          .upsert(courseAssignments, {
-            onConflict: 'user_id,course_id,role',
-            ignoreDuplicates: false
-          });
+        if (courseAssignments.length > 0) {
+          const { error: courseAssignmentError } = await supabase
+            .from("course_assignments")
+            .insert(courseAssignments);
+          if (courseAssignmentError) {
+            throw new Error(`Could not create required course assignments: ${courseAssignmentError.message}`);
+          }
+        }
 
         // Create enrollments
         const enrollments = authCourses.map(ac => ({

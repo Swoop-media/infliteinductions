@@ -6,6 +6,7 @@ import { createSupabaseServer } from "@/lib/supabase/server";
 import { hasRole } from "@/lib/roles";
 import { redirect } from "next/navigation";
 import ExpandableTrainingRecord from "./ExpandableTrainingRecord";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type CompletedCourse = {
   assignment_id: string;
@@ -249,7 +250,31 @@ async function loadUserCompletedItems(userId: string) {
     status: 'revoked'
   }));
 
-  return { processedCourses, processedAuthorizations, processedRevokedAuthorizations };
+  let trainingHistory: any[] = [];
+  let authorisationHistory: any[] = [];
+  try {
+    const admin = supabaseAdmin();
+    const [courseResult, authResult] = await Promise.all([
+      admin
+        .from("course_assignment_history")
+        .select("id, completed_at, course_title, course_version_number, attempt_number, snapshot, evidence, snapshot_source")
+        .eq("user_id", userId)
+        .order("completed_at", { ascending: false }),
+      admin
+        .from("authorisation_assignment_history")
+        .select("id, approved_at, expires_at, restrictions, authorisation_title, attempt_number, snapshot, evidence, snapshot_source")
+        .eq("user_id", userId)
+        .order("approved_at", { ascending: false }),
+    ]);
+    if (courseResult.error) throw courseResult.error;
+    if (authResult.error) throw authResult.error;
+    trainingHistory = courseResult.data || [];
+    authorisationHistory = authResult.data || [];
+  } catch (historyError) {
+    console.error("Could not load immutable training history for PDF:", historyError);
+  }
+
+  return { processedCourses, processedAuthorizations, processedRevokedAuthorizations, trainingHistory, authorisationHistory };
 }
 
 export default async function UserTrainingRecordPDF({
@@ -277,7 +302,7 @@ export default async function UserTrainingRecordPDF({
     );
   }
 
-  const { processedCourses, processedAuthorizations, processedRevokedAuthorizations } = await loadUserCompletedItems(resolvedParams.id);
+  const { processedCourses, processedAuthorizations, processedRevokedAuthorizations, trainingHistory, authorisationHistory } = await loadUserCompletedItems(resolvedParams.id);
 
   return (
     <ExpandableTrainingRecord 
@@ -285,6 +310,8 @@ export default async function UserTrainingRecordPDF({
       courses={processedCourses}
       authorizations={processedAuthorizations}
       revokedAuthorizations={processedRevokedAuthorizations}
+      trainingHistory={trainingHistory}
+      authorisationHistory={authorisationHistory}
     />
   );
 }

@@ -10,6 +10,8 @@ import { buildCourseCorpus, loadStoredSuggestion } from "@/lib/course-suggestion
 import SafefliteRiskPicker from "./SafefliteRiskPicker";
 import { toAbsoluteUrl } from "@/lib/utils/url";
 import { logContentAudit, logModuleContentAudit, diffChanges } from "@/lib/audit";
+import { hasRole } from "@/lib/roles";
+import { publishNewCourseVersion } from "@/lib/training-history";
 import {
   listSafefliteRisks,
   upsertTrainingControl,
@@ -91,6 +93,7 @@ function noticeMessage(code?: string) {
   switch (code) {
     case "saved": return "Saved.";
     case "status_updated": return "Course status updated.";
+    case "version_published": return "New course version published. Existing learners have been assigned the new version; their prior completions remain in training history.";
     case "module_created": return "Module created.";
     case "module_deleted": return "Module deleted.";
     case "module_renamed": return "Module renamed.";
@@ -116,6 +119,7 @@ type CourseRow = {
   created_at: string;
   updated_at: string;
   created_by: string | null;
+  current_version_number?: number;
   external_contractors?: boolean;
   contractor_flow_type?: string | null;
   contractor_site_id?: string | null;
@@ -544,6 +548,52 @@ async function updateCourseStatusAction(formData: FormData) {
 
   revalidatePath(buildCourseUrl(courseId));
   redirect(next);
+}
+
+async function publishNewVersionAction(formData: FormData) {
+  "use server";
+  const courseId = String(formData.get("course_id") || "");
+  const confirmed = formData.get("confirm_release") === "yes";
+  const changeNotes = String(formData.get("change_notes") || "").trim() || null;
+  if (!courseId) throw new Error("Missing course_id");
+  if (!confirmed) throw new Error("Confirm that this release requires every assigned learner to start the new version.");
+
+  const canPublish =
+    (await hasRole("Course Creators")) ||
+    (await hasRole("Senior management")) ||
+    (await hasRole("Admin"));
+  if (!canPublish) throw new Error("You do not have permission to publish course versions.");
+
+  const supabase = await createSupabaseServer();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/login");
+
+  const result = await publishNewCourseVersion({
+    courseId,
+    actorId: user.id,
+    changeNotes,
+  });
+
+  const { data: releasedCourse } = await supabaseAdmin()
+    .from("courses")
+    .select("title")
+    .eq("id", courseId)
+    .maybeSingle();
+  await logContentAudit({
+    entityType: "course",
+    entityId: courseId,
+    entityName: releasedCourse?.title || "Course",
+    action: "new_version_published",
+    actorId: user.id,
+    details: {
+      version_number: result.versionNumber,
+      learner_assignments_reset: result.resetCount,
+      change_notes: changeNotes,
+    },
+  });
+
+  revalidatePath(buildCourseUrl(courseId));
+  redirect(buildCourseUrl(courseId, "details", "version_published"));
 }
 
 /** ✅ UPDATED: Details save now supports department + tags (keeps your valid_for_months) */
@@ -1437,7 +1487,12 @@ function DetailsTab({
 
       {/* FORM 2: Status */}
       <div className="rounded-lg border p-4 space-y-3">
-        <div className="font-semibold">Course status</div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="font-semibold">Course status</div>
+          <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+            Released version {course.current_version_number || 1}
+          </span>
+        </div>
         <form action={updateCourseStatusAction} className="flex items-center gap-3">
           <input type="hidden" name="course_id" value={course.id} />
           <input type="hidden" name="next" value={courseUrlFor("status_updated")} />
@@ -1457,6 +1512,56 @@ function DetailsTab({
         <div className="text-xs text-gray-500">
           Draft: only editors/owners see it. Published: visible to learners. Archived: hidden for new learners.
         </div>
+      </div>
+
+      <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4 space-y-4">
+        <div>
+          <div className="font-semibold text-amber-950">Publish new required version</div>
+          <p className="mt-1 text-sm text-amber-900">
+            Use this only when the edited course must be completed again. It freezes the current
+            course, quiz questions, onsite requirements, learner results and evidence as a new
+            version. Every assigned learner is moved to the new version; previous completions stay
+            permanently in their training history.
+          </p>
+        </div>
+        <form action={publishNewVersionAction} className="space-y-3">
+          <input type="hidden" name="course_id" value={course.id} />
+          <div>
+            <label htmlFor="change_notes" className="block text-sm font-medium text-amber-950">
+              What changed? <span className="font-normal">(optional)</span>
+            </label>
+            <textarea
+              id="change_notes"
+              name="change_notes"
+              rows={2}
+              className="mt-1 w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm"
+              placeholder="e.g. Updated emergency procedure and replaced the final assessment"
+            />
+          </div>
+          <label className="flex items-start gap-2 text-sm text-amber-950">
+            <input
+              type="checkbox"
+              name="confirm_release"
+              value="yes"
+              required
+              className="mt-1"
+            />
+            <span>
+              I understand this creates version {(course.current_version_number || 1) + 1} and
+              requires all assigned learners to complete it.
+            </span>
+          </label>
+          <button
+            type="submit"
+            disabled={course.status !== "published"}
+            className="rounded-md bg-amber-700 px-4 py-2 text-sm font-medium text-white hover:bg-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Publish version {(course.current_version_number || 1) + 1}
+          </button>
+          {course.status !== "published" && (
+            <p className="text-xs text-amber-800">Publish the course status first.</p>
+          )}
+        </form>
       </div>
 
       {/* Resit notification menu for published courses */}

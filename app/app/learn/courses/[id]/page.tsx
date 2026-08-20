@@ -299,6 +299,7 @@ async function submitQuizAnswers(formData: FormData) {
 
   // Get current user (skip in preview mode)
   let user = null;
+  let assignmentVersion: any = null;
   if (!preview) {
     const { data: authData } = await supabase.auth.getUser();
     user = authData.user;
@@ -306,6 +307,47 @@ async function submitQuizAnswers(formData: FormData) {
       redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=auth_required`);
       return;
     }
+  }
+
+  const validationAdmin = supabaseAdmin();
+  const [moduleResult, quizResult, assignmentResult] = await Promise.all([
+    validationAdmin
+      .from("course_modules")
+      .select("id, course_id, type")
+      .eq("id", moduleId)
+      .maybeSingle(),
+    validationAdmin
+      .from("quizzes")
+      .select("id, module_id, course_id, pass_mark")
+      .eq("id", quizId)
+      .maybeSingle(),
+    !preview && user
+      ? validationAdmin
+          .from("course_assignments")
+          .select("id, user_id, course_id, role, course_version_id, attempt_number")
+          .eq("id", assignmentId)
+          .eq("user_id", user.id)
+          .eq("role", "trainee")
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  const validatedModule = moduleResult.data;
+  const validatedQuiz = quizResult.data;
+  assignmentVersion = assignmentResult.data;
+  const invalidQuizChain =
+    moduleResult.error ||
+    quizResult.error ||
+    !validatedModule ||
+    !validatedQuiz ||
+    validatedModule.course_id !== courseId ||
+    validatedModule.type !== "digital_assessment_quiz" ||
+    validatedQuiz.module_id !== moduleId ||
+    (validatedQuiz.course_id && validatedQuiz.course_id !== courseId) ||
+    (!preview && (!assignmentVersion || assignmentVersion.course_id !== courseId));
+  if (invalidQuizChain) {
+    redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=invalid_quiz_assignment`);
+    return;
   }
 
   // Collect answers from form data
@@ -322,9 +364,13 @@ async function submitQuizAnswers(formData: FormData) {
     .from("quiz_questions")
     .select(`
       id,
+      stem,
+      type,
+      order_index,
       points,
       quiz_options (
         id,
+        label,
         is_correct
       )
     `)
@@ -350,14 +396,7 @@ async function submitQuizAnswers(formData: FormData) {
 
   const scorePercent = totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
 
-  // Get quiz pass mark
-  const { data: quiz } = await supabase
-    .from("quizzes")
-    .select("pass_mark")
-    .eq("id", quizId)
-    .single();
-
-  const passMarkPercent = quiz?.pass_mark || 80;  // Use 80% as default to match other quiz modules
+  const passMarkPercent = validatedQuiz.pass_mark || 80;
   const passed = scorePercent >= passMarkPercent;
 
   // Save quiz attempt (skip in preview mode)
@@ -368,10 +407,16 @@ async function submitQuizAnswers(formData: FormData) {
       score_pct: scorePercent,
       passed: passed,
       answers: answers,
+      assignment_id: assignmentId,
+      course_version_id: assignmentVersion.course_version_id,
+      attempt_number: assignmentVersion.attempt_number || 1,
+      question_snapshot: questions,
     });
 
     if (attemptError) {
       console.error("Failed to save quiz attempt:", attemptError);
+      redirect(`/app/learn/courses/${courseId}?module=${moduleId}&quiz=start&error=history_not_ready`);
+      return;
     }
 
     // Mark module as complete if passed - use admin client to bypass RLS
@@ -528,8 +573,27 @@ async function QuizRenderer({ moduleId, assignmentId, preview, review, authoriza
   const isCompleted = !!progress;
 
   if (isCompleted) {
-    // Fetch quiz result if completed
-    const { data: result } = await supabase.from("quiz_attempts").select("score_pct, passed").eq("quiz_id", quizData.id).eq("user_id", user?.id).order("created_at", { ascending: false }).limit(1).maybeSingle();
+    // Fetch only the result for this assignment attempt; prior retake scores
+    // remain immutable evidence but must not appear as the current result.
+    const { data: currentAssignment } = await supabaseAdmin()
+      .from("course_assignments")
+      .select("attempt_number")
+      .eq("id", assignmentId)
+      .eq("user_id", user?.id)
+      .eq("role", "trainee")
+      .maybeSingle();
+    const { data: result } = currentAssignment
+      ? await supabase
+          .from("quiz_attempts")
+          .select("score_pct, passed")
+          .eq("quiz_id", quizData.id)
+          .eq("user_id", user?.id)
+          .eq("assignment_id", assignmentId)
+          .eq("attempt_number", currentAssignment.attempt_number || 1)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      : { data: null };
     return (
       <div className="bg-white p-6 rounded-lg border">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Quiz Complete</h2>

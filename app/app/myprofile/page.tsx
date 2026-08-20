@@ -170,6 +170,30 @@ async function loadMyProfileAndLearning() {
     a.assignment_status === "completed"
   );
 
+  let trainingHistory: any[] = [];
+  let authorisationHistory: any[] = [];
+  try {
+    const admin = supabaseAdmin();
+    const [courseResult, authorisationResult] = await Promise.all([
+      admin
+        .from("course_assignment_history")
+        .select("id, completed_at, course_title, course_version_number, attempt_number, snapshot, evidence, snapshot_source")
+        .eq("user_id", user.id)
+        .order("completed_at", { ascending: false }),
+      admin
+        .from("authorisation_assignment_history")
+        .select("id, completed_at, approved_at, expires_at, restrictions, authorisation_title, attempt_number, snapshot, evidence, snapshot_source")
+        .eq("user_id", user.id)
+        .order("approved_at", { ascending: false }),
+    ]);
+    if (courseResult.error) throw courseResult.error;
+    if (authorisationResult.error) throw authorisationResult.error;
+    trainingHistory = courseResult.data || [];
+    authorisationHistory = authorisationResult.data || [];
+  } catch (historyError) {
+    console.error("Could not load immutable training history:", historyError);
+  }
+
   const inProgressAuth = (authWithCourses ?? []).filter(a => 
     a.assignment_status === "assigned" || a.assignment_status === "in_progress"
   );
@@ -289,6 +313,8 @@ async function loadMyProfileAndLearning() {
     profile, 
     inProgressCourses, 
     completedCourses, 
+    trainingHistory,
+    authorisationHistory,
     inProgressAuth,
     completedAuth,
     retakePendingAuth,
@@ -320,7 +346,7 @@ function Pill({
 
 /* ---------------- Page ---------------- */
 export default async function MyProfilePage() {
-  const { profile, inProgressCourses, completedCourses, inProgressAuth, completedAuth, retakePendingAuth, onsiteAssignments, operationsNotices } = await loadMyProfileAndLearning();
+  const { profile, inProgressCourses, completedCourses, trainingHistory, authorisationHistory, inProgressAuth, completedAuth, retakePendingAuth, onsiteAssignments, operationsNotices } = await loadMyProfileAndLearning();
   const supabase = await createSupabaseServer();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -698,6 +724,108 @@ export default async function MyProfilePage() {
                   </div>
                 );
               })
+            )}
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Permanent Training History"
+            count={trainingHistory.length}
+            defaultCollapsed={true}
+            pillTone="blue"
+          >
+            {trainingHistory.length === 0 ? (
+              <p className="text-sm text-gray-500">No immutable history records have been created yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {trainingHistory.map((record: any) => {
+                  const modules = Array.isArray(record.snapshot?.modules) ? record.snapshot.modules : [];
+                  const attempts = Array.isArray(record.evidence?.quiz_attempts)
+                    ? record.evidence.quiz_attempts
+                    : [];
+                  return (
+                    <div key={record.id} className="rounded-lg border border-blue-200 bg-blue-50/40 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-medium">{record.course_title || "Course"}</h3>
+                          <p className="text-sm text-gray-600">
+                            Completed {record.completed_at ? new Date(record.completed_at).toLocaleDateString() : "date unavailable"}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Version {record.course_version_number || "baseline"} · Attempt {record.attempt_number || "legacy"} · {modules.length} modules
+                          </p>
+                        </div>
+                        <Pill tone="blue">Permanent record</Pill>
+                      </div>
+                      {attempts.length > 0 && (
+                        <details className="mt-3 rounded border bg-white p-3">
+                          <summary className="cursor-pointer text-sm font-medium">Quiz results</summary>
+                          <ul className="mt-2 space-y-1 text-sm text-gray-600">
+                            {attempts.map((attempt: any, index: number) => (
+                              <li key={attempt.id || index}>
+                                Attempt {index + 1}: {attempt.score_pct ?? 0}% — {attempt.passed ? "Passed" : "Not passed"}
+                              </li>
+                            ))}
+                          </ul>
+                        </details>
+                      )}
+                      {record.snapshot_source !== "exact" && (
+                        <p className="mt-2 text-xs text-amber-700">
+                          This older record was reconstructed from the content still available when history was enabled.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            title="Permanent Authorisation History"
+            count={authorisationHistory.length}
+            defaultCollapsed={true}
+            pillTone="blue"
+          >
+            {authorisationHistory.length === 0 ? (
+              <p className="text-sm text-gray-500">No immutable authorisation records have been created yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {authorisationHistory.map((record: any) => {
+                  const requiredCourses = Array.isArray(record.snapshot?.required_courses)
+                    ? record.snapshot.required_courses
+                    : [];
+                  const completions = Array.isArray(record.evidence?.course_completion_records)
+                    ? record.evidence.course_completion_records
+                    : [];
+                  return (
+                    <div key={record.id} className="rounded-lg border border-indigo-200 bg-indigo-50/40 p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-medium">{record.authorisation_title || "Authorisation"}</h3>
+                          <p className="text-sm text-gray-600">
+                            Approved {record.approved_at ? new Date(record.approved_at).toLocaleDateString() : "date unavailable"}
+                          </p>
+                          <p className="mt-1 text-xs text-gray-500">
+                            Attempt {record.attempt_number || "legacy"} · {requiredCourses.length} required courses · {completions.length} course completions
+                          </p>
+                          {record.expires_at && (
+                            <p className="text-xs text-gray-500">Expires {new Date(record.expires_at).toLocaleDateString()}</p>
+                          )}
+                        </div>
+                        <Pill tone="blue">Permanent approval</Pill>
+                      </div>
+                      {record.restrictions && (
+                        <p className="mt-2 text-sm text-gray-700"><strong>Restrictions:</strong> {record.restrictions}</p>
+                      )}
+                      {record.snapshot_source !== "exact" && (
+                        <p className="mt-2 text-xs text-amber-700">
+                          This older record was reconstructed from the requirements still available when history was enabled.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </CollapsibleSection>
         </div>

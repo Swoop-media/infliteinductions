@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
+import { recordCourseCompletion } from "@/lib/training-history";
 
 export async function POST(req: NextRequest) {
   try {
@@ -78,11 +79,19 @@ export async function POST(req: NextRequest) {
       const allCompleted = moduleIds.every((id) => completedModuleIds.has(id));
 
       if (allCompleted) {
+        const completedAt = assignment.completed_at || new Date().toISOString();
+        await recordCourseCompletion({
+          assignmentId: assignment.id,
+          completedAt,
+          reason: "status_repair",
+          adminClient: supabase,
+        });
+
         const { error: updateError } = await supabase
           .from("course_assignments")
           .update({
             assignment_status: "completed",
-            completed_at: assignment.completed_at || new Date().toISOString(),
+            completed_at: completedAt,
           })
           .eq("id", assignment.id);
 

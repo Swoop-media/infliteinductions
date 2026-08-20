@@ -10,6 +10,7 @@ import DocumentRequirements from "./DocumentRequirements";
 import ExpandableCourseDetails from "./ExpandableCourseDetails";
 import ApprovalSection from "./ApprovalSection";
 import UserAuthorisationsBox from "./UserAuthorisationsBox";
+import { recordAuthorisationCompletion } from "@/lib/training-history";
 
 type Props = {
   params: Promise<{ assignmentId: string }>;
@@ -819,6 +820,22 @@ async function approveAssignment(formData: FormData) {
 
   const restrictionsText = (formData.get("restrictions") as string || "").trim() || null;
 
+  try {
+    await recordAuthorisationCompletion({
+      assignmentId,
+      completedAt: assignment.completed_at || approvalDate.toISOString(),
+      approvedAt: approvalDate.toISOString(),
+      expiresAt: expiryDate ? expiryDate.toISOString() : null,
+      restrictions: restrictionsText,
+      actorId: user.id,
+      reason: "completion",
+      adminClient: supabaseService,
+    });
+  } catch (historyError) {
+    console.error("Could not preserve immutable authorisation approval:", historyError);
+    redirect(`/app/admin/review/${assignmentId}?banner=approval_history_failed`);
+  }
+
   // Update the authorisation assignment status to 'completed' and record approval details.
   // Use admin client to bypass RLS and ensure schema cache is up to date
   const updatePayload: Record<string, any> = {
@@ -826,6 +843,7 @@ async function approveAssignment(formData: FormData) {
     approved_at: approvalDate.toISOString(),
     approved_by: user.id,
     restrictions: restrictionsText,
+    expires_at: expiryDate ? expiryDate.toISOString() : null,
   };
   const { error: updateError } = await supabaseService
     .from("authorisation_assignments")
@@ -835,21 +853,6 @@ async function approveAssignment(formData: FormData) {
   if (updateError) {
     console.error("Error approving assignment:", updateError);
     redirect(`/app/admin/review/${assignmentId}?banner=approval_failed`);
-  }
-  
-  // Then update expires_at separately if we have an expiry date
-  if (expiryDate) {
-    const { error: expiryError } = await supabaseService
-      .from("authorisation_assignments")
-      .update({ 
-        expires_at: expiryDate.toISOString()
-      })
-      .eq("id", assignmentId);
-      
-    if (expiryError) {
-      console.error("Warning: Could not set expiry date:", expiryError);
-      // Don't fail the whole approval if expiry update fails
-    }
   }
   
   // Send notification to the trainee about the approval

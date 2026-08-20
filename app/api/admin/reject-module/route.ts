@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
+import { recordAuthorisationCompletion, recordCourseCompletion } from "@/lib/training-history";
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,7 +47,7 @@ export async function POST(request: NextRequest) {
     // Get the course assignment
     const { data: courseAssignment, error: assignmentError } = await adminClient
       .from("course_assignments")
-      .select("id, assignment_status")
+      .select("id, assignment_status, completed_at, attempt_number")
       .eq("user_id", userId)
       .eq("course_id", courseId)
       .eq("role", "trainee")
@@ -58,6 +59,23 @@ export async function POST(request: NextRequest) {
         { error: "Course assignment not found" },
         { status: 404 }
       );
+    }
+
+    if (courseAssignment.assignment_status === "completed" && courseAssignment.completed_at) {
+      try {
+        await recordCourseCompletion({
+          assignmentId: courseAssignment.id,
+          completedAt: courseAssignment.completed_at,
+          actorId: adminUser.id,
+          reason: "module_rejected",
+          adminClient,
+        });
+      } catch (historyError: any) {
+        return NextResponse.json(
+          { error: historyError?.message || "Could not preserve completed training before reopening the module" },
+          { status: 500 }
+        );
+      }
     }
 
     // Delete the module progress to mark it as incomplete
@@ -75,28 +93,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If it's a quiz module, also delete quiz attempts for this user and module
-    if (moduleType === "digital_assessment_quiz") {
-      // First get the quiz for this module
-      const { data: quiz } = await adminClient
-        .from("quizzes")
-        .select("id")
-        .eq("module_id", moduleId)
-        .single();
-
-      if (quiz) {
-        // Delete quiz attempts
-        const { error: deleteQuizError } = await adminClient
-          .from("quiz_attempts")
-          .delete()
-          .eq("user_id", userId)
-          .eq("quiz_id", quiz.id);
-
-        if (deleteQuizError) {
-          console.error("Error deleting quiz attempts:", deleteQuizError);
-        }
-      }
-    }
+    // Quiz attempts are immutable evidence. Removing module progress is enough
+    // to allow a new quiz attempt.
 
     // If it's an onsite module, delete requirement responses
     if (moduleType === "onsite_training" || moduleType === "onsite_assessment") {
@@ -118,6 +116,7 @@ export async function POST(request: NextRequest) {
         .update({
           assignment_status: "in_progress",
           completed_at: null,
+          attempt_number: (courseAssignment.attempt_number || 1) + 1,
           updated_at: new Date().toISOString(),
         })
         .eq("id", courseAssignment.id);
@@ -131,16 +130,31 @@ export async function POST(request: NextRequest) {
     if (assignmentId) {
       const { data: authAssignment } = await adminClient
         .from("authorisation_assignments")
-        .select("id, assignment_status")
+        .select("id, assignment_status, completed_at, attempt_number")
         .eq("id", assignmentId)
         .single();
 
       if (authAssignment && authAssignment.assignment_status === "completed") {
+        try {
+          await recordAuthorisationCompletion({
+            assignmentId: authAssignment.id,
+            completedAt: authAssignment.completed_at,
+            actorId: adminUser.id,
+            reason: "retake",
+            adminClient,
+          });
+        } catch (historyError: any) {
+          return NextResponse.json(
+            { error: historyError?.message || "Could not preserve the completed authorisation before reopening it" },
+            { status: 500 }
+          );
+        }
         const { error: updateAuthError } = await adminClient
           .from("authorisation_assignments")
           .update({
             assignment_status: "in_progress",
             completed_at: null,
+            attempt_number: (authAssignment.attempt_number || 1) + 1,
             updated_at: new Date().toISOString(),
           })
           .eq("id", assignmentId);

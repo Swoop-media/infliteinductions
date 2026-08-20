@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { hasRole } from "@/lib/roles";
 import { logUserAudit } from "@/lib/audit";
 import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorizationExpiry";
+import { recordAuthorisationCompletion, recordCourseCompletion } from "@/lib/training-history";
 import { notifyUser } from "@/lib/notifications/dispatcher";
 
 const CHUNK = 150;
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
     // Existing assignments for this authorisation
     const { data: existingAuthRows, error: existErr } = await admin
       .from("authorisation_assignments")
-      .select("id, user_id, assignment_status, completed_at, approved_at, approved_by, restrictions")
+      .select("id, user_id, assignment_status, completed_at, approved_at, approved_by, restrictions, attempt_number")
       .eq("authorisation_id", authorisationId);
     if (existErr) {
       return NextResponse.json({ error: `Failed to load existing assignments: ${existErr.message}` }, { status: 500 });
@@ -135,98 +136,81 @@ export async function POST(request: NextRequest) {
     const nowIso = new Date().toISOString();
     const errors: string[] = [];
 
-    // 1) Snapshot completed authorisation assignments into history (with expiry as-of-now)
-    if (completedUsers.length > 0) {
-      // Gather docs + completed courses for all completed users to compute expiry
-      const docsByUser = new Map<string, any[]>();
-      const completedCoursesByUser = new Map<string, any[]>();
-
-      if (courseIds.length > 0) {
-        for (const userChunk of chunk(completedUsers, CHUNK)) {
-          for (const courseChunk of chunk(courseIds, CHUNK)) {
-            const { data: docs } = await admin
-              .from("learner_documents")
-              .select("user_id, expires_on, status")
-              .in("user_id", userChunk)
-              .in("course_id", courseChunk)
-              .not("expires_on", "is", null)
-              .or("status.is.null,status.neq.replaced");
-            for (const d of docs || []) {
-              const list = docsByUser.get(d.user_id) || [];
-              list.push({ expires_on: d.expires_on });
-              docsByUser.set(d.user_id, list);
-            }
-
-            const { data: completions } = await admin
-              .from("course_assignments")
-              .select("user_id, course_id, completed_at, courses!course_assignments_course_id_fkey(valid_for_months)")
-              .in("user_id", userChunk)
-              .in("course_id", courseChunk)
-              .eq("role", "trainee")
-              .not("completed_at", "is", null);
-            for (const c of completions || []) {
-              const list = completedCoursesByUser.get(c.user_id) || [];
-              list.push({ valid_for_months: c.courses?.valid_for_months ?? null, completed_at: c.completed_at });
-              completedCoursesByUser.set(c.user_id, list);
+    // 1) Course completion records must exist before authorisation history is
+    // captured, because the approval evidence references those immutable rows.
+    if (completedUsers.length > 0 && courseIds.length > 0) {
+      for (const userChunk of chunk(completedUsers, CHUNK)) {
+        for (const courseChunk of chunk(courseIds, CHUNK)) {
+          const { data: completedCourseRows, error: completedCourseError } = await admin
+            .from("course_assignments")
+            .select("id, completed_at")
+            .in("user_id", userChunk)
+            .in("course_id", courseChunk)
+            .eq("role", "trainee")
+            .eq("assignment_status", "completed")
+            .not("completed_at", "is", null);
+          if (completedCourseError) {
+            return NextResponse.json(
+              { error: `Could not load completed courses before snapshot: ${completedCourseError.message}` },
+              { status: 500 }
+            );
+          }
+          for (const row of completedCourseRows || []) {
+            try {
+              await recordCourseCompletion({
+                assignmentId: row.id,
+                completedAt: row.completed_at,
+                actorId: adminUser.id,
+                reason: "bulk_authorisation_retake",
+                adminClient: admin,
+              });
+            } catch (historyError: any) {
+              return NextResponse.json(
+                { error: historyError?.message || "Could not preserve completed course history. Nothing was reset." },
+                { status: 500 }
+              );
             }
           }
         }
       }
+    }
 
-      const historyRows = completedUsers.map((userId) => {
+    // 2) Snapshot completed authorisation assignments before any reset.
+    if (completedUsers.length > 0) {
+      for (const userId of completedUsers) {
         const row = byUser.get(userId);
-        const approvedAt = row.approved_at
-          ? new Date(row.approved_at)
-          : row.completed_at
-            ? new Date(row.completed_at)
-            : new Date();
-        let expiresAt: string | null = null;
         try {
-          const expiry = calculateAuthorizationExpiry(
-            approvedAt,
-            auth.valid_for_days ?? null,
-            docsByUser.get(userId) || [],
-            completedCoursesByUser.get(userId) || []
+          await recordAuthorisationCompletion({
+            assignmentId: row.id,
+            completedAt: row.completed_at,
+            actorId: adminUser.id,
+            reason: "retake",
+            adminClient: admin,
+          });
+        } catch (historyError: any) {
+          return NextResponse.json(
+            { error: historyError?.message || "Could not preserve completed authorisation history. Nothing was reset." },
+            { status: 500 }
           );
-          expiresAt = expiry ? expiry.toISOString() : null;
-        } catch {
-          expiresAt = null;
-        }
-        return {
-          assignment_id: row.id,
-          user_id: userId,
-          authorisation_id: authorisationId,
-          assignment_status: row.assignment_status,
-          completed_at: row.completed_at,
-          approved_at: row.approved_at,
-          approved_by: row.approved_by,
-          restrictions: row.restrictions,
-          expires_at: expiresAt,
-          superseded_by: adminUser.id,
-          reason: "retake",
-        };
-      });
-
-      for (const rowsChunk of chunk(historyRows, CHUNK)) {
-        const { error } = await admin.from("authorisation_assignment_history").insert(rowsChunk);
-        if (error) {
-          console.error("[bulk-assign] Could not snapshot authorisation history:", error.message);
-          errors.push(`History snapshot: ${error.message}`);
         }
       }
     }
 
-    // 2) Reset all existing authorisation assignments (completed + in-progress) back to 'assigned'
-    const existingAssignmentIds = [...byUser.values()].map((r) => r.id);
-    for (const idsChunk of chunk(existingAssignmentIds, CHUNK)) {
+    // 3) Reset all existing authorisation assignments (completed + in-progress) back to 'assigned'
+    for (const row of byUser.values()) {
       const { error } = await admin
         .from("authorisation_assignments")
-        .update({ assignment_status: "assigned", completed_at: null, created_by: adminUser.id })
-        .in("id", idsChunk);
+        .update({
+          assignment_status: "assigned",
+          completed_at: null,
+          attempt_number: (row.attempt_number || 1) + 1,
+          created_by: adminUser.id,
+        })
+        .eq("id", row.id);
       if (error) errors.push(`Reset authorisation assignments: ${error.message}`);
     }
 
-    // 3) Create authorisation assignments for users who never had one
+    // 4) Create authorisation assignments for users who never had one
     const newAuthRows = newUsers.map((userId) => ({
       user_id: userId,
       authorisation_id: authorisationId,
@@ -241,7 +225,7 @@ export async function POST(request: NextRequest) {
       if (error) errors.push(`Create authorisation assignments: ${error.message}`);
     }
 
-    // 4) Course assignments: snapshot completed ones, wipe progress, reset/create for everyone
+    // 5) Course assignments: snapshot completed ones, wipe progress, reset/create for everyone
     if (courseIds.length > 0) {
       // Load all existing trainee course assignments for these users/courses
       const existingCourseRows: any[] = [];
@@ -249,7 +233,7 @@ export async function POST(request: NextRequest) {
         for (const courseChunk of chunk(courseIds, CHUNK)) {
           const { data, error } = await admin
             .from("course_assignments")
-            .select("id, user_id, course_id, assignment_status, completed_at")
+            .select("id, user_id, course_id, assignment_status, completed_at, attempt_number")
             .in("user_id", userChunk)
             .in("course_id", courseChunk)
             .eq("role", "trainee");
@@ -263,24 +247,25 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Snapshot completed course assignments
+      // Snapshot completed course assignments. Fail before any progress is
+      // deleted if one learner record cannot be preserved.
       const completedCourseRows = existingCourseRows.filter(
         (r) => r.assignment_status === "completed" && r.completed_at
       );
-      const courseHistoryRows = completedCourseRows.map((r) => ({
-        assignment_id: r.id,
-        user_id: r.user_id,
-        course_id: r.course_id,
-        assignment_status: r.assignment_status,
-        completed_at: r.completed_at,
-        superseded_by: adminUser.id,
-        reason: "retake",
-      }));
-      for (const rowsChunk of chunk(courseHistoryRows, CHUNK)) {
-        const { error } = await admin.from("course_assignment_history").insert(rowsChunk);
-        if (error) {
-          console.error("[bulk-assign] Could not snapshot course history:", error.message);
-          errors.push(`Course history snapshot: ${error.message}`);
+      for (const row of completedCourseRows) {
+        try {
+          await recordCourseCompletion({
+            assignmentId: row.id,
+            completedAt: row.completed_at,
+            actorId: adminUser.id,
+            reason: "bulk_authorisation_retake",
+            adminClient: admin,
+          });
+        } catch (historyError: any) {
+          return NextResponse.json(
+            { error: historyError?.message || "Could not preserve completed course history. No course progress was reset." },
+            { status: 500 }
+          );
         }
       }
 
@@ -289,14 +274,22 @@ export async function POST(request: NextRequest) {
       for (const idsChunk of chunk(existingCourseAssignmentIds, CHUNK)) {
         const { error } = await admin.from("assignment_progress").delete().in("assignment_id", idsChunk);
         if (error) errors.push(`Delete progress: ${error.message}`);
+        const { error: responseError } = await admin.from("requirement_responses").delete().in("assignment_id", idsChunk);
+        if (responseError) errors.push(`Delete requirement responses: ${responseError.message}`);
       }
 
-      // Reset existing course assignments
-      for (const idsChunk of chunk(existingCourseAssignmentIds, CHUNK)) {
+      // Reset existing course assignments and advance their attempt identity.
+      for (const row of existingCourseRows) {
         const { error } = await admin
           .from("course_assignments")
-          .update({ assignment_status: "assigned", completed_at: null, updated_at: nowIso, created_by: adminUser.id })
-          .in("id", idsChunk);
+          .update({
+            assignment_status: "assigned",
+            completed_at: null,
+            attempt_number: (row.attempt_number || 1) + 1,
+            updated_at: nowIso,
+            created_by: adminUser.id,
+          })
+          .eq("id", row.id);
         if (error) errors.push(`Reset course assignments: ${error.message}`);
       }
 

@@ -1,6 +1,8 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import { recordAuthorisationCompletion, recordCourseCompletion } from "@/lib/training-history";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,6 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createSupabaseServer();
+    const adminClient = supabaseAdmin();
     
     // Get current user and check permissions
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -69,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Get the assignment details
     const { data: assignment, error: assignmentError } = await supabase
       .from("course_assignments")
-      .select("id, user_id, course_id")
+      .select("id, user_id, course_id, assignment_status, completed_at, attempt_number")
       .eq("id", targetAssignmentId)
       .single();
 
@@ -81,8 +84,26 @@ export async function POST(request: NextRequest) {
 
     console.log("Resetting course progress for assignment:", targetAssignmentId);
 
+    if (assignment.assignment_status === "completed" && assignment.completed_at) {
+      try {
+        await recordCourseCompletion({
+          assignmentId: targetAssignmentId,
+          completedAt: assignment.completed_at,
+          actorId: user.id,
+          reason: "reset",
+          adminClient,
+        });
+      } catch (historyError: any) {
+        console.error("Could not preserve course before progress reset:", historyError);
+        return NextResponse.json(
+          { error: historyError?.message || "Could not preserve completed training before reset" },
+          { status: 500 }
+        );
+      }
+    }
+
     // 1. Delete assignment progress
-    const { error: progressError } = await supabase
+    const { error: progressError } = await adminClient
       .from("assignment_progress")
       .delete()
       .eq("assignment_id", targetAssignmentId);
@@ -92,11 +113,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Reset course assignment status
-    const { error: courseAssignError } = await supabase
+    const { error: courseAssignError } = await adminClient
       .from("course_assignments")
       .update({
         assignment_status: 'assigned',
         completed_at: null,
+        attempt_number: (assignment.attempt_number || 1) + 1,
         updated_at: new Date().toISOString()
       })
       .eq("id", targetAssignmentId);
@@ -106,7 +128,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Delete requirement responses for this assignment
-    const { error: reqError } = await supabase
+    const { error: reqError } = await adminClient
       .from("requirement_responses")
       .delete()
       .eq("assignment_id", targetAssignmentId);
@@ -115,60 +137,41 @@ export async function POST(request: NextRequest) {
       console.error("Error deleting requirement responses:", reqError);
     }
 
-    // 4. Delete quiz attempts for this user and course
-    // First get all modules for this course
-    const { data: modules } = await supabase
-      .from("course_modules")
-      .select("id")
-      .eq("course_id", assignment.course_id);
-
-    if (modules && modules.length > 0) {
-      const moduleIds = modules.map(m => m.id);
-      
-      // Get quizzes for these modules
-      const { data: quizzes } = await supabase
-        .from("quizzes")
-        .select("id")
-        .in("module_id", moduleIds);
-
-      if (quizzes && quizzes.length > 0) {
-        const quizIds = quizzes.map(q => q.id);
-        
-        // Delete quiz attempts
-        const { error: quizError } = await supabase
-          .from("quiz_attempts")
-          .delete()
-          .in("quiz_id", quizIds)
-          .eq("user_id", assignment.user_id);
-
-        if (quizError) {
-          console.error("Error deleting quiz attempts:", quizError);
-        }
-      }
-    }
+    // Quiz attempts are immutable evidence. New attempts are tied to the
+    // incremented assignment attempt number instead of deleting old rows.
 
     // 5. Reset authorization assignment status if needed
-    const { data: authAssignments } = await supabase
+    const { data: authAssignments } = await adminClient
       .from("authorisation_assignments")
-      .select("id, authorisation_id")
+      .select("id, authorisation_id, assignment_status, completed_at, attempt_number")
       .eq("user_id", assignment.user_id);
 
     if (authAssignments && authAssignments.length > 0) {
       for (const authAssign of authAssignments) {
         // Check if this authorization includes this course
-        const { data: authCourses } = await supabase
+        const { data: authCourses } = await adminClient
           .from("authorisation_courses")
           .select("course_id")
           .eq("authorisation_id", authAssign.authorisation_id)
           .eq("course_id", assignment.course_id);
 
         if (authCourses && authCourses.length > 0) {
+          if (authAssign.assignment_status === "completed" && authAssign.completed_at) {
+            await recordAuthorisationCompletion({
+              assignmentId: authAssign.id,
+              completedAt: authAssign.completed_at,
+              actorId: user.id,
+              reason: "retake",
+              adminClient,
+            });
+          }
           // Reset this authorization assignment
-          await supabase
+          await adminClient
             .from("authorisation_assignments")
             .update({
               assignment_status: 'assigned',
-              completed_at: null
+              completed_at: null,
+              attempt_number: (authAssign.attempt_number || 1) + 1,
             })
             .eq("id", authAssign.id);
         }

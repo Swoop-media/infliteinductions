@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { notifyUser } from "@/lib/notifications/dispatcher";
+import { recordCourseCompletion } from "@/lib/training-history";
 
 export async function POST(
   request: NextRequest,
@@ -21,7 +22,7 @@ export async function POST(
 
     const { data: assignment, error: assignmentError } = await adminClient
       .from("course_assignments")
-      .select("id, user_id, course_id, assignment_status")
+      .select("id, user_id, course_id, assignment_status, completed_at, attempt_number")
       .eq("course_id", courseId)
       .eq("user_id", user.id)
       .eq("role", "trainee")
@@ -46,6 +47,21 @@ export async function POST(
 
     const courseTitle = course?.title || "Unknown Course";
 
+    try {
+      await recordCourseCompletion({
+        assignmentId: assignment.id,
+        completedAt: assignment.completed_at,
+        actorId: user.id,
+        reason: "form_resubmission",
+        adminClient,
+      });
+    } catch (historyError: any) {
+      return NextResponse.json(
+        { error: historyError?.message || "Could not preserve completed training before reassessment" },
+        { status: 500 }
+      );
+    }
+
     const { data: modules } = await adminClient
       .from("course_modules")
       .select("id, type")
@@ -67,7 +83,8 @@ export async function POST(
       .from("course_assignments")
       .update({
         assignment_status: "assigned",
-        completed_at: null
+        completed_at: null,
+        attempt_number: (assignment.attempt_number || 1) + 1,
       })
       .eq("id", assignment.id);
 
