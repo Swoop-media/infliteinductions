@@ -12,6 +12,7 @@ import { toAbsoluteUrl } from "@/lib/utils/url";
 import { logContentAudit, logModuleContentAudit, diffChanges } from "@/lib/audit";
 import { hasRole } from "@/lib/roles";
 import { publishNewCourseVersion } from "@/lib/training-history";
+import { requireCourseVersionChangeNotes } from "@/lib/course-version-logs";
 import {
   listSafefliteRisks,
   upsertTrainingControl,
@@ -554,7 +555,7 @@ async function publishNewVersionAction(formData: FormData) {
   "use server";
   const courseId = String(formData.get("course_id") || "");
   const confirmed = formData.get("confirm_release") === "yes";
-  const changeNotes = String(formData.get("change_notes") || "").trim() || null;
+  const changeNotes = requireCourseVersionChangeNotes(formData.get("change_notes"));
   if (!courseId) throw new Error("Missing course_id");
   if (!confirmed) throw new Error("Confirm that this release saves a new version without changing existing learners.");
 
@@ -1528,12 +1529,13 @@ function DetailsTab({
           <input type="hidden" name="course_id" value={course.id} />
           <div>
             <label htmlFor="change_notes" className="block text-sm font-medium text-blue-950">
-              What changed? <span className="font-normal">(optional)</span>
+              What changed? <span className="font-normal">(required)</span>
             </label>
             <textarea
               id="change_notes"
               name="change_notes"
               rows={2}
+              required
               className="mt-1 w-full rounded-md border border-blue-300 bg-white px-3 py-2 text-sm"
               placeholder="e.g. Updated emergency procedure and replaced the final assessment"
             />

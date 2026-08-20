@@ -1,6 +1,10 @@
 // @ts-nocheck
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { pinnedSnapshotSource } from "@/lib/course-version";
+import {
+  assertResumableCourseVersion,
+  courseVersionReleaseAttribution,
+} from "@/lib/course-version-logs";
 
 export const IMMUTABLE_HISTORY_MIGRATION = "032_immutable_training_history.sql";
 
@@ -329,6 +333,8 @@ export async function publishNewCourseVersion(args: {
   actorId: string;
   changeNotes?: string | null;
 }) {
+  const releaseAttribution = courseVersionReleaseAttribution(args.changeNotes, args.actorId);
+  const changeNotes = releaseAttribution.change_notes;
   const adminClient = supabaseAdmin();
   const { data: course, error: courseError } = await adminClient
     .from("courses")
@@ -352,7 +358,7 @@ export async function publishNewCourseVersion(args: {
 
   let { data: nextVersion, error: nextVersionError } = await adminClient
     .from("course_versions")
-    .select("id, version_number, status")
+    .select("id, version_number, status, change_notes, published_by, published_at")
     .eq("course_id", course.id)
     .eq("version_number", nextVersionNumber)
     .maybeSingle();
@@ -368,14 +374,17 @@ export async function publishNewCourseVersion(args: {
         description: course.description,
         snapshot,
         status: "publishing",
-        change_notes: args.changeNotes || null,
-        published_by: args.actorId,
-        published_at: new Date().toISOString(),
+        ...releaseAttribution,
       })
       .select("id, version_number, status")
       .single();
     if (created.error) throw migrationError(created.error);
     nextVersion = created.data;
+  } else if (nextVersion.status === "publishing") {
+    // Migration 032 makes attribution immutable as soon as the publishing row
+    // exists. A retry therefore preserves the original summary and publisher,
+    // and only completes the permitted publishing -> published transition.
+    assertResumableCourseVersion(nextVersion);
   }
 
   const { error: publishError } = await adminClient

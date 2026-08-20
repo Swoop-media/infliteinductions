@@ -14,11 +14,17 @@ import SortableCourseProgressTable from "./_components/SortableCourseProgressTab
 import AuthorisationOverviewMatrix from "./_components/AuthorisationOverviewMatrix";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { calculateAuthorizationExpiry } from "@/lib/utils/calculateAuthorizationExpiry";
+import {
+  changeDetailsForCourseVersion,
+  COURSE_VERSION_LOG_PAGE_SIZE,
+  loadCourseVersionLogPage,
+  publisherNameForCourseVersion,
+} from "@/lib/course-version-logs";
 
 
 export const dynamic = "force-dynamic";
 
-type TabKey = "overview" | "due_dates_courses" | "due_dates_authorisations" | "course_progress" | "users" | "pending_authorisations" | "documents" | "sites_jobs" | "audit_trail";
+type TabKey = "overview" | "due_dates_courses" | "due_dates_authorisations" | "course_progress" | "users" | "pending_authorisations" | "documents" | "sites_jobs" | "audit_trail" | "course_version_logs";
 
 function tabFromSearch(sp: Record<string, string | string[] | undefined>): TabKey {
   const raw = Array.isArray(sp.tab) ? sp.tab[0] : sp.tab || "";
@@ -30,6 +36,7 @@ function tabFromSearch(sp: Record<string, string | string[] | undefined>): TabKe
   if (raw === "documents") return "documents";
   if (raw === "sites_jobs") return "sites_jobs";
   if (raw === "audit_trail") return "audit_trail";
+  if (raw === "course_version_logs") return "course_version_logs";
   return "due_dates_courses";
 }
 
@@ -651,6 +658,9 @@ export default async function AdminPage({
 
   const resolvedSearchParams = await searchParams;
   const tab = tabFromSearch(resolvedSearchParams ?? {});
+  if (tab === "course_version_logs" && !isAdmin) {
+    redirect("/app/home?banner=no_access");
+  }
   const ok =
     (Array.isArray(resolvedSearchParams?.ok) ? resolvedSearchParams?.ok[0] : resolvedSearchParams?.ok) ?? null;
   const error =
@@ -674,6 +684,7 @@ export default async function AdminPage({
   // Audit Trail is Admin-only
   if (isAdmin) {
     tabs.push({ key: "audit_trail", label: "Audit Trail", href: "/app/admin?tab=audit_trail" });
+    tabs.push({ key: "course_version_logs", label: "Course Version Logs", href: "/app/admin?tab=course_version_logs" });
   }
 
   // Only show the Sites & Jobs management tab to Admins
@@ -761,7 +772,7 @@ export default async function AdminPage({
 
       {banner(ok, error)}
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {tabs.map(t => {
           const active = t.key === tab;
           return (
@@ -797,6 +808,12 @@ export default async function AdminPage({
         ) : tab === "audit_trail" ? (
           isAdmin ? (
             <AuditTrailSection q={q} page={page} />
+          ) : (
+            <p className="text-sm text-red-600">Admin access required.</p>
+          )
+        ) : tab === "course_version_logs" ? (
+          isAdmin ? (
+            <CourseVersionLogsSection q={q} page={page} />
           ) : (
             <p className="text-sm text-red-600">Admin access required.</p>
           )
@@ -2289,6 +2306,142 @@ function AuditChangeDetails({ details }: { details: any }) {
             </div>
           ))
         : null}
+    </div>
+  );
+}
+
+/* --------------------------
+   COURSE VERSION LOGS
+---------------------------*/
+
+async function CourseVersionLogsSection({ q, page = 1 }: { q: string | null; page?: number }) {
+  noStore();
+  const isAdmin = await hasRole("Admin");
+  if (!isAdmin) redirect("/app/home?banner=no_access");
+
+  const admin = supabaseAdmin();
+  const { rows, totalCount, totalPages, currentPage, error } = await loadCourseVersionLogPage({
+    isAdmin,
+    adminClient: admin,
+    q,
+    page,
+  });
+  if (error) {
+    const missingTable = error.code === "PGRST205" || /course_versions/.test(error.message || "");
+    return (
+      <div className="space-y-2">
+        <h2 className="text-lg font-semibold">Course Version Logs</h2>
+        <p className="text-sm text-amber-700">
+          {missingTable
+            ? "Course version history has not been set up yet. Apply app/migrations/032_immutable_training_history.sql in Supabase to enable it."
+            : `Failed to load course version history: ${error.message}`}
+        </p>
+      </div>
+    );
+  }
+
+  const publisherIds = [...new Set(rows.map((row: any) => row.published_by).filter(Boolean))];
+  const profiles = await fetchInChunks(admin, "profiles", "id, full_name, email", "id", publisherIds);
+  const profileById = new Map((profiles ?? []).map((profile: any) => [profile.id, profile]));
+  const fmt = (iso: string | null) =>
+    iso
+      ? new Date(iso).toLocaleString("en-NZ", {
+          timeZone: "Pacific/Auckland",
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+      : "Date not recorded";
+  const pageHref = (targetPage: number) =>
+    `/app/admin?tab=course_version_logs&page=${targetPage}${q ? `&q=${encodeURIComponent(q)}` : ""}`;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">Course Version Logs</h2>
+          <p className="text-sm text-gray-600">
+            {totalCount} released version{totalCount !== 1 ? "s" : ""} across all courses
+          </p>
+        </div>
+        <form method="get" action="/app/admin" className="flex items-center gap-2">
+          <input type="hidden" name="tab" value="course_version_logs" />
+          <input
+            name="q"
+            defaultValue={q ?? ""}
+            maxLength={120}
+            placeholder="Search course or change details"
+            className="w-full rounded-md border px-3 py-2 text-sm sm:w-80"
+          />
+          <button className="rounded-md border px-3 py-2 text-sm hover:bg-gray-50">Search</button>
+        </form>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="text-sm text-gray-600">
+          {q
+            ? "No released course versions match your search."
+            : "No course versions have been released yet. Baseline and future published versions will appear here."}
+        </p>
+      ) : (
+        <>
+          <div className="overflow-x-auto rounded-lg border">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Course</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Released</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Version</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">Published by</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">What changed?</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {rows.map((row: any) => (
+                  <tr key={row.id} className="align-top">
+                    <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                      {row.title || <span className="text-gray-400">Untitled course</span>}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{fmt(row.published_at)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">Version {row.version_number}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700">
+                      {publisherNameForCourseVersion(row, profileById.get(row.published_by))}
+                    </td>
+                    <td className="min-w-80 px-4 py-3 text-sm text-gray-700">
+                      {changeDetailsForCourseVersion(row)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between gap-3 px-1 py-2">
+              <p className="text-sm text-gray-700">
+                Showing <span className="font-medium">{(currentPage - 1) * COURSE_VERSION_LOG_PAGE_SIZE + 1}</span> to{" "}
+                <span className="font-medium">{Math.min(currentPage * COURSE_VERSION_LOG_PAGE_SIZE, totalCount)}</span> of{" "}
+                <span className="font-medium">{totalCount}</span>
+              </p>
+              <div className="flex gap-2">
+                {currentPage > 1 && (
+                  <a href={pageHref(currentPage - 1)} className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50">
+                    Previous
+                  </a>
+                )}
+                {currentPage < totalPages && (
+                  <a href={pageHref(currentPage + 1)} className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50">
+                    Next
+                  </a>
+                )}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
