@@ -124,6 +124,44 @@ function getEquipmentNameFromId(equipmentId: string): string {
   return equipmentMap[equipmentId] || 'Equipment Item';
 }
 
+const MEDICAL_EXEMPTION_QUESTION = "medical falls under our exemption";
+
+function normaliseResponseText(value: unknown): string {
+  return String(value ?? "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+}
+
+function getMedicalExemptionAnswers(courses: any[]) {
+  const contexts = courses.flatMap((course) =>
+    (course.modules || []).flatMap((module: any) =>
+      module.module_type === "onsite_assessment"
+        ? (module.onsite_responses || [])
+            .filter(
+              (response: any) =>
+                normaliseResponseText(response.requirement_label) ===
+                  MEDICAL_EXEMPTION_QUESTION &&
+                normaliseResponseText(response.response_text) === "yes"
+            )
+            .map(() => ({
+              courseTitle: course.course_title || null,
+              moduleTitle: module.module_title || null,
+            }))
+        : []
+    )
+  );
+
+  return Array.from(
+    new Map(
+      contexts.map((context) => [
+        JSON.stringify([context.courseTitle, context.moduleTitle]),
+        context,
+      ])
+    ).values()
+  );
+}
+
 async function loadAssignmentDetails(assignmentId: string) {
   "use server";
   noStore();
@@ -712,6 +750,8 @@ async function loadAssignmentDetails(assignmentId: string) {
     };
   });
 
+  const medicalExemptionAnswers = getMedicalExemptionAnswers(coursesWithDetails);
+
   return {
     assignment,
     authorisation,
@@ -719,7 +759,8 @@ async function loadAssignmentDetails(assignmentId: string) {
     courses: coursesWithDetails,
     documents: documentsWithContext,
     documentRequirements,
-    responsiblePerson: responsiblePersonDetails
+    responsiblePerson: responsiblePersonDetails,
+    medicalExemptionAnswers
   };
 }
 
@@ -959,7 +1000,16 @@ export default async function ReviewAssignmentPage({ params }: Props) {
   }
 
   const resolvedParams = await params;
-  const { assignment, authorisation, profile, courses, documents, documentRequirements, responsiblePerson } = await loadAssignmentDetails(resolvedParams.assignmentId);
+  const {
+    assignment,
+    authorisation,
+    profile,
+    courses,
+    documents,
+    documentRequirements,
+    responsiblePerson,
+    medicalExemptionAnswers,
+  } = await loadAssignmentDetails(resolvedParams.assignmentId);
   const { items: userAuthorisations } = await loadUserAuthorisationsOverview(profile.id, authorisation.id);
 
   // Connected authorisations the learner does not currently hold/approved. We treat
@@ -1033,6 +1083,27 @@ export default async function ReviewAssignmentPage({ params }: Props) {
             {assignment.completed_at ? new Date(assignment.completed_at).toLocaleDateString() : "Not completed"}
           </p>
         </div>
+
+        {medicalExemptionAnswers.length > 0 && (
+          <section
+            aria-labelledby="medical-exemption-notice-title"
+            className="mt-5 rounded-lg border-2 border-amber-400 bg-amber-50 p-4 text-amber-950"
+          >
+            <h3 id="medical-exemption-notice-title" className="font-semibold">
+              Medical exemption declared
+            </h3>
+            <p className="mt-1 text-sm">
+              The learner answered Yes to “Medical falls under our exemption.” Review this medical exemption before making an authorisation decision.
+            </p>
+            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm">
+              {medicalExemptionAnswers.map((context) => (
+                <li key={JSON.stringify([context.courseTitle, context.moduleTitle])}>
+                  {[context.courseTitle, context.moduleTitle].filter(Boolean).join(" — ") || "Course and module context unavailable"}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
         
         {/* Responsible Person */}
         <div className="mt-4">
