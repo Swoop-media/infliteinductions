@@ -11,6 +11,7 @@ import ExpandableCourseDetails from "./ExpandableCourseDetails";
 import ApprovalSection from "./ApprovalSection";
 import UserAuthorisationsBox from "./UserAuthorisationsBox";
 import { recordAuthorisationCompletion } from "@/lib/training-history";
+import { getMedicalExemptionAnswers } from "@/lib/review/medical-exemption";
 
 type Props = {
   params: Promise<{ assignmentId: string }>;
@@ -122,44 +123,6 @@ function getEquipmentNameFromId(equipmentId: string): string {
   };
   
   return equipmentMap[equipmentId] || 'Equipment Item';
-}
-
-const MEDICAL_EXEMPTION_QUESTION = "medical falls under our exemption";
-
-function normaliseResponseText(value: unknown): string {
-  return String(value ?? "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .toLowerCase();
-}
-
-function getMedicalExemptionAnswers(courses: any[]) {
-  const contexts = courses.flatMap((course) =>
-    (course.modules || []).flatMap((module: any) =>
-      module.module_type === "onsite_assessment"
-        ? (module.onsite_responses || [])
-            .filter(
-              (response: any) =>
-                normaliseResponseText(response.requirement_label) ===
-                  MEDICAL_EXEMPTION_QUESTION &&
-                normaliseResponseText(response.response_text) === "yes"
-            )
-            .map(() => ({
-              courseTitle: course.course_title || null,
-              moduleTitle: module.module_title || null,
-            }))
-        : []
-    )
-  );
-
-  return Array.from(
-    new Map(
-      contexts.map((context) => [
-        JSON.stringify([context.courseTitle, context.moduleTitle]),
-        context,
-      ])
-    ).values()
-  );
 }
 
 async function loadAssignmentDetails(assignmentId: string) {
