@@ -31,3 +31,4 @@
 - [Course/authorisation assignment direction](auth-course-linking-backfill.md) — authorisations backfill courses; direct course completion never infers an authorisation because links can be ambiguous.
 - [Format-fix URL holdback](format-fix-url-holdback.md) — unplayable format-fix uploads hold the block URL (pending_format_fix marker) until converted; all ~7 video renderers must show the placeholder.
 - [Non-disruptive course releases](explicit-course-releases.md) — releases save immutable definitions only; learners move to the latest version only when an explicit fresh attempt begins.
+- [Versioned read receipts](versioned-read-receipts.md) — for republishable content, store the exact publication version read; timestamps alone can hide concurrent republishes.
