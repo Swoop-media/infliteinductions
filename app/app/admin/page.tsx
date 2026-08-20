@@ -697,7 +697,7 @@ export default async function AdminPage({
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Admin</h1>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link
             href="/app/admin/diagnose-documents"
             className="rounded-md bg-purple-600 text-white px-3 py-1 text-sm hover:bg-purple-700"
@@ -740,6 +740,14 @@ export default async function AdminPage({
               className="rounded-md bg-teal-600 text-white px-3 py-1 text-sm hover:bg-teal-700"
             >
               Video Optimisation Queue
+            </Link>
+          )}
+          {isAdmin && (
+            <Link
+              href="/app/admin/release-notes"
+              className="rounded-md bg-blue-700 text-white px-3 py-1 text-sm hover:bg-blue-800"
+            >
+              Release Notes
             </Link>
           )}
           <Link

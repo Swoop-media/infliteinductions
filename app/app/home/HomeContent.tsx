@@ -33,12 +33,20 @@ export default function HomeContent({ profile, notice, banner }: HomeContentProp
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold">Welcome{profile?.full_name ? `, ${profile.full_name}` : ""}</h1>
-          {profile?.email && <p className="text-sm text-gray-600">{profile.email}</p>}
+          {profile?.email && <p className="break-words text-sm text-gray-600">{profile.email}</p>}
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Link
+            href="/app/release-notes"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-md bg-blue-700 px-3 py-1.5 text-sm text-white hover:bg-blue-800"
+          >
+            Release Notes
+          </Link>
           <Link href="/app/myprofile" className="rounded-md border px-3 py-1.5 text-sm hover:bg-gray-50">
             My profile
           </Link>
